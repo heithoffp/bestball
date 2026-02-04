@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Best Ball Portfolio Manager (Fixed)</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-card: #141824;
+            --bg-hover: #1a1f2e;
+            --border: #2a3142;
+            --text-primary: #e8eaed;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg-dark); color: var(--text-primary); }
+        .app-container { min-height: 100vh; padding: 2rem; }
+        h1 { font-family: 'JetBrains Mono', monospace; font-size: 2rem; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+        .config-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+        .path-input { width: 100%; background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace; }
+        .load-button { background: var(--gradient-primary); color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
+        .load-button:hover { transform: translateY(-2px); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+        td { padding: 1rem; border-bottom: 1px solid var(--border); }
+        .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge-rb { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .badge-wr { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .badge-qb { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .badge-te { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        function App() {
+            const [config, setConfig] = useState({ rosterPath: '', adpPath: '' });
+            const [rosterData, setRosterData] = useState([]);
+            const [masterPlayers, setMasterPlayers] = useState([]);
+            const [status, setStatus] = useState({ type: '', msg: '' });
+
+            // Load Config
+            useEffect(() => {
+                const stored = localStorage.getItem('bb_config_v2');
+                if (stored) setConfig(JSON.parse(stored));
+            }, []);
+
+            const saveConfig = () => {
+                localStorage.setItem('bb_config_v2', JSON.stringify(config));
+                loadFiles();
+            };
+
+            const parseCSV = (text) => {
+                return new Promise(resolve => {
+                    Papa.parse(text, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (res) => resolve(res.data)
+                    });
+                });
+            };
+
+            const normalizeName = (n) => n ? n.trim().replace(/\s+/g, ' ') : 'Unknown';
+
+            const loadFiles = async () => {
+                setStatus({ type: 'loading', msg: 'Loading...' });
+                try {
+                    // 1. Load Rosters
+                    if (!config.rosterPath) throw new Error("Please enter a Roster CSV path");
+                    const rRes = await fetch(config.rosterPath);
+                    if (!rRes.ok) throw new Error(`Could not find file: ${config.rosterPath}`);
+                    const rText = await rRes.text();
+                    const rParsed = await parseCSV(rText);
+
+                    // Map Roster Data (Fixed for your CSV format)
+                    const mappedRosters = rParsed.map(row => {
+                        // Handle "First Name" + "Last Name" columns
+                        let name = row['Player Name'] || row.player_name || row.Player;
+                        if (!name && (row['First Name'] || row.firstName)) {
+                            name = `${row['First Name'] || row.firstName || ''} ${row['Last Name'] || row.lastName || ''}`;
+                        }
+                        
+                        // Handle Entry ID from "Draft Entry" column
+                        const entry = row['Draft Entry'] || row['Entry ID'] || row.entry_id || 'Entry1';
+                        
+                        // Handle Pick/Round from "Pick Number"
+                        const pick = parseInt(row['Pick Number'] || row.pick_number || row.Pick || 0);
+                        const draftSize = parseInt(row['Draft Size'] || 12);
+                        const round = row['Round'] || (pick > 0 ? Math.ceil(pick / draftSize) : '-');
+
+                        return {
+                            name: normalizeName(name),
+                            position: row['Position'] || row.position || 'N/A',
+                            team: row['Team'] || row.team || 'N/A',
+                            entry_id: entry,
+                            pick: pick,
+                            round: round
+                        };
+                    }).filter(p => p.name !== 'Unknown');
+
+                    console.log(`Loaded ${mappedRosters.length} roster rows`);
+                    setRosterData(mappedRosters);
+
+                    // 2. Load ADP (Optional)
+                    let adpMap = {};
+                    if (config.adpPath) {
+                        try {
+                            const aRes = await fetch(config.adpPath);
+                            if (aRes.ok) {
+                                const aText = await aRes.text();
+                                const aParsed = await parseCSV(aText);
+                                aParsed.forEach(row => {
+                                    const name = normalizeName(`${row.firstName || ''} ${row.lastName || ''}`);
+                                    if (name !== 'Unknown') {
+                                        adpMap[name] = {
+                                            adp: parseFloat(row.adp || 0),
+                                            proj: parseFloat(row.projectedPoints || 0)
+                                        };
+                                    }
+                                });
+                                console.log(`Loaded ADP for ${Object.keys(adpMap).length} players`);
+                            }
+                        } catch (e) {
+                            console.warn("ADP Load failed", e);
+                        }
+                    }
+
+                    // 3. Aggregate Data
+                    processMasterList(mappedRosters, adpMap);
+                    setStatus({ type: 'success', msg: `Successfully loaded ${mappedRosters.length} players across ${new Set(mappedRosters.map(r=>r.entry_id)).size} entries.` });
+
+                } catch (err) {
+                    console.error(err);
+                    setStatus({ type: 'error', msg: err.message });
+                }
+            };
+
+            const processMasterList = (rosters, adpMap) => {
+                const totalEntries = new Set(rosters.map(r => r.entry_id)).size;
+                const playerMap = {};
+
+                rosters.forEach(r => {
+                    if (!playerMap[r.name]) {
+                        playerMap[r.name] = {
+                            name: r.name,
+                            position: r.position,
+                            team: r.team,
+                            count: 0,
+                            entries: [],
+                            adp: adpMap[r.name]?.adp || '-',
+                            proj: adpMap[r.name]?.proj || '-'
+                        };
+                    }
+                    playerMap[r.name].count++;
+                    playerMap[r.name].entries.push(r.entry_id);
+                });
+
+                const final = Object.values(playerMap).map(p => ({
+                    ...p,
+                    exposure: ((p.count / totalEntries) * 100).toFixed(1)
+                })).sort((a,b) => parseFloat(b.exposure) - parseFloat(a.exposure));
+
+                setMasterPlayers(final);
+            };
+
+            return (
+                <div className="app-container">
+                    <h1>BEST BALL MANAGER</h1>
+                    
+                    <div className="config-section">
+                        <label>Roster CSV Path (e.g. ./rosters.csv)</label>
+                        <input className="path-input" value={config.rosterPath} onChange={e => setConfig({...config, rosterPath: e.target.value})} />
+                        
+                        <label>ADP CSV Path (e.g. ./underdog_adp_2026-02-04.csv)</label>
+                        <input className="path-input" value={config.adpPath} onChange={e => setConfig({...config, adpPath: e.target.value})} placeholder="Optional: Full path to ADP file" />
+                        
+                        <button className="load-button" onClick={saveConfig}>Load Data</button>
+                        
+                        {status.msg && (
+                            <div style={{marginTop: '1rem', color: status.type === 'error' ? 'var(--accent-red)' : 'var(--accent-green)'}}>
+                                {status.msg}
+                            </div>
+                        )}
+                    </div>
+
+                    {masterPlayers.length > 0 && (
+                        <div className="card">
+                            <h2>Top Exposures ({masterPlayers.length} Players)</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Pos</th>
+                                        <th>Team</th>
+                                        <th>Exposure</th>
+                                        <th>ADP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {masterPlayers.slice(0, 50).map(p => (
+                                        <tr key={p.name}>
+                                            <td>{p.name}</td>
+                                            <td><span className={`badge badge-${p.position.toLowerCase()}`}>{p.position}</span></td>
+                                            <td>{p.team}</td>
+                                            <td>{p.exposure}% ({p.count})</td>
+                                            <td>{p.adp}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
