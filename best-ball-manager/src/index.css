@@ -1,0 +1,118 @@
+:root {
+  --bg-dark: #0a0e1a;
+  --bg-card: #141824;
+  --bg-hover: #1a1f2e;
+  --border: #2a3142;
+  --text-primary: #e8eaed;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-yellow: #f59e0b;
+  --accent-red: #ef4444;
+  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg-dark); color: var(--text-primary); }
+.app-container { min-height: 100vh; padding: 2rem; }
+h1 { font-family: 'JetBrains Mono', monospace; font-size: 2rem; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+.config-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+.path-input { width: 100%; background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace; }
+.load-button { background: var(--gradient-primary); color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
+.load-button:hover { transform: translateY(-2px); }
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+td { padding: 1rem; border-bottom: 1px solid var(--border); }
+.badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+.badge-rb { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+.badge-wr { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+.badge-qb { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+.badge-te { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+.tab-bar { display:flex; gap: 8px; margin-bottom: 12px; }
+.tab-button { background: transparent; border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; cursor:pointer; color: var(--text-primary); }
+.tab-button.active { background: var(--bg-hover); }
+.exposure-table table thead th {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.exposure-scroll {
+  max-height: 56vh;   /* scrollable window height — adjust as needed */
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+/* Improve row spacing in the scrollable area */
+.exposure-scroll table tbody td {
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- fixed table header + scrollable body --- */
+.table-container {
+  width: 100%;
+  /* outer container for visual card padding, not the scrollbar */
+}
+
+/* Use fixed table layout for consistent column widths */
+.exposure-fixed-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* critical for header/body alignment */
+}
+
+/* Make thead behave like a table-row group and keep it visible */
+.exposure-fixed-table thead {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* tbody becomes a block with its own scroll */
+.exposure-fixed-table tbody {
+  display: block;
+  max-height: 56vh; /* adjust height as you prefer */
+  overflow-y: auto;
+  width: 100%;
+}
+
+/* tbody rows need to be table-row display for width calc */
+.exposure-fixed-table tbody tr {
+  display: table;
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* cells */
+.exposure-fixed-table th,
+.exposure-fixed-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* explicit column widths (tweak to taste) */
+.exposure-fixed-table .col-name { width: 36%; text-align: left; }
+.exposure-fixed-table .col-pos  { width: 8%; text-align: left; }
+.exposure-fixed-table .col-team { width: 12%; text-align: left; }
+.exposure-fixed-table .col-exposure { width: 16%; text-align: left; }
+.exposure-fixed-table .col-count { width: 8%; text-align: left; }
+.exposure-fixed-table .col-adp { width: 10%; text-align: left; }
+
+/* header styling */
+.exposure-fixed-table thead th {
+  background: transparent;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+/* row hover */
+.exposure-fixed-table tbody tr:hover td {
+  background: var(--bg-hover);
+}

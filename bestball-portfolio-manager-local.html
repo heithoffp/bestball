@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Best Ball Portfolio Manager (Fixed)</title>
+
+    <!-- TODO (MVP): Consider replacing CDN React/Babel with a build step once MVP stabilizes -->
+
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- TODO (MVP): Add charting library (Chart.js / Recharts / D3) for ADP scatter + time-series -->
+
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -52,7 +58,15 @@
         function App() {
             const [config, setConfig] = useState({ rosterPath: '', adpPath: '' });
             const [rosterData, setRosterData] = useState([]);
+            const [activeTab, setActiveTab] = useState('exposures');
+
+            // TODO (MVP): Extend masterPlayers to include:
+            // - unique internal player_id
+            // - rookie flag (derived or manually assigned)
+            // - historical ADP array (for time-series)
             const [masterPlayers, setMasterPlayers] = useState([]);
+
+            // TODO (MVP): Store raw ADP rows with timestamps for time-series charts
             const [status, setStatus] = useState({ type: '', msg: '' });
 
             // Load Config
@@ -76,30 +90,34 @@
                 });
             };
 
+            // TODO (MVP): Improve name normalization
+            // - lowercase
+            // - strip suffixes (Jr, Sr, III)
+            // - normalize special characters
             const normalizeName = (n) => n ? n.trim().replace(/\s+/g, ' ') : 'Unknown';
 
             const loadFiles = async () => {
                 setStatus({ type: 'loading', msg: 'Loading...' });
                 try {
-                    // 1. Load Rosters
+                    // =============================
+                    // CSV Upload & Parsing (MVP)
+                    // =============================
+                    // TODO (MVP): Support drag-and-drop file upload (File API)
+                    // TODO (MVP): Add column-mapping UI instead of hard-coded column names
+
                     if (!config.rosterPath) throw new Error("Please enter a Roster CSV path");
                     const rRes = await fetch(config.rosterPath);
                     if (!rRes.ok) throw new Error(`Could not find file: ${config.rosterPath}`);
                     const rText = await rRes.text();
                     const rParsed = await parseCSV(rText);
 
-                    // Map Roster Data (Fixed for your CSV format)
                     const mappedRosters = rParsed.map(row => {
-                        // Handle "First Name" + "Last Name" columns
                         let name = row['Player Name'] || row.player_name || row.Player;
                         if (!name && (row['First Name'] || row.firstName)) {
                             name = `${row['First Name'] || row.firstName || ''} ${row['Last Name'] || row.lastName || ''}`;
                         }
-                        
-                        // Handle Entry ID from "Draft Entry" column
+
                         const entry = row['Draft Entry'] || row['Entry ID'] || row.entry_id || 'Entry1';
-                        
-                        // Handle Pick/Round from "Pick Number"
                         const pick = parseInt(row['Pick Number'] || row.pick_number || row.Pick || 0);
                         const draftSize = parseInt(row['Draft Size'] || 12);
                         const round = row['Round'] || (pick > 0 ? Math.ceil(pick / draftSize) : '-');
@@ -114,10 +132,14 @@
                         };
                     }).filter(p => p.name !== 'Unknown');
 
-                    console.log(`Loaded ${mappedRosters.length} roster rows`);
                     setRosterData(mappedRosters);
 
-                    // 2. Load ADP (Optional)
+                    // =============================
+                    // ADP Load (MVP)
+                    // =============================
+                    // TODO (MVP): Store ADP snapshots with timestamps
+                    // TODO (MVP): Allow multiple ADP uploads to build time-series
+
                     let adpMap = {};
                     if (config.adpPath) {
                         try {
@@ -134,37 +156,53 @@
                                         };
                                     }
                                 });
-                                console.log(`Loaded ADP for ${Object.keys(adpMap).length} players`);
                             }
                         } catch (e) {
                             console.warn("ADP Load failed", e);
                         }
                     }
 
-                    // 3. Aggregate Data
                     processMasterList(mappedRosters, adpMap);
-                    setStatus({ type: 'success', msg: `Successfully loaded ${mappedRosters.length} players across ${new Set(mappedRosters.map(r=>r.entry_id)).size} entries.` });
+                    setStatus({ type: 'success', msg: `Loaded ${mappedRosters.length} players.` });
 
                 } catch (err) {
-                    console.error(err);
                     setStatus({ type: 'error', msg: err.message });
                 }
             };
 
+            const stableId = (input) => {
+                let hash = 0;
+                for (let i = 0; i < input.length; i++) {
+                    hash = ((hash << 5) - hash) + input.charCodeAt(i);
+                    hash |= 0;
+                }
+                return `p_${Math.abs(hash)}`;
+            };
+
             const processMasterList = (rosters, adpMap) => {
                 const totalEntries = new Set(rosters.map(r => r.entry_id)).size;
+
+                // =============================
+                // Canonical Player Table (MVP)
+                // =============================
+                // TODO (MVP): Generate stable player_id (hash of name+team+position)
+                // TODO (MVP): Detect rookies (via external list or year drafted)
+                // TODO (MVP): Store per-player list of draft picks (for avg ADP calc)
+
                 const playerMap = {};
 
                 rosters.forEach(r => {
                     if (!playerMap[r.name]) {
+                        const canonicalKey = `${r.name}|${r.position}|${r.team}`;
                         playerMap[r.name] = {
+                            player_id: stableId(canonicalKey),
                             name: r.name,
                             position: r.position,
                             team: r.team,
+                            rookie: false,
                             count: 0,
                             entries: [],
-                            adp: adpMap[r.name]?.adp || '-',
-                            proj: adpMap[r.name]?.proj || '-'
+                            adp: adpMap[r.name]?.adp || '-'
                         };
                     }
                     playerMap[r.name].count++;
@@ -174,7 +212,8 @@
                 const final = Object.values(playerMap).map(p => ({
                     ...p,
                     exposure: ((p.count / totalEntries) * 100).toFixed(1)
-                })).sort((a,b) => parseFloat(b.exposure) - parseFloat(a.exposure));
+                }))
+                .sort((a,b) => parseFloat(b.exposure) - parseFloat(a.exposure));
 
                 setMasterPlayers(final);
             };
@@ -182,50 +221,132 @@
             return (
                 <div className="app-container">
                     <h1>BEST BALL MANAGER</h1>
-                    
+
                     <div className="config-section">
-                        <label>Roster CSV Path (e.g. ./rosters.csv)</label>
-                        <input className="path-input" value={config.rosterPath} onChange={e => setConfig({...config, rosterPath: e.target.value})} />
-                        
-                        <label>ADP CSV Path (e.g. ./underdog_adp_2026-02-04.csv)</label>
-                        <input className="path-input" value={config.adpPath} onChange={e => setConfig({...config, adpPath: e.target.value})} placeholder="Optional: Full path to ADP file" />
-                        
+                        {/* TODO (MVP): Replace path-based loading with file picker UI */}
+                        <label>Roster CSV Path</label>
+                        <input className="path-input" value={config.rosterPath}
+                            onChange={e => setConfig({...config, rosterPath: e.target.value})} />
+
+                        <label>ADP CSV Path</label>
+                        <input className="path-input" value={config.adpPath}
+                            onChange={e => setConfig({...config, adpPath: e.target.value})} />
+
                         <button className="load-button" onClick={saveConfig}>Load Data</button>
-                        
-                        {status.msg && (
-                            <div style={{marginTop: '1rem', color: status.type === 'error' ? 'var(--accent-red)' : 'var(--accent-green)'}}>
-                                {status.msg}
-                            </div>
-                        )}
                     </div>
+
+                    {/* =============================
+                        Portfolio Overview (MVP)
+                       ============================= */}
+                    {/* TODO (MVP): Add filters by:
+                        - position
+                        - team
+                        - individual entry
+                    */}
+
+                    {/* =============================
+                        Exposure Summary Dashboard (MVP)
+                       ============================= */}
+                    {/* TODO (MVP): Add charts:
+                        - exposure by position
+                        - exposure by team
+                    */}
 
                     {masterPlayers.length > 0 && (
                         <div className="card">
-                            <h2>Top Exposures ({masterPlayers.length} Players)</h2>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Player</th>
-                                        <th>Pos</th>
-                                        <th>Team</th>
-                                        <th>Exposure</th>
-                                        <th>ADP</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {masterPlayers.slice(0, 50).map(p => (
-                                        <tr key={p.name}>
-                                            <td>{p.name}</td>
-                                            <td><span className={`badge badge-${p.position.toLowerCase()}`}>{p.position}</span></td>
-                                            <td>{p.team}</td>
-                                            <td>{p.exposure}% ({p.count})</td>
-                                            <td>{p.adp}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            <div className="tab-bar">
+                                <button
+                                    className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('exposures')}
+                                >
+                                    Top Exposures
+                                </button>
+                                <button
+                                    className={`tab-button ${activeTab === 'canonical' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('canonical')}
+                                >
+                                    Canonical Player Table
+                                </button>
+                            </div>
+
+                            {activeTab === 'exposures' && (
+                                <>
+                                    <h2>Top Exposures</h2>
+
+                                    {/* TODO (MVP): Add sortable columns */}
+                                    {/* TODO (MVP): Add exposure threshold highlighting */}
+
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Player</th>
+                                                <th>Pos</th>
+                                                <th>Team</th>
+                                                <th>Exposure</th>
+                                                <th>ADP</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {masterPlayers.slice(0, 50).map(p => (
+                                                <tr key={p.name}>
+                                                    <td>{p.name}</td>
+                                                    <td>{p.position}</td>
+                                                    <td>{p.team}</td>
+                                                    <td>{p.exposure}% ({p.count})</td>
+                                                    <td>{p.adp}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </>
+                            )}
+
+                            {activeTab === 'canonical' && (
+                                <>
+                                    <h2>Canonical Player Table</h2>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Player ID</th>
+                                                <th>Player</th>
+                                                <th>Pos</th>
+                                                <th>Team</th>
+                                                <th>Rookie</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {masterPlayers.map(p => (
+                                                <tr key={p.player_id}>
+                                                    <td>{p.player_id}</td>
+                                                    <td>{p.name}</td>
+                                                    <td>{p.position}</td>
+                                                    <td>{p.team}</td>
+                                                    <td>{p.rookie ? 'Yes' : 'No'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </>
+                            )}
                         </div>
                     )}
+
+                    {/* =============================
+                        ADP vs Exposure Analysis (MVP)
+                       ============================= */}
+                    {/* TODO (MVP): Scatter plot:
+                        X = ADP
+                        Y = Exposure %
+                        Bubble size = count
+                    */}
+                    {/* TODO (MVP): Highlight players where exposure deviates from ADP expectation */}
+
+                    {/* =============================
+                        ADP Time-Series (MVP)
+                       ============================= */}
+                    {/* TODO (MVP): Line chart of ADP over time */}
+                    {/* TODO (MVP): Player selector with comparison overlay */}
+                    {/* TODO (MVP): Mark draft events on timeline */}
                 </div>
             );
         }

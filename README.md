@@ -1,93 +1,195 @@
-# Underdog ADP Scraper
+# Best Ball Portfolio Dashboard
 
-Python scripts to scrape Average Draft Position (ADP) data from DraftSharks Underdog Fantasy.
+A web-based dashboard for analyzing and managing Underdog Fantasy Best Ball portfolios.  
+The tool focuses on **exposure management**, **ADP trends**, and **portfolio risk** using uploaded CSV data.
 
-## Files
+This project is designed to support both **early-season drafts (Big Board)** and **late-season drafts (Best Ball Mania)** by adapting analysis depth to the available information.
 
-1. **scrape_adp.py** - Basic scraper using requests + BeautifulSoup
-2. **scrape_adp_enhanced.py** - Enhanced scraper with Selenium support for dynamic content
 
-## Requirements
+To run the app `npm run dev`
+---
 
-### Basic Version
-```bash
-pip install requests beautifulsoup4
-```
+## Core Inputs
 
-### Enhanced Version (recommended)
-```bash
-pip install requests beautifulsoup4 selenium
-```
+### 1. Portfolio / Exposure CSV
+Typical Underdog export containing drafted rosters.
 
-You'll also need Chrome browser and ChromeDriver for Selenium:
-- Download ChromeDriver: https://chromedriver.chromium.org/downloads
-- Match your Chrome browser version
-- Add ChromeDriver to your PATH
+Expected fields (flexible mapping supported):
+- `player_name`
+- `position`
+- `team`
+- `entry_id` (roster identifier)
+- `pick_round` (optional)
+- `pick_overall` (optional)
+- `bye_week` (optional)
 
-## Usage
+### 2. Underdog ADP Data
+Current or historical ADP snapshot(s).
 
-### Basic Version
-```bash
-python scrape_adp.py
-```
+Expected fields:
+- `player_name`
+- `position`
+- `team`
+- `adp`
+- `adp_rank`
+- `timestamp`
 
-### Enhanced Version (recommended)
-```bash
-python scrape_adp_enhanced.py
-```
+---
 
-## Output
+## MVP Features (Phase 1)
 
-Both scripts will create a CSV file named `underdog_adp.csv` containing:
-- Player names
-- Positions
-- Teams
-- ADP values
-- Other relevant fantasy football statistics
+### CSV Upload & Parsing
+- Upload portfolio and ADP CSVs
 
-## Example Output
 
-```csv
-Rank,Player,Position,Team,ADP,Change
-1,Christian McCaffrey,RB,SF,1.2,0
-2,CeeDee Lamb,WR,DAL,2.5,+1
-3,Tyreek Hill,WR,MIA,3.1,-1
-...
-```
+### Canonical Player Table
+- Normalized player identity (name, position, team)
+- Rookie flag
+- Unique internal player ID
 
-## Troubleshooting
+### Portfolio Overview
+- Aggregate exposure table:
+  - % of entries per player
+  - Total count
+  - Average draft position
+- Filters by:
+  - Position
+  - Team
+  - Individual entry
 
-### Script returns no data
-- The website might use JavaScript to load content (use enhanced version)
-- Website structure may have changed (inspect with browser DevTools)
-- Network connectivity issues
+### Exposure Summary Dashboard
+- Top exposures by player
+- Exposure distribution by position
+- Exposure distribution by team
 
-### Selenium errors
-- Make sure Chrome and ChromeDriver versions match
-- Verify ChromeDriver is in your PATH
-- Try running with `--headless=false` to see what's happening
+### ADP vs Exposure Analysis
+- Scatter plot:
+  - X-axis: ADP
+  - Y-axis: Portfolio exposure %
+  - Bubble size: number of shares
+- Highlight players where exposure diverges from market pricing
 
-### Permission errors
-- Ensure you have write permissions in the directory
-- Try running from a different location
+### ADP Time-Series
+- Line chart of ADP over time
+- Player selection with comparison overlay
+- Ability to mark when portfolio shares were added
 
-## Customization
 
-You can modify the scripts to:
-- Change output filename (edit `filename` parameter in `save_to_csv()`)
-- Add data filtering or transformation
-- Scrape additional pages or data points
-- Export to different formats (JSON, Excel, etc.)
+---
 
-## Legal & Ethical Considerations
+## Phase 2 Features (High-Value Analytics)
 
-- Respect the website's robots.txt file
-- Don't overload the server with requests
-- Use responsibly and for personal use only
-- Check the website's Terms of Service
+### Correlation Analysis
+- Pairwise player correlation heatmap
+- Identify correlated upside and shared failure modes
+- Useful for detecting fragile portfolio construction
 
-## Notes
+### Monte Carlo Portfolio Simulation
+- Weekly scoring simulation
+- Best-ball lineup selection logic
+- Output distributions:
+  - Median outcome
+  - 90th / 99th percentile outcomes
+  - Probability of top-X% finish
 
-- Data is scraped as-is from the website
-- ADP values are updated regularly by DraftSharks
-- Script may need updates if website structure changes
+### Schedule-Aware Analysis
+- NFL schedule integration
+- Bye-week impact visualization
+- Opponent strength indicators
+- Identification of favorable week clusters
+
+### What-If Scenarios
+- Replace-player analysis
+- Exposure rebalance preview
+- Delta in portfolio EV and downside risk
+
+### Draft Target Suggestions
+- Identify players that:
+  - Reduce correlation
+  - Improve exposure balance
+  - Offer high upside relative to ADP
+  - Expected Round 2 combinations
+- While drafting, compare combinations owned (round 1-3) vs available options
+
+---
+
+## Phase 3 Features (Advanced / Long-Term)
+
+### Portfolio Optimization
+- Exposure rebalancing recommendations
+- Marginal EV per pick analysis
+- Constraints for max exposure per player/team
+
+### Historical Backtesting
+- Apply strategies to past seasons
+- Compare Big Board vs Best Ball Mania approaches
+- ROI and finish distribution analysis
+
+### Draft Simulation Engine
+- ADP-aware draft simulator
+- Strategy constraints (stacking, exposure caps)
+- Pick recommendation logic
+
+### Integrations
+- Automatic Underdog data ingestion (if available)
+- Google Sheets sync
+- Notifications for major ADP shifts
+
+---
+
+## UX Principles
+
+- Fast time-to-insight (<30 seconds from upload to dashboard)
+- Drill-down friendly (portfolio → player → correlation)
+- Explicit uncertainty (confidence indicators, timestamps)
+- Manual overrides everywhere (expert-in-the-loop)
+- Saved views for different drafting phases
+
+---
+
+## Data Integrity & Guardrails
+
+- Player name matching must support:
+  - Exact match
+  - Normalized match
+  - Fuzzy match
+  - Manual override
+- ADP data is timestamped and never treated as static truth
+- Correlation and simulation models use regularization to avoid overfitting
+- Historical distributions adjusted for rookies and injury risk
+
+---
+
+## Target Use Cases
+
+- Identify overexposed players before advancing draft season
+- Track ADP movement relative to portfolio exposure
+- Reduce correlated downside risk
+- Improve probability of top-percentile tournament outcomes
+- Support different drafting strategies across the calendar year
+
+---
+
+## Non-Goals (Explicitly Out of Scope for MVP)
+
+- Live draft assistant
+- Player projection modeling from scratch
+- Betting or DFS optimization
+- Lineup setting (best-ball is automatic)
+
+---
+
+## Roadmap Summary
+
+- **Phase 1:** Visibility & exposure management
+- **Phase 2:** Risk, correlation, and simulation
+- **Phase 3:** Optimization and automation
+
+---
+
+## Philosophy
+
+This tool is designed to **augment expert decision-making**, not replace it.  
+The goal is clarity, not automation for its own sake.
+
+If the data is wrong or opaque, the analysis is useless — correctness and transparency come first.
