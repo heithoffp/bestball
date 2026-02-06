@@ -10,7 +10,6 @@ const MAX_POINTS = 10;
 function AdpSparkline({ history }) {
   if (!history || history.length === 0) return null;
 
-  // take last N snapshots
   const data = history
     .filter(h => h.adpPick !== null)
     .slice(-MAX_POINTS);
@@ -19,11 +18,16 @@ function AdpSparkline({ history }) {
 
   const first = data[0].adpPick;
   const last = data[data.length - 1].adpPick;
+  
+  // Calculate the raw difference
+  const diff = last - first;
 
+  // Only change color if the movement is GREATER than 1 ADP
+  // Note: 'last < first - 1' means the pick number got smaller (player rising)
   const trendColor =
-    last < first ? '#10b981' :   // rising (earlier pick)
-    last > first ? '#ef4444' :   // falling
-    '#9ca3af';                   // flat
+    diff < -1 ? '#10b981' :  // Rising (e.g., went from 50 to 48.5)
+    diff > 1  ? '#ef4444' :  // Falling (e.g., went from 50 to 51.2)
+    '#9ca3af';               // Neutral/Flat (within +/- 1.0)
 
   return (
     <div style={{ width: '100%', height: 28 }}>
@@ -32,7 +36,7 @@ function AdpSparkline({ history }) {
           <YAxis
             dataKey="adpPick"
             reversed
-            domain={['dataMin', 'dataMax']}
+            domain={['dataMin - 1', 'dataMax + 1']} // Added padding for better visibility
             hide
           />
           <Line
@@ -41,7 +45,7 @@ function AdpSparkline({ history }) {
             stroke={trendColor}
             strokeWidth={2}
             dot={false}
-            connectNulls={false}
+            animationDuration={300}
           />
         </LineChart>
       </ResponsiveContainer>
