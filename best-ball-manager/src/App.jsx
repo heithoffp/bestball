@@ -5,6 +5,7 @@ import CanonicalTable from './components/CanonicalTable';
 import { parseCSVFile, parseCSVText } from './utils/csv';
 import { processMasterList, parseAdpString } from './utils/helpers';
 import AdpTimeSeries from './components/AdpTimeSeries';
+import ComboAnalysis from './components/ComboAnalysis';
 
 
 // NOTE: roster CSV is a single, fixed file inside src/assets
@@ -152,12 +153,13 @@ export default function App() {
         <div className="card">
           <div className="tab-bar">
             <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
-            <button className={`tab-button ${activeTab === 'canonical' ? 'active' : ''}`} onClick={() => setActiveTab('canonical')}>Canonical Player Table</button>
             <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Time Series</button>
+            <button className={`tab-button ${activeTab === 'combos' ? 'active' : ''}`} onClick={() => setActiveTab('combos')}>Combo Analysis</button>
           </div>
 
           {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} />}
           {activeTab === 'canonical' && <CanonicalTable masterPlayers={masterPlayers} />}
+          {activeTab === 'combos' && <ComboAnalysis rosterData={rosterData} />}
           {activeTab === 'timeseries' && (
             <AdpTimeSeries
               adpSnapshots={adpSnapshots}
