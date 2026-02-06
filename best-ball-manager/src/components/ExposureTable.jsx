@@ -1,5 +1,6 @@
 // src/components/ExposureTable.jsx
 import React, { useMemo, useState } from 'react';
+import AdpSparkline from './AdpSparkline';
 
 /**
  * Exposures table with:
@@ -95,6 +96,7 @@ export default function ExposureTable({ masterPlayers }) {
                 <th className="col-exposure" onClick={() => onSort('exposure')}>Exposure % {sortArrow('exposure')}</th>
                 <th className="col-count" onClick={() => onSort('count')}>Count {sortArrow('count')}</th>
                 <th className="col-adp" onClick={() => onSort('adp')}>ADP {sortArrow('adp')}</th>
+                <th>ADP Trend</th>
               </tr>
             </thead>
 
@@ -113,6 +115,9 @@ export default function ExposureTable({ masterPlayers }) {
                   <td className="col-exposure">{p.exposure}%</td>
                   <td className="col-count">{p.count}</td>
                   <td className="col-adp">{p.adpDisplay !== '-' ? p.adpDisplay : '-'}</td>
+                  <td style={{ minWidth: 120 }}>
+                    <AdpSparkline history={p.history} />
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -4,6 +4,8 @@ import ExposureTable from './components/ExposureTable';
 import CanonicalTable from './components/CanonicalTable';
 import { parseCSVFile, parseCSVText } from './utils/csv';
 import { processMasterList, parseAdpString } from './utils/helpers';
+import AdpTimeSeries from './components/AdpTimeSeries';
+
 
 // NOTE: roster CSV is a single, fixed file inside src/assets
 // The ?raw import returns the file contents as a string at build/dev time.
@@ -26,12 +28,6 @@ export default function App() {
     autoLoadFromAssets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Save config but we won't rely on config for the auto-load case
-  // const saveConfig = (newConfig = config) => {
-  //   localStorage.setItem('bb_config_v2', JSON.stringify(newConfig));
-  //   setConfig(newConfig);
-  // };
 
   // -------------------------
   // AUTO-LOAD IMPLEMENTATION
@@ -78,7 +74,7 @@ export default function App() {
       if (adpEntries.length === 0) {
         setAdpSnapshots([]);
         // Still build master list without ADP
-        const master = processMasterList(mappedRosters, {}, 12);
+        const master = processMasterList(mappedRosters, {}, 12, adpSnapshots);
         setMasterPlayers(master);
         setStatus({ type: 'success', msg: `Loaded ${mappedRosters.length} roster rows; no ADP snapshots found.` });
         return;
@@ -131,7 +127,7 @@ export default function App() {
       // ----------------
       // 4) Build canonical master list with latest ADP
       // ----------------
-      const master = processMasterList(mappedRosters, localAdpMap, 12);
+      const master = processMasterList(mappedRosters, localAdpMap, 12, snapshots);
       setMasterPlayers(master);
 
       setStatus({ type: 'success', msg: `Loaded ${mappedRosters.length} roster rows; ${snapshots.length} ADP snapshots loaded (latest: ${latest ? latest.date : 'n/a'}).` });
@@ -157,10 +153,18 @@ export default function App() {
           <div className="tab-bar">
             <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
             <button className={`tab-button ${activeTab === 'canonical' ? 'active' : ''}`} onClick={() => setActiveTab('canonical')}>Canonical Player Table</button>
+            <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Time Series</button>
           </div>
 
           {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} />}
           {activeTab === 'canonical' && <CanonicalTable masterPlayers={masterPlayers} />}
+          {activeTab === 'timeseries' && (
+            <AdpTimeSeries
+              adpSnapshots={adpSnapshots}
+              masterPlayers={masterPlayers}
+              teams={12} // or wire in configurable league size
+            />
+          )}
         </div>
       )}
     </div>

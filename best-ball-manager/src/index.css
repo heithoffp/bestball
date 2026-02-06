@@ -116,3 +116,15 @@ td { padding: 1rem; border-bottom: 1px solid var(--border); }
 .exposure-fixed-table tbody tr:hover td {
   background: var(--bg-hover);
 }
+
+/* ADP Time-Series selector styles (small) */
+.adp-selector {
+  max-height: 36vh;
+  overflow-y: auto;
+  border-radius: 8px;
+}
+
+/* small tweak for recharts tooltip background if needed */
+.recharts-default-tooltip {
+  background: rgba(15, 23, 36, 0.95);
+}
