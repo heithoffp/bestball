@@ -173,6 +173,7 @@ export default function App() {
               adpSnapshots={adpSnapshots}
               masterPlayers={masterPlayers}
               teams={12}
+              rosterData={rosterData}
             />
           )}
         </div>
