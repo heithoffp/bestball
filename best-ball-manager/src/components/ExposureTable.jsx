@@ -1,20 +1,20 @@
-// src/components/ExposureTable.jsx
 import React, { useMemo, useState } from 'react';
 import AdpSparkline from './AdpSparkline';
 
-/**
- * Exposures table with:
- * - search (name, team, position)
- * - sortable columns (name, position, team, exposure, count, adp)
- * - single-table layout with scrollable tbody (header aligned)
- *
- * masterPlayers entries must include:
- *  - name, position, team, exposure, count
- *  - adpDisplay (string) and adpPick (number|null)
- */
+// --- Shared Utilities ---
+const COLORS = {
+  QB: '#bf44ef',
+  RB: '#10b981',
+  WR: '#f59e0b',
+  TE: '#3b82f6',
+  default: '#6b7280'
+};
+
+const getPosColor = (pos) => COLORS[pos] || COLORS.default;
+
 export default function ExposureTable({ masterPlayers }) {
   const [search, setSearch] = useState('');
-  const [sortField, setSortField] = useState('exposure'); // default
+  const [sortField, setSortField] = useState('exposure');
   const [sortDir, setSortDir] = useState('desc');
 
   const onSort = (field) => {
@@ -22,8 +22,7 @@ export default function ExposureTable({ masterPlayers }) {
       setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
-      if (field === 'adp') setSortDir('asc');
-      else if (field === 'name') setSortDir('asc');
+      if (field === 'adp' || field === 'name') setSortDir('asc');
       else setSortDir('desc');
     }
   };
@@ -103,23 +102,50 @@ export default function ExposureTable({ masterPlayers }) {
             <tbody>
               {filteredAndSorted.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: '1rem' }}>No players match your search.</td>
+                  <td colSpan={7} style={{ padding: '1rem' }}>No players match your search.</td>
                 </tr>
               )}
 
-              {filteredAndSorted.map(p => (
-                <tr key={p.player_id}>
-                  <td className="col-name">{p.name}</td>
-                  <td className="col-pos">{p.position}</td>
-                  <td className="col-team">{p.team}</td>
-                  <td className="col-exposure">{p.exposure}%</td>
-                  <td className="col-count">{p.count}</td>
-                  <td className="col-adp">{p.adpDisplay !== '-' ? p.adpDisplay : '-'}</td>
-                  <td style={{ minWidth: 120 }}>
-                    <AdpSparkline history={p.history} />
-                  </td>
-                </tr>
-              ))}
+              {filteredAndSorted.map(p => {
+                const posColor = getPosColor(p.position);
+                
+                return (
+                  <tr key={p.player_id}>
+                    {/* Player Name with a colored accent border */}
+                    <td className="col-name" style={{ borderLeft: `4px solid ${posColor}`, fontWeight: 600 }}>
+                      {p.name}
+                    </td>
+
+                    {/* Position with a colored badge */}
+                    <td className="col-pos">
+                      <span style={{ 
+                        backgroundColor: `${posColor}20`, // 20% opacity background
+                        color: posColor, 
+                        padding: '2px 8px', 
+                        borderRadius: '4px', 
+                        fontSize: '10px', 
+                        fontWeight: '800',
+                        border: `1px solid ${posColor}40`
+                      }}>
+                        {p.position}
+                      </span>
+                    </td>
+
+                    <td className="col-team" style={{ opacity: 0.8 }}>{p.team}</td>
+                    
+                    {/* Exposure with a slight font weight boost */}
+                    <td className="col-exposure" style={{ fontWeight: 700 }}>
+                      {p.exposure}%
+                    </td>
+                    
+                    <td className="col-count">{p.count}</td>
+                    <td className="col-adp">{p.adpDisplay !== '-' ? p.adpDisplay : '-'}</td>
+                    <td style={{ minWidth: 120 }}>
+                      <AdpSparkline history={p.history} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
