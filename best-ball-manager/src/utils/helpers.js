@@ -54,112 +54,95 @@ export function parseAdpString(rawAdp) {
  *  - history: [{ date, adpPick, adpDisplay }, ... ] aligned to adpSnapshots (or empty)
  */
 export function processMasterList(rosters = [], adpMap = {}, teams = 12, adpSnapshots = []) {
-  // ------------------------
-  // 1) Build snapshot lookups (if snapshots provided)
-  // ------------------------
-  // Each lookup is a Map(normalizedName -> parsedAdpObj)
+  // 1) Build snapshot lookups (Map: Name -> ParsedADP)
   const snapshotLookups = (Array.isArray(adpSnapshots) && adpSnapshots.length > 0)
     ? adpSnapshots.map(snap => {
-        const lookup = new Map();
-        (snap.rows || []).forEach(row => {
-          // derive name similarly to ingestion logic
-          const nameCandidate = (
-            (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`).trim()
-            || row['Player Name'] || row.player_name || row.Player || ''
-          ).trim();
-          if (!nameCandidate) return;
+      const lookup = new Map();
+      (snap.rows || []).forEach(row => {
+        const nameCandidate = (
+          (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`).trim()
+          || row['Player Name'] || row.player_name || row.Player || ''
+        ).trim().replace(/\s+/g, ' ');
 
-          const normalized = nameCandidate.replace(/\s+/g, ' ');
-          // find common ADP column names; keep raw string so parseAdpString can handle it
-          const rawAdp = row.adp ?? row.ADP ?? row['ADP'] ?? row['Round.Pick'] ?? row['Adp'] ?? row['ADP (R.P)'] ?? '';
-          const parsed = parseAdpString(rawAdp);
-          lookup.set(normalized, parsed);
-        });
-        return { date: snap.date, lookup };
-      })
+        if (!nameCandidate) return;
+        const rawAdp = row.adp ?? row.ADP ?? row['ADP'] ?? row['Round.Pick'] ?? row['Adp'] ?? '';
+        lookup.set(nameCandidate, parseAdpString(rawAdp));
+      });
+      return { date: snap.date, lookup };
+    })
     : [];
 
-  // ------------------------
-  // 2) Build canonical player map from rosters
-  // ------------------------
+  // 2) Count exposures from rosters
   const totalEntries = new Set(rosters.map(r => r.entry_id)).size || 1;
-  const playerMap = {};
-
+  const draftCounts = {};
   rosters.forEach(r => {
-    const key = r.name;
-    if (!playerMap[key]) {
-      const canonicalKey = `${r.name}|${r.position}|${r.team}`;
-      playerMap[key] = {
-        player_id: stableId(canonicalKey),
-        name: r.name,
-        position: r.position,
-        team: r.team,
-        rookie: false,
-        count: 0,
-        entries: [],
-        history: [] // will be filled below if snapshots exist
-      };
-    }
-    playerMap[key].count++;
-    playerMap[key].entries.push(r.entry_id);
+    draftCounts[r.name] = (draftCounts[r.name] || 0) + 1;
   });
 
-  // ------------------------
-  // 3) If snapshots exist, populate per-player history aligned to snapshots (old -> new)
-  // ------------------------
-  if (snapshotLookups.length > 0) {
-    // For each snapshot (by index), for each player, push a history entry.
-    snapshotLookups.forEach((snapObj) => {
-      const date = snapObj.date;
-      const lookup = snapObj.lookup;
-      Object.values(playerMap).forEach(p => {
-        // lookup by the canonical name
-        const parsed = lookup.get(p.name);
-        if (parsed && parsed.pick !== null) {
-          p.history.push({ date, adpPick: parsed.pick, adpDisplay: parsed.display });
-        } else {
-          // preserve alignment: include null entries so sparklines/series can rely on positions
-          p.history.push({ date, adpPick: null, adpDisplay: '-' });
-        }
-      });
-    });
-  }
+  // 3) BUILD THE UNIVERSE: Collect EVERY unique player name from ADP and Rosters
+  const allPlayerNames = new Set([
+    ...Object.keys(adpMap),
+    ...rosters.map(r => r.name),
+    ...(snapshotLookups.length > 0 ? snapshotLookups[snapshotLookups.length - 1].lookup.keys() : [])
+  ]);
 
-  // ------------------------
-  // 4) Build final array using adpMap (latest) as primary source, fallback to last snapshot if available
-  // ------------------------
-  const final = Object.values(playerMap).map(p => {
-    // Primary: latest from adpMap keyed by normalized name
-    const adpObjFromMap = adpMap && (adpMap[p.name]);
+  // 4) Create the Master List by iterating over the Universe
+  const final = Array.from(allPlayerNames).map(name => {
+    // A) Get latest Info (Pos/Team) - Prefer roster data, fallback to latest ADP row
+    const rosterInstance = rosters.find(r => r.name === name);
+    const latestSnap = snapshotLookups[snapshotLookups.length - 1];
+
+    // Attempt to find metadata if player wasn't drafted
+    let pos = rosterInstance?.position || 'N/A';
+    let team = rosterInstance?.team || 'N/A';
+
+    // B) Resolve ADP Data
+    const adpObj = adpMap[name];
     let adpDisplay = '-';
     let adpPick = null;
 
-    if (adpObjFromMap) {
-      // adpMap entries may be { pick, display } coming from parseAdpString, or raw objects
-      adpPick = (adpObjFromMap.pick === undefined) ? (Number.isFinite(Number(adpObjFromMap)) ? Number(adpObjFromMap) : null) : adpObjFromMap.pick;
-      adpDisplay = (adpObjFromMap.display !== undefined) ? adpObjFromMap.display : (adpPick !== null ? String(adpPick) : '-');
-    } else if (snapshotLookups.length > 0) {
-      // fallback: use the last snapshot's lookup for this player
-      const lastSnap = snapshotLookups[snapshotLookups.length - 1];
-      const parsed = lastSnap.lookup.get(p.name);
-      if (parsed && parsed.pick !== null) {
+    if (adpObj) {
+      adpPick = adpObj.pick ?? (Number.isFinite(Number(adpObj)) ? Number(adpObj) : null);
+      adpDisplay = adpObj.display ?? (adpPick !== null ? String(adpPick) : '-');
+    } else if (latestSnap) {
+      const parsed = latestSnap.lookup.get(name);
+      if (parsed) {
         adpPick = parsed.pick;
         adpDisplay = parsed.display;
       }
     }
 
+    // C) Build History (Aligned to Snapshots)
+    const history = snapshotLookups.map(snapObj => {
+      const parsed = snapObj.lookup.get(name);
+      return {
+        date: snapObj.date,
+        adpPick: parsed?.pick ?? null,
+        adpDisplay: parsed?.display ?? '-'
+      };
+    });
+
+    const count = draftCounts[name] || 0;
+
     return {
-      ...p,
-      exposure: ((p.count / totalEntries) * 100).toFixed(1),
+      player_id: `id-${name}-${pos}-${team}`.replace(/\s+/g, ''),
+      name,
+      position: pos,
+      team,
+      count,
+      exposure: ((count / totalEntries) * 100).toFixed(1),
       adpDisplay,
-      adpPick
-      // history already exists on p (possibly empty)
+      adpPick,
+      history
     };
   })
-  .sort((a,b) => {
-    // default: sort by exposure desc
-    return parseFloat(b.exposure || 0) - parseFloat(a.exposure || 0);
-  });
+    .sort((a, b) => {
+      // Sort drafted players to top, then by ADP for the rest
+      if (parseFloat(b.exposure) !== parseFloat(a.exposure)) {
+        return parseFloat(b.exposure) - parseFloat(a.exposure);
+      }
+      return (a.adpPick || 999) - (b.adpPick || 999);
+    });
 
   return final;
 }

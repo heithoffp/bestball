@@ -526,7 +526,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
           </div>
         )}
 
- // 2. Updated Heat Map JSX
+ 
         {activeTab === 'qbqb' && (
           <div style={{ padding: '40px 20px', overflowX: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
 
@@ -547,7 +547,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
               </div>
             )}
 
-            <table style={{ borderCollapse: 'separate', borderSpacing: '3px', width: 'auto', margin: '0 auto' }}>
+            <table style={{ borderCollapse: 'separate', borderSpacing: '3px', width: 'auto', margin: '0 auto', tableLayout: 'fixed' }}>
               <thead>
                 <tr>
                   <th style={{ background: 'transparent' }}></th>

@@ -13,7 +13,7 @@ const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
 export default function App() {
   const [rosterData, setRosterData] = useState([]);
   const [masterPlayers, setMasterPlayers] = useState([]);
-  const [adpSnapshots, setAdpSnapshots] = useState([]); 
+  const [adpSnapshots, setAdpSnapshots] = useState([]);
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [activeTab, setActiveTab] = useState('exposures');
 
@@ -79,8 +79,8 @@ export default function App() {
       if (latest && latest.rows) {
         latest.rows.forEach(row => {
           // 1. Identify Name
-          const name = ( `${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
-                        || row['Player Name'] || row.player_name || row.Player );
+          const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
+            || row['Player Name'] || row.player_name || row.Player);
           if (!name) return;
           const normalizedName = name.trim().replace(/\s+/g, ' ');
 
@@ -98,6 +98,24 @@ export default function App() {
         });
       }
 
+      // 3.5) Build the "Universe" of all players in the ADP file
+      const universePlayers = [];
+      if (latest && latest.rows) {
+        latest.rows.forEach(row => {
+          const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
+            || row['Player Name'] || row.player_name || row.Player);
+          if (!name) return;
+          const normalizedName = name.trim().replace(/\s+/g, ' ');
+
+          universePlayers.push({
+            name: normalizedName,
+            // Get position and team from the ADP row so undrafted players have info
+            position: row.position || row.Position || row.pos || 'N/A',
+            team: teamLookup[normalizedName] || 'N/A'
+          });
+        });
+      }
+
       // 4) Enrich Rosters (Use "latest" team if available, otherwise original)
       const enrichedRosters = mappedRosters.map(player => {
         const latestTeam = teamLookup[player.name];
@@ -106,7 +124,7 @@ export default function App() {
           ...player,
           team: latestTeam || player.team || 'N/A',
           // Adding the ADP fields here
-          latestADP: adpData ? adpData.pick : null, 
+          latestADP: adpData ? adpData.pick : null,
           latestADPDisplay: adpData ? adpData.display : 'N/A',
           // Optional: Calculate "Value" (Draft Pick vs ADP)
           adpDiff: adpData && player.pick ? (adpData.pick - player.pick).toFixed(2) : null
@@ -115,7 +133,9 @@ export default function App() {
 
       // 5) UPDATE BOTH STATES WITH ENRICHED DATA
       setRosterData(enrichedRosters);
-      const master = processMasterList(enrichedRosters, localAdpMap, 12, snapshots);
+      // 5) Update Master List using the Universe
+      // Pass the universePlayers array as the source list
+      const master = processMasterList(enrichedRosters, localAdpMap, 12, snapshots, universePlayers);
       setMasterPlayers(master);
 
       setStatus({ type: 'success', msg: `Sync Complete: ${snapshots.length} snapshots loaded.` });
