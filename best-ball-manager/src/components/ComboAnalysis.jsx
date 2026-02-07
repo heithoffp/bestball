@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 
 // --- Shared Utilities ---
-const COLORS = { 
-  QB: '#ef4444', 
-  RB: '#10b981', 
-  WR: '#3b82f6', 
-  TE: '#f59e0b', 
-  default: '#6b7280' 
+const COLORS = {
+  QB: '#ef4444',
+  RB: '#10b981',
+  WR: '#3b82f6',
+  TE: '#f59e0b',
+  default: '#6b7280'
 };
 
 const getPosColor = (pos) => COLORS[pos] || COLORS.default;
@@ -60,7 +60,7 @@ function DraftFlowAnalysis({ rosterData }) {
     });
 
     // 3. Flatten for Columns based on selection
-    const flatten = (obj, parentCount) => 
+    const flatten = (obj, parentCount) =>
       Object.values(obj)
         .sort((a, b) => b.count - a.count)
         .map(item => ({
@@ -93,7 +93,7 @@ function DraftFlowAnalysis({ rosterData }) {
   const PlayerRow = ({ player, count, percent, isActive, onClick, isLeaf }) => {
     const color = getPosColor(player.position);
     return (
-      <div 
+      <div
         onClick={onClick}
         style={{
           position: 'relative',
@@ -108,15 +108,15 @@ function DraftFlowAnalysis({ rosterData }) {
       >
         {/* Background Exposure Bar */}
         <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0, 
-          width: `${percent}%`, backgroundColor: color, opacity: 0.15, 
+          position: 'absolute', left: 0, top: 0, bottom: 0,
+          width: `${percent}%`, backgroundColor: color, opacity: 0.15,
           pointerEvents: 'none', transition: 'width 0.3s ease'
         }} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, zIndex: 1, flex: 1 }}>
-          <span style={{ 
-            fontSize: 10, fontWeight: 800, color: color, 
-            background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: 4, minWidth: 24, textAlign: 'center' 
+          <span style={{
+            fontSize: 10, fontWeight: 800, color: color,
+            background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: 4, minWidth: 24, textAlign: 'center'
           }}>
             {player.position}
           </span>
@@ -135,10 +135,10 @@ function DraftFlowAnalysis({ rosterData }) {
   };
 
   const Header = ({ title }) => (
-    <div style={{ 
-      padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', 
-      background: 'rgba(0,0,0,0.2)', fontSize: 11, fontWeight: 700, 
-      letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary, #aaa)' 
+    <div style={{
+      padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)',
+      background: 'rgba(0,0,0,0.2)', fontSize: 11, fontWeight: 700,
+      letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary, #aaa)'
     }}>
       {title}
     </div>
@@ -151,13 +151,13 @@ function DraftFlowAnalysis({ rosterData }) {
         <Header title="Round 1 Pick" />
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {r1Data.map(p => (
-            <PlayerRow 
-              key={p.name} 
-              player={p} 
-              count={p.count} 
-              percent={p.percent} 
-              isActive={selectedR1 === p.name} 
-              onClick={() => { setSelectedR1(p.name); setSelectedR2(null); }} 
+            <PlayerRow
+              key={p.name}
+              player={p}
+              count={p.count}
+              percent={p.percent}
+              isActive={selectedR1 === p.name}
+              onClick={() => { setSelectedR1(p.name); setSelectedR2(null); }}
             />
           ))}
         </div>
@@ -168,18 +168,18 @@ function DraftFlowAnalysis({ rosterData }) {
         <Header title={selectedR1 ? `Round 2 (w/ ${selectedR1.split(' ').pop()})` : "Round 2"} />
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {!selectedR1 ? (
-             <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select a Round 1 player</div>
+            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select a Round 1 player</div>
           ) : r2Data.length === 0 ? (
-             <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No pairs found</div>
+            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No pairs found</div>
           ) : (
             r2Data.map(p => (
-              <PlayerRow 
-                key={p.name} 
-                player={p} 
-                count={p.count} 
-                percent={p.percent} 
-                isActive={selectedR2 === p.name} 
-                onClick={() => setSelectedR2(p.name)} 
+              <PlayerRow
+                key={p.name}
+                player={p}
+                count={p.count}
+                percent={p.percent}
+                isActive={selectedR2 === p.name}
+                onClick={() => setSelectedR2(p.name)}
               />
             ))
           )}
@@ -191,16 +191,16 @@ function DraftFlowAnalysis({ rosterData }) {
         <Header title="Round 3 Extension" />
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {!selectedR2 ? (
-             <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select Round 2 to see extensions</div>
+            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select Round 2 to see extensions</div>
           ) : r3Data.length === 0 ? (
-             <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No Round 3 data</div>
+            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No Round 3 data</div>
           ) : (
             r3Data.map(p => (
-              <PlayerRow 
-                key={p.name} 
-                player={p} 
-                count={p.count} 
-                percent={p.percent} 
+              <PlayerRow
+                key={p.name}
+                player={p}
+                count={p.count}
+                percent={p.percent}
                 isLeaf={true}
               />
             ))
@@ -279,30 +279,46 @@ export default function ComboAnalysis({ rosterData = [] }) {
     if (activeTab === 'qbqb') {
       const pairCounts = new Map();
       const individualCounts = new Map();
+      const adpLookup = new Map(); // Store ADP for sorting later
+
       teams.forEach(roster => {
-        const qbs = roster.filter(p => p.position === 'QB').sort((a, b) => a.name.localeCompare(b.name));
+        // Sort QBs by ADP (ascending) so pairs are always stored in a consistent order
+        const qbs = roster
+          .filter(p => p.position === 'QB')
+          .sort((a, b) => (a.latestADP || 999) - (b.latestADP || 999));
+
         qbs.forEach(qb => {
           individualCounts.set(qb.name, (individualCounts.get(qb.name) || 0) + 1);
+
+          // Store the ADP if we haven't yet
+          if (!adpLookup.has(qb.name)) {
+            adpLookup.set(qb.name, qb.latestADP || 999);
+          }
         });
+
         if (qbs.length >= 2) {
           for (let i = 0; i < qbs.length; i++) {
             for (let j = i + 1; j < qbs.length; j++) {
-              const names = [qbs[i].name, qbs[j].name].sort();
+              // Because qbs is already sorted by ADP, names[0] is higher ADP than names[1]
+              const names = [qbs[i].name, qbs[j].name];
               const key = names.join('||');
               pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
             }
           }
         }
       });
+
       const sortedQBs = Array.from(individualCounts.entries())
         .sort((a, b) => {
-          const lastNameA = a[0].split(' ').pop();
-          const lastNameB = b[0].split(' ').pop();
-          return lastNameA.localeCompare(lastNameB);
+          const adpA = adpLookup.get(a[0]);
+          const adpB = adpLookup.get(b[0]);
+          // Sort by ADP ascending (1, 2, 3...)
+          return adpA - adpB;
         })
         .slice(0, 30)
         .map(entry => entry[0]);
-      return { sortedQBs, pairCounts, individualCounts };
+
+      return { sortedQBs, pairCounts, individualCounts, adpLookup };
     }
 
     if (activeTab === 'starts') {
@@ -340,11 +356,33 @@ export default function ComboAnalysis({ rosterData = [] }) {
       }
       return arr;
     }
-    
+
     // Default return for 'flow' tab (handled internally by DraftFlowAnalysis)
     return [];
   }, [teams, activeTab, onlyWithR3, qbFilter]);
 
+
+
+  const getBlendedColor = (adp1, adp2, intensity) => {
+    const t1 = getTierInfo(adp1);
+    const t2 = getTierInfo(adp2);
+
+    // Average the RGB values to find the "intersection" color
+    const r = Math.floor((t1.r + t2.r) / 2);
+    const g = Math.floor((t1.g + t2.g) / 2);
+    const b = Math.floor((t1.b + t2.b) / 2);
+
+    // Return rgba with the intensity (count) controlling the opacity
+    return `rgba(${r}, ${g}, ${b}, ${0.15 + intensity * 0.8})`;
+  };
+
+  // Update getTierInfo to return numeric RGB for math
+  const getTierInfo = (adp) => {
+    if (adp <= 48) return { label: 'T1', color: '#ef4444', r: 239, g: 68, b: 68 };
+    if (adp <= 96) return { label: 'T2', color: '#f59e0b', r: 245, g: 158, b: 11 };
+    if (adp <= 144) return { label: 'T3', color: '#10b981', r: 16, g: 185, b: 129 };
+    return { label: 'T4', color: '#64748b', r: 100, g: 116, b: 139 };
+  };
   const Badge = ({ p }) => (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -372,7 +410,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
   // --- RENDER ---
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      
+
       {/* Controls */}
       <div className="card" style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap', padding: '12px 20px' }}>
         <div style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 8 }}>
@@ -382,9 +420,9 @@ export default function ComboAnalysis({ rosterData = [] }) {
               className={`tab-button ${activeTab === t ? 'active' : ''}`}
               onClick={() => onTabClick(t)}
             >
-              {t === 'flow' ? 'Draft Flow' : 
-               t === 'starts' ? 'Early Starts (Grid)' : 
-               t === 'stacks' ? 'QB Stack Groups' : 'QB Rooms'}
+              {t === 'flow' ? 'Draft Flow' :
+                t === 'starts' ? 'Early Starts (Grid)' :
+                  t === 'stacks' ? 'QB Stack Groups' : 'QB Rooms'}
             </button>
           ))}
         </div>
@@ -418,22 +456,22 @@ export default function ComboAnalysis({ rosterData = [] }) {
           )}
 
           {activeTab !== 'flow' && (
-             <>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Min Count:</span>
-                <input type="number" value={minCount} onChange={e => setMinCount(Number(e.target.value))} style={{ width: 50 }} />
-             </>
+            <>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Min Count:</span>
+              <input type="number" value={minCount} onChange={e => setMinCount(Number(e.target.value))} style={{ width: 50 }} />
+            </>
           )}
         </div>
       </div>
 
       {/* Results Area */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        
+
         {/* NEW FLOW VIEW */}
         {activeTab === 'flow' && (
-           <div style={{ padding: 16 }}>
-             <DraftFlowAnalysis rosterData={rosterData} />
-           </div>
+          <div style={{ padding: 16 }}>
+            <DraftFlowAnalysis rosterData={rosterData} />
+          </div>
         )}
 
         {/* STACKS TABLE */}
@@ -488,92 +526,131 @@ export default function ComboAnalysis({ rosterData = [] }) {
           </div>
         )}
 
-        {/* HEAT MAP */}
+ // 2. Updated Heat Map JSX
         {activeTab === 'qbqb' && (
-          <div style={{ padding: '40px 20px', overflowX: 'auto', background: 'rgba(0,0,0,0.1)' }}>
+          <div style={{ padding: '40px 20px', overflowX: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+
+            {/* RESTORED: Back Button Logic */}
             {selectedQB && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                 <button
                   onClick={() => setSelectedQB(null)}
                   style={{
-                    padding: '6px 12px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6',
+                    padding: '8px 16px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6',
                     borderRadius: 6, color: '#3b82f6', cursor: 'pointer', fontSize: 12, fontWeight: 600
                   }}>
                   ← Back to Full Grid
                 </button>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Showing: {selectedQB}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Showing Pairs for: {selectedQB}
+                </span>
               </div>
             )}
-            <table style={{ borderCollapse: 'separate', borderSpacing: '2px', width: 'auto' }}>
+
+            <table style={{ borderCollapse: 'separate', borderSpacing: '3px', width: 'auto', margin: '0 auto' }}>
               <thead>
                 <tr>
                   <th style={{ background: 'transparent' }}></th>
-                  {processedData.sortedQBs.map(name => (
-                    <th
-                      key={name}
-                      onMouseEnter={() => setHoveredQB(name)}
-                      onMouseLeave={() => setHoveredQB(null)}
-                      onClick={() => setSelectedQB(selectedQB === name ? null : name)}
-                      style={{
-                        padding: '8px', fontSize: 10, fontWeight: 700, minWidth: 45, transform: 'rotate(-45deg)',
-                        height: 80, textAlign: 'left', verticalAlign: 'bottom', cursor: 'pointer', transition: 'color 0.2s',
-                        color: hoveredQB === name || hoveredCell?.includes(name) || selectedQB === name ? '#3b82f6' : 'var(--text-secondary)',
-                      }}>
-                      {name.split(' ').pop()}
-                    </th>
-                  ))}
+                  {processedData.sortedQBs.map(name => {
+                    const adp = processedData.adpLookup.get(name) || 999;
+                    const tier = getTierInfo(adp);
+                    const isSelected = selectedQB === name;
+
+                    return (
+                      <th
+                        key={name}
+                        onClick={() => setSelectedQB(isSelected ? null : name)}
+                        onMouseEnter={() => setHoveredQB(name)}
+                        onMouseLeave={() => setHoveredQB(null)}
+                        style={{ position: 'relative', height: '100px', verticalAlign: 'bottom', padding: '0', cursor: 'pointer' }}
+                      >
+                        <div style={{
+                          position: 'absolute', bottom: '0', left: '50%', transform: 'translateX(-50%)',
+                          width: '80%', height: '4px', background: tier.color, borderRadius: '2px 2px 0 0'
+                        }} />
+                        <div style={{
+                          transform: 'rotate(-45deg) translate(10px, -5px)',
+                          transformOrigin: 'bottom left',
+                          whiteSpace: 'nowrap',
+                          width: '30px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          color: isSelected || hoveredQB === name ? '#3b82f6' : 'var(--text-secondary)',
+                          transition: 'all 0.2s'
+                        }}>
+                          {name.split(' ').pop()}
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {processedData.sortedQBs.filter(qb => !selectedQB || qb === selectedQB).map((rowName) => (
-                  <tr key={rowName}>
-                    <td
-                      onMouseEnter={() => setHoveredQB(rowName)}
-                      onMouseLeave={() => setHoveredQB(null)}
-                      onClick={() => setSelectedQB(selectedQB === rowName ? null : rowName)}
-                      style={{
-                        padding: '4px 12px', fontSize: 11, fontWeight: 700, textAlign: 'right', borderRight: '1px solid var(--border)',
-                        whiteSpace: 'nowrap', cursor: 'pointer', transition: 'color 0.2s',
-                        color: hoveredQB === rowName || hoveredCell?.includes(rowName) || selectedQB === rowName ? '#3b82f6' : 'var(--text-primary)',
-                      }}>
-                      {rowName}
-                    </td>
-                    {processedData.sortedQBs.map((colName) => {
-                      const isDiagonal = rowName === colName;
-                      const names = [rowName, colName].sort();
-                      const key = names.join('||');
-                      const count = isDiagonal ? processedData.individualCounts.get(rowName) : (processedData.pairCounts.get(key) || 0);
-                      const maxVal = isDiagonal ? totalTeams : (Math.max(...Array.from(processedData.pairCounts.values())) || 1);
-                      const intensity = count / maxVal;
-                      const isHighlighted = hoveredQB === rowName || hoveredQB === colName;
-                      const isCellHovered = hoveredCell === `${rowName}||${colName}`;
+                {processedData.sortedQBs.filter(qb => !selectedQB || qb === selectedQB).map((rowName) => {
+                  const rowAdp = processedData.adpLookup.get(rowName) || 999;
+                  const rowTier = getTierInfo(rowAdp);
+                  const isRowSelected = selectedQB === rowName;
 
-                      return (
-                        <td
-                          key={colName}
-                          title={`${rowName} + ${colName}: ${count}`}
-                          onMouseEnter={() => setHoveredCell(`${rowName}||${colName}`)}
-                          onMouseLeave={() => setHoveredCell(null)}
-                          style={{
-                            width: 35, height: 35, textAlign: 'center', fontSize: 11, fontWeight: 700, borderRadius: 2,
-                            background: isDiagonal ? 'rgba(255,255,255,0.03)' : count > 0 ? `rgba(59, 130, 246, ${0.1 + intensity * 0.9})` : 'rgba(255,255,255,0.01)',
-                            color: count > 0 ? '#fff' : 'transparent',
-                            border: isDiagonal ? '1px dashed rgba(255,255,255,0.1)' : (isHighlighted || isCellHovered) && count > 0 ? '2px solid #3b82f6' : 'none',
-                            outline: (isHighlighted || isCellHovered) && count > 0 ? '1px solid rgba(59, 130, 246, 0.5)' : 'none',
-                            outlineOffset: '1px', transition: 'all 0.2s',
-                            cursor: count > 0 ? 'pointer' : 'default'
-                          }}>
-                          {count > 0 ? count : ''}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                  return (
+                    <tr key={rowName}>
+                      <td
+                        onClick={() => setSelectedQB(isRowSelected ? null : rowName)}
+                        onMouseEnter={() => setHoveredQB(rowName)}
+                        onMouseLeave={() => setHoveredQB(null)}
+                        style={{
+                          padding: '4px 12px', fontSize: '11px', fontWeight: '700', textAlign: 'right',
+                          borderRight: `3px solid ${rowTier.color}`,
+                          background: 'rgba(255,255,255,0.03)',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer',
+                          color: isRowSelected || hoveredQB === rowName ? '#3b82f6' : 'var(--text-primary)'
+                        }}>
+                        {rowName} <span style={{ opacity: 0.4, fontSize: '9px' }}>{rowAdp}</span>
+                      </td>
+
+                      {processedData.sortedQBs.map((colName) => {
+                        const colAdp = processedData.adpLookup.get(colName) || 999;
+                        const isDiagonal = rowName === colName;
+                        const names = [rowName, colName].sort();
+                        const key = names.join('||');
+                        const count = isDiagonal ? processedData.individualCounts.get(rowName) : (processedData.pairCounts.get(key) || 0);
+                        const maxVal = isDiagonal ? totalTeams : (Math.max(...Array.from(processedData.pairCounts.values())) || 1);
+                        const intensity = count / maxVal;
+
+                        // NEW: Using your Blended Color Logic
+                        const cellBg = count > 0
+                          ? getBlendedColor(rowAdp, colAdp, intensity)
+                          : isDiagonal ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.1)';
+
+                        return (
+                          <td
+                            key={colName}
+                            onMouseEnter={() => setHoveredCell(`${rowName}||${colName}`)}
+                            onMouseLeave={() => setHoveredCell(null)}
+                            style={{
+                              width: '38px', height: '38px', textAlign: 'center', fontSize: '12px', fontWeight: '800',
+                              borderRadius: '3px',
+                              background: cellBg,
+                              color: count > 0 ? '#fff' : 'transparent',
+                              // Highlighting logic
+                              border: (hoveredQB === rowName || hoveredQB === colName || hoveredCell === `${rowName}||${colName}`) && count > 0
+                                ? '1px solid #fff'
+                                : 'none',
+                              boxShadow: count > 0 ? 'inset 0 0 10px rgba(0,0,0,0.1)' : 'none',
+                              transition: 'all 0.1s',
+                              cursor: count > 0 ? 'pointer' : 'default'
+                            }}>
+                            {count > 0 ? count : ''}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-
         {/* STARTS GRID (ORIGINAL) */}
         {activeTab === 'starts' && (
           <div style={{ maxHeight: '65vh', overflowY: 'auto', padding: 16 }}>

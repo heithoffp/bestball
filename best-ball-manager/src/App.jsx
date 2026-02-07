@@ -101,9 +101,15 @@ export default function App() {
       // 4) Enrich Rosters (Use "latest" team if available, otherwise original)
       const enrichedRosters = mappedRosters.map(player => {
         const latestTeam = teamLookup[player.name];
+        const adpData = localAdpMap[player.name];
         return {
           ...player,
-          team: latestTeam || player.team || 'N/A'
+          team: latestTeam || player.team || 'N/A',
+          // Adding the ADP fields here
+          latestADP: adpData ? adpData.pick : null, 
+          latestADPDisplay: adpData ? adpData.display : 'N/A',
+          // Optional: Calculate "Value" (Draft Pick vs ADP)
+          adpDiff: adpData && player.pick ? (adpData.pick - player.pick).toFixed(2) : null
         };
       });
 
