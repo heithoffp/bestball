@@ -8,56 +8,63 @@ export const ROSTER_ARCHETYPES = {
     name: 'Zero-RB',
     description: 'No RBs in rounds 1-6',
     rule: 'count(RB,1,6) == 0',
-    emoji: '🚫',
+    emoji: '',
     color: '#8b5cf6'
   },
   FRAGILE_RB: {
     name: 'Fragile-RB',
     description: '2-3 RBs early (rounds 1-3), then none until round 10',
     rule: '2 <= count(RB,1,3) <= 3 AND count(RB,4,9) == 0',
-    emoji: '💎',
+    emoji: '',
     color: '#ec4899'
   },
   ROBUST_RB: {
     name: 'Robust-RB',
     description: '2+ RBs early (rounds 1-4) and 6+ total by round 14',
     rule: 'count(RB,1,4) >= 2 AND count(RB,1,14) >= 6',
-    emoji: '🏃‍♂️',
+    emoji: '',
     color: '#ef4444'
+  },
+  HERO_RB: {
+    name: 'Hero-RB',
+    description: '1 RB early (rounds 1-2) and 0 for next 5 rounds',
+    rule: 'count(RB,1,2) == 1 AND count(RB,3,7) == 0 ',
+    emoji: '',
+    color: '#4bf1db'
   },
   BALANCED: {
     name: 'Balanced',
     description: '2+ RBs and 3+ WRs in first 6 rounds',
     rule: 'count(RB,1,6) >= 2 AND count(WR,1,6) >= 3',
-    emoji: '⚖️',
+    emoji: '',
     color: '#10b981'
   },
   LATE_QB: {
     name: 'Late-QB',
     description: 'No QB before round 10, first QB in rounds 10-14',
     rule: 'count(QB,1,9) == 0 AND count(QB,10,14) >= 1',
-    emoji: '🎯',
+    emoji: '',
     color: '#eab308'
   },
-  EARLY_QB: {
-    name: 'Early-QB',
-    description: 'QB in rounds 3-5 (anchor QB)',
-    rule: 'count(QB,3,5) >= 1 AND count(QB,1,2) == 0',
-    emoji: '👑',
+  ELITE_QB: {
+    name: 'Elite-QB',
+    description: 'QB in rounds 1-3',
+    rule: 'count(QB,1,3) >= 1',
+    emoji: '',
     color: '#f59e0b'
   },
   ANCHOR_TE: {
     name: 'Anchor-TE',
-    description: 'Lock top TE early (rounds 2-4)',
-    rule: 'count(TE,2,4) >= 1',
-    emoji: '🎪',
+    description: 'Lock top TE early (rounds 1-3)',
+    rule: 'count(TE,1,3) >= 1',
+    emoji: '',
     color: '#06b6d4'
   },
   WR_HEAVY: {
     name: 'WR-Heavy',
-    description: '2+ WRs in rounds 1-3, max 2 RBs through round 8',
-    rule: 'count(WR,1,3) >= 2 AND count(RB,1,8) <= 2',
-    emoji: '📡',
+    description: '3+ WRs in rounds 1-4',
+    rule: 'count(WR,1,4) >= 3',
+    emoji: '',
     color: '#3b82f6'
   }
 };
@@ -108,6 +115,14 @@ export function classifyRoster(roster, draftSize = 12) {
     archetypes.push('FRAGILE_RB');
   }
   
+
+// Hero-RB: count(RB,1,2) == 1 AND count(RB,3,7) == 0
+  const rbIn1to2 = countPosition(roster, 'RB', 1, 2);
+  const rbIn3to7 = countPosition(roster, 'RB', 3, 7);
+  if (rbIn1to2 === 1 && rbIn3to7 === 0) {
+    archetypes.push('HERO_RB');
+  }
+
   // 3 — Robust-RB: count(RB,1,4) >= 2 AND count(RB,1,14) >= 6
   const rbIn1to4 = countPosition(roster, 'RB', 1, 4);
   const rbIn1to14 = countPosition(roster, 'RB', 1, 14);
@@ -128,23 +143,21 @@ export function classifyRoster(roster, draftSize = 12) {
     archetypes.push('LATE_QB');
   }
   
-  // 6 — Early-QB: count(QB,3,5) >= 1 AND count(QB,1,2) == 0
-  const qbIn1to2 = countPosition(roster, 'QB', 1, 2);
-  const qbIn3to5 = countPosition(roster, 'QB', 3, 5);
-  if (qbIn3to5 >= 1 && qbIn1to2 === 0) {
-    archetypes.push('EARLY_QB');
+  // 6 — Elite-QB: count(QB,1,3) >= 1
+  const qbIn1to3 = countPosition(roster, 'QB', 1, 3);
+  if (qbIn1to3 >= 1) {
+    archetypes.push('ELITE_QB');
   }
   
-  // 7 — Anchor-TE: count(TE,2,4) >= 1
-  const teIn2to4 = countPosition(roster, 'TE', 2, 4);
-  if (teIn2to4 >= 1) {
+  // 7 — Anchor-TE: count(TE,1,3) >= 1
+  const teIn1to3 = countPosition(roster, 'TE', 1, 3);
+  if (teIn1to3 >= 1) {
     archetypes.push('ANCHOR_TE');
   }
   
-  // 8 — WR-Heavy: count(WR,1,3) >= 2 AND count(RB,1,8) <= 2
-  const wrIn1to3 = countPosition(roster, 'WR', 1, 3);
-  const rbIn1to8 = countPosition(roster, 'RB', 1, 8);
-  if (wrIn1to3 >= 2 && rbIn1to8 <= 2) {
+  // 8 — WR-Heavy: count(WR,1,4) >= 3
+  const wrIn1to4 = countPosition(roster, 'WR', 1, 4);
+  if (wrIn1to4 >= 3) {
     archetypes.push('WR_HEAVY');
   }
   

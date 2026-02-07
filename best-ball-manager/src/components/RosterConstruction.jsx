@@ -1,6 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { analyzeRosterConstructions, ROSTER_ARCHETYPES } from '../utils/rosterArchetypes';
 
+const COLORS = {
+  QB: '#bf44ef',
+  RB: '#10b981',
+  WR: '#f59e0b',
+  TE: '#3b82f6',
+  default: '#6b7280'
+};
+
 export default function RosterConstruction({ rosterData }) {
   const [selectedArchetype, setSelectedArchetype] = useState(null);
   
@@ -61,7 +69,6 @@ export default function RosterConstruction({ rosterData }) {
             style={{ borderLeftColor: archetype.color }}
           >
             <div className="archetype-header">
-              <span className="archetype-emoji">{archetype.emoji}</span>
               <h3>{archetype.name}</h3>
             </div>
             <p className="archetype-description">{archetype.description}</p>
@@ -89,7 +96,6 @@ export default function RosterConstruction({ rosterData }) {
         <div className="archetype-details">
           <div className="details-header">
             <h3>
-              <span className="archetype-emoji">{selectedDetails.emoji}</span>
               {selectedDetails.name} Rosters ({selectedDetails.count})
             </h3>
             <button 
@@ -130,7 +136,11 @@ export default function RosterConstruction({ rosterData }) {
                         <div className="round-label">R{round}</div>
                         <div className="round-picks">
                           {playersInRound.map((p, idx) => (
-                            <span key={idx} className={`round-pick-badge pos-${p.position}`}>
+                            <span 
+                              key={idx} 
+                              className="round-pick-badge"
+                              style={{ backgroundColor: COLORS[p.position] || COLORS.default }}
+                            >
                               {p.position}
                             </span>
                           ))}
@@ -141,18 +151,15 @@ export default function RosterConstruction({ rosterData }) {
                 </div>
                 
                 <div className="roster-players">
-                  {roster.slice(0, 8).map((player, idx) => (
+                  {roster.map((player, idx) => (
                     <div key={idx} className="player-item">
                       <span className="player-pick">#{player.pick}</span>
                       <span className="player-name">{player.name}</span>
-                      <span className="player-position">{player.position}</span>
+                      <span className="player-position" style={{ color: COLORS[player.position] || COLORS.default }}>
+                        {player.position}
+                      </span>
                     </div>
                   ))}
-                  {roster.length > 8 && (
-                    <div className="player-item more">
-                      + {roster.length - 8} more players
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
@@ -214,9 +221,6 @@ export default function RosterConstruction({ rosterData }) {
           margin-bottom: 8px;
         }
         
-        .archetype-emoji {
-          font-size: 24px;
-        }
         
         .archetype-header h3 {
           margin: 0;
@@ -406,32 +410,31 @@ export default function RosterConstruction({ rosterData }) {
           color: white;
         }
         
-        .round-pick-badge.pos-QB {
-          background: #f59e0b;
-        }
-        
-        .round-pick-badge.pos-RB {
-          background: #ef4444;
-        }
-        
-        .round-pick-badge.pos-WR {
-          background: #3b82f6;
-        }
-        
-        .round-pick-badge.pos-TE {
-          background: #06b6d4;
-        }
-        
-        .round-pick-badge.pos-K,
-        .round-pick-badge.pos-DST,
-        .round-pick-badge.pos-DEF {
-          background: #6b7280;
-        }
-        
         .roster-players {
           display: flex;
           flex-direction: column;
           gap: 6px;
+          max-height: 400px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+        
+        .roster-players::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .roster-players::-webkit-scrollbar-track {
+          background: #f3f4f6;
+          border-radius: 3px;
+        }
+        
+        .roster-players::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 3px;
+        }
+        
+        .roster-players::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
         }
         
         .player-item {
@@ -442,12 +445,6 @@ export default function RosterConstruction({ rosterData }) {
           background: white;
           border-radius: 4px;
           font-size: 13px;
-        }
-        
-        .player-item.more {
-          justify-content: center;
-          color: #6b7280;
-          font-style: italic;
         }
         
         .player-pick {
@@ -462,8 +459,7 @@ export default function RosterConstruction({ rosterData }) {
         }
         
         .player-position {
-          font-weight: 600;
-          color: #3b82f6;
+          font-weight: 700;
           font-size: 12px;
           min-width: 30px;
           text-align: right;
