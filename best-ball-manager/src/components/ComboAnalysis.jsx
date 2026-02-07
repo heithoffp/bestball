@@ -2,10 +2,10 @@ import React, { useMemo, useState } from 'react';
 
 // --- Shared Utilities ---
 const COLORS = {
-  QB: '#ef4444',
+  QB: '#bf44ef',
   RB: '#10b981',
-  WR: '#3b82f6',
-  TE: '#f59e0b',
+  WR: '#f59e0b',
+  TE: '#3b82f6',
   default: '#6b7280'
 };
 
