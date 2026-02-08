@@ -72,7 +72,6 @@ export default function RosterConstruction({ rosterData }) {
               <h3>{archetype.name}</h3>
             </div>
             <p className="archetype-description">{archetype.description}</p>
-            <p className="archetype-rule">{archetype.rule}</p>
             <div className="archetype-stats">
               <div className="stat-main">
                 <span className="stat-percentage">{archetype.percentage}%</span>
@@ -125,7 +124,7 @@ export default function RosterConstruction({ rosterData }) {
                 </div>
                 
                 <div className="round-timeline">
-                  {Array.from({length: 14}, (_, i) => i + 1).map(round => {
+                  {Array.from({length: 20}, (_, i) => i + 1).map(round => {
                     const playersInRound = roster.filter(p => {
                       const r = typeof p.round === 'number' ? p.round : parseInt(p.round);
                       return r === round;
@@ -233,17 +232,6 @@ export default function RosterConstruction({ rosterData }) {
           color: #6b7280;
           font-size: 13px;
           line-height: 1.5;
-        }
-        
-        .archetype-rule {
-          margin: 0 0 16px 0;
-          color: #9ca3af;
-          font-size: 11px;
-          font-family: 'Courier New', monospace;
-          background: #f9fafb;
-          padding: 6px 8px;
-          border-radius: 4px;
-          border: 1px solid #e5e7eb;
         }
         
         .archetype-stats {

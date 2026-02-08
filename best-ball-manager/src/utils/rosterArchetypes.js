@@ -60,12 +60,19 @@ export const ROSTER_ARCHETYPES = {
     emoji: '',
     color: '#06b6d4'
   },
-  WR_HEAVY: {
-    name: 'WR-Heavy',
-    description: '3+ WRs in rounds 1-4',
-    rule: 'count(WR,1,4) >= 3',
+  DOUBLE_PREMIUM_QB: {
+    name: 'Double-Premium-QB',
+    description: '2 QB in rounds 1-7',
+    rule: 'count(QB,1,7) >= 2',
     emoji: '',
-    color: '#3b82f6'
+    color: '#db2777'
+  },
+  OTHER: {
+    name: 'Other',
+    description: 'Does not fit other archetypes',
+    rule: 'N/A',
+    emoji: '',
+    color: '#6b7280'
   }
 };
 
@@ -101,66 +108,40 @@ function countPosition(roster, position, startRound, endRound) {
  */
 export function classifyRoster(roster, draftSize = 12) {
   const archetypes = [];
-  
-  // 1 — Zero-RB: count(RB,1,6) == 0
   const rbIn1to6 = countPosition(roster, 'RB', 1, 6);
-  if (rbIn1to6 === 0) {
-    archetypes.push('ZERO_RB');
-  }
-  
-  // 2 — Fragile-RB: 2 <= count(RB,1,3) <= 3 AND count(RB,4,9) == 0
   const rbIn1to3 = countPosition(roster, 'RB', 1, 3);
   const rbIn4to9 = countPosition(roster, 'RB', 4, 9);
-  if (rbIn1to3 >= 2 && rbIn1to3 <= 3 && rbIn4to9 === 0) {
-    archetypes.push('FRAGILE_RB');
-  }
-  
-
-// Hero-RB: count(RB,1,2) == 1 AND count(RB,3,7) == 0
   const rbIn1to2 = countPosition(roster, 'RB', 1, 2);
   const rbIn3to7 = countPosition(roster, 'RB', 3, 7);
-  if (rbIn1to2 === 1 && rbIn3to7 === 0) {
-    archetypes.push('HERO_RB');
-  }
-
-  // 3 — Robust-RB: count(RB,1,4) >= 2 AND count(RB,1,14) >= 6
   const rbIn1to4 = countPosition(roster, 'RB', 1, 4);
   const rbIn1to14 = countPosition(roster, 'RB', 1, 14);
-  if (rbIn1to4 >= 2 && rbIn1to14 >= 6) {
-    archetypes.push('ROBUST_RB');
-  }
-  
-  // 4 — Balanced: count(RB,1,6) >= 2 AND count(WR,1,6) >= 3
-  const wrIn1to6 = countPosition(roster, 'WR', 1, 6);
-  if (rbIn1to6 >= 2 && wrIn1to6 >= 3) {
-    archetypes.push('BALANCED');
-  }
-  
-  // 5 — Late-QB: count(QB,1,9) == 0 AND count(QB,10,14) >= 1
+  const wrIn1to7 = countPosition(roster, 'WR', 1, 7);
   const qbIn1to9 = countPosition(roster, 'QB', 1, 9);
-  const qbIn10to14 = countPosition(roster, 'QB', 10, 14);
-  if (qbIn1to9 === 0 && qbIn10to14 >= 1) {
-    archetypes.push('LATE_QB');
-  }
-  
-  // 6 — Elite-QB: count(QB,1,3) >= 1
-  const qbIn1to3 = countPosition(roster, 'QB', 1, 3);
-  if (qbIn1to3 >= 1) {
-    archetypes.push('ELITE_QB');
-  }
-  
-  // 7 — Anchor-TE: count(TE,1,3) >= 1
   const teIn1to3 = countPosition(roster, 'TE', 1, 3);
-  if (teIn1to3 >= 1) {
+    // 6 — Elite-QB: count(QB,1,3) >= 1
+  const qbIn1to3 = countPosition(roster, 'QB', 1, 3);
+  if (rbIn1to6 === 0) {
+    archetypes.push('ZERO_RB');
+  } else if (rbIn1to2 === 1 && rbIn3to7 === 0) {
+    archetypes.push('HERO_RB');
+  } else if (qbIn1to3 >= 1) {
+    archetypes.push('ELITE_QB');
+  } else if (teIn1to3 >= 1) {
     archetypes.push('ANCHOR_TE');
+  } else if(rbIn1to4 >= 2 && rbIn1to14 >= 6) {
+    archetypes.push('ROBUST_RB');
+  } else if (rbIn1to3 >= 2 && rbIn1to3 <= 3 && rbIn4to9 === 0) {
+    archetypes.push('FRAGILE_RB');
+  } else  if (qbIn1to9 === 0) {
+    archetypes.push('LATE_QB');
+  } else if(  countPosition(roster, 'QB', 1, 7) >= 2 ) {
+    archetypes.push('DOUBLE_PREMIUM_QB');
+  } else if (rbIn1to6 >= 2 && wrIn1to7 >= 3) {
+    archetypes.push('BALANCED');
+  } else{
+    archetypes.push('OTHER');
   }
-  
-  // 8 — WR-Heavy: count(WR,1,4) >= 3
-  const wrIn1to4 = countPosition(roster, 'WR', 1, 4);
-  if (wrIn1to4 >= 3) {
-    archetypes.push('WR_HEAVY');
-  }
-  
+
   return archetypes;
 }
 
