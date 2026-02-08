@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { parseAdpString } from '../utils/helpers';
 
-// --- Math Helper for Quartiles ---
+// --- Math Helper for Quartiles + mean ---
 const calculateBoxPlot = (values) => {
   if (!values || values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -21,13 +21,16 @@ const calculateBoxPlot = (values) => {
     }
   };
 
+  const mean = sorted.reduce((s, v) => s + v, 0) / sorted.length;
+
   return {
     min: sorted[0],
     q1: quantile(sorted, 0.25),
     median: quantile(sorted, 0.50),
     q3: quantile(sorted, 0.75),
     max: sorted[sorted.length - 1],
-    count: sorted.length
+    count: sorted.length,
+    mean
   };
 };
 
@@ -135,12 +138,16 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
             : 0;
             
         const pickStats = calculateBoxPlot(p.myPicks);
+        const myAvg = pickStats ? pickStats.mean : null;
+        const value = (p.lastAdp !== null && myAvg !== null) ? (myAvg - p.lastAdp) : 0; // ADP - myAvg
 
         return {
             ...p,
             change,
             displayAdp: p.lastAdp ? p.lastAdp.toFixed(1) : '-',
-            pickStats
+            pickStats,
+            myAvg,
+            value
         };
     });
   }, [masterPlayers, adpSnapshots, teams, rosterData]);
@@ -167,7 +174,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
         if (sortConfig.key === 'name') {
              valA = valA.toLowerCase(); 
              valB = valB.toLowerCase();
-        } else if (sortConfig.key === 'lastAdp') {
+        } else if (['lastAdp','value','myAvg'].includes(sortConfig.key)) {
              valA = valA === null ? 9999 : valA;
              valB = valB === null ? 9999 : valB;
         }
@@ -268,7 +275,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                     </div>
                     {hasStats && (
                         <div style={{ fontSize: 10, color: '#aaa', marginLeft: 8 }}>
-                            My Picks: Med {stats.median.toFixed(1)} (Range: {stats.min}-{stats.max})
+                            My Picks: Avg {stats.mean.toFixed(1)} • Med {stats.median.toFixed(1)} (Range: {stats.min}-{stats.max})
                         </div>
                     )}
                 </div>
@@ -279,7 +286,6 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
   };
 
   // Define Grid Columns here for easy adjustment
-  // Changed width to 480px and added a column for "My Pick" (75px)
   const gridTemplate = '30px 1fr 50px 50px 75px 50px';
 
   return (
@@ -316,7 +322,6 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', height: 500 }}>
         
         {/* --- Left Pane: Data Table --- */}
-        {/* Widened to 480px to accommodate new column */}
         <div className="card" style={{ width: 480, padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
             
             {/* Header */}
@@ -333,8 +338,8 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                 <div style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Player <SortIcon col="name"/></div>
                 <div style={{ cursor: 'pointer', textAlign: 'right' }} onClick={() => handleSort('exposure')}>Exp <SortIcon col="exposure"/></div>
                 <div style={{ cursor: 'pointer', textAlign: 'right' }} onClick={() => handleSort('lastAdp')}>ADP <SortIcon col="lastAdp"/></div>
-                {/* NEW COLUMN */}
-                <div style={{ cursor: 'pointer', textAlign: 'right' }} onClick={() => handleSort('myPickMedian')}>My Pick <SortIcon col="myPickMedian"/></div>
+                {/* NEW COLUMN: Value (ADP - my average) */}
+                <div style={{ cursor: 'pointer', textAlign: 'right' }} onClick={() => handleSort('value')}>Value <SortIcon col="value"/></div>
                 <div style={{ cursor: 'pointer', textAlign: 'right' }} onClick={() => handleSort('change')}>Trend <SortIcon col="change"/></div>
             </div>
 
@@ -351,10 +356,13 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                     const stats = p.pickStats;
                     const hasPicks = stats && stats.count > 0;
                     
-                    // Calculate Diff from ADP (Negative = Value, Positive = Reach)
-                    const diff = (p.lastAdp && hasPicks) ? (stats.median - p.lastAdp) : null;
-                    const diffColor = diff && diff < 0 ? '#ef4444' : (diff && diff > 0 ? '#10b981' : 'inherit');
-
+                    // NEW: Value = ADP - myAvg (positive = value, negative = reach)
+                    const value = p.value;
+                    const valueColor = value === null ? 'inherit' : (value > 0 ? '#10b981' : value < 0 ? '#ef4444' : 'inherit');
+                    const valueDisplay = value !== null ? `${value > 0 ? '+' : ''}${value.toFixed(1)}` : '-';
+                    const myAvgDisplay = p.myAvg !== null ? p.myAvg.toFixed(1) : '-';
+                    const adpDisplayRaw = p.lastAdp !== null ? p.lastAdp.toFixed(1) : '-';
+                    
                     return (
                         <div key={p.id} onClick={() => toggleSelect(p.id)}
                             style={{ 
@@ -383,15 +391,15 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                             {/* ADP */}
                             <div style={{ textAlign: 'right', fontFamily: 'monospace' }}>{p.displayAdp}</div>
 
-                            {/* NEW: My Pick Stats */}
+                            {/* NEW: Value column (ADP - myAvg) with small avg/ADP text */}
                             <div style={{ textAlign: 'right', fontFamily: 'monospace', lineHeight: 1.1 }}>
                                 {hasPicks ? (
                                     <>
-                                        <div style={{ fontWeight: 600, color: diffColor }}>
-                                            {stats.median.toFixed(1)}
+                                        <div style={{ fontWeight: 600, color: valueColor }}>
+                                            {valueDisplay}
                                         </div>
                                         <div style={{ fontSize: 10, color: '#888' }}>
-                                            {Math.round(stats.q1)}-{Math.round(stats.q3)}
+                                            {myAvgDisplay} avg • {adpDisplayRaw}
                                         </div>
                                     </>
                                 ) : (
