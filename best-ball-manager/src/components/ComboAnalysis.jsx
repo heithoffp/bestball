@@ -11,50 +11,53 @@ const COLORS = {
 
 const getPosColor = (pos) => COLORS[pos] || COLORS.default;
 
-// --- NEW COMPONENT: Draft Flow (Miller Columns) ---
+import { ROSTER_ARCHETYPES, classifyRoster } from '../utils/rosterArchetypes';
+
 function DraftFlowAnalysis({ rosterData }) {
   const [selectedR1, setSelectedR1] = useState(null);
   const [selectedR2, setSelectedR2] = useState(null);
 
   // Process Data into a Tree Structure (R1 -> R2 -> R3)
-  const { r1Data, r2Data, r3Data } = useMemo(() => {
+  const { r1Data, r2Data, r3Data, tree, teamsMap } = useMemo(() => {
     // 1. Group by Team
-    const teamsMap = new Map();
+    const tMap = new Map();
     rosterData.forEach(p => {
       const id = p.entry_id || 'unknown';
-      if (!teamsMap.has(id)) teamsMap.set(id, []);
-      teamsMap.get(id).push(p);
+      if (!tMap.has(id)) tMap.set(id, []);
+      tMap.get(id).push(p);
     });
 
-    const teams = Array.from(teamsMap.values());
+    const teams = Array.from(tMap.values());
     const totalCount = teams.length;
-    const tree = {};
+    const treeData = {};
 
-    // 2. Build Tree
+    // 2. Build Tree and track Entry IDs at each node
     teams.forEach(roster => {
       const p1 = roster.find(p => parseInt(p.round) === 1);
       const p2 = roster.find(p => parseInt(p.round) === 2);
       const p3 = roster.find(p => parseInt(p.round) === 3);
+      const entryId = roster[0]?.entry_id || 'unknown';
 
       if (!p1) return;
 
       // Level 1
-      if (!tree[p1.name]) tree[p1.name] = { player: p1, count: 0, r2s: {} };
-      tree[p1.name].count++;
+      if (!treeData[p1.name]) treeData[p1.name] = { player: p1, count: 0, r2s: {} };
+      treeData[p1.name].count++;
 
       // Level 2
       if (p2) {
-        if (!tree[p1.name].r2s[p2.name]) {
-          tree[p1.name].r2s[p2.name] = { player: p2, count: 0, r3s: {} };
+        if (!treeData[p1.name].r2s[p2.name]) {
+          treeData[p1.name].r2s[p2.name] = { player: p2, count: 0, r3s: {} };
         }
-        tree[p1.name].r2s[p2.name].count++;
+        treeData[p1.name].r2s[p2.name].count++;
 
         // Level 3
         if (p3) {
-          if (!tree[p1.name].r2s[p2.name].r3s[p3.name]) {
-            tree[p1.name].r2s[p2.name].r3s[p3.name] = { player: p3, count: 0 };
+          if (!treeData[p1.name].r2s[p2.name].r3s[p3.name]) {
+            treeData[p1.name].r2s[p2.name].r3s[p3.name] = { player: p3, count: 0, entryIds: [] };
           }
-          tree[p1.name].r2s[p2.name].r3s[p3.name].count++;
+          treeData[p1.name].r2s[p2.name].r3s[p3.name].count++;
+          treeData[p1.name].r2s[p2.name].r3s[p3.name].entryIds.push(entryId);
         }
       }
     });
@@ -66,31 +69,59 @@ function DraftFlowAnalysis({ rosterData }) {
         .map(item => ({
           ...item.player,
           count: item.count,
-          // If parentCount is null, it's R1 (share of total drafts). 
-          // Otherwise it's Conditional Probability (share of previous pick).
+          entryIds: item.entryIds || [],
           percent: (item.count / (parentCount || totalCount)) * 100
         }));
 
     // Column 1: Always all R1s
-    const r1List = flatten(tree, null);
+    const r1List = flatten(treeData, null);
 
     // Column 2: R2s connected to selected R1
     let r2List = [];
-    if (selectedR1 && tree[selectedR1]) {
-      r2List = flatten(tree[selectedR1].r2s, tree[selectedR1].count);
+    if (selectedR1 && treeData[selectedR1]) {
+      r2List = flatten(treeData[selectedR1].r2s, treeData[selectedR1].count);
     }
 
     // Column 3: R3s connected to selected R1 + R2
     let r3List = [];
-    if (selectedR1 && selectedR2 && tree[selectedR1]?.r2s[selectedR2]) {
-      r3List = flatten(tree[selectedR1].r2s[selectedR2].r3s, tree[selectedR1].r2s[selectedR2].count);
+    if (selectedR1 && selectedR2 && treeData[selectedR1]?.r2s[selectedR2]) {
+      r3List = flatten(treeData[selectedR1].r2s[selectedR2].r3s, treeData[selectedR1].r2s[selectedR2].count);
     }
 
-    return { r1Data: r1List, r2Data: r2List, r3Data: r3List };
+    return { r1Data: r1List, r2Data: r2List, r3Data: r3List, tree: treeData, teamsMap: tMap };
   }, [rosterData, selectedR1, selectedR2]);
 
+  // Calculate Archetype Breakdown for ALL R3 players
+  const r3WithArchetypes = useMemo(() => {
+    if (!selectedR1 || !selectedR2 || !r3Data.length) return [];
+
+    return r3Data.map(r3Player => {
+      const node = tree[selectedR1]?.r2s[selectedR2]?.r3s[r3Player.name];
+      if (!node || !node.entryIds) return { ...r3Player, archetypes: [] };
+
+      const counts = {};
+      node.entryIds.forEach(id => {
+        const fullRoster = teamsMap.get(id);
+        const archetypes = classifyRoster(fullRoster);
+        archetypes.forEach(arch => {
+          counts[arch] = (counts[arch] || 0) + 1;
+        });
+      });
+
+      const archetypes = Object.entries(counts)
+        .map(([key, count]) => ({
+          ...ROSTER_ARCHETYPES[key],
+          count,
+          percent: (count / node.entryIds.length) * 100
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      return { ...r3Player, archetypes };
+    });
+  }, [selectedR1, selectedR2, r3Data, tree, teamsMap]);
+
   // Row Renderer
-  const PlayerRow = ({ player, count, percent, isActive, onClick, isLeaf }) => {
+  const PlayerRow = ({ player, count, percent, isActive, onClick }) => {
     const color = getPosColor(player.position);
     return (
       <div
@@ -145,73 +176,111 @@ function DraftFlowAnalysis({ rosterData }) {
   );
 
   return (
-    <div style={{ display: 'flex', height: '600px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-      {/* Column 1: Round 1 */}
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Header title="Round 1 Pick" />
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-          {r1Data.map(p => (
-            <PlayerRow
-              key={p.name}
-              player={p}
-              count={p.count}
-              percent={p.percent}
-              isActive={selectedR1 === p.name}
-              onClick={() => { setSelectedR1(p.name); setSelectedR2(null); }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Column 2: Round 2 */}
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', minWidth: 0, background: selectedR1 ? 'transparent' : 'rgba(0,0,0,0.1)' }}>
-        <Header title={selectedR1 ? `Round 2 (w/ ${selectedR1.split(' ').pop()})` : "Round 2"} />
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-          {!selectedR1 ? (
-            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select a Round 1 player</div>
-          ) : r2Data.length === 0 ? (
-            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No pairs found</div>
-          ) : (
-            r2Data.map(p => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', height: '600px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+        {/* Column 1: Round 1 */}
+        <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Header title="Round 1 Pick" />
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {r1Data.map(p => (
               <PlayerRow
                 key={p.name}
                 player={p}
                 count={p.count}
                 percent={p.percent}
-                isActive={selectedR2 === p.name}
-                onClick={() => setSelectedR2(p.name)}
+                isActive={selectedR1 === p.name}
+                onClick={() => { setSelectedR1(p.name); setSelectedR2(null); }}
               />
-            ))
-          )}
+            ))}
+          </div>
+        </div>
+
+        {/* Column 2: Round 2 */}
+        <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', minWidth: 0, background: selectedR1 ? 'transparent' : 'rgba(0,0,0,0.1)' }}>
+          <Header title={selectedR1 ? `Round 2 (w/ ${selectedR1.split(' ').pop()})` : "Round 2"} />
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {!selectedR1 ? (
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select a Round 1 player</div>
+            ) : r2Data.length === 0 ? (
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No pairs found</div>
+            ) : (
+              r2Data.map(p => (
+                <PlayerRow
+                  key={p.name}
+                  player={p}
+                  count={p.count}
+                  percent={p.percent}
+                  isActive={selectedR2 === p.name}
+                  onClick={() => setSelectedR2(p.name)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Column 3: Round 3 (Preview only) */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: selectedR2 ? 'transparent' : 'rgba(0,0,0,0.1)' }}>
+          <Header title="Round 3 Extension" />
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {!selectedR2 ? (
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select Round 2 to see extensions</div>
+            ) : r3Data.length === 0 ? (
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No Round 3 data</div>
+            ) : (
+              r3Data.map(p => (
+                <PlayerRow
+                  key={p.name}
+                  player={p}
+                  count={p.count}
+                  percent={p.percent}
+                  isActive={false}
+                />
+              ))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Column 3: Round 3 */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: selectedR2 ? 'transparent' : 'rgba(0,0,0,0.1)' }}>
-        <Header title="Round 3 Extension" />
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-          {!selectedR2 ? (
-            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666', fontStyle: 'italic' }}>Select Round 2 to see extensions</div>
-          ) : r3Data.length === 0 ? (
-            <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: '#666' }}>No Round 3 data</div>
-          ) : (
-            r3Data.map(p => (
-              <PlayerRow
-                key={p.name}
-                player={p}
-                count={p.count}
-                percent={p.percent}
-                isLeaf={true}
-              />
-            ))
-          )}
+      {/* Archetype Breakdown Section - Shows ALL R3 players */}
+      {selectedR2 && r3WithArchetypes.length > 0 && (
+        <div style={{ padding: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
+          <h3 style={{ fontSize: 14, marginBottom: 15, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#aaa' }}>
+            Strategy Breakdown for {selectedR1} → {selectedR2}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {r3WithArchetypes.map(r3Player => (
+              <div key={r3Player.name} style={{ borderLeft: `4px solid ${getPosColor(r3Player.position)}`, background: 'rgba(0,0,0,0.2)', padding: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{r3Player.name}</span>
+                    <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>({r3Player.count} teams)</span>
+                  </div>
+                </div>
+                {r3Player.archetypes.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                    {r3Player.archetypes.map(arch => (
+                      <div key={arch.name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 11, fontWeight: 600 }}>{arch.name}</span>
+                          <span style={{ fontSize: 11, opacity: 0.8 }}>{Math.round(arch.percent)}%</span>
+                        </div>
+                        <div style={{ height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}>
+                          <div style={{ height: '100%', width: `${arch.percent}%`, background: arch.color, borderRadius: 2 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic' }}>No strategy data</div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-
-
 // --- MAIN COMPONENT ---
 export default function ComboAnalysis({ rosterData = [] }) {
   const [activeTab, setActiveTab] = useState('flow'); // Default to new view

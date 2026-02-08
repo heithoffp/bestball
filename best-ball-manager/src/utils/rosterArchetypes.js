@@ -34,8 +34,8 @@ export const ROSTER_ARCHETYPES = {
   },
   BALANCED: {
     name: 'Balanced',
-    description: '2+ RBs and 3+ WRs in first 6 rounds',
-    rule: 'count(RB,1,6) >= 2 AND count(WR,1,6) >= 3',
+    description: '2+ RBs and 3+ WRs in first 7 rounds',
+    rule: 'count(RB,1,7) >= 2 AND count(WR,1,7) >= 3',
     emoji: '',
     color: '#10b981'
   },
@@ -67,13 +67,6 @@ export const ROSTER_ARCHETYPES = {
     emoji: '',
     color: '#db2777'
   },
-  OTHER: {
-    name: 'Other',
-    description: 'Does not fit other archetypes',
-    rule: 'N/A',
-    emoji: '',
-    color: '#6b7280'
-  }
 };
 
 /**
@@ -120,27 +113,34 @@ export function classifyRoster(roster, draftSize = 12) {
   const teIn1to3 = countPosition(roster, 'TE', 1, 3);
     // 6 — Elite-QB: count(QB,1,3) >= 1
   const qbIn1to3 = countPosition(roster, 'QB', 1, 3);
+  /* Change this to a more flexible system that checks all archetypes and allows for multiple matches. */
   if (rbIn1to6 === 0) {
     archetypes.push('ZERO_RB');
-  } else if (rbIn1to2 === 1 && rbIn3to7 === 0) {
-    archetypes.push('HERO_RB');
-  } else if (qbIn1to3 >= 1) {
-    archetypes.push('ELITE_QB');
-  } else if (teIn1to3 >= 1) {
-    archetypes.push('ANCHOR_TE');
-  } else if(rbIn1to4 >= 2 && rbIn1to14 >= 6) {
-    archetypes.push('ROBUST_RB');
-  } else if (rbIn1to3 >= 2 && rbIn1to3 <= 3 && rbIn4to9 === 0) {
-    archetypes.push('FRAGILE_RB');
-  } else  if (qbIn1to9 === 0) {
-    archetypes.push('LATE_QB');
-  } else if(  countPosition(roster, 'QB', 1, 7) >= 2 ) {
-    archetypes.push('DOUBLE_PREMIUM_QB');
-  } else if (rbIn1to6 >= 2 && wrIn1to7 >= 3) {
-    archetypes.push('BALANCED');
-  } else{
-    archetypes.push('OTHER');
   }
+  if (rbIn1to2 === 1 && rbIn3to7 === 0) {
+    archetypes.push('HERO_RB');
+  } 
+  if (qbIn1to3 >= 1) {
+    archetypes.push('ELITE_QB');
+  } 
+  if (teIn1to3 >= 1) {
+    archetypes.push('ANCHOR_TE');
+  } 
+  if(rbIn1to4 >= 2 && rbIn1to14 >= 6) {
+    archetypes.push('ROBUST_RB');
+  } 
+  if (rbIn1to3 >= 2 && rbIn1to3 <= 3 && rbIn4to9 === 0) {
+    archetypes.push('FRAGILE_RB');
+  } 
+  if (qbIn1to9 === 0) {
+    archetypes.push('LATE_QB');
+  } 
+  if(  countPosition(roster, 'QB', 1, 7) >= 2 ) {
+    archetypes.push('DOUBLE_PREMIUM_QB');
+  } 
+  if (rbIn1to6 >= 2 && wrIn1to7 >= 3) {
+    archetypes.push('BALANCED');
+  } 
 
   return archetypes;
 }
