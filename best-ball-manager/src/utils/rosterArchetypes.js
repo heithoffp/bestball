@@ -1,195 +1,141 @@
-// Roster Construction Archetypes for Bimodal Volatility Portfolio
-
 /**
- * Defines the specific target strategies for the top-0.1% portfolio
+ * BIMODAL VOLATILITY PROTOCOL - HIERARCHICAL TREE
+ * Structure: RB Tier (Capital Spend) -> QB Tier (Correlation) -> TE Tier (Final Hedge)
  */
-export const ROSTER_ARCHETYPES = {
-  // --- RB TARGETS (The Barbell) ---
+export const PROTOCOL_TREE = {
+  // --- LEVEL 1: RB (Capital Spend) ---
   RB_ZERO: {
-    name: 'Zero RB',
-    description: 'No RBs in rounds 1-6. Maximizes chaos upside.',
-    // Target: 40% of Portfolio
-    color: '#8b5cf6' 
+    target: 40,
+    color: '#8b5cf6',
+    children: {
+      QB_ELITE: { target: 70, children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } },
+      QB_CORE: { target: 30, children: { TE_ELITE: 60, TE_ANCHOR: 30, TE_LATE: 10 } },
+      QB_LATE: { target: 0, children: { TE_LATE: 100 } }
+    }
   },
   RB_HYPER_FRAGILE: {
-    name: 'Hyper Fragile RB',
-    description: '3+ RBs in rounds 1-3, then NONE until Round 10+. Maximizes early dominance.',
-    // Target: 40% of Portfolio
-    color: '#f97316'
+    target: 40,
+    color: '#f97316',
+    children: {
+      QB_LATE: { target: 70, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
+      QB_CORE: { target: 30, children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
+      QB_ELITE: { target: 0, children: { TE_LATE: 100 } }
+    }
   },
   RB_HERO: {
-    name: 'Hero RB',
-    description: 'Exactly 1 RB in rounds 1-2, then NONE rounds 3-7. The structural hedge.',
-    // Target: 20% of Portfolio
-    color: '#4bf1db'
+    target: 20,
+    color: '#4bf1db',
+    children: {
+      QB_CORE: { target: 60, children: { TE_ANCHOR: 50, TE_ELITE: 30, TE_LATE: 20 } },
+      QB_ELITE: { target: 20, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
+      QB_LATE: { target: 20, children: { TE_ELITE: 50, TE_ANCHOR: 50, TE_LATE: 0 } }
+    }
   },
   RB_SUBOPTIMAL: {
-    name: 'Suboptimal RB',
-    description: 'Dead Zone, Balanced, or Robust builds that do not fit the volatility model.',
-    // Target: 0% (Avoid)
-    color: '#ef4444'
-  },
-
-  // --- QB TARGETS (Correlations) ---
-  QB_ELITE: {
-    name: 'Elite QB',
-    description: 'Top tier QB in rounds 1-3. Mandatory for Zero RB.',
-    color: '#f59e0b'
-  },
-  QB_CORE: {
-    name: 'Core QB',
-    description: 'Mid-round QB commit (Rounds 4-9). Optional for all builds.',
-    color: '#3b82f6'
-  },
-  QB_LATE: {
-    name: 'Late QB',
-    description: 'No QB before Round 10. Mandatory for Hyper Fragile.',
-    color: '#9ca3af'
-  },
-
-  // --- TE TARGETS (Correlations) ---
-  TE_ELITE: {
-    name: 'Elite TE',
-    description: 'Top tier TE in rounds 1-3.',
-    color: '#db2777'
-  },
-  TE_ANCHOR: {
-    name: 'Anchor TE',
-    description: 'Mid-round TE commit (Rounds 4-7).',
-    color: '#06b6d4'
-  },
-  TE_LATE: { 
-    name: 'Late TE', 
-    description: 'No TE until Round 8+. Requires 3-TE builds.', 
-    color: '#64748b' 
+    target: 0,
+    color: '#ef4444',
+    children: {}
   }
 };
 
 /**
- * Helper function to count positions in a round range
+ * Metadata for UI labels and descriptions
  */
-function countPosition(roster, position, startRound, endRound) {
-  return roster.filter(player => {
-    if (player.position !== position) return false;
-    const round = typeof player.round === 'number' ? player.round : parseInt(player.round);
-    if (isNaN(round)) return false;
-    return round >= startRound && round <= endRound;
+export const ARCHETYPE_METADATA = {
+  RB_ZERO: { name: 'Zero RB', desc: 'No RB R1-6. Capital Rich.' },
+  RB_HYPER_FRAGILE: { name: 'Hyper Fragile', desc: '3 RB R1-3. Capital Poor.' },
+  RB_HERO: { name: 'Hero RB', desc: '1 RB R1-2. Middle Class.' },
+  RB_SUBOPTIMAL: { name: 'Suboptimal', desc: 'Dead Zone / Robust Builds.' },
+  QB_ELITE: { name: 'Elite QB', desc: 'Rounds 1-3' },
+  QB_CORE: { name: 'Core QB', desc: 'Rounds 4-9' },
+  QB_LATE: { name: 'Late QB', desc: 'Round 10+' },
+  TE_ELITE: { name: 'Elite TE', desc: 'Rounds 1-3' },
+  TE_ANCHOR: { name: 'Anchor TE', desc: 'Rounds 4-7' },
+  TE_LATE: { name: 'Late TE', desc: 'Round 8+' }
+};
+
+/**
+ * Helper: Position Counter
+ */
+function countPosition(roster, position, start, end) {
+  return roster.filter(p => {
+    if (p.position !== position) return false;
+    let r = p.round || Math.ceil(parseInt(p.pick) / 12);
+    return r >= start && r <= end;
   }).length;
 }
 
 /**
- * Classify a roster based on the Bimodal Volatility Protocol
- * Returns an array of tags (e.g., ['RB_ZERO', 'QB_ELITE'])
+ * Returns specific path tags for a roster
  */
-export function classifyRoster(roster) {
-  const archetypes = [];
+export function classifyRosterPath(roster) {
+  const path = { rb: 'RB_SUBOPTIMAL', qb: 'QB_LATE', te: 'TE_LATE' };
 
-  // --- RB CLASSIFICATION ---
-  const rb1to2 = countPosition(roster, 'RB', 1, 2);
+  // RB Logic
   const rb1to3 = countPosition(roster, 'RB', 1, 3);
   const rb1to6 = countPosition(roster, 'RB', 1, 6);
+  const rb1to2 = countPosition(roster, 'RB', 1, 2);
   const rb3to7 = countPosition(roster, 'RB', 3, 7);
   const rb4to9 = countPosition(roster, 'RB', 4, 9);
-  
-  if (rb1to3 >= 3 && rb4to9 === 0) {
-    archetypes.push('RB_HYPER_FRAGILE');
-  } else if (rb1to6 === 0) {
-    archetypes.push('RB_ZERO');
-  } else if (rb1to2 === 1 && rb3to7 === 0) {
-    archetypes.push('RB_HERO');
-  } else {
-    archetypes.push('RB_SUBOPTIMAL');
-  }
 
-  // --- QB CLASSIFICATION ---
-  const qb1to3 = countPosition(roster, 'QB', 1, 3);
-  const qb4to9 = countPosition(roster, 'QB', 4, 9);
-  const qb1to9 = countPosition(roster, 'QB', 1, 9);
+  if (rb1to3 >= 3 && rb4to9 === 0) path.rb = 'RB_HYPER_FRAGILE';
+  else if (rb1to6 === 0) path.rb = 'RB_ZERO';
+  else if (rb1to2 === 1 && rb3to7 === 0) path.rb = 'RB_HERO';
 
-  if (qb1to3 >= 1) {
-    archetypes.push('QB_ELITE');
-  } else if (qb4to9 >= 1) {
-    archetypes.push('QB_CORE');
-  } else if (qb1to9 === 0) {
-    archetypes.push('QB_LATE');
-  }
+  // QB Logic
+  if (countPosition(roster, 'QB', 1, 4) >= 1) path.qb = 'QB_ELITE';
+  else if (countPosition(roster, 'QB', 5, 8) >= 1) path.qb = 'QB_CORE';
+  else if ( countPosition(roster, 'QB', 9, 20) >= 1) path.qb = 'QB_LATE';
 
-  // --- TE CLASSIFICATION ---
-  const te1to3 = countPosition(roster, 'TE', 1, 3);
-  const te4to7 = countPosition(roster, 'TE', 4, 7);
-  const te1to7 = countPosition(roster, 'TE', 1, 7);
+  // TE Logic
+  if (countPosition(roster, 'TE', 1, 3) >= 1) path.te = 'TE_ELITE';
+  else if (countPosition(roster, 'TE', 4, 7) >= 1) path.te = 'TE_ANCHOR';
+  else if (countPosition(roster, 'TE', 8, 20) >= 1) path.te = 'TE_LATE';
 
-  if (te1to3 >= 1) {
-    archetypes.push('TE_ELITE');
-  } else if (te4to7 >= 1) {
-    archetypes.push('TE_ANCHOR');
-  } else if (te1to7 === 0) {
-    archetypes.push('TE_LATE');
-  }
-
-  return archetypes;
+  return path;
 }
 
 /**
- * Analyze all rosters and calculate exposure to each archetype
- * @param {Array} rosterData - All drafted players
- * @param {number} draftSize - Number of teams (default 12)
- * @returns {Object} - Exposure data by archetype
+ * Analyze Portfolio using the Tree Structure
  */
-export function analyzeRosterConstructions(rosterData, draftSize = 12) {
-  // Group players by entry_id
+export function analyzePortfolioTree(rosterData) {
   const entriesMap = {};
-  rosterData.forEach(player => {
-    const entryId = player.entry_id || 'Unknown';
-    if (!entriesMap[entryId]) {
-      entriesMap[entryId] = [];
-    }
-    entriesMap[entryId].push(player);
+  rosterData.forEach(p => {
+    const id = p.entry_id || p.entryId || 'Unknown';
+    if (!entriesMap[id]) entriesMap[id] = [];
+    entriesMap[id].push(p);
   });
+
+  const totalEntries = Object.keys(entriesMap).length;
   
-  const entries = Object.keys(entriesMap);
-  const totalEntries = entries.length;
-  
-  // Count archetypes
-  const archetypeCounts = {};
-  const archetypeEntries = {}; // Track which entries match each archetype
-  
-  Object.keys(ROSTER_ARCHETYPES).forEach(key => {
-    archetypeCounts[key] = 0;
-    archetypeEntries[key] = [];
-  });
-  
-  // Classify each roster
-  entries.forEach(entryId => {
-    const roster = entriesMap[entryId];
-    const archetypes = classifyRoster(roster, draftSize);
-    
-    archetypes.forEach(archetype => {
-      archetypeCounts[archetype]++;
-      archetypeEntries[archetype].push(entryId);
+  // Initialize results tree
+  const tree = {};
+  Object.keys(PROTOCOL_TREE).forEach(rbKey => {
+    tree[rbKey] = { count: 0, children: {} };
+    Object.keys(PROTOCOL_TREE[rbKey].children || {}).forEach(qbKey => {
+      tree[rbKey].children[qbKey] = { count: 0, children: {} };
+      Object.keys(PROTOCOL_TREE[rbKey].children[qbKey].children || {}).forEach(teKey => {
+        tree[rbKey].children[qbKey].children[teKey] = { count: 0, entries: [] };
+      });
     });
   });
-  
-  // Calculate percentages and build results
-  const results = Object.keys(ROSTER_ARCHETYPES).map(key => {
-    const count = archetypeCounts[key];
-    const percentage = totalEntries > 0 ? (count / totalEntries) * 100 : 0;
+
+  // Sort rosters into the tree
+  Object.entries(entriesMap).forEach(([id, roster]) => {
+    const path = classifyRosterPath(roster);
     
-    return {
-      key,
-      ...ROSTER_ARCHETYPES[key],
-      count,
-      percentage: percentage.toFixed(1),
-      entries: archetypeEntries[key]
-    };
+    // Safety check for off-tree branches
+    if (tree[path.rb]) {
+      tree[path.rb].count++;
+      if (tree[path.rb].children[path.qb]) {
+        tree[path.rb].children[path.qb].count++;
+        if (tree[path.rb].children[path.qb].children[path.te]) {
+          tree[path.rb].children[path.qb].children[path.te].count++;
+          tree[path.rb].children[path.qb].children[path.te].entries.push({ id, roster });
+        }
+      }
+    }
   });
-  
-  // Sort by percentage descending
-  results.sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage));
-  
-  return {
-    totalEntries,
-    archetypes: results,
-    entriesMap // Include for individual roster analysis
-  };
+
+  return { totalEntries, tree };
 }
