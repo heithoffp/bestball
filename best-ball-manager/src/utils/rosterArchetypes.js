@@ -1,146 +1,131 @@
-// Roster Construction Archetypes for Best Ball
+// Roster Construction Archetypes for Bimodal Volatility Portfolio
 
 /**
- * Defines different roster construction strategies in best ball
+ * Defines the specific target strategies for the top-0.1% portfolio
  */
 export const ROSTER_ARCHETYPES = {
-  ZERO_RB: {
-    name: 'Zero-RB',
-    description: 'No RBs in rounds 1-6',
-    rule: 'count(RB,1,6) == 0',
-    emoji: '',
-    color: '#8b5cf6'
+  // --- RB TARGETS (The Barbell) ---
+  RB_ZERO: {
+    name: 'Zero RB',
+    description: 'No RBs in rounds 1-6. Maximizes chaos upside.',
+    // Target: 40% of Portfolio
+    color: '#8b5cf6' 
   },
-  FRAGILE_RB: {
-    name: 'Fragile-RB',
-    description: '2-3 RBs early (rounds 1-3), then none until round 10',
-    rule: '2 <= count(RB,1,3) <= 3 AND count(RB,4,9) == 0',
-    emoji: '',
-    color: '#ec4899'
+  RB_HYPER_FRAGILE: {
+    name: 'Hyper Fragile RB',
+    description: '3+ RBs in rounds 1-3, then NONE until Round 10+. Maximizes early dominance.',
+    // Target: 40% of Portfolio
+    color: '#f97316'
   },
-  ROBUST_RB: {
-    name: 'Robust-RB',
-    description: '2+ RBs early (rounds 1-4) and 6+ total by round 14',
-    rule: 'count(RB,1,4) >= 2 AND count(RB,1,14) >= 6',
-    emoji: '',
-    color: '#ef4444'
-  },
-  HERO_RB: {
-    name: 'Hero-RB',
-    description: '1 RB early (rounds 1-2) and 0 for next 5 rounds',
-    rule: 'count(RB,1,2) == 1 AND count(RB,3,7) == 0 ',
-    emoji: '',
+  RB_HERO: {
+    name: 'Hero RB',
+    description: 'Exactly 1 RB in rounds 1-2, then NONE rounds 3-7. The structural hedge.',
+    // Target: 20% of Portfolio
     color: '#4bf1db'
   },
-  BALANCED: {
-    name: 'Balanced',
-    description: '2+ RBs and 3+ WRs in first 7 rounds',
-    rule: 'count(RB,1,7) >= 2 AND count(WR,1,7) >= 3',
-    emoji: '',
-    color: '#10b981'
+  RB_SUBOPTIMAL: {
+    name: 'Suboptimal RB',
+    description: 'Dead Zone, Balanced, or Robust builds that do not fit the volatility model.',
+    // Target: 0% (Avoid)
+    color: '#ef4444'
   },
-  LATE_QB: {
-    name: 'Late-QB',
-    description: 'No QB before round 10, first QB in rounds 10-14',
-    rule: 'count(QB,1,9) == 0 AND count(QB,10,14) >= 1',
-    emoji: '',
-    color: '#eab308'
-  },
-  ELITE_QB: {
-    name: 'Elite-QB',
-    description: 'QB in rounds 1-3',
-    rule: 'count(QB,1,3) >= 1',
-    emoji: '',
+
+  // --- QB TARGETS (Correlations) ---
+  QB_ELITE: {
+    name: 'Elite QB',
+    description: 'Top tier QB in rounds 1-3. Mandatory for Zero RB.',
     color: '#f59e0b'
   },
-  ANCHOR_TE: {
-    name: 'Anchor-TE',
-    description: 'Lock top TE early (rounds 1-3)',
-    rule: 'count(TE,1,3) >= 1',
-    emoji: '',
-    color: '#06b6d4'
+  QB_CORE: {
+    name: 'Core QB',
+    description: 'Mid-round QB commit (Rounds 4-9). Optional for all builds.',
+    color: '#3b82f6'
   },
-  DOUBLE_PREMIUM_QB: {
-    name: 'Double-Premium-QB',
-    description: '2 QB in rounds 1-7',
-    rule: 'count(QB,1,7) >= 2',
-    emoji: '',
+  QB_LATE: {
+    name: 'Late QB',
+    description: 'No QB before Round 10. Mandatory for Hyper Fragile.',
+    color: '#9ca3af'
+  },
+
+  // --- TE TARGETS (Correlations) ---
+  TE_ELITE: {
+    name: 'Elite TE',
+    description: 'Top tier TE in rounds 1-3.',
     color: '#db2777'
   },
+  TE_ANCHOR: {
+    name: 'Anchor TE',
+    description: 'Mid-round TE commit (Rounds 4-7).',
+    color: '#06b6d4'
+  },
+  TE_LATE: { 
+    name: 'Late TE', 
+    description: 'No TE until Round 8+. Requires 3-TE builds.', 
+    color: '#64748b' 
+  }
 };
 
 /**
  * Helper function to count positions in a round range
- * @param {Array} roster - Array of player objects
- * @param {string} position - Position to count (e.g., 'RB', 'WR', 'QB', 'TE')
- * @param {number} startRound - Start round (inclusive)
- * @param {number} endRound - End round (inclusive)
- * @returns {number} - Count of players matching criteria
  */
 function countPosition(roster, position, startRound, endRound) {
   return roster.filter(player => {
     if (player.position !== position) return false;
-    
-    // Get round number - handle both number and string types
-    const round = typeof player.round === 'number' 
-      ? player.round 
-      : parseInt(player.round);
-    
-    // Skip if round is invalid
+    const round = typeof player.round === 'number' ? player.round : parseInt(player.round);
     if (isNaN(round)) return false;
-    
     return round >= startRound && round <= endRound;
   }).length;
 }
 
 /**
- * Classify a single roster by its construction archetype
- * @param {Array} roster - Array of player objects for one entry
- * @param {number} draftSize - Number of teams in draft (default 12)
- * @returns {Array} - Array of archetype keys that this roster matches
+ * Classify a roster based on the Bimodal Volatility Protocol
+ * Returns an array of tags (e.g., ['RB_ZERO', 'QB_ELITE'])
  */
-export function classifyRoster(roster, draftSize = 12) {
+export function classifyRoster(roster) {
   const archetypes = [];
-  const rbIn1to6 = countPosition(roster, 'RB', 1, 6);
-  const rbIn1to3 = countPosition(roster, 'RB', 1, 3);
-  const rbIn4to9 = countPosition(roster, 'RB', 4, 9);
-  const rbIn1to2 = countPosition(roster, 'RB', 1, 2);
-  const rbIn3to7 = countPosition(roster, 'RB', 3, 7);
-  const rbIn1to4 = countPosition(roster, 'RB', 1, 4);
-  const rbIn1to14 = countPosition(roster, 'RB', 1, 14);
-  const wrIn1to7 = countPosition(roster, 'WR', 1, 7);
-  const qbIn1to9 = countPosition(roster, 'QB', 1, 9);
-  const teIn1to3 = countPosition(roster, 'TE', 1, 3);
-    // 6 — Elite-QB: count(QB,1,3) >= 1
-  const qbIn1to3 = countPosition(roster, 'QB', 1, 3);
-  /* Change this to a more flexible system that checks all archetypes and allows for multiple matches. */
-  if (rbIn1to6 === 0) {
-    archetypes.push('ZERO_RB');
+
+  // --- RB CLASSIFICATION ---
+  const rb1to2 = countPosition(roster, 'RB', 1, 2);
+  const rb1to3 = countPosition(roster, 'RB', 1, 3);
+  const rb1to6 = countPosition(roster, 'RB', 1, 6);
+  const rb3to7 = countPosition(roster, 'RB', 3, 7);
+  const rb4to9 = countPosition(roster, 'RB', 4, 9);
+  
+  if (rb1to3 >= 3 && rb4to9 === 0) {
+    archetypes.push('RB_HYPER_FRAGILE');
+  } else if (rb1to6 === 0) {
+    archetypes.push('RB_ZERO');
+  } else if (rb1to2 === 1 && rb3to7 === 0) {
+    archetypes.push('RB_HERO');
+  } else {
+    archetypes.push('RB_SUBOPTIMAL');
   }
-  if (rbIn1to2 === 1 && rbIn3to7 === 0) {
-    archetypes.push('HERO_RB');
-  } 
-  if (qbIn1to3 >= 1) {
-    archetypes.push('ELITE_QB');
-  } 
-  if (teIn1to3 >= 1) {
-    archetypes.push('ANCHOR_TE');
-  } 
-  if(rbIn1to4 >= 2 && rbIn1to14 >= 6) {
-    archetypes.push('ROBUST_RB');
-  } 
-  if (rbIn1to3 >= 2 && rbIn1to3 <= 3 && rbIn4to9 === 0) {
-    archetypes.push('FRAGILE_RB');
-  } 
-  if (qbIn1to9 === 0) {
-    archetypes.push('LATE_QB');
-  } 
-  if(  countPosition(roster, 'QB', 1, 7) >= 2 ) {
-    archetypes.push('DOUBLE_PREMIUM_QB');
-  } 
-  if (rbIn1to6 >= 2 && wrIn1to7 >= 3) {
-    archetypes.push('BALANCED');
-  } 
+
+  // --- QB CLASSIFICATION ---
+  const qb1to3 = countPosition(roster, 'QB', 1, 3);
+  const qb4to9 = countPosition(roster, 'QB', 4, 9);
+  const qb1to9 = countPosition(roster, 'QB', 1, 9);
+
+  if (qb1to3 >= 1) {
+    archetypes.push('QB_ELITE');
+  } else if (qb4to9 >= 1) {
+    archetypes.push('QB_CORE');
+  } else if (qb1to9 === 0) {
+    archetypes.push('QB_LATE');
+  }
+
+  // --- TE CLASSIFICATION ---
+  const te1to3 = countPosition(roster, 'TE', 1, 3);
+  const te4to7 = countPosition(roster, 'TE', 4, 7);
+  const te1to7 = countPosition(roster, 'TE', 1, 7);
+
+  if (te1to3 >= 1) {
+    archetypes.push('TE_ELITE');
+  } else if (te4to7 >= 1) {
+    archetypes.push('TE_ANCHOR');
+  } else if (te1to7 === 0) {
+    archetypes.push('TE_LATE');
+  }
 
   return archetypes;
 }

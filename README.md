@@ -6,7 +6,7 @@ The tool focuses on **exposure management**, **ADP trends**, and **portfolio ris
 This project is designed to support both **early-season drafts (Big Board)** and **late-season drafts (Best Ball Mania)** by adapting analysis depth to the available information.
 
 
-To run the app `npm run dev`
+To run the app `cd best-ball-manager` `npm run dev`
 ---
 
 ## Core Inputs
