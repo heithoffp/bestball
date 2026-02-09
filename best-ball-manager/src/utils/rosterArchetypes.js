@@ -5,7 +5,7 @@
 export const PROTOCOL_TREE = {
   // --- LEVEL 1: RB (Capital Spend) ---
   RB_ZERO: {
-    target: 40,
+    target: 35,
     color: '#8b5cf6',
     children: {
       QB_ELITE: { target: 70, children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } },
@@ -14,7 +14,7 @@ export const PROTOCOL_TREE = {
     }
   },
   RB_HYPER_FRAGILE: {
-    target: 40,
+    target: 25,
     color: '#f97316',
     children: {
       QB_LATE: { target: 70, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
@@ -23,7 +23,7 @@ export const PROTOCOL_TREE = {
     }
   },
   RB_HERO: {
-    target: 20,
+    target: 40,
     color: '#4bf1db',
     children: {
       QB_CORE: { target: 60, children: { TE_ANCHOR: 50, TE_ELITE: 30, TE_LATE: 20 } },
@@ -31,10 +31,14 @@ export const PROTOCOL_TREE = {
       QB_LATE: { target: 20, children: { TE_ELITE: 50, TE_ANCHOR: 50, TE_LATE: 0 } }
     }
   },
-  RB_SUBOPTIMAL: {
+  RB_VALUE: {
     target: 0,
     color: '#ef4444',
-    children: {}
+    children: {
+      QB_CORE: { target: 60, children: { TE_ANCHOR: 50, TE_ELITE: 30, TE_LATE: 20 } },
+      QB_ELITE: { target: 20, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
+      QB_LATE: { target: 20, children: { TE_ELITE: 50, TE_ANCHOR: 50, TE_LATE: 0 } }
+    }
   }
 };
 
@@ -45,7 +49,7 @@ export const ARCHETYPE_METADATA = {
   RB_ZERO: { name: 'Zero RB', desc: 'No RB R1-6. Capital Rich.' },
   RB_HYPER_FRAGILE: { name: 'Hyper Fragile', desc: '3 RB R1-3. Capital Poor.' },
   RB_HERO: { name: 'Hero RB', desc: '1 RB R1-2. Middle Class.' },
-  RB_SUBOPTIMAL: { name: 'Suboptimal', desc: 'Dead Zone / Robust Builds.' },
+  RB_VALUE: { name: 'Value', desc: 'Value Picks' },
   QB_ELITE: { name: 'Elite QB', desc: 'Rounds 1-3' },
   QB_CORE: { name: 'Core QB', desc: 'Rounds 4-9' },
   QB_LATE: { name: 'Late QB', desc: 'Round 10+' },
@@ -81,6 +85,7 @@ export function classifyRosterPath(roster) {
   if (rb1to3 >= 3 && rb4to9 === 0) path.rb = 'RB_HYPER_FRAGILE';
   else if (rb1to6 === 0) path.rb = 'RB_ZERO';
   else if (rb1to2 === 1 && rb3to7 === 0) path.rb = 'RB_HERO';
+  else path.rb = 'RB_VALUE';
 
   // QB Logic
   if (countPosition(roster, 'QB', 1, 4) >= 1) path.qb = 'QB_ELITE';
