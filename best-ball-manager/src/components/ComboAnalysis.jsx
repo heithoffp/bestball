@@ -11,7 +11,7 @@ const COLORS = {
 
 const getPosColor = (pos) => COLORS[pos] || COLORS.default;
 
-import { ROSTER_ARCHETYPES, classifyRoster } from '../utils/rosterArchetypes';
+import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 
 function DraftFlowAnalysis({ rosterData }) {
   const [selectedR1, setSelectedR1] = useState(null);
@@ -91,32 +91,54 @@ function DraftFlowAnalysis({ rosterData }) {
     return { r1Data: r1List, r2Data: r2List, r3Data: r3List, tree: treeData, teamsMap: tMap };
   }, [rosterData, selectedR1, selectedR2]);
 
-  // Calculate Archetype Breakdown for ALL R3 players
-  const r3WithArchetypes = useMemo(() => {
+  // Calculate Hierarchical Path Breakdown for ALL R3 players
+  const r3WithPaths = useMemo(() => {
     if (!selectedR1 || !selectedR2 || !r3Data.length) return [];
 
     return r3Data.map(r3Player => {
       const node = tree[selectedR1]?.r2s[selectedR2]?.r3s[r3Player.name];
-      if (!node || !node.entryIds) return { ...r3Player, archetypes: [] };
+      if (!node || !node.entryIds) return { ...r3Player, paths: [] };
 
-      const counts = {};
+      // Count each unique path (RB → QB → TE)
+      const pathCounts = {};
       node.entryIds.forEach(id => {
         const fullRoster = teamsMap.get(id);
-        const archetypes = classifyRoster(fullRoster);
-        archetypes.forEach(arch => {
-          counts[arch] = (counts[arch] || 0) + 1;
-        });
+        const path = classifyRosterPath(fullRoster);
+        const pathKey = `${path.rb}|${path.qb}|${path.te}`;
+        
+        if (!pathCounts[pathKey]) {
+          pathCounts[pathKey] = {
+            rb: path.rb,
+            qb: path.qb,
+            te: path.te,
+            count: 0
+          };
+        }
+        pathCounts[pathKey].count++;
       });
 
-      const archetypes = Object.entries(counts)
-        .map(([key, count]) => ({
-          ...ROSTER_ARCHETYPES[key],
-          count,
-          percent: (count / node.entryIds.length) * 100
+      // Convert to sorted array with metadata
+      const paths = Object.values(pathCounts)
+        .map(pathData => ({
+          rb: {
+            key: pathData.rb,
+            ...ARCHETYPE_METADATA[pathData.rb],
+            color: PROTOCOL_TREE[pathData.rb]?.color || '#888'
+          },
+          qb: {
+            key: pathData.qb,
+            ...ARCHETYPE_METADATA[pathData.qb]
+          },
+          te: {
+            key: pathData.te,
+            ...ARCHETYPE_METADATA[pathData.te]
+          },
+          count: pathData.count,
+          percent: (pathData.count / node.entryIds.length) * 100
         }))
         .sort((a, b) => b.count - a.count);
 
-      return { ...r3Player, archetypes };
+      return { ...r3Player, paths };
     });
   }, [selectedR1, selectedR2, r3Data, tree, teamsMap]);
 
@@ -241,31 +263,77 @@ function DraftFlowAnalysis({ rosterData }) {
         </div>
       </div>
 
-      {/* Archetype Breakdown Section - Shows ALL R3 players */}
-      {selectedR2 && r3WithArchetypes.length > 0 && (
+      {/* Hierarchical Path Breakdown Section */}
+      {selectedR2 && r3WithPaths.length > 0 && (
         <div style={{ padding: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
           <h3 style={{ fontSize: 14, marginBottom: 15, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#aaa' }}>
-            Strategy Breakdown for {selectedR1} → {selectedR2}
+            Strategy Paths for {selectedR1} → {selectedR2}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {r3WithArchetypes.map(r3Player => (
-              <div key={r3Player.name} style={{ borderLeft: `4px solid ${getPosColor(r3Player.position)}`, background: 'rgba(0,0,0,0.2)', padding: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            {r3WithPaths.map(r3Player => (
+              <div key={r3Player.name} style={{ 
+                borderLeft: `4px solid ${getPosColor(r3Player.position)}`, 
+                background: 'rgba(0,0,0,0.2)', 
+                padding: '12px' 
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div>
                     <span style={{ fontWeight: 700, fontSize: 13 }}>{r3Player.name}</span>
                     <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>({r3Player.count} teams)</span>
                   </div>
                 </div>
-                {r3Player.archetypes.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
-                    {r3Player.archetypes.map(arch => (
-                      <div key={arch.name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: 11, fontWeight: 600 }}>{arch.name}</span>
-                          <span style={{ fontSize: 11, opacity: 0.8 }}>{Math.round(arch.percent)}%</span>
+                
+                {r3Player.paths.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {r3Player.paths.map((path, idx) => (
+                      <div key={idx} style={{ 
+                        background: 'rgba(0,0,0,0.3)', 
+                        padding: '10px 12px', 
+                        borderRadius: 6,
+                        borderLeft: `3px solid ${path.rb.color}`
+                      }}>
+                        {/* Path Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ 
+                              fontSize: 11, 
+                              fontWeight: 700,
+                              color: path.rb.color,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              {path.rb.name}
+                            </span>
+                            <span style={{ color: '#666', fontSize: 10 }}>→</span>
+                            <span style={{ fontSize: 10, color: '#aaa' }}>{path.qb.name}</span>
+                            <span style={{ color: '#666', fontSize: 10 }}>→</span>
+                            <span style={{ fontSize: 10, color: '#aaa' }}>{path.te.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700 }}>{path.count}</span>
+                            <span style={{ fontSize: 10, color: '#888' }}>({Math.round(path.percent)}%)</span>
+                          </div>
                         </div>
-                        <div style={{ height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}>
-                          <div style={{ height: '100%', width: `${arch.percent}%`, background: arch.color, borderRadius: 2 }} />
+
+                        {/* Progress Bar */}
+                        <div style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}>
+                          <div style={{ 
+                            height: '100%', 
+                            width: `${path.percent}%`, 
+                            background: `linear-gradient(90deg, ${path.rb.color}, ${path.rb.color}aa)`,
+                            borderRadius: 2,
+                            transition: 'width 0.3s ease'
+                          }} />
+                        </div>
+
+                        {/* Path Description */}
+                        <div style={{ 
+                          fontSize: 10, 
+                          color: '#777', 
+                          marginTop: 6,
+                          fontStyle: 'italic'
+                        }}>
+                          {path.rb.desc} • {path.qb.desc} • {path.te.desc}
                         </div>
                       </div>
                     ))}
@@ -281,6 +349,7 @@ function DraftFlowAnalysis({ rosterData }) {
     </div>
   );
 }
+
 // --- MAIN COMPONENT ---
 export default function ComboAnalysis({ rosterData = [] }) {
   const [activeTab, setActiveTab] = useState('flow'); // Default to new view

@@ -9,7 +9,7 @@ export const PROTOCOL_TREE = {
     color: '#8b5cf6',
     children: {
       QB_ELITE: { target: 70, children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } },
-      QB_CORE: { target: 30, children: { TE_ELITE: 60, TE_ANCHOR: 30, TE_LATE: 10 } },
+      QB_CORE: { target: 30, children: { TE_ELITE: 70, TE_ANCHOR: 30, TE_LATE: 0 } },
       QB_LATE: { target: 0, children: { TE_LATE: 100 } }
     }
   },
@@ -17,9 +17,9 @@ export const PROTOCOL_TREE = {
     target: 25,
     color: '#f97316',
     children: {
-      QB_LATE: { target: 70, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
-      QB_CORE: { target: 30, children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
-      QB_ELITE: { target: 0, children: { TE_LATE: 100 } }
+      QB_LATE: { target: 60, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
+      QB_CORE: { target: 20, children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
+      QB_ELITE: { target: 20, children: { TE_LATE: 100 } }
     }
   },
   RB_HERO: {
@@ -77,14 +77,14 @@ export function classifyRosterPath(roster) {
 
   // RB Logic
   const rb1to3 = countPosition(roster, 'RB', 1, 3);
-  const rb1to6 = countPosition(roster, 'RB', 1, 6);
+  const rb1to5 = countPosition(roster, 'RB', 1, 5);
   const rb1to2 = countPosition(roster, 'RB', 1, 2);
-  const rb3to7 = countPosition(roster, 'RB', 3, 7);
+  const rb3to6 = countPosition(roster, 'RB', 3, 6);
   const rb4to9 = countPosition(roster, 'RB', 4, 9);
 
   if (rb1to3 >= 3 && rb4to9 === 0) path.rb = 'RB_HYPER_FRAGILE';
-  else if (rb1to6 === 0) path.rb = 'RB_ZERO';
-  else if (rb1to2 === 1 && rb3to7 === 0) path.rb = 'RB_HERO';
+  else if (rb1to5 === 0) path.rb = 'RB_ZERO';
+  else if (rb1to2 === 1 && rb3to6 === 0) path.rb = 'RB_HERO';
   else path.rb = 'RB_VALUE';
 
   // QB Logic
@@ -94,8 +94,8 @@ export function classifyRosterPath(roster) {
 
   // TE Logic
   if (countPosition(roster, 'TE', 1, 3) >= 1) path.te = 'TE_ELITE';
-  else if (countPosition(roster, 'TE', 4, 7) >= 1) path.te = 'TE_ANCHOR';
-  else if (countPosition(roster, 'TE', 8, 20) >= 1) path.te = 'TE_LATE';
+  else if (countPosition(roster, 'TE', 4, 8) >= 1) path.te = 'TE_ANCHOR';
+  else if (countPosition(roster, 'TE', 9, 20) >= 1) path.te = 'TE_LATE';
 
   return path;
 }
