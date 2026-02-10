@@ -7,6 +7,7 @@ import { processMasterList, parseAdpString } from './utils/helpers';
 import AdpTimeSeries from './components/AdpTimeSeries';
 import ComboAnalysis from './components/ComboAnalysis';
 import RosterConstruction from './components/RosterConstruction';
+import DraftFlowAnalysis from './components/DraftFlowAnalysis';
 
 import rosterRaw from './assets/rosters.csv?raw';
 const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
@@ -161,11 +162,13 @@ export default function App() {
           <div className="tab-bar">
             <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
             <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Time Series</button>
+            <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Flow</button>
             <button className={`tab-button ${activeTab === 'combos' ? 'active' : ''}`} onClick={() => setActiveTab('combos')}>Combo Analysis</button>
             <button className={`tab-button ${activeTab === 'construction' ? 'active' : ''}`} onClick={() => setActiveTab('construction')}>Roster Construction</button>
           </div>
 
           {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
+          {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} />}
           {activeTab === 'combos' && <ComboAnalysis rosterData={rosterData} />}
           {activeTab === 'construction' && <RosterConstruction rosterData={rosterData} />}
           {activeTab === 'timeseries' && (
