@@ -165,7 +165,7 @@ export default function App() {
             <button className={`tab-button ${activeTab === 'construction' ? 'active' : ''}`} onClick={() => setActiveTab('construction')}>Roster Construction</button>
           </div>
 
-          {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} />}
+          {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
           {activeTab === 'combos' && <ComboAnalysis rosterData={rosterData} />}
           {activeTab === 'construction' && <RosterConstruction rosterData={rosterData} />}
           {activeTab === 'timeseries' && (

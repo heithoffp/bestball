@@ -10,7 +10,7 @@ export const PROTOCOL_TREE = {
     children: {
       QB_ELITE: { target: 70, children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } },
       QB_CORE: { target: 30, children: { TE_ELITE: 70, TE_ANCHOR: 30, TE_LATE: 0 } },
-      QB_LATE: { target: 0, children: { TE_LATE: 100 } }
+      QB_LATE: { target: 0, children: { TE_ELITE: 80, TE_ANCHOR: 20, TE_LATE: 0 } }
     }
   },
   RB_HYPER_FRAGILE: {
@@ -19,7 +19,7 @@ export const PROTOCOL_TREE = {
     children: {
       QB_LATE: { target: 60, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
       QB_CORE: { target: 20, children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
-      QB_ELITE: { target: 20, children: { TE_LATE: 100 } }
+      QB_ELITE: { target: 20, children: { TE_LATE: 100, TE_ANCHOR: 0, TE_ELITE: 0} }
     }
   },
   RB_HERO: {
