@@ -9,6 +9,108 @@ const COLORS = {
 
 const getPosColor = (pos) => COLORS[pos] || COLORS.default;
 
+const getGlobalExposureColor = (percent) => {
+  if (percent === 0) return '#3b82f6'; // Blue for 0%
+  if (percent > 30) return '#ef4444'; // Red for >30%
+  if (percent >= 7 && percent <= 10) return '#10b981'; // Green for ~8.333% (balanced)
+  if (percent < 8.333) return '#60a5fa'; // Light blue for under-exposed
+  return '#f59e0b'; // Orange for over-exposed but not critical
+};
+
+// Sophisticated stacking analysis
+const analyzeStack = (player, currentPicks) => {
+  const team = player.team;
+  if (!team || team === 'FA' || team === 'N/A') return null;
+
+  // Find all teammates
+  const teammates = currentPicks.filter(p => p.team === team);
+  if (teammates.length === 0) return null;
+
+  const playerPos = player.position;
+  const qbs = teammates.filter(p => p.position === 'QB');
+  const wrs = teammates.filter(p => p.position === 'WR');
+  const tes = teammates.filter(p => p.position === 'TE');
+  const rbs = teammates.filter(p => p.position === 'RB');
+
+  let stackType = '';
+  let priority = 0; // Higher = more important
+  let color = '#64748b';
+  let icon = '●';
+
+  // ELITE STACKS - QB correlation
+  if (playerPos === 'QB' && (wrs.length > 0 || tes.length > 0)) {
+    const passTargets = wrs.length + tes.length;
+    if (passTargets >= 2) {
+      stackType = '🔥 ELITE OVERSTACK';
+      priority = 100;
+      color = '#a855f7'; // Purple
+      icon = '⚡⚡';
+    } else {
+      stackType = '⚡ ELITE STACK';
+      priority = 90;
+      color = '#8b5cf6';
+      icon = '⚡';
+    }
+  } else if ((playerPos === 'WR' || playerPos === 'TE') && qbs.length > 0) {
+    const passTargets = wrs.length + tes.length;
+    if (passTargets >= 1) { // Already have WR/TE, adding another
+      stackType = '🔥 ELITE OVERSTACK';
+      priority = 100;
+      color = '#a855f7';
+      icon = '⚡⚡';
+    } else {
+      stackType = '⚡ ELITE STACK';
+      priority = 90;
+      color = '#8b5cf6';
+      icon = '⚡';
+    }
+  }
+  // OVERSTACKS - Same position teammates
+  else if (playerPos === 'WR' && wrs.length >= 1) {
+    stackType = `💎 WR OVERSTACK (${wrs.length + 1})`;
+    priority = 80;
+    color = '#06b6d4'; // Cyan
+    icon = '💎';
+  } else if (playerPos === 'TE' && tes.length >= 1) {
+    stackType = `💎 TE OVERSTACK (${tes.length + 1})`;
+    priority = 80;
+    color = '#06b6d4';
+    icon = '💎';
+  } else if (playerPos === 'RB' && rbs.length >= 1) {
+    stackType = `🔄 RB STACK (${rbs.length + 1})`;
+    priority = 60;
+    color = '#f59e0b'; // Orange - risky backfield
+    icon = '🔄';
+  }
+  // CORRELATION STACKS - Weak but notable
+  else if (playerPos === 'RB' && (wrs.length > 0 || tes.length > 0)) {
+    stackType = '○ Game Stack';
+    priority = 40;
+    color = '#64748b';
+    icon = '○';
+  } else if ((playerPos === 'WR' || playerPos === 'TE') && rbs.length > 0) {
+    stackType = '○ Game Stack';
+    priority = 40;
+    color = '#64748b';
+    icon = '○';
+  }
+  // Generic same-team
+  else {
+    stackType = '● Stack';
+    priority = 30;
+    color = '#64748b';
+    icon = '●';
+  }
+
+  return {
+    type: stackType,
+    priority,
+    color,
+    icon,
+    teammates: teammates.map(t => `${t.position} ${t.name}`).join(', ')
+  };
+};
+
 // --- STRATEGY VIABILITY CHECKER (from V2) ---
 function checkStrategyViability(strategyKey, currentPicks, currentRound) {
   const countPos = (pos, start, end) => currentPicks.filter(p => {
@@ -46,6 +148,22 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
   const [debugPlayer, setDebugPlayer] = useState(null);
+
+  // Add animation styles
+  React.useEffect(() => {
+    const styleId = 'stack-animations';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   // --- 1. DATA TRANSFORMATION ---
   const allRosters = useMemo(() => {
@@ -215,13 +333,19 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     let baseList = [];
 
     if (masterPlayers && masterPlayers.length > 0) {
-      baseList = masterPlayers.map(mp => ({
-        ...mp,
-        rawCount: roundCounts.get(mp.name) || 0,
-        matchCount: matchCounts.get(mp.name) || 0,
-        totalGlobalCount: globalPlayerCounts.get(mp.name) || 0,
-        _sortAdp: normalizeAdp(mp)
-      }));
+      baseList = masterPlayers.map(mp => {
+        const historicalData = historicalInfo.get(mp.name) || {};
+        return {
+          ...mp,
+          // Ensure position/team from master takes priority, fallback to historical
+          position: mp.position || historicalData.position || mp.pos || 'N/A',
+          team: mp.team || historicalData.team || 'FA',
+          rawCount: roundCounts.get(mp.name) || 0,
+          matchCount: matchCounts.get(mp.name) || 0,
+          totalGlobalCount: globalPlayerCounts.get(mp.name) || 0,
+          _sortAdp: normalizeAdp(mp)
+        };
+      });
     } else {
       baseList = Array.from(historicalInfo.keys()).map(name => ({
         name,
@@ -538,8 +662,8 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen, setDebugOpen }) {
     const color = getPosColor(player.position);
 
-    // Stack Match Detection (from V1)
-    const stackMatch = currentPicks.find(p => p.team === player.team && p.team !== 'FA' && p.team !== 'N/A');
+    // Stack Analysis (upgraded)
+    const stackInfo = analyzeStack(player, currentPicks);
 
     // Metrics
     const pathExp = player.portfolioExposure || 0;
@@ -612,13 +736,24 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
                   {player.name || 'Unknown Player'}
                 </span>
 
-                {stackMatch && (
+                {stackInfo && (
                   <span style={{ 
-                    fontSize: 9, background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', 
-                    padding: '3px 7px', borderRadius: 6, display: 'flex', alignItems: 'center', 
-                    gap: 4, fontWeight: 700
+                    fontSize: stackInfo.priority >= 90 ? 10 : 9,
+                    background: stackInfo.priority >= 90 
+                      ? `linear-gradient(135deg, ${stackInfo.color}22, ${stackInfo.color}33)` 
+                      : `${stackInfo.color}22`,
+                    color: stackInfo.color,
+                    padding: stackInfo.priority >= 90 ? '4px 10px' : '3px 8px',
+                    borderRadius: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontWeight: stackInfo.priority >= 80 ? 800 : 600,
+                    border: stackInfo.priority >= 90 ? `1.5px solid ${stackInfo.color}` : 'none',
+                    boxShadow: stackInfo.priority >= 90 ? `0 0 12px ${stackInfo.color}44` : 'none',
+                    animation: stackInfo.priority >= 100 ? 'pulse 2s infinite' : 'none'
                   }}>
-                    <Zap size={11} /> STACK
+                    {stackInfo.type}
                   </span>
                 )}
               </div>
@@ -693,7 +828,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
               <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
                 Global
               </div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#cbd5e1', marginBottom: 3 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: getGlobalExposureColor(globalExp), marginBottom: 3 }}>
                 {Math.round(globalExp)}%
               </div>
               <div style={{ fontSize: 10, color: '#475569' }}>{(player.totalGlobalCount || 0)} total</div>
@@ -749,6 +884,19 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
                 <Row k="Total Rosters" v={player.totalGlobalCount} />
               </div>
             </div>
+            {stackInfo && (
+              <div style={{ borderTop: '1px solid #1e293b', paddingTop: 10, marginTop: 10 }}>
+                <div style={{ fontSize: 10, color: stackInfo.color, marginBottom: 8, textTransform: 'uppercase', fontWeight: 600 }}>Stack Analysis</div>
+                <div style={{ marginBottom: 6 }}>
+                  <span style={{ color: '#94a3b8', fontSize: 11 }}>Type: </span>
+                  <span style={{ color: stackInfo.color, fontWeight: 700, fontSize: 11 }}>{stackInfo.type}</span>
+                </div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                  <span style={{ color: '#64748b' }}>With: </span>
+                  {stackInfo.teammates}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
