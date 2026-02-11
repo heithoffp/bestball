@@ -168,7 +168,7 @@ export default function App() {
           </div>
 
           {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
-          {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} />}
+          {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
           {activeTab === 'combos' && <ComboAnalysis rosterData={rosterData} />}
           {activeTab === 'construction' && <RosterConstruction rosterData={rosterData} />}
           {activeTab === 'timeseries' && (
