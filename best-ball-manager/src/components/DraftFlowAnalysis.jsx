@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Target, Zap, Users, Activity, GitBranch } from 'lucide-react';
+import { Target, Zap, Users, Activity, GitBranch, Link as LinkIcon } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 
 // --- SHARED CONSTANTS ---
@@ -12,15 +12,15 @@ const getPosColor = (pos) => COLORS[pos] || COLORS.default;
 export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}) {
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
-  const [debugPlayer, setDebugPlayer] = useState(null); // Local state for debug panel
+  const [debugPlayer, setDebugPlayer] = useState(null);
 
   // --- 0. DATA TRANSFORMATION ---
+  // Create a structured list of rosters
   const allRosters = useMemo(() => {
     if (rosterData.length > 0 && Array.isArray(rosterData[0])) return rosterData;
 
     const tMap = new Map();
     rosterData.forEach(p => {
-      // Handle both casing styles seen in your snippets
       const id = p.entry_id || p.entryId || p['Entry ID'] || 'unknown';
       if (!tMap.has(id)) tMap.set(id, []);
       tMap.get(id).push(p);
@@ -28,17 +28,31 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     return Array.from(tMap.values());
   }, [rosterData]);
 
+  // --- 0b. PRE-COMPUTE PLAYER INDICES (For Correlation) ---
+  // Map<PlayerName, Set<RosterIndex>>
+  // This allows us to instantly find all rosters a specific player is in.
+  const playerIndexMap = useMemo(() => {
+    const map = new Map();
+    allRosters.forEach((roster, rIndex) => {
+      roster.forEach(p => {
+        if (!p.name) return;
+        if (!map.has(p.name)) map.set(p.name, new Set());
+        map.get(p.name).add(rIndex); // Store index of the roster
+      });
+    });
+    return map;
+  }, [allRosters]);
+
   // --- 1. Current Context ---
   const currentRound = currentPicks.length + 1;
 
-  // --- 2. Filter Matching Rosters ---
+  // --- 2. Filter Matching Rosters (Exact Path) ---
   const matchingRosters = useMemo(() => {
     if (currentPicks.length === 0) return allRosters;
 
     return allRosters.filter(roster => {
       return currentPicks.every(pick => 
         roster.some(p => {
-           // Ensure robust comparison of names and rounds
            const rRound = parseInt(p.round || p.Round);
            return p.name === pick.name && rRound === pick.round;
         })
@@ -53,7 +67,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
     matchingRosters.forEach(roster => {
       const path = classifyRosterPath(roster);
-      const stratKey = path.rb; // using RB strategy as the primary archetype key
+      const stratKey = path.rb; 
       
       if (!counts[stratKey]) counts[stratKey] = 0;
       counts[stratKey]++;
@@ -92,8 +106,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   }, [allRosters]);
 
   // --- 5. Candidate Players Logic ---
-  
-  // Helper: Extract valid numeric round
   const parseRoundNum = (r) => {
     if (r == null) return NaN;
     if (typeof r === 'number') return r;
@@ -107,30 +119,36 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     return (round % 2 === 1) ? slot : (teams + 1 - slot);
   };
 
-  // *** CRITICAL FIX: Update normalizeAdp to check `adpPick` (from masterPlayers) ***
   const normalizeAdp = (p) => {
     if (Number.isFinite(p?.adpPick)) return p.adpPick;
     if (Number.isFinite(p?.overallPick)) return p.overallPick;
     if (Number.isFinite(p?.adp)) return p.adp;
-    // Fallback: try parsing display string if numeric
     if (p?.adpDisplay && !isNaN(p.adpDisplay)) return parseFloat(p.adpDisplay);
     return Infinity;
   };
 
   const candidatePlayers = useMemo(() => {
-    // A. Calculate stats from Historical Data
+    // A. Global Ownership Counts
+    const globalPlayerCounts = new Map();
+    allRosters.forEach(roster => {
+        roster.forEach(p => {
+            if (p.name) {
+                globalPlayerCounts.set(p.name, (globalPlayerCounts.get(p.name) || 0) + 1);
+            }
+        });
+    });
+
     const roundCounts = new Map(); // Times taken in THIS specific round globally
     const matchCounts = new Map(); // Times taken in THIS specific round by matching rosters
-    const historicalInfo = new Map(); // Fallback positional data
+    const historicalInfo = new Map(); 
 
     allRosters.forEach(roster => {
       const player = roster.find(p => parseRoundNum(p.round) === currentRound);
       if (!player || !player.name) return;
-      
+
       const name = player.name;
       roundCounts.set(name, (roundCounts.get(name) || 0) + 1);
-      
-      // Store pos/team if we see it, just in case it's missing from master
+
       if (!historicalInfo.has(name)) {
         historicalInfo.set(name, { position: player.position, team: player.team });
       }
@@ -142,70 +160,117 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       matchCounts.set(player.name, (matchCounts.get(player.name) || 0) + 1);
     });
 
-    // B. Build Base List from MasterPlayers (or historical if master is empty)
+    // B. Build Base List
     let baseList = [];
-    
+
     if (masterPlayers && masterPlayers.length > 0) {
       baseList = masterPlayers.map(mp => ({
         ...mp,
-        // Ensure we grab historical counts
         rawCount: roundCounts.get(mp.name) || 0,
         matchCount: matchCounts.get(mp.name) || 0,
-        // Ensure ADP is normalized for sorting
+        totalGlobalCount: globalPlayerCounts.get(mp.name) || 0,
         _sortAdp: normalizeAdp(mp)
       }));
     } else {
-      // Fallback: Build list purely from what we've seen in rosters
       baseList = Array.from(historicalInfo.keys()).map(name => ({
         name,
         ...historicalInfo.get(name),
         rawCount: roundCounts.get(name) || 0,
         matchCount: matchCounts.get(name) || 0,
-        _sortAdp: Infinity // No ADP data available
+        totalGlobalCount: globalPlayerCounts.get(name) || 0,
+        _sortAdp: Infinity
       }));
     }
 
-    // C. Filter out players already picked in current simulation
-    const availablePlayers = baseList.filter(p => 
+    // C. Filter out players already picked
+    const availablePlayers = baseList.filter(p =>
       !currentPicks.some(cp => cp.name === p.name)
     );
 
-    // D. Determine Window (Who is available around this pick?)
+    // D. Determine Window (Dynamic based on round)
+    // Round 1-2: Window ~14 (+/- 7 players)
+    // Round 8: Window ~32 (+/- 16 players)
+    // Round 18: Window ~60
+    const dynamicWindow = 10 + (currentRound * 3); 
+
     const TEAMS = 12;
     const pickPos = getSnakePickPosition(currentRound, draftSlot, TEAMS) || 1;
     const currentOverallPick = (currentRound - 1) * TEAMS + pickPos;
 
-    // Sort by ADP to find the "window"
     availablePlayers.sort((a, b) => a._sortAdp - b._sortAdp);
 
-    // Find index of current pick in the ADP list
-    // (If everyone is Infinity, this stays at 0, showing top list)
+    // Find the index of the player closest to our current pick
     let idx = availablePlayers.findIndex(p => p._sortAdp >= currentOverallPick);
-    
-    // Safety: if we are late in draft or ADP is weird, center loosely
     if (idx === -1) idx = availablePlayers.length > 0 ? availablePlayers.length - 1 : 0;
 
-    // Define Window Size
-    const WINDOW = 20; 
-    const half = Math.floor(WINDOW / 2);
+    const half = Math.floor(dynamicWindow / 2);
     let start = Math.max(0, idx - half);
-    let end = Math.min(availablePlayers.length, start + WINDOW);
-    
-    // Adjust window to ensure it fills up
-    if (end - start < WINDOW) {
-      start = Math.max(0, end - WINDOW);
-    }
+    let end = Math.min(availablePlayers.length, start + dynamicWindow);
+
+    // Adjust start if we hit the end of the list to keep window size consistent
+    if (end - start < dynamicWindow) start = Math.max(0, end - dynamicWindow);
 
     const slice = availablePlayers.slice(start, end);
 
-    // E. Final Sort for Display (ADP tie-broken by Name)
-    // You can change this to sort by 'matchCount' if you want to see most frequent picks first
-    return slice.sort((a, b) => {
-       if (a._sortAdp !== b._sortAdp) return a._sortAdp - b._sortAdp;
-       return a.name.localeCompare(b.name);
+    // E. Finalize Candidates with CORRELATION logic
+    const matchingRosterTotal = matchingRosters.length;
+
+    const finalCandidates = slice.map(candidate => {
+      // 1. Portfolio Exposure (Current Path)
+      const pathPercent = matchingRosterTotal > 0 
+        ? (candidate.matchCount / matchingRosterTotal) * 100 
+        : 0;
+
+      // 2. Correlation Score (The "Unique Combo" metric)
+      // Logic: Average Conditional Probability
+      // For every picked player P: What % of rosters with P also have Candidate C?
+      let sumProb = 0;
+      let comparisons = 0;
+      
+      // Get the set of rosters this candidate is in
+      const candidateRosters = playerIndexMap.get(candidate.name) || new Set();
+
+      if (currentPicks.length > 0) {
+        currentPicks.forEach(pick => {
+          const pickRosters = playerIndexMap.get(pick.name) || new Set();
+          
+          if (pickRosters.size > 0) {
+            // Find Intersection count
+            let intersection = 0;
+            // Iterate over the smaller set for performance
+            if (pickRosters.size < candidateRosters.size) {
+                pickRosters.forEach(rid => { if(candidateRosters.has(rid)) intersection++; });
+            } else {
+                candidateRosters.forEach(rid => { if(pickRosters.has(rid)) intersection++; });
+            }
+
+            // Probability: P(Candidate | Pick)
+            const prob = intersection / pickRosters.size;
+            sumProb += prob;
+            comparisons++;
+          }
+        });
+      }
+
+      // If we have picks, average the probabilities. If not (Round 1), it's 0.
+      const avgCorrelation = comparisons > 0 ? (sumProb / comparisons) * 100 : 0;
+
+      return {
+        ...candidate,
+        portfolioExposure: pathPercent, // "Current Path"
+        correlationScore: avgCorrelation, // "Roster Correlation"
+        _sortAdp: candidate._sortAdp
+      };
     });
 
-  }, [masterPlayers, allRosters, matchingRosters, currentRound, draftSlot, currentPicks]);
+    // F. Final Sort
+    finalCandidates.sort((a, b) => {
+      if (a._sortAdp !== b._sortAdp) return a._sortAdp - b._sortAdp;
+      return a.name.localeCompare(b.name);
+    });
+
+    return finalCandidates;
+  }, [masterPlayers, allRosters, matchingRosters, currentRound, draftSlot, currentPicks, playerIndexMap]);
 
 
   // --- Actions ---
@@ -357,16 +422,25 @@ function PlayerCard({ player = {}, currentPicks = [], matchingRostersCount = 0, 
   // 1. Correlation Check
   const stackMatch = currentPicks.find(p => p.team === player.team && p.team !== 'FA' && p.team !== 'N/A');
 
-  // 2. Uniqueness Check
-  const portfolioExposure = matchingRostersCount > 0
-    ? (player.matchCount || 0) / matchingRostersCount * 100
-    : 0;
+  // 2. Uniqueness Check (How often do matching rosters take this player IN THIS ROUND)
+  const portfolioExposure = player.portfolioExposure || 0;
 
-  // 3. Global Exposure
-  const globalOwn = totalEntries > 0 ? (player.rawCount || 0) / totalEntries * 100 : 0;
+  // 3. Global Exposure 
+  const globalOwn = totalEntries > 0 ? (player.totalGlobalCount || 0) / totalEntries * 100 : 0;
 
-  // 4. ADP Display - PRIORITIZE adpDisplay or adpPick from processMasterList
+  // 4. ADP Display
   const displayAdp = player.adpDisplay || (Number.isFinite(player.adpPick) ? player.adpPick.toFixed(1) : '—');
+
+  // 5. Correlation Score Logic
+  // If > 0, it means there is overlap. If 0, it is a very unique combo (or just no data).
+  // We color code: High Correlation (Red) = Chalky. Low Correlation (Green) = Unique.
+  const corr = player.correlationScore || 0;
+  let corrColor = '#6b7280'; // Gray
+  if (currentPicks.length > 0) {
+    if (corr > 25) corrColor = '#ef4444'; // Red (Very correlated, chalky)
+    else if (corr > 15) corrColor = '#f59e0b'; // Orange
+    else if (corr > 0) corrColor = '#10b981'; // Green (Unique but exists)
+  }
 
   // helper render small key/value
   const Row = ({ k, v }) => (
@@ -381,14 +455,22 @@ function PlayerCard({ player = {}, currentPicks = [], matchingRostersCount = 0, 
       <div
         onClick={onSelect}
         style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: '#1f2937', padding: '10px 14px', borderRadius: 8,
-          borderLeft: `4px solid ${color}`, cursor: 'pointer', transition: 'background 0.15s'
+          display: 'grid',
+          gridTemplateColumns: '280px 1fr auto',
+          gap: 24,
+          alignItems: 'center',
+          background: '#1f2937',
+          padding: '12px 16px',
+          borderRadius: 8,
+          borderLeft: `4px solid ${color}`,
+          cursor: 'pointer',
+          transition: 'background 0.15s'
         }}
         onMouseEnter={e => e.currentTarget.style.background = '#374151'}
         onMouseLeave={e => e.currentTarget.style.background = '#1f2937'}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 2, minWidth: 0 }}>
+        {/* Player Info Section */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#111827', background: color, padding: '2px 6px', borderRadius: 4, minWidth: 24, textAlign: 'center' }}>
             {player.position || '??'}
           </div>
@@ -410,33 +492,58 @@ function PlayerCard({ player = {}, currentPicks = [], matchingRostersCount = 0, 
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flex: 2, justifyContent: 'flex-end' }}>
-          {/* Path Frequency */}
-          <div style={{ textAlign: 'right', minWidth: 80 }}>
-            <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', marginBottom: 4 }}>Freq</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+        {/* Stats Grid - Spread Out */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          {/* Portfolio Frequency (In this specific round) */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', marginBottom: 6 }}>Current Path</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
               <Users size={14} color={portfolioExposure > 25 ? '#10b981' : '#f59e0b'} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: portfolioExposure > 25 ? '#10b981' : '#f59e0b' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: portfolioExposure > 25 ? '#10b981' : '#f59e0b' }}>
                 {Math.round(portfolioExposure)}%
               </span>
             </div>
-            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>{(player.matchCount || 0)} hits</div>
+            <div style={{ fontSize: 11, color: '#6b7280' }}>{(player.matchCount || 0)} here</div>
+          </div>
+
+          {/* Total Exposure */}
+          <div style={{ textAlign: 'center', borderLeft: '1px solid #374151', paddingLeft: 12 }}>
+            <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', marginBottom: 6 }}>Total Exposure</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#e5e7eb', marginBottom: 4 }}>
+              {Math.round(globalOwn)}%
+            </div>
+            <div style={{ fontSize: 11, color: '#6b7280' }}>{(player.totalGlobalCount || 0)} total</div>
+          </div>
+
+          {/* Correlation Score (NEW) */}
+          <div style={{ textAlign: 'center', borderLeft: '1px solid #374151', paddingLeft: 12 }}>
+            <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', marginBottom: 6 }}>Roster Corr</div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+               <LinkIcon size={14} color={corrColor} />
+               <div style={{ fontSize: 15, fontWeight: 700, color: corrColor }}>
+                  {currentPicks.length > 0 ? Math.round(corr) + '%' : '—'}
+               </div>
+            </div>
+             <div style={{ fontSize: 11, color: '#6b7280' }}>
+               {corr < 5 && currentPicks.length > 0 ? 'Unique' : 'Common'}
+             </div>
           </div>
 
           {/* ADP */}
-          <div style={{ textAlign: 'right', minWidth: 60 }}>
-            <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase' }}>ADP</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#e5e7eb' }}>{displayAdp}</div>
+          <div style={{ textAlign: 'center', borderLeft: '1px solid #374151', paddingLeft: 12 }}>
+            <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', marginBottom: 6 }}>ADP</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#e5e7eb' }}>{displayAdp}</div>
           </div>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              onClick={(e) => { e.stopPropagation(); setDebugOpen(!debugOpen); }}
-              style={{ background: '#111827', color: '#9ca3af', border: '1px solid #374151', padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-            >
-              ?
-            </button>
-          </div>
+        {/* Debug Button */}
+        <div>
+          <button
+            onClick={(e) => { e.stopPropagation(); setDebugOpen(!debugOpen); }}
+            style={{ background: '#111827', color: '#9ca3af', border: '1px solid #374151', padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
+          >
+            ?
+          </button>
         </div>
       </div>
 
@@ -444,11 +551,10 @@ function PlayerCard({ player = {}, currentPicks = [], matchingRostersCount = 0, 
         <div style={{ background: '#0b1220', borderRadius: 8, padding: 10, marginTop: 6, border: '1px solid #243042', fontSize: 13, color: '#d1d5db' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
             <Row k="Name" v={player.name} />
-            <Row k="ID" v={player.player_id} />
-            <Row k="ADP Pick" v={player.adpPick} />
-            <Row k="ADP Disp" v={player.adpDisplay} />
-            <Row k="_sortAdp" v={player._sortAdp} />
-            <Row k="Matches" v={player.matchCount} />
+            <Row k="Path Freq" v={portfolioExposure.toFixed(1) + '%'} />
+            <Row k="Global Freq" v={globalOwn.toFixed(1) + '%'} />
+            <Row k="Correlation" v={corr.toFixed(1) + '%'} />
+            <Row k="ADP" v={player.adpPick} />
           </div>
         </div>
       )}
