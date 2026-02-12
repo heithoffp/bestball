@@ -338,8 +338,8 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         return {
           ...mp,
           // Ensure position/team from master takes priority, fallback to historical
-          position: mp.position || historicalData.position || mp.pos || 'N/A',
-          team: mp.team || historicalData.team || 'FA',
+          position: mp.position,
+          team: mp.team,
           rawCount: roundCounts.get(mp.name) || 0,
           matchCount: matchCounts.get(mp.name) || 0,
           totalGlobalCount: globalPlayerCounts.get(mp.name) || 0,
