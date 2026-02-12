@@ -1,6 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
+
+// --- EXTENDED CONFIGURATION: QB & TE ARCHETYPES (from V2) ---
+const QB_META = {
+  QB_ELITE: { name: 'Elite QB', target: 15, color: '#a855f7', rounds: [1, 4] },
+  QB_MID:   { name: 'Mid-Round QB', target: 25, color: '#d8b4fe', rounds: [5, 9] },
+  QB_LATE:  { name: 'Late Round QB', target: 60, color: '#e9d5ff', rounds: [10, 18] }
+};
+
+const TE_META = {
+  TE_ELITE: { name: 'Elite TE', target: 20, color: '#3b82f6', rounds: [1, 4] },
+  TE_MID:   { name: 'Mid-Round TE', target: 30, color: '#93c5fd', rounds: [5, 9] },
+  TE_LATE:  { name: 'Late Round TE', target: 50, color: '#bfdbfe', rounds: [10, 18] }
+};
 
 // --- SHARED CONSTANTS ---
 const COLORS = {
@@ -10,19 +23,18 @@ const COLORS = {
 const getPosColor = (pos) => COLORS[pos] || COLORS.default;
 
 const getGlobalExposureColor = (percent) => {
-  if (percent === 0) return '#3b82f6'; // Blue for 0%
-  if (percent > 30) return '#ef4444'; // Red for >30%
-  if (percent >= 7 && percent <= 10) return '#10b981'; // Green for ~8.333% (balanced)
-  if (percent < 8.333) return '#60a5fa'; // Light blue for under-exposed
-  return '#f59e0b'; // Orange for over-exposed but not critical
+  if (percent === 0) return '#3b82f6';
+  if (percent > 30) return '#ef4444';
+  if (percent >= 7 && percent <= 10) return '#10b981';
+  if (percent < 8.333) return '#60a5fa';
+  return '#f59e0b';
 };
 
-// Sophisticated stacking analysis
+// --- STACK ANALYSIS (from V1) ---
 const analyzeStack = (player, currentPicks) => {
   const team = player.team;
   if (!team || team === 'FA' || team === 'N/A') return null;
 
-  // Find all teammates
   const teammates = currentPicks.filter(p => p.team === team);
   if (teammates.length === 0) return null;
 
@@ -33,27 +45,13 @@ const analyzeStack = (player, currentPicks) => {
   const rbs = teammates.filter(p => p.position === 'RB');
 
   let stackType = '';
-  let priority = 0; // Higher = more important
+  let priority = 0;
   let color = '#64748b';
   let icon = '●';
 
-  // ELITE STACKS - QB correlation
   if (playerPos === 'QB' && (wrs.length > 0 || tes.length > 0)) {
     const passTargets = wrs.length + tes.length;
     if (passTargets >= 2) {
-      stackType = '🔥 ELITE OVERSTACK';
-      priority = 100;
-      color = '#a855f7'; // Purple
-      icon = '⚡⚡';
-    } else {
-      stackType = '⚡ ELITE STACK';
-      priority = 90;
-      color = '#8b5cf6';
-      icon = '⚡';
-    }
-  } else if ((playerPos === 'WR' || playerPos === 'TE') && qbs.length > 0) {
-    const passTargets = wrs.length + tes.length;
-    if (passTargets >= 1) { // Already have WR/TE, adding another
       stackType = '🔥 ELITE OVERSTACK';
       priority = 100;
       color = '#a855f7';
@@ -64,12 +62,23 @@ const analyzeStack = (player, currentPicks) => {
       color = '#8b5cf6';
       icon = '⚡';
     }
-  }
-  // OVERSTACKS - Same position teammates
-  else if (playerPos === 'WR' && wrs.length >= 1) {
+  } else if ((playerPos === 'WR' || playerPos === 'TE') && qbs.length > 0) {
+    const passTargets = wrs.length + tes.length;
+    if (passTargets >= 1) {
+      stackType = '🔥 ELITE OVERSTACK';
+      priority = 100;
+      color = '#a855f7';
+      icon = '⚡⚡';
+    } else {
+      stackType = '⚡ ELITE STACK';
+      priority = 90;
+      color = '#8b5cf6';
+      icon = '⚡';
+    }
+  } else if (playerPos === 'WR' && wrs.length >= 1) {
     stackType = `💎 WR OVERSTACK (${wrs.length + 1})`;
     priority = 80;
-    color = '#06b6d4'; // Cyan
+    color = '#06b6d4';
     icon = '💎';
   } else if (playerPos === 'TE' && tes.length >= 1) {
     stackType = `💎 TE OVERSTACK (${tes.length + 1})`;
@@ -79,11 +88,9 @@ const analyzeStack = (player, currentPicks) => {
   } else if (playerPos === 'RB' && rbs.length >= 1) {
     stackType = `🔄 RB STACK (${rbs.length + 1})`;
     priority = 60;
-    color = '#f59e0b'; // Orange - risky backfield
+    color = '#f59e0b';
     icon = '🔄';
-  }
-  // CORRELATION STACKS - Weak but notable
-  else if (playerPos === 'RB' && (wrs.length > 0 || tes.length > 0)) {
+  } else if (playerPos === 'RB' && (wrs.length > 0 || tes.length > 0)) {
     stackType = '○ Game Stack';
     priority = 40;
     color = '#64748b';
@@ -93,9 +100,7 @@ const analyzeStack = (player, currentPicks) => {
     priority = 40;
     color = '#64748b';
     icon = '○';
-  }
-  // Generic same-team
-  else {
+  } else {
     stackType = '● Stack';
     priority = 30;
     color = '#64748b';
@@ -111,14 +116,14 @@ const analyzeStack = (player, currentPicks) => {
   };
 };
 
-// --- STRATEGY VIABILITY CHECKER (from V2) ---
+// --- MULTI-DIMENSIONAL VIABILITY CHECKER (Enhanced from V2) ---
 function checkStrategyViability(strategyKey, currentPicks, currentRound) {
   const countPos = (pos, start, end) => currentPicks.filter(p => {
       const r = p.round;
       return p.position === pos && r >= start && r <= end;
   }).length;
 
-  // RB Logic
+  // --- RB LOGIC ---
   if (strategyKey === 'RB_HYPER_FRAGILE') {
     const rb1to3 = countPos('RB', 1, 3);
     if (currentRound > 3) return rb1to3 >= 3;
@@ -129,20 +134,48 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
   }
   if (strategyKey === 'RB_HERO') {
     const rb1to2 = countPos('RB', 1, 2);
-    if (rb1to2 > 1) return false; // Too many early
-    if (countPos('RB', 3, 6) > 0) return false; // Dead zone violation
-    if (currentRound > 2 && rb1to2 === 0) return false; // Missed window
+    if (rb1to2 > 1) return false;
+    if (countPos('RB', 3, 6) > 0) return false;
+    if (currentRound > 2 && rb1to2 === 0) return false;
     return true;
   }
-  if (strategyKey === 'RB_VALUE') return true; // Fallback
+  if (strategyKey === 'RB_VALUE') return true;
 
-  // QB Logic (simplified for brevity)
-  if (strategyKey === 'QB_ELITE') return countPos('QB', 1, 3) >= 1 || currentRound <= 3;
-  if (strategyKey === 'QB_CORE')  return countPos('QB', 5, 9) >= 1 || currentRound <= 9;
-  if (strategyKey === 'QB_LATE')  return true;
+  // --- QB LOGIC (from V2) ---
+  if (strategyKey === 'QB_ELITE') return countPos('QB', 1, 4) >= 1 || currentRound <= 4;
+  if (strategyKey === 'QB_MID')   return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 9) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 9);
+  if (strategyKey === 'QB_LATE')  return countPos('QB', 1, 9) === 0;
+
+  // --- TE LOGIC (from V2) ---
+  if (strategyKey === 'TE_ELITE') return countPos('TE', 1, 4) >= 1 || currentRound <= 4;
+  if (strategyKey === 'TE_MID')   return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 9) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
+  if (strategyKey === 'TE_LATE')  return countPos('TE', 1, 9) === 0;
 
   return true;
 }
+
+// --- LOCAL CLASSIFIER FOR QB/TE (from V2) ---
+const classifyStructure = (roster) => {
+  let rbPath = 'RB_VALUE';
+  try {
+    rbPath = classifyRosterPath(roster).rb;
+  } catch (e) { /* fallback */ }
+
+  const countPos = (pos, start, end) => roster.filter(p => {
+    const r = typeof p.round === 'string' ? parseInt(p.round.replace(/\D/g,'')) : p.round;
+    return p.position === pos && r >= start && r <= end;
+  }).length;
+
+  let qbPath = 'QB_LATE';
+  if (countPos('QB', 1, 4) > 0) qbPath = 'QB_ELITE';
+  else if (countPos('QB', 5, 9) > 0) qbPath = 'QB_MID';
+
+  let tePath = 'TE_LATE';
+  if (countPos('TE', 1, 4) > 0) tePath = 'TE_ELITE';
+  else if (countPos('TE', 5, 9) > 0) tePath = 'TE_MID';
+
+  return { rb: rbPath, qb: qbPath, te: tePath };
+};
 
 export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}) {
   const [currentPicks, setCurrentPicks] = useState([]);
@@ -160,6 +193,9 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           0%, 100% { opacity: 1; }
           50% { opacity: 0.8; }
         }
+        .thin-scrollbar::-webkit-scrollbar { width: 6px; }
+        .thin-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .thin-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
       `;
       document.head.appendChild(style);
     }
@@ -178,7 +214,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     return Array.from(tMap.values());
   }, [rosterData]);
 
-  // --- 2. PLAYER INDEX MAP (from V1 - for correlation) ---
+  // --- 2. PLAYER INDEX MAP (from V1) ---
   const playerIndexMap = useMemo(() => {
     const map = new Map();
     allRosters.forEach((roster, rIndex) => {
@@ -207,30 +243,39 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     );
   }, [allRosters, currentPicks]);
 
-  // --- 5. STRATEGY STATUS (from V2 - Deterministic + Pools) ---
+  // --- 5. STRATEGY STATUS (MULTI-DIMENSIONAL from V2) ---
   const strategyStatus = useMemo(() => {
-    // A. Identify Viability (Rules)
-    const viableRB = Object.keys(PROTOCOL_TREE).map(key => ({
+    const checkGroup = (metaObj) => {
+      const items = Object.keys(metaObj).map(key => ({
+        key,
+        name: metaObj[key].name,
+        viable: checkStrategyViability(key, currentPicks, currentRound),
+        meta: metaObj[key]
+      }));
+      const active = items.filter(i => i.viable);
+      const locked = active.length === 1 ? active[0] : null;
+      return { items, locked };
+    };
+
+    // RB Strategy
+    const rbStatus = Object.keys(PROTOCOL_TREE).map(key => ({
       key,
       name: ARCHETYPE_METADATA[key]?.name || key,
       viable: checkStrategyViability(key, currentPicks, currentRound),
       meta: PROTOCOL_TREE[key]
     }));
+    const strictRbActive = rbStatus.filter(s => s.viable && s.key !== 'RB_VALUE');
+    const rbLocked = strictRbActive.length === 1 ? strictRbActive[0] : (strictRbActive.length === 0 ? rbStatus.find(s=>s.key === 'RB_VALUE') : null);
 
-    const activeStructural = viableRB.filter(s => s.viable && s.key !== 'RB_VALUE');
-    
-    let lockedStrategy = null;
-    let lockedLevel = 0; 
+    // QB & TE Strategy
+    const qbStatus = checkGroup(QB_META);
+    const teStatus = checkGroup(TE_META);
 
-    if (activeStructural.length === 1) {
-      lockedStrategy = activeStructural[0];
-      lockedLevel = 1;
-    } else if (activeStructural.length === 0) {
-      lockedStrategy = viableRB.find(s => s.key === 'RB_VALUE');
-      lockedLevel = 1;
-    }
+    // Reference Strategy (for player comparison)
+    const referenceStrategyKey = rbLocked ? rbLocked.key : 
+        (rbStatus.find(s => s.viable && s.key === 'RB_HERO') ? 'RB_HERO' : 'RB_VALUE');
 
-    // B. Strategy Pools
+    // Strategy Pools
     const strategyPools = {
         RB_ZERO: [], RB_HERO: [], RB_HYPER_FRAGILE: [], RB_VALUE: []
     };
@@ -240,41 +285,47 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         if (strategyPools[path.rb]) strategyPools[path.rb].push(roster);
     });
 
-    // Reference Strategy
-    const referenceStrategyKey = lockedStrategy ? lockedStrategy.key : 
-        (viableRB.find(s => s.viable && s.key === 'RB_HERO') ? 'RB_HERO' : 'RB_VALUE');
-
     return {
-        viableRB,
-        lockedStrategy,
-        lockedLevel,
-        strategyPools,
-        referenceStrategyKey,
-        referenceStrategyName: ARCHETYPE_METADATA[referenceStrategyKey]?.name
+      rb: { items: rbStatus, locked: rbLocked },
+      qb: qbStatus,
+      te: teStatus,
+      referenceStrategyKey,
+      referenceStrategyName: ARCHETYPE_METADATA[referenceStrategyKey]?.name,
+      strategyPools
     };
   }, [currentPicks, currentRound, allRosters]);
 
-  // --- 6. PORTFOLIO HEALTH (from V1) ---
+  // --- 6. PORTFOLIO HEALTH (EXPANDED from V2) ---
   const portfolioHealth = useMemo(() => {
     const totalEntries = allRosters.length;
-    const currentCounts = {};
+    if (totalEntries === 0) return { rb: [], qb: [], te: [] };
+
+    const counts = { rb: {}, qb: {}, te: {} };
+
+    Object.keys(PROTOCOL_TREE).forEach(k => counts.rb[k] = 0);
+    Object.keys(QB_META).forEach(k => counts.qb[k] = 0);
+    Object.keys(TE_META).forEach(k => counts.te[k] = 0);
 
     allRosters.forEach(roster => {
-      const path = classifyRosterPath(roster);
-      if (!currentCounts[path.rb]) currentCounts[path.rb] = 0;
-      currentCounts[path.rb]++;
+      const struct = classifyStructure(roster);
+      if (counts.rb[struct.rb] !== undefined) counts.rb[struct.rb]++;
+      if (counts.qb[struct.qb] !== undefined) counts.qb[struct.qb]++;
+      if (counts.te[struct.te] !== undefined) counts.te[struct.te]++;
     });
 
-    return Object.keys(PROTOCOL_TREE).map(key => ({
-      key,
-      name: ARCHETYPE_METADATA[key]?.name || key,
-      target: PROTOCOL_TREE[key].target,
-      actual: totalEntries > 0 ? ((currentCounts[key] || 0) / totalEntries) * 100 : 0,
-      color: PROTOCOL_TREE[key].color
-    }));
+    const calcMetric = (key, name, target, count, color) => ({
+      key, name, target, color,
+      actual: (count / totalEntries) * 100
+    });
+
+    return {
+      rb: Object.keys(PROTOCOL_TREE).map(k => calcMetric(k, ARCHETYPE_METADATA[k]?.name, PROTOCOL_TREE[k].target, counts.rb[k], PROTOCOL_TREE[k].color)),
+      qb: Object.keys(QB_META).map(k => calcMetric(k, QB_META[k].name, QB_META[k].target, counts.qb[k], QB_META[k].color)),
+      te: Object.keys(TE_META).map(k => calcMetric(k, TE_META[k].name, TE_META[k].target, counts.te[k], TE_META[k].color))
+    };
   }, [allRosters]);
 
-  // --- 7. CANDIDATE PLAYERS (MERGED LOGIC) ---
+  // --- 7. CANDIDATE PLAYERS (FULL V1 LOGIC) ---
   const parseRoundNum = (r) => {
     if (r == null) return NaN;
     if (typeof r === 'number') return r;
@@ -337,7 +388,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         const historicalData = historicalInfo.get(mp.name) || {};
         return {
           ...mp,
-          // Ensure position/team from master takes priority, fallback to historical
           position: mp.position,
           team: mp.team,
           rawCount: roundCounts.get(mp.name) || 0,
@@ -362,7 +412,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       !currentPicks.some(cp => cp.name === p.name)
     );
 
-    // D. Dynamic Window (from V1)
+    // D. Dynamic Window
     const dynamicWindow = 10 + (currentRound * 3); 
     const TEAMS = 12;
     const pickPos = getSnakePickPosition(currentRound, draftSlot, TEAMS) || 1;
@@ -389,12 +439,12 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     const totalRosters = allRosters.length;
 
     const finalCandidates = slice.map(candidate => {
-      // 1. Path Exposure (Current exact path)
+      // 1. Path Exposure
       const pathPercent = matchingRosterTotal > 0 
         ? (candidate.matchCount / matchingRosterTotal) * 100 
         : 0;
 
-      // 2. Strategy Exposure (from V2)
+      // 2. Strategy Exposure
       const inStrat = targetStratRosters.filter(r => r.some(x => x.name === candidate.name)).length;
       const stratPercent = targetStratTotal > 0 ? (inStrat / targetStratTotal) * 100 : 0;
 
@@ -403,7 +453,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         ? (candidate.totalGlobalCount / totalRosters) * 100 
         : 0;
 
-      // 4. Correlation Score (from V1)
+      // 4. Correlation Score
       let sumProb = 0;
       let comparisons = 0;
       
@@ -430,11 +480,22 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
       const correlationScore = comparisons > 0 ? (sumProb / comparisons) * 100 : 0;
 
-      // 5. Kills Strategy Check (from V2)
-      const killsStrategy = strategyStatus.viableRB.filter(s => s.viable && s.key !== 'RB_VALUE').some(s => {
-         const nextPicks = [...currentPicks, { ...candidate, round: currentRound, position: candidate.position }];
-         return !checkStrategyViability(s.key, nextPicks, currentRound);
-      });
+      // 5. Kills Strategy Check (Multi-dimensional)
+      let killsStrategy = false;
+      const nextPicks = [...currentPicks, { ...candidate, round: currentRound, position: candidate.position }];
+      
+      // Check RB
+      if (strategyStatus.rb.locked && candidate.position === 'RB') {
+        if (!checkStrategyViability(strategyStatus.rb.locked.key, nextPicks, currentRound)) killsStrategy = true;
+      }
+      // Check QB
+      if (strategyStatus.qb.locked && candidate.position === 'QB') {
+        if (!checkStrategyViability(strategyStatus.qb.locked.key, nextPicks, currentRound)) killsStrategy = true;
+      }
+      // Check TE
+      if (strategyStatus.te.locked && candidate.position === 'TE') {
+        if (!checkStrategyViability(strategyStatus.te.locked.key, nextPicks, currentRound)) killsStrategy = true;
+      }
 
       return {
         ...candidate,
@@ -456,6 +517,73 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     return finalCandidates;
   }, [masterPlayers, allRosters, matchingPathRosters, currentRound, draftSlot, currentPicks, playerIndexMap, strategyStatus]);
 
+  // --- SUB-COMPONENTS (from V2) ---
+  
+  const StrategyCard = ({ title, statusObj, icon: Icon }) => {
+    const locked = statusObj.locked;
+    const isLocked = !!locked;
+    
+    return (
+      <div style={{ background: '#1e293b', borderRadius: 8, padding: '10px', marginBottom: 8, border: `1px solid ${isLocked ? locked.meta.color : '#334155'}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon size={14} color={isLocked ? locked.meta.color : '#94a3b8'} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase' }}>{title}</span>
+          </div>
+          {isLocked ? (
+             <span style={{ fontSize: 10, background: locked.meta.color, color: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
+               {locked.name}
+             </span>
+          ) : (
+            <span style={{ fontSize: 10, color: '#64748b' }}>{statusObj.items.filter(i=>i.viable).length} paths</span>
+          )}
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {statusObj.items.map(s => (
+             <div key={s.key} style={{ 
+               display: 'flex', alignItems: 'center', gap: 6, 
+               opacity: s.viable ? 1 : 0.2,
+               transition: 'all 0.3s'
+             }}>
+               <div style={{ flex: 1, height: 4, background: '#334155', borderRadius: 2 }}>
+                 <div style={{ 
+                   width: s.viable ? '100%' : '0%', 
+                   height: '100%', 
+                   background: s.meta.color, 
+                   borderRadius: 2,
+                   transition: 'width 0.3s'
+                 }} />
+               </div>
+               <span style={{ fontSize: 9, width: 60, textAlign: 'right', color: s.viable ? '#cbd5e1' : '#475569' }}>
+                 {s.name.replace('Round','').replace('Strategy','')}
+               </span>
+             </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const PortfolioRow = ({ item }) => {
+    const diff = item.actual - item.target;
+    const isHigh = diff > 5;
+    const isLow = diff < -5;
+    
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+           <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.color }} />
+           <span style={{ color: '#cbd5e1' }}>{item.name}</span>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+           <span style={{ fontWeight: 700, color: isHigh ? '#ef4444' : isLow ? '#3b82f6' : '#94a3b8' }}>{item.actual.toFixed(1)}%</span>
+           <span style={{ color: '#475569', marginLeft: 4 }}>/ {item.target}%</span>
+        </div>
+      </div>
+    );
+  };
+
   // --- ACTIONS ---
   const handleSelect = (player) => {
     setCurrentPicks([...currentPicks, { ...player, round: currentRound }]);
@@ -467,10 +595,10 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
   const slotNum = Number(draftSlot) || 1;
   const overallPick = (currentRound - 1) * 12 + slotNum;
-  const { lockedLevel, lockedStrategy, referenceStrategyName } = strategyStatus;
+  const { referenceStrategyName } = strategyStatus;
 
   return (
-    <div style={{ display: 'flex', gap: 20, height: '750px', fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: 20 }}>
+    <div style={{ display: 'flex', gap: 20, height: '130vh', fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: 20 }}>
       
       {/* LEFT COLUMN */}
       <div style={{ width: '340px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -496,8 +624,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         </div>
 
         {/* Drafted Roster */}
-        <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', display: 'flex', flexDirection: 'column', minHeight: 200, maxHeight: 320 }}>
-          {/* Header with buttons */}
+        <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', display: 'flex', flexDirection: 'column', minHeight: 200, maxHeight: 280 }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155' }}>
             <h2 style={{ fontSize: 14, fontWeight: 800, margin: '0 0 12px 0', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Draft Board
@@ -532,8 +659,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
             )}
           </div>
 
-          {/* Scrollable picks area */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }} className="thin-scrollbar">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {currentPicks.map((p, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, paddingBottom: 8, borderBottom: i < currentPicks.length - 1 ? '1px solid #334155' : 'none' }}>
@@ -551,72 +677,43 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           </div>
         </div>
 
-        {/* Strategy Status */}
-        <div style={{ background: '#1e293b', padding: 20, borderRadius: 12, border: '1px solid #334155', flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 15 }}>
-            {lockedLevel > 0 ? <Lock size={16} color="#10b981" /> : <GitBranch size={16} color="#f59e0b" />}
-            <h3 style={{ fontSize: 13, textTransform: 'uppercase', margin: 0, color: lockedLevel > 0 ? '#10b981' : '#f59e0b', fontWeight: 800, letterSpacing: '0.5px' }}>
-                {lockedLevel > 0 ? 'Strategy Locked' : 'Viable Paths'}
-            </h3>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {strategyStatus.viableRB.map((strat) => (
-              <div key={strat.key} style={{ opacity: strat.viable ? 1 : 0.35, transition: 'opacity 0.3s' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                  <span style={{ color: strat.meta.color, fontWeight: 700 }}>{strat.name}</span>
-                  {strat.viable && (
-                    <span style={{ color: '#10b981', fontSize: 10, fontWeight: 600 }}>
-                      {lockedLevel > 0 && lockedStrategy?.key === strat.key ? '● LOCKED' : '✓ Active'}
-                    </span>
-                  )}
-                </div>
-                <div style={{ height: 5, background: '#334155', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ 
-                    width: strat.viable ? '100%' : '0%', 
-                    height: '100%', 
-                    background: strat.meta.color,
-                    transition: 'width 0.4s ease'
-                  }} />
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* CONSTRUCTION BOARD (from V2) */}
+        <div style={{ background: '#1e293b22', borderRadius: 12, border: '1px solid #334155', padding: 12 }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
+             <Activity size={16} color="#f59e0b" />
+             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#f59e0b', fontWeight: 800 }}>Construction Board</h3>
+           </div>
+           
+           <StrategyCard title="Rushing Structure" statusObj={strategyStatus.rb} icon={Shield} />
+           <StrategyCard title="QB Approach" statusObj={strategyStatus.qb} icon={Zap} />
+           <StrategyCard title="TE Approach" statusObj={strategyStatus.te} icon={Anchor} />
         </div>
 
-        {/* Portfolio Targets */}
-        <div style={{ background: '#1e293b', padding: 20, borderRadius: 12, border: '1px solid #334155' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 15 }}>
-            <Target size={16} color="#3b82f6" />
-            <h3 style={{ fontSize: 13, textTransform: 'uppercase', margin: 0, color: '#3b82f6', fontWeight: 800, letterSpacing: '0.5px' }}>
-              Portfolio Targets
-            </h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {portfolioHealth.map((strat) => {
-              const diff = strat.actual - strat.target;
-              const isOver = diff > 5;
-              const isUnder = diff < -5;
-              return (
-                <div key={strat.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: strat.color || '#64748b' }} />
-                    <span style={{ color: '#cbd5e1', fontSize: 12 }}>{strat.name}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, color: '#94a3b8', fontSize: 12 }}>
-                    <span style={{ fontWeight: 600 }}>{strat.actual.toFixed(1)}%</span>
-                    <span style={{ color: isOver ? '#ef4444' : isUnder ? '#10b981' : '#64748b', fontWeight: 700 }}>
-                      / {strat.target}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {/* PORTFOLIO TARGETS (Expanded from V2) */}
+        <div style={{ flex: 1, background: '#1e293b', borderRadius: 12, border: '1px solid #334155', padding: 16, overflowY: 'auto' }} className="thin-scrollbar">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+             <Target size={16} color="#3b82f6" />
+             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#3b82f6', fontWeight: 800 }}>Portfolio Targets</h3>
+           </div>
+
+           <div style={{ marginBottom: 12 }}>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>RB ALLOCATION</div>
+             {portfolioHealth.rb?.map(i => <PortfolioRow key={i.key} item={i} />)}
+           </div>
+           
+           <div style={{ marginBottom: 12 }}>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>QB ALLOCATION</div>
+             {portfolioHealth.qb?.map(i => <PortfolioRow key={i.key} item={i} />)}
+           </div>
+
+           <div>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>TE ALLOCATION</div>
+             {portfolioHealth.te?.map(i => <PortfolioRow key={i.key} item={i} />)}
+           </div>
         </div>
       </div>
 
-      {/* RIGHT COLUMN: PLAYER LIST */}
+      {/* RIGHT COLUMN: PLAYER LIST (Full V1 Logic) */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', background: '#1e293b' }}>
            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -633,7 +730,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
            </div>
         </div>
         
-        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }} className="thin-scrollbar">
             {candidatePlayers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
                 No player data available for this round.<br/>
@@ -658,33 +755,27 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   );
 }
 
-// --- PLAYER CARD (MERGED) ---
+// --- PLAYER CARD (Full V1 Component) ---
 function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen, setDebugOpen }) {
     const color = getPosColor(player.position);
-
-    // Stack Analysis (upgraded)
     const stackInfo = analyzeStack(player, currentPicks);
 
-    // Metrics
     const pathExp = player.portfolioExposure || 0;
     const stratExp = player.strategyExposure || 0;
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
     const killsStrategy = player.killsStrategy;
 
-    // ADP Display
     const displayAdp = player.adpDisplay || (Number.isFinite(player.adpPick) ? player.adpPick.toFixed(1) : '—');
 
-    // Correlation Color Coding (from V1)
-    let corrColor = '#64748b'; // Gray
+    let corrColor = '#64748b';
     if (currentPicks.length > 0) {
-      if (corr > 25) corrColor = '#ef4444'; // Red (Very correlated, chalky)
-      else if (corr > 15) corrColor = '#f59e0b'; // Orange
-      else if (corr > 5) corrColor = '#fbbf24'; // Yellow
-      else corrColor = '#10b981'; // Green (Unique)
+      if (corr > 25) corrColor = '#ef4444';
+      else if (corr > 15) corrColor = '#f59e0b';
+      else if (corr > 5) corrColor = '#fbbf24';
+      else corrColor = '#10b981';
     }
 
-    // Helper for Debug
     const Row = ({ k, v }) => (
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11, color: '#cbd5e1' }}>
         <div style={{ color: '#94a3b8' }}>{k}</div>
@@ -718,7 +809,6 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
             e.currentTarget.style.borderColor = '#1e293b';
           }}
         >
-          {/* Player Info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <div style={{ 
               fontSize: 10, fontWeight: 900, color: '#0f172a', background: color, 
@@ -776,10 +866,10 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
             </div>
           </div>
 
-          {/* Stats Grid - All 4 Metrics */}
+          {/* Stats Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
             
-            {/* 1. Path Exposure */}
+            {/* Path Exposure */}
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
                 Path
@@ -796,7 +886,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
               <div style={{ fontSize: 10, color: '#475569' }}>{(player.matchCount || 0)} here</div>
             </div>
 
-            {/* 2. Strategy Exposure */}
+            {/* Strategy Exposure */}
             <div style={{ textAlign: 'center', borderLeft: '1px solid #334155', paddingLeft: 12 }}>
               <div style={{ fontSize: 9, color: '#f59e0b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 700 }}>
                 {stratName ? stratName.split(' ')[0] : 'Strat'}
@@ -807,7 +897,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
               <div style={{ fontSize: 10, color: '#475569' }}>in strategy</div>
             </div>
 
-            {/* 3. Correlation Score */}
+            {/* Correlation Score */}
             <div style={{ textAlign: 'center', borderLeft: '1px solid #334155', paddingLeft: 12 }}>
               <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
                 Correlation
@@ -823,7 +913,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
               </div>
             </div>
 
-            {/* 4. Global Exposure */}
+            {/* Global Exposure */}
             <div style={{ textAlign: 'center', borderLeft: '1px solid #334155', paddingLeft: 12 }}>
               <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
                 Global
