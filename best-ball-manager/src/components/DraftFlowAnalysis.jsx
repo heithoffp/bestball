@@ -15,6 +15,28 @@ const TE_META = {
   TE_LATE:  { name: 'Late Round TE', target: 50, color: '#bfdbfe', rounds: [10, 18] }
 };
 
+// RB Archetype Reminder Blurbs
+const RB_BLURBS = {
+  RB_ZERO: {
+    title: 'Zero RB Protocol',
+    protocol: 'Absolute moratorium on RBs until Round 6; use early capital to lock in an Elite QB/TE and a massive WR advantage.',
+    execution: 'Hammer "Ambiguous Backfield" RBs in Rounds 7–10 to find breakout starters through sheer volume.',
+    constraint: 'If you miss on Elite QB/TE, this build often lacks the ceiling to win.'
+  },
+  RB_HYPER_FRAGILE: {
+    title: 'Hyper Fragile Protocol',
+    protocol: 'Draft 3 Elite RBs in the first 4 rounds, then enforce a hard stop on the position until Round 10+.',
+    execution: 'Spend Rounds 5–9 exclusively on a high-upside "WR Avalanche" to catch up on pass-catcher depth.',
+    constraint: 'Do not draft a "Value" RB in Round 6. You are playing for 3 healthy studs; a 4th RB is a wasted pick.'
+  },
+  RB_HERO: {
+    title: 'Hero RB Protocol',
+    protocol: 'Anchor with exactly one "Legendary" RB in Rounds 1–2, then pivot immediately to dominantly drafting WRs.',
+    execution: 'Strictly avoid drafting your RB2 in the "Dead Zone" (Rounds 3–6); wait for the "Value Pocket" in Round 7+ to add depth.',
+    constraint: 'This is a "Barbell" approach—balance your one elite RB with a deep WR room, not a "balanced" RB room.'
+  }
+};
+
 // --- SHARED CONSTANTS ---
 const COLORS = {
   QB: '#bf44ef', RB: '#10b981', WR: '#f59e0b', TE: '#3b82f6', default: '#6b7280'
@@ -143,13 +165,13 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
 
   // --- QB LOGIC (from V2) ---
   if (strategyKey === 'QB_ELITE') return countPos('QB', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'QB_CORE')  return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 8) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 8);
-  if (strategyKey === 'QB_LATE')  return countPos('QB', 1, 8) === 0;
+  if (strategyKey === 'QB_CORE')  return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 9) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 9);
+  if (strategyKey === 'QB_LATE')  return countPos('QB', 1, 9) === 0;
 
   // --- TE LOGIC (from V2) ---
   if (strategyKey === 'TE_ELITE') return countPos('TE', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'TE_ANCHOR') return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 8) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
-  if (strategyKey === 'TE_LATE')  return countPos('TE', 1, 8) === 0;
+  if (strategyKey === 'TE_ANCHOR') return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 9) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
+  if (strategyKey === 'TE_LATE')  return countPos('TE', 1, 9) === 0;
 
   return true;
 }
@@ -168,11 +190,11 @@ const classifyStructure = (roster) => {
 
   let qbPath = 'QB_LATE';
   if (countPos('QB', 1, 4) > 0) qbPath = 'QB_ELITE';
-  else if (countPos('QB', 5, 8) > 0) qbPath = 'QB_CORE';
+  else if (countPos('QB', 5, 9) > 0) qbPath = 'QB_CORE';
 
   let tePath = 'TE_LATE';
   if (countPos('TE', 1, 4) > 0) tePath = 'TE_ELITE';
-  else if (countPos('TE', 5, 8) > 0) tePath = 'TE_ANCHOR';
+  else if (countPos('TE', 5, 9) > 0) tePath = 'TE_ANCHOR';
 
   return { rb: rbPath, qb: qbPath, te: tePath };
 };
@@ -692,7 +714,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const { referenceStrategyName } = strategyStatus;
 
   return (
-    <div style={{ display: 'flex', gap: 20, height: '130vh', fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: 20 }}>
+    <div style={{ display: 'flex', gap: 20, height: '180vh', fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: 20 }}>
       
       {/* LEFT COLUMN */}
       <div style={{ width: '340px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -770,6 +792,71 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
             </div>
           </div>
         </div>
+
+        {/* RB STRATEGY REMINDER - Shows when RB archetype is locked */}
+        {strategyStatus.rb.locked && strategyStatus.rb.locked.key !== 'RB_VALUE' && RB_BLURBS[strategyStatus.rb.locked.key] && (
+          <div style={{ 
+            background: `linear-gradient(135deg, ${strategyStatus.rb.locked.meta.color}15, ${strategyStatus.rb.locked.meta.color}05)`,
+            borderRadius: 12, 
+            border: `2px solid ${strategyStatus.rb.locked.meta.color}`,
+            padding: '16px',
+            boxShadow: `0 0 20px ${strategyStatus.rb.locked.meta.color}33`
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{ 
+                width: 8, 
+                height: 8, 
+                borderRadius: '50%', 
+                background: strategyStatus.rb.locked.meta.color,
+                boxShadow: `0 0 8px ${strategyStatus.rb.locked.meta.color}`
+              }} />
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: 12, 
+                fontWeight: 800, 
+                color: strategyStatus.rb.locked.meta.color,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                {RB_BLURBS[strategyStatus.rb.locked.key].title}
+              </h3>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>
+                  Protocol
+                </div>
+                <div style={{ fontSize: 11, color: '#e2e8f0', lineHeight: 1.5 }}>
+                  {RB_BLURBS[strategyStatus.rb.locked.key].protocol}
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>
+                  Execution
+                </div>
+                <div style={{ fontSize: 11, color: '#e2e8f0', lineHeight: 1.5 }}>
+                  {RB_BLURBS[strategyStatus.rb.locked.key].execution}
+                </div>
+              </div>
+              
+              <div style={{ 
+                padding: '10px', 
+                background: '#0f172a', 
+                borderRadius: 8,
+                borderLeft: '3px solid #ef4444'
+              }}>
+                <div style={{ fontSize: 9, color: '#ef4444', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>
+                  ⚠️ Key Constraint
+                </div>
+                <div style={{ fontSize: 11, color: '#fca5a5', lineHeight: 1.5 }}>
+                  {RB_BLURBS[strategyStatus.rb.locked.key].constraint}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CONSTRUCTION BOARD (from V2) */}
         <div style={{ background: '#1e293b22', borderRadius: 12, border: '1px solid #334155', padding: 12 }}>
