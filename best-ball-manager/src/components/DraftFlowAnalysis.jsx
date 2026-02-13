@@ -5,13 +5,13 @@ import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/
 // --- EXTENDED CONFIGURATION: QB & TE ARCHETYPES (from V2) ---
 const QB_META = {
   QB_ELITE: { name: 'Elite QB', target: 15, color: '#a855f7', rounds: [1, 4] },
-  QB_MID:   { name: 'Mid-Round QB', target: 25, color: '#d8b4fe', rounds: [5, 9] },
+  QB_CORE:  { name: 'Core QB', target: 25, color: '#d8b4fe', rounds: [5, 9] },
   QB_LATE:  { name: 'Late Round QB', target: 60, color: '#e9d5ff', rounds: [10, 18] }
 };
 
 const TE_META = {
   TE_ELITE: { name: 'Elite TE', target: 20, color: '#3b82f6', rounds: [1, 4] },
-  TE_MID:   { name: 'Mid-Round TE', target: 30, color: '#93c5fd', rounds: [5, 9] },
+  TE_ANCHOR: { name: 'Anchor TE', target: 30, color: '#60a5fa', rounds: [5, 9] },
   TE_LATE:  { name: 'Late Round TE', target: 50, color: '#bfdbfe', rounds: [10, 18] }
 };
 
@@ -143,12 +143,12 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
 
   // --- QB LOGIC (from V2) ---
   if (strategyKey === 'QB_ELITE') return countPos('QB', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'QB_MID')   return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 9) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 9);
+  if (strategyKey === 'QB_CORE')  return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 9) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 9);
   if (strategyKey === 'QB_LATE')  return countPos('QB', 1, 9) === 0;
 
   // --- TE LOGIC (from V2) ---
   if (strategyKey === 'TE_ELITE') return countPos('TE', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'TE_MID')   return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 9) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
+  if (strategyKey === 'TE_ANCHOR') return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 9) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
   if (strategyKey === 'TE_LATE')  return countPos('TE', 1, 9) === 0;
 
   return true;
@@ -168,11 +168,11 @@ const classifyStructure = (roster) => {
 
   let qbPath = 'QB_LATE';
   if (countPos('QB', 1, 4) > 0) qbPath = 'QB_ELITE';
-  else if (countPos('QB', 5, 9) > 0) qbPath = 'QB_MID';
+  else if (countPos('QB', 5, 9) > 0) qbPath = 'QB_CORE';
 
   let tePath = 'TE_LATE';
   if (countPos('TE', 1, 4) > 0) tePath = 'TE_ELITE';
-  else if (countPos('TE', 5, 9) > 0) tePath = 'TE_MID';
+  else if (countPos('TE', 5, 9) > 0) tePath = 'TE_ANCHOR';
 
   return { rb: rbPath, qb: qbPath, te: tePath };
 };
@@ -295,10 +295,10 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     };
   }, [currentPicks, currentRound, allRosters]);
 
-  // --- 6. PORTFOLIO HEALTH (EXPANDED from V2) ---
+  // --- 6. PORTFOLIO HEALTH (HIERARCHICAL from PROTOCOL_TREE) ---
   const portfolioHealth = useMemo(() => {
     const totalEntries = allRosters.length;
-    if (totalEntries === 0) return { rb: [], qb: [], te: [] };
+    if (totalEntries === 0) return { rb: [], qb: [], te: [], activePath: null };
 
     const counts = { rb: {}, qb: {}, te: {} };
 
@@ -318,12 +318,96 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       actual: (count / totalEntries) * 100
     });
 
+    // Determine active path for target calculation
+    const rbLocked = strategyStatus.rb.locked;
+    const qbLocked = strategyStatus.qb.locked;
+    const teLocked = strategyStatus.te.locked;
+
+    // RB Level - Always use top-level PROTOCOL_TREE targets
+    const rbMetrics = Object.keys(PROTOCOL_TREE).map(k => 
+      calcMetric(k, ARCHETYPE_METADATA[k]?.name, PROTOCOL_TREE[k].target, counts.rb[k], PROTOCOL_TREE[k].color)
+    );
+
+    // QB Level - Use hierarchical targets if RB is locked
+    let qbMetrics = [];
+    let activePath = null;
+    
+    if (rbLocked) {
+      const rbKey = rbLocked.key;
+      const qbChildren = PROTOCOL_TREE[rbKey]?.children || {};
+      
+      qbMetrics = Object.keys(QB_META).map(qbKey => {
+        const target = qbChildren[qbKey]?.target ?? 0;
+        return calcMetric(qbKey, QB_META[qbKey].name, target, counts.qb[qbKey], QB_META[qbKey].color);
+      });
+      
+      activePath = { rb: rbLocked.name };
+      
+      if (qbLocked) {
+        activePath.qb = qbLocked.name;
+      }
+    } else {
+      // RB not locked - show default QB targets from QB_META
+      qbMetrics = Object.keys(QB_META).map(k => 
+        calcMetric(k, QB_META[k].name, QB_META[k].target, counts.qb[k], QB_META[k].color)
+      );
+    }
+
+    // TE Level - Use hierarchical targets if both RB and QB are locked
+    let teMetrics = [];
+    
+    if (rbLocked && qbLocked) {
+      const rbKey = rbLocked.key;
+      const qbKey = qbLocked.key;
+      const teChildren = PROTOCOL_TREE[rbKey]?.children?.[qbKey]?.children || {};
+      
+      teMetrics = Object.keys(TE_META).map(teKey => {
+        const target = teChildren[teKey] ?? 0;
+        return calcMetric(teKey, TE_META[teKey].name, target, counts.te[teKey], TE_META[teKey].color);
+      });
+      
+      if (teLocked) {
+        activePath.te = teLocked.name;
+      }
+    } else if (rbLocked) {
+      // RB locked but QB not locked - show aggregated TE targets across all QB branches
+      const rbKey = rbLocked.key;
+      const qbChildren = PROTOCOL_TREE[rbKey]?.children || {};
+      
+      // Average the TE targets across all possible QB paths
+      const teAggregates = {};
+      Object.keys(TE_META).forEach(teKey => teAggregates[teKey] = []);
+      
+      Object.keys(qbChildren).forEach(qbKey => {
+        const teChildren = qbChildren[qbKey]?.children || {};
+        Object.keys(teChildren).forEach(teKey => {
+          if (teAggregates[teKey]) {
+            teAggregates[teKey].push(teChildren[teKey]);
+          }
+        });
+      });
+      
+      teMetrics = Object.keys(TE_META).map(teKey => {
+        const values = teAggregates[teKey];
+        const avgTarget = values.length > 0 
+          ? values.reduce((sum, val) => sum + val, 0) / values.length 
+          : TE_META[teKey].target;
+        return calcMetric(teKey, TE_META[teKey].name, avgTarget, counts.te[teKey], TE_META[teKey].color);
+      });
+    } else {
+      // Neither RB nor QB locked - show default TE targets
+      teMetrics = Object.keys(TE_META).map(k => 
+        calcMetric(k, TE_META[k].name, TE_META[k].target, counts.te[k], TE_META[k].color)
+      );
+    }
+
     return {
-      rb: Object.keys(PROTOCOL_TREE).map(k => calcMetric(k, ARCHETYPE_METADATA[k]?.name, PROTOCOL_TREE[k].target, counts.rb[k], PROTOCOL_TREE[k].color)),
-      qb: Object.keys(QB_META).map(k => calcMetric(k, QB_META[k].name, QB_META[k].target, counts.qb[k], QB_META[k].color)),
-      te: Object.keys(TE_META).map(k => calcMetric(k, TE_META[k].name, TE_META[k].target, counts.te[k], TE_META[k].color))
+      rb: rbMetrics,
+      qb: qbMetrics,
+      te: teMetrics,
+      activePath
     };
-  }, [allRosters]);
+  }, [allRosters, strategyStatus]);
 
   // --- 7. CANDIDATE PLAYERS (FULL V1 LOGIC) ---
   const parseRoundNum = (r) => {
@@ -689,12 +773,36 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
            <StrategyCard title="TE Approach" statusObj={strategyStatus.te} icon={Anchor} />
         </div>
 
-        {/* PORTFOLIO TARGETS (Expanded from V2) */}
+        {/* PORTFOLIO TARGETS (Hierarchical from PROTOCOL_TREE) */}
         <div style={{ flex: 1, background: '#1e293b', borderRadius: 12, border: '1px solid #334155', padding: 16, overflowY: 'auto' }} className="thin-scrollbar">
-           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
              <Target size={16} color="#3b82f6" />
              <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#3b82f6', fontWeight: 800 }}>Portfolio Targets</h3>
            </div>
+           
+           {/* Active Path Indicator */}
+           {portfolioHealth.activePath && (
+             <div style={{ 
+               fontSize: 10, 
+               color: '#94a3b8', 
+               marginBottom: 12, 
+               padding: '8px 10px', 
+               background: '#0f172a', 
+               borderRadius: 6,
+               borderLeft: '3px solid #3b82f6'
+             }}>
+               <div style={{ fontWeight: 700, color: '#cbd5e1', marginBottom: 4 }}>ACTIVE PATH:</div>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                 <div>RB: <span style={{ color: '#f59e0b', fontWeight: 600 }}>{portfolioHealth.activePath.rb}</span></div>
+                 {portfolioHealth.activePath.qb && (
+                   <div>QB: <span style={{ color: '#a855f7', fontWeight: 600 }}>{portfolioHealth.activePath.qb}</span></div>
+                 )}
+                 {portfolioHealth.activePath.te && (
+                   <div>TE: <span style={{ color: '#3b82f6', fontWeight: 600 }}>{portfolioHealth.activePath.te}</span></div>
+                 )}
+               </div>
+             </div>
+           )}
 
            <div style={{ marginBottom: 12 }}>
              <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>RB ALLOCATION</div>
@@ -702,12 +810,22 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
            </div>
            
            <div style={{ marginBottom: 12 }}>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>QB ALLOCATION</div>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
+               QB ALLOCATION
+               {!strategyStatus.rb.locked && <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>(default)</span>}
+             </div>
              {portfolioHealth.qb?.map(i => <PortfolioRow key={i.key} item={i} />)}
            </div>
 
            <div>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>TE ALLOCATION</div>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
+               TE ALLOCATION
+               {(!strategyStatus.rb.locked || !strategyStatus.qb.locked) && (
+                 <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>
+                   {!strategyStatus.rb.locked && !strategyStatus.qb.locked ? '(default)' : '(avg)'}
+                 </span>
+               )}
+             </div>
              {portfolioHealth.te?.map(i => <PortfolioRow key={i.key} item={i} />)}
            </div>
         </div>
