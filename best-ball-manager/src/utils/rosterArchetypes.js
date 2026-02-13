@@ -93,8 +93,8 @@ export function classifyRosterPath(roster) {
   else if ( countPosition(roster, 'QB', 9, 20) >= 1) path.qb = 'QB_LATE';
 
   // TE Logic
-  if (countPosition(roster, 'TE', 1, 3) >= 1) path.te = 'TE_ELITE';
-  else if (countPosition(roster, 'TE', 4, 8) >= 1) path.te = 'TE_ANCHOR';
+  if (countPosition(roster, 'TE', 1, 4) >= 1) path.te = 'TE_ELITE';
+  else if (countPosition(roster, 'TE', 5, 8) >= 1) path.te = 'TE_ANCHOR';
   else if (countPosition(roster, 'TE', 9, 20) >= 1) path.te = 'TE_LATE';
 
   return path;

@@ -143,13 +143,13 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
 
   // --- QB LOGIC (from V2) ---
   if (strategyKey === 'QB_ELITE') return countPos('QB', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'QB_CORE')  return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 9) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 9);
-  if (strategyKey === 'QB_LATE')  return countPos('QB', 1, 9) === 0;
+  if (strategyKey === 'QB_CORE')  return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 8) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 8);
+  if (strategyKey === 'QB_LATE')  return countPos('QB', 1, 8) === 0;
 
   // --- TE LOGIC (from V2) ---
   if (strategyKey === 'TE_ELITE') return countPos('TE', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'TE_ANCHOR') return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 9) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
-  if (strategyKey === 'TE_LATE')  return countPos('TE', 1, 9) === 0;
+  if (strategyKey === 'TE_ANCHOR') return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 8) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
+  if (strategyKey === 'TE_LATE')  return countPos('TE', 1, 8) === 0;
 
   return true;
 }
@@ -168,11 +168,11 @@ const classifyStructure = (roster) => {
 
   let qbPath = 'QB_LATE';
   if (countPos('QB', 1, 4) > 0) qbPath = 'QB_ELITE';
-  else if (countPos('QB', 5, 9) > 0) qbPath = 'QB_CORE';
+  else if (countPos('QB', 5, 8) > 0) qbPath = 'QB_CORE';
 
   let tePath = 'TE_LATE';
   if (countPos('TE', 1, 4) > 0) tePath = 'TE_ELITE';
-  else if (countPos('TE', 5, 9) > 0) tePath = 'TE_ANCHOR';
+  else if (countPos('TE', 5, 8) > 0) tePath = 'TE_ANCHOR';
 
   return { rb: rbPath, qb: qbPath, te: tePath };
 };
@@ -257,13 +257,23 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       return { items, locked };
     };
 
-    // RB Strategy
-    const rbStatus = Object.keys(PROTOCOL_TREE).map(key => ({
-      key,
-      name: ARCHETYPE_METADATA[key]?.name || key,
-      viable: checkStrategyViability(key, currentPicks, currentRound),
-      meta: PROTOCOL_TREE[key]
-    }));
+    // RB Strategy - Gray out RB_VALUE after 3 picks
+    const rbStatus = Object.keys(PROTOCOL_TREE).map(key => {
+      let viable = checkStrategyViability(key, currentPicks, currentRound);
+      
+      // Gray out RB_VALUE after round 3 - archetype should be determined by then
+      if (key === 'RB_VALUE' && currentPicks.length >= 3) {
+        viable = false;
+      }
+      
+      return {
+        key,
+        name: ARCHETYPE_METADATA[key]?.name || key,
+        viable,
+        meta: PROTOCOL_TREE[key]
+      };
+    });
+    
     const strictRbActive = rbStatus.filter(s => s.viable && s.key !== 'RB_VALUE');
     const rbLocked = strictRbActive.length === 1 ? strictRbActive[0] : (strictRbActive.length === 0 ? rbStatus.find(s=>s.key === 'RB_VALUE') : null);
 
