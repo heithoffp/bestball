@@ -714,7 +714,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const { referenceStrategyName } = strategyStatus;
 
   return (
-    <div style={{ display: 'flex', gap: 20, height: '180vh', fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: 20 }}>
+    <div style={{ display: 'flex', gap: 20, height: '130vh', fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: 20 }}>
       
       {/* LEFT COLUMN */}
       <div style={{ width: '340px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -738,7 +738,75 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
              </div>
            </div>
         </div>
+        
+        {/* CONSTRUCTION BOARD (from V2) */}
+        <div style={{ background: '#1e293b22', borderRadius: 12, border: '1px solid #334155', padding: 12 }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
+             <Activity size={16} color="#f59e0b" />
+             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#f59e0b', fontWeight: 800 }}>Construction Board</h3>
+           </div>
+           
+           <StrategyCard title="Rushing Structure" statusObj={strategyStatus.rb} icon={Shield} />
+           <StrategyCard title="QB Approach" statusObj={strategyStatus.qb} icon={Zap} />
+           <StrategyCard title="TE Approach" statusObj={strategyStatus.te} icon={Anchor} />
+        </div>
 
+        {/* PORTFOLIO TARGETS (Hierarchical from PROTOCOL_TREE) */}
+        <div style={{ flex: 1, background: '#1e293b', borderRadius: 12, border: '1px solid #334155', padding: 16, overflowY: 'auto', maxHeight: 380 }} className="thin-scrollbar">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+             <Target size={16} color="#3b82f6" />
+             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#3b82f6', fontWeight: 800 }}>Portfolio Targets</h3>
+           </div>
+           
+           {/* Active Path Indicator */}
+           {portfolioHealth.activePath && (
+             <div style={{ 
+               fontSize: 10, 
+               color: '#94a3b8', 
+               marginBottom: 12, 
+               padding: '8px 10px', 
+               background: '#0f172a', 
+               borderRadius: 6,
+               borderLeft: '3px solid #3b82f6'
+             }}>
+               <div style={{ fontWeight: 700, color: '#cbd5e1', marginBottom: 4 }}>ACTIVE PATH:</div>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                 <div>RB: <span style={{ color: '#f59e0b', fontWeight: 600 }}>{portfolioHealth.activePath.rb}</span></div>
+                 {portfolioHealth.activePath.qb && (
+                   <div>QB: <span style={{ color: '#a855f7', fontWeight: 600 }}>{portfolioHealth.activePath.qb}</span></div>
+                 )}
+                 {portfolioHealth.activePath.te && (
+                   <div>TE: <span style={{ color: '#3b82f6', fontWeight: 600 }}>{portfolioHealth.activePath.te}</span></div>
+                 )}
+               </div>
+             </div>
+           )}
+
+           <div style={{ marginBottom: 12 }}>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>RB ALLOCATION</div>
+             {portfolioHealth.rb?.map(i => <PortfolioRow key={i.key} item={i} />)}
+           </div>
+           
+           <div style={{ marginBottom: 12 }}>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
+               QB ALLOCATION
+               {!strategyStatus.rb.locked && <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>(default)</span>}
+             </div>
+             {portfolioHealth.qb?.map(i => <PortfolioRow key={i.key} item={i} />)}
+           </div>
+
+           <div>
+             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
+               TE ALLOCATION
+               {(!strategyStatus.rb.locked || !strategyStatus.qb.locked) && (
+                 <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>
+                   {!strategyStatus.rb.locked && !strategyStatus.qb.locked ? '(default)' : '(avg)'}
+                 </span>
+               )}
+             </div>
+             {portfolioHealth.te?.map(i => <PortfolioRow key={i.key} item={i} />)}
+           </div>
+        </div>
         {/* Drafted Roster */}
         <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', display: 'flex', flexDirection: 'column', minHeight: 200, maxHeight: 280 }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155' }}>
@@ -792,8 +860,47 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
             </div>
           </div>
         </div>
+      </div>
+      
 
-        {/* RB STRATEGY REMINDER - Shows when RB archetype is locked */}
+      {/* RIGHT COLUMN: PLAYER LIST (Full V1 Logic) */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', background: '#1e293b' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <div>
+               <h2 style={{ fontSize: 16, margin: 0, fontWeight: 800, color: '#fff' }}>Available Players</h2>
+               <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                 Comparing against: <span style={{ color: '#f59e0b', fontWeight: 700 }}>{referenceStrategyName}</span>
+               </div>
+             </div>
+             <div style={{ fontSize: 11, color: '#64748b', textAlign: 'right' }}>
+               <div>Round {currentRound}</div>
+               <div style={{ color: '#475569' }}>~{candidatePlayers.length} shown</div>
+             </div>
+           </div>
+        </div>
+        
+        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }} className="thin-scrollbar">
+            {candidatePlayers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
+                No player data available for this round.<br/>
+                <span style={{ fontSize: 12, color: '#475569' }}>Check if Master Players or ADP data is loaded.</span>
+              </div>
+            ) : (
+              candidatePlayers.map(p => (
+                  <PlayerCard 
+                      key={p.name} 
+                      player={p}
+                      currentPicks={currentPicks}
+                      onSelect={() => handleSelect(p)} 
+                      stratName={referenceStrategyName}
+                      debugOpen={debugPlayer === p.name}
+                      setDebugOpen={(isOpen) => setDebugPlayer(isOpen ? p.name : null)}
+                  />
+              ))
+            )}
+        </div>
+              {/* RB STRATEGY REMINDER - Shows when RB archetype is locked */}
         {strategyStatus.rb.locked && strategyStatus.rb.locked.key !== 'RB_VALUE' && RB_BLURBS[strategyStatus.rb.locked.key] && (
           <div style={{ 
             background: `linear-gradient(135deg, ${strategyStatus.rb.locked.meta.color}15, ${strategyStatus.rb.locked.meta.color}05)`,
@@ -858,113 +965,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           </div>
         )}
 
-        {/* CONSTRUCTION BOARD (from V2) */}
-        <div style={{ background: '#1e293b22', borderRadius: 12, border: '1px solid #334155', padding: 12 }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
-             <Activity size={16} color="#f59e0b" />
-             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#f59e0b', fontWeight: 800 }}>Construction Board</h3>
-           </div>
-           
-           <StrategyCard title="Rushing Structure" statusObj={strategyStatus.rb} icon={Shield} />
-           <StrategyCard title="QB Approach" statusObj={strategyStatus.qb} icon={Zap} />
-           <StrategyCard title="TE Approach" statusObj={strategyStatus.te} icon={Anchor} />
-        </div>
-
-        {/* PORTFOLIO TARGETS (Hierarchical from PROTOCOL_TREE) */}
-        <div style={{ flex: 1, background: '#1e293b', borderRadius: 12, border: '1px solid #334155', padding: 16, overflowY: 'auto' }} className="thin-scrollbar">
-           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-             <Target size={16} color="#3b82f6" />
-             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#3b82f6', fontWeight: 800 }}>Portfolio Targets</h3>
-           </div>
-           
-           {/* Active Path Indicator */}
-           {portfolioHealth.activePath && (
-             <div style={{ 
-               fontSize: 10, 
-               color: '#94a3b8', 
-               marginBottom: 12, 
-               padding: '8px 10px', 
-               background: '#0f172a', 
-               borderRadius: 6,
-               borderLeft: '3px solid #3b82f6'
-             }}>
-               <div style={{ fontWeight: 700, color: '#cbd5e1', marginBottom: 4 }}>ACTIVE PATH:</div>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                 <div>RB: <span style={{ color: '#f59e0b', fontWeight: 600 }}>{portfolioHealth.activePath.rb}</span></div>
-                 {portfolioHealth.activePath.qb && (
-                   <div>QB: <span style={{ color: '#a855f7', fontWeight: 600 }}>{portfolioHealth.activePath.qb}</span></div>
-                 )}
-                 {portfolioHealth.activePath.te && (
-                   <div>TE: <span style={{ color: '#3b82f6', fontWeight: 600 }}>{portfolioHealth.activePath.te}</span></div>
-                 )}
-               </div>
-             </div>
-           )}
-
-           <div style={{ marginBottom: 12 }}>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>RB ALLOCATION</div>
-             {portfolioHealth.rb?.map(i => <PortfolioRow key={i.key} item={i} />)}
-           </div>
-           
-           <div style={{ marginBottom: 12 }}>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
-               QB ALLOCATION
-               {!strategyStatus.rb.locked && <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>(default)</span>}
-             </div>
-             {portfolioHealth.qb?.map(i => <PortfolioRow key={i.key} item={i} />)}
-           </div>
-
-           <div>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
-               TE ALLOCATION
-               {(!strategyStatus.rb.locked || !strategyStatus.qb.locked) && (
-                 <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>
-                   {!strategyStatus.rb.locked && !strategyStatus.qb.locked ? '(default)' : '(avg)'}
-                 </span>
-               )}
-             </div>
-             {portfolioHealth.te?.map(i => <PortfolioRow key={i.key} item={i} />)}
-           </div>
-        </div>
-      </div>
-
-      {/* RIGHT COLUMN: PLAYER LIST (Full V1 Logic) */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', background: '#1e293b' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <div>
-               <h2 style={{ fontSize: 16, margin: 0, fontWeight: 800, color: '#fff' }}>Available Players</h2>
-               <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                 Comparing against: <span style={{ color: '#f59e0b', fontWeight: 700 }}>{referenceStrategyName}</span>
-               </div>
-             </div>
-             <div style={{ fontSize: 11, color: '#64748b', textAlign: 'right' }}>
-               <div>Round {currentRound}</div>
-               <div style={{ color: '#475569' }}>~{candidatePlayers.length} shown</div>
-             </div>
-           </div>
-        </div>
-        
-        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }} className="thin-scrollbar">
-            {candidatePlayers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
-                No player data available for this round.<br/>
-                <span style={{ fontSize: 12, color: '#475569' }}>Check if Master Players or ADP data is loaded.</span>
-              </div>
-            ) : (
-              candidatePlayers.map(p => (
-                  <PlayerCard 
-                      key={p.name} 
-                      player={p}
-                      currentPicks={currentPicks}
-                      onSelect={() => handleSelect(p)} 
-                      stratName={referenceStrategyName}
-                      debugOpen={debugPlayer === p.name}
-                      setDebugOpen={(isOpen) => setDebugPlayer(isOpen ? p.name : null)}
-                  />
-              ))
-            )}
-        </div>
       </div>
     </div>
   );
