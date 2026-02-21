@@ -595,7 +595,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       }
 
       const correlationScore = comparisons > 0 ? (sumProb / comparisons) * 100 : 0;
-
+      const liftScore = globalPercent > 0 ? (correlationScore / globalPercent) : 0;
       // 5. Kills Strategy Check (Multi-dimensional)
       let killsStrategy = false;
       const nextPicks = [...currentPicks, { ...candidate, round: currentRound, position: candidate.position }];
@@ -618,6 +618,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         portfolioExposure: pathPercent,
         strategyExposure: stratPercent,
         globalExposure: globalPercent,
+        liftScore,
         correlationScore,
         killsStrategy,
         _sortAdp: candidate._sortAdp
@@ -977,6 +978,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
 
     const pathExp = player.portfolioExposure || 0;
     const stratExp = player.strategyExposure || 0;
+    const liftScore = player.liftScore || 0;
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
     const killsStrategy = player.killsStrategy;
@@ -1104,10 +1106,10 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
             {/* Strategy Exposure */}
             <div style={{ textAlign: 'center', borderLeft: '1px solid #334155', paddingLeft: 12 }}>
               <div style={{ fontSize: 9, color: '#f59e0b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 700 }}>
-                {stratName ? stratName.split(' ')[0] : 'Strat'}
+                {'Lift Score'}
               </div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#e2e8f0', marginBottom: 3 }}>
-                {Math.round(stratExp)}%
+                {liftScore.toFixed(2)}
               </div>
               <div style={{ fontSize: 10, color: '#475569' }}>in strategy</div>
             </div>

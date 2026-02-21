@@ -76,13 +76,13 @@ export function classifyRosterPath(roster) {
   const path = { rb: 'RB_SUBOPTIMAL', qb: 'QB_LATE', te: 'TE_LATE' };
 
   // RB Logic
-  const rb1to3 = countPosition(roster, 'RB', 1, 3);
+  const rb1to4 = countPosition(roster, 'RB', 1, 4);
   const rb1to5 = countPosition(roster, 'RB', 1, 5);
   const rb1to2 = countPosition(roster, 'RB', 1, 2);
   const rb3to6 = countPosition(roster, 'RB', 3, 6);
-  const rb4to9 = countPosition(roster, 'RB', 4, 9);
+  const rb1to18 = countPosition(roster, 'RB', 1, 18);
 
-  if (rb1to3 >= 3 && rb4to9 === 0) path.rb = 'RB_HYPER_FRAGILE';
+  if (rb1to4 >= 3 && rb1to18 <= 5) path.rb = 'RB_HYPER_FRAGILE';
   else if (rb1to5 === 0) path.rb = 'RB_ZERO';
   else if (rb1to2 === 1 && rb3to6 === 0) path.rb = 'RB_HERO';
   else path.rb = 'RB_VALUE';
