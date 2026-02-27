@@ -19,12 +19,14 @@ function calcCLV(pick, latestADP, alpha = 0.5) {
 function clvLabel(pct) {
   if (pct === null) return { text: 'N/A', color: '#d6d6d6' };
   const sign = pct >= 0 ? '+' : '';
-  const color = pct > 15 ? '#00e5a0'
-              : pct > 5  ? '#7dffcc'
-              : pct > -5 ? '#ff9f43'
+  const color = pct > 5 ? '#00e5a0'
+              : pct > 2.5  ? '#7dffcc'
+              : pct > 0  ? '#fcff55'
+              : pct > -2.5 ? '#ff9f43'
               :             '#ff4d6d';
   return { text: `${sign}${pct.toFixed(2)}%`, color };
 }
+
 
 // ── Uniqueness color scale (rank-normalized) ──────────────────────────────────
 
@@ -49,13 +51,8 @@ function uniquenessColor(t) {
   return lerpColor([255, 159, 67], [0, 229, 160], (t - 0.5) * 2);
 }
 
-// ── RB Archetype rarity model ─────────────────────────────────────────────────
+// ── Helpers & priors (unchanged) ──────────
 
-/**
- * Prevalence priors: estimated % of field in each RB archetype.
- * Source: user-provided field composition estimates.
- * Balanced/Value (~60%) is split across RB_VALUE and RB_SUBOPTIMAL.
- */
 const RB_ARCHETYPE_PREVALENCE = {
   RB_VALUE:         0.6,
   RB_HERO:          0.20,
@@ -63,123 +60,118 @@ const RB_ARCHETYPE_PREVALENCE = {
   RB_HYPER_FRAGILE: 0.05,
 };
 
-/**
- * Shannon surprisal: -log2(p)
- * Rare archetypes = high surprisal = more unique.
- * Normalized to [0,1] relative to the spread across known archetypes.
- */
 const _surprisalValues = Object.values(RB_ARCHETYPE_PREVALENCE).map(p => -Math.log2(p));
 const _surprisalMin = Math.min(..._surprisalValues);
 const _surprisalMax = Math.max(..._surprisalValues);
 
 function archetypeRarityNorm(rbArchetype) {
   const p = RB_ARCHETYPE_PREVALENCE[rbArchetype];
-  if (p == null) return 0.5; // unknown archetype → neutral
+  if (p == null) return 0.5;
   const raw = -Math.log2(p);
-  return (raw - _surprisalMin) / (_surprisalMax - _surprisalMin); // 0..1
-}
-
-// ── Snake-aware composite rarity (draft deviation × archetype boost) ──────────
-
-/**
- * Helper: circular distance between positions in a round (1..numTeams).
- */
-function circularDistance(a, b, n) {
-  const raw = Math.abs(a - b);
-  return Math.min(raw, n - raw);
+  return (_surprisalMax === _surprisalMin)
+    ? 0.5
+    : (raw - _surprisalMin) / (_surprisalMax - _surprisalMin);
 }
 
 /**
- * Default accessibility function: exponential decay of availability with distance.
- *   accessibility = exp(-posDistance / scale)
- * Returns value in (0,1], where values close to 1 means high uniqueness (few teams can reach),
- * and small values reduce the impact of a raw reach.
+ * Calculates how "irrational" or rare a reach is based on whether the 
+ * player would have survived to the drafting team's NEXT pick.
+ * We use the standard logistic CDF / survival function.
  */
-function defaultAccessibility(posDistance, scale) {
-  return Math.exp(-posDistance / scale);
+function survivalProbability(reachMagnitude, scale) {
+  // If reach is 0, survival to your current pick was standard (~0.5 or lower).
+  // The larger the reach, the closer survival probability gets to 1.0.
+  // We use this as a multiplier: reaching for a player with a 99% chance 
+  // to survive to your next pick yields a massive rarity boost.
+  return 1 - Math.exp(-reachMagnitude / scale);
 }
 
-/**
- * Composite Rarity = (sum over players of adjusted deviation) × archetype boost
- *
- * Tunables in opts:
- *   - alphaPhase (default 1.0)
- *   - betaPhase  (default 0.5)
- *   - archetypeBoostMax (default 0.5)
- *   - numTeams (default 12)
- *   - accessibilityScale (default Math.sqrt(numTeams))
- *   - accessibilityFunc (default exponential)
- *   - applyAccessibilityOnReachOnly (default true)  <-- new: only apply accessibility when pick is a reach
- *   - returnDetails (default false) -> when true return object with components
- *
- * NOTE: keeps numeric return for backwards compatibility (composite score).
- */
 function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
   const {
     alphaPhase = 1.0,
     betaPhase = 0.5,
-    archetypeBoostMax = 0.5,
+    archetypeWeight = 1.5, // Increased default to balance against draft RSS scale
     numTeams = 12,
-    accessibilityScale = Math.sqrt(numTeams),
-    accessibilityFunc = defaultAccessibility,
-    applyAccessibilityOnReachOnly = true,
+    reachThreshold = 0,
+    aggregation = 'rss',
+    topK = 3,
+    normalizeBy = 'sqrtN',
     returnDetails = false,
   } = opts;
 
-  // 1) Draft deviation component (snake-aware)
-  let rawDraftRarity = 0;         // sum of raw deviations (unadjusted)
-  let adjustedDraftRarity = 0;    // sum of deviations after accessibility multiplier
+  const rawReachDevs = [];
+  const adjustedReachDevs = [];
 
   rosterPlayers.forEach(p => {
     const pick   = Number(p.pick || 0) || 0;
     const adpRaw = Number(p.latestADP || p.adp || p.latestADPValue || 0) || (pick || 1000);
     const adp    = Math.max(1, adpRaw);
 
-    // denom approximates pick-phase volatility (tunable)
-    const denom  = alphaPhase * Math.sqrt(adp) + betaPhase;
+    // Standardize deviation by phase volatility
+    const denom = alphaPhase * Math.sqrt(adp) + betaPhase;
+    
+    // Use absolute deviation so both Reaches AND Steals (CLV) make the roster unique
+    const rawDeviation = Math.abs(adp - pick); 
+    const deviationScaled = rawDeviation / Math.max(1e-9, denom);
+    
+    rawReachDevs.push(deviationScaled); // (You may want to rename this array to rawDevs)
 
-    // raw deviation (how far from ADP)
-    const rawDev = Math.abs(pick - adp) / Math.max(1e-9, denom);
-    rawDraftRarity += rawDev;
+    // Uniqueness Multiplier based on absolute deviation
+    const uniquenessMultiplier = rawDeviation >= reachThreshold 
+        ? survivalProbability(rawDeviation, denom * 2) 
+        : 1.0; 
 
-    // compute within-round positions (1..numTeams)
-    // rounding ADP/picks to nearest integer pick for in-round position approximation
-    const posInRound = ((Math.round(pick) - 1) % numTeams) + 1;
-    const adpPosInRound = ((Math.round(adp) - 1) % numTeams) + 1;
-    const posDistance = circularDistance(posInRound, adpPosInRound, numTeams);
-
-    // Determine whether this pick is a "reach" (earlier than ADP)
-    const isReach = pick < adp - 6;
-
-    // accessibility multiplier (0..1), smaller when many teams can reach the player.
-    // Only apply the accessibility penalty if it's a reach and the option is enabled.
-    const accessibility = (applyAccessibilityOnReachOnly ? (isReach ? accessibilityFunc(posDistance, accessibilityScale) : 1.0)
-                                                       : accessibilityFunc(posDistance, accessibilityScale));
-
-    // adjusted contribution
-    const adjustedDev = rawDev * accessibility;
-    adjustedDraftRarity += adjustedDev;
+    const adjustedDev = deviationScaled * uniquenessMultiplier;
+    adjustedReachDevs.push(adjustedDev);
   });
 
-  // 2) Archetype multiplicative boost (same as your original logic)
-  const archBoostRaw = archetypeRarityNorm(rbArchetype); // 0..1
-  const archBoost = 1 + archetypeBoostMax * archBoostRaw;
+  // Aggregation
+  let aggregatedAdjusted;
+  if (aggregation === 'sum') {
+    aggregatedAdjusted = adjustedReachDevs.reduce((s, x) => s + x, 0);
+  } else if (aggregation === 'topk') {
+    const sorted = adjustedReachDevs.slice().sort((a, b) => b - a);
+    const k = Math.max(1, Math.min(topK, sorted.length));
+    aggregatedAdjusted = sorted.slice(0, k).reduce((s, x) => s + x, 0);
+  } else { // 'rss'
+    const sumsq = adjustedReachDevs.reduce((s, x) => s + x * x, 0);
+    aggregatedAdjusted = Math.sqrt(sumsq);
+  }
 
-  // 3) Composite score
-  const composite = adjustedDraftRarity * archBoost;
+  // Normalization
+  const nPlayers = Math.max(1, rosterPlayers.length);
+  let normalizedAdjusted = aggregatedAdjusted;
+  if (normalizeBy === 'sqrtN') {
+    normalizedAdjusted = aggregatedAdjusted / Math.sqrt(nPlayers);
+  }
+
+  const archBoostRaw = archetypeRarityNorm(rbArchetype);
+  const archetypeContribution = archetypeWeight * archBoostRaw;
+  const composite = normalizedAdjusted + archetypeContribution;
 
   if (returnDetails) {
+    const rawDraftRarity = rawReachDevs.reduce((s, x) => s + x, 0);
     return {
       rawDraftRarity: Number(rawDraftRarity.toFixed(6)),
-      adjustedDraftRarity: Number(adjustedDraftRarity.toFixed(6)),
+      adjustedDraftRarityAggregated: Number(aggregatedAdjusted.toFixed(6)),
+      adjustedDraftRarityNormalized: Number(normalizedAdjusted.toFixed(6)),
       archBoostRaw: Number(archBoostRaw.toFixed(6)),
-      archBoost: Number(archBoost.toFixed(6)),
+      archetypeContribution: Number(archetypeContribution.toFixed(6)),
       composite: Number(composite.toFixed(6)),
+      details: {
+        perPlayer: rosterPlayers.map((p, i) => ({
+          pick: Number(p.pick || 0) || 0,
+          adp: Number(p.latestADP || p.adp || p.latestADPValue || 0) || (Number(p.pick || 0) || 1000),
+          rawReachDev: Number(rawReachDevs[i].toFixed(6)),
+          adjustedReachDev: Number(adjustedReachDevs[i].toFixed(6))
+        }))
+      }
     };
   }
 
   return composite;
 }
+
 // ── Archetype display helpers ─────────────────────────────────────────────────
 
 const ARCHETYPE_COLORS = {
@@ -338,10 +330,19 @@ export default function RosterViewer({ rosterData = [] }) {
       const rarity = calculateCompositeRarity(r.players, r.path.rb, {
         alphaPhase,
         betaPhase,
-        archetypeBoostMax,
+        archetypeWeight: 0.3,        // If RSS scales high, you may need to bump this to 0.5 - 1.5 to make archetype matter
+        aggregation: 'rss',          
+        reachThreshold: 2,           
+        normalizeBy: 'sqrtN',
       });
+
       rawRarity.push(rarity);
-      return { entry_id: r.entry_id, rarity, rbArchetype: r.path.rb };
+
+      return {
+        entry_id: r.entry_id,
+        rarity,
+        rbArchetype: r.path.rb,
+      };
     });
 
     const rarityPercentiles = {};
@@ -511,11 +512,6 @@ export default function RosterViewer({ rosterData = [] }) {
                         }}
                       >
                         {scores.rarity?.toFixed(2) ?? '—'}
-                        {boostPct > 0 && (
-                          <span style={{ fontSize: 9, opacity: 0.6, marginLeft: 4 }}>
-                            ×{scores.archBoost}
-                          </span>
-                        )}
                       </span>
                     </td>
 
