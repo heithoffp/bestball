@@ -79,36 +79,107 @@ function archetypeRarityNorm(rbArchetype) {
   return (raw - _surprisalMin) / (_surprisalMax - _surprisalMin); // 0..1
 }
 
+// ── Snake-aware composite rarity (draft deviation × archetype boost) ──────────
+
 /**
- * Composite Rarity = draft deviation rarity × archetype rarity multiplier
+ * Helper: circular distance between positions in a round (1..numTeams).
+ */
+function circularDistance(a, b, n) {
+  const raw = Math.abs(a - b);
+  return Math.min(raw, n - raw);
+}
+
+/**
+ * Default accessibility function: exponential decay of availability with distance.
+ *   accessibility = exp(-posDistance / scale)
+ * Returns value in (0,1], where values close to 1 means high uniqueness (few teams can reach),
+ * and small values reduce the impact of a raw reach.
+ */
+function defaultAccessibility(posDistance, scale) {
+  return Math.exp(-posDistance / scale);
+}
+
+/**
+ * Composite Rarity = (sum over players of adjusted deviation) × archetype boost
  *
- * Formula: draftRarity × (1 + archetypeBoostMax × archetypeRarityNorm)
+ * Tunables in opts:
+ *   - alphaPhase (default 1.0)
+ *   - betaPhase  (default 0.5)
+ *   - archetypeBoostMax (default 0.5)
+ *   - numTeams (default 12)
+ *   - accessibilityScale (default Math.sqrt(numTeams))
+ *   - accessibilityFunc (default exponential)
+ *   - applyAccessibilityOnReachOnly (default true)  <-- new: only apply accessibility when pick is a reach
+ *   - returnDetails (default false) -> when true return object with components
  *
- * - Common archetype (norm ≈ 0): no boost — pure draft deviation signal
- * - Rare archetype (norm = 1): score boosted by archetypeBoostMax (default 0.5 = +50%)
- * - The signals compound: a contrarian drafter in a rare archetype scores highest
- *
- * archetypeBoostMax is tunable: 0 = archetype ignored, 1 = archetype can double the score
+ * NOTE: keeps numeric return for backwards compatibility (composite score).
  */
 function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
-  const { alphaPhase = 1.0, betaPhase = 0.5, archetypeBoostMax = 0.5 } = opts;
+  const {
+    alphaPhase = 1.0,
+    betaPhase = 0.5,
+    archetypeBoostMax = 0.5,
+    numTeams = 12,
+    accessibilityScale = Math.sqrt(numTeams),
+    accessibilityFunc = defaultAccessibility,
+    applyAccessibilityOnReachOnly = true,
+    returnDetails = false,
+  } = opts;
 
-  // Draft deviation component: sum of pick deviations scaled by expected σ at that ADP
-  let draftRarity = 0;
+  // 1) Draft deviation component (snake-aware)
+  let rawDraftRarity = 0;         // sum of raw deviations (unadjusted)
+  let adjustedDraftRarity = 0;    // sum of deviations after accessibility multiplier
+
   rosterPlayers.forEach(p => {
     const pick   = Number(p.pick || 0) || 0;
     const adpRaw = Number(p.latestADP || p.adp || p.latestADPValue || 0) || (pick || 1000);
     const adp    = Math.max(1, adpRaw);
+
+    // denom approximates pick-phase volatility (tunable)
     const denom  = alphaPhase * Math.sqrt(adp) + betaPhase;
-    draftRarity += Math.abs(pick - adp) / denom;
+
+    // raw deviation (how far from ADP)
+    const rawDev = Math.abs(pick - adp) / Math.max(1e-9, denom);
+    rawDraftRarity += rawDev;
+
+    // compute within-round positions (1..numTeams)
+    // rounding ADP/picks to nearest integer pick for in-round position approximation
+    const posInRound = ((Math.round(pick) - 1) % numTeams) + 1;
+    const adpPosInRound = ((Math.round(adp) - 1) % numTeams) + 1;
+    const posDistance = circularDistance(posInRound, adpPosInRound, numTeams);
+
+    // Determine whether this pick is a "reach" (earlier than ADP)
+    const isReach = pick < adp - 6;
+
+    // accessibility multiplier (0..1), smaller when many teams can reach the player.
+    // Only apply the accessibility penalty if it's a reach and the option is enabled.
+    const accessibility = (applyAccessibilityOnReachOnly ? (isReach ? accessibilityFunc(posDistance, accessibilityScale) : 1.0)
+                                                       : accessibilityFunc(posDistance, accessibilityScale));
+
+    // adjusted contribution
+    const adjustedDev = rawDev * accessibility;
+    adjustedDraftRarity += adjustedDev;
   });
 
-  // Multiplicative archetype boost — compounds with draft deviation
-  const archBoost = 1 + archetypeBoostMax * archetypeRarityNorm(rbArchetype);
+  // 2) Archetype multiplicative boost (same as your original logic)
+  const archBoostRaw = archetypeRarityNorm(rbArchetype); // 0..1
+  const archBoost = 1 + archetypeBoostMax * archBoostRaw;
 
-  return draftRarity * archBoost;
+  // 3) Composite score
+  const composite = adjustedDraftRarity * archBoost;
+
+  if (returnDetails) {
+    return {
+      rawDraftRarity: Number(rawDraftRarity.toFixed(6)),
+      adjustedDraftRarity: Number(adjustedDraftRarity.toFixed(6)),
+      archBoostRaw: Number(archBoostRaw.toFixed(6)),
+      archBoost: Number(archBoost.toFixed(6)),
+      composite: Number(composite.toFixed(6)),
+    };
+  }
+
+  return composite;
 }
-
 // ── Archetype display helpers ─────────────────────────────────────────────────
 
 const ARCHETYPE_COLORS = {
