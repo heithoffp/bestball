@@ -1,75 +1,118 @@
 // src/components/RosterViewer.jsx
 import React, { useState, useMemo } from 'react';
+import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── CLV helpers ───────────────────────────────────────────────────────────────
 
 /**
  * Power-law value curve CLV
- *
- * Maps each pick to a fantasy "value" using V(pick) = 1 / pick^α
- * where α controls how steeply value decays with pick number.
- *
- * α = 1.0  → raw % of pick number (original, too extreme at top)
- * α = 0.5  → sqrt curve (recommended default — still rewards top picks
- *             more but doesn't skew wildly for small movements early)
- * α = 0.35 → gentler, treats all positions more equally
- *
- * CLV% = (V(draftPick) - V(currentADP)) / V(draftPick) * 100
- *
- * Examples at α=0.5:
- *   Drafted 6 → ADP 4   : +22.5%   (was +33% with raw %)
- *   Drafted 20 → ADP 14 : +17.3%
- *   Drafted 50 → ADP 40 : +11.2%
- *   Drafted 120 → ADP 90: +15.5%
- *
- * Positive = good (player's value rose, you got them cheap relative to now)
+ * V(pick) = 1 / pick^α  —  CLV% = (vNow - vDraft) / vDraft * 100
+ * Positive = ADP moved earlier after draft = you got a bargain.
  */
 function calcCLV(pick, latestADP, alpha = 0.5) {
   if (!pick || !latestADP || isNaN(pick) || isNaN(latestADP)) return null;
   const vDraft = 1 / Math.pow(pick, alpha);
   const vNow   = 1 / Math.pow(latestADP, alpha);
-  // vNow > vDraft when ADP moved earlier (more valuable) → positive CLV = you got a bargain
   return ((vNow - vDraft) / vDraft) * 100;
 }
 
-/**
- * The colour thresholds are tighter now that the scale is compressed.
- * A +15% on the power curve is a genuinely great pick — treat it green.
- */
 function clvLabel(pct) {
-  if (pct === null) return { text: 'N/A', color: '#666' };
+  if (pct === null) return { text: 'N/A', color: '#d6d6d6' };
   const sign = pct >= 0 ? '+' : '';
   const color = pct > 15 ? '#00e5a0'
               : pct > 5  ? '#7dffcc'
               : pct > -5 ? '#ff9f43'
               :             '#ff4d6d';
-  return { text: `${sign}${pct.toFixed(1)}%`, color };
+  return { text: `${sign}${pct.toFixed(2)}%`, color };
 }
+
+// ── Archetype display helpers ─────────────────────────────────────────────────
+
+const ARCHETYPE_COLORS = {
+  RB_ZERO:          '#8b5cf6',
+  RB_HYPER_FRAGILE: '#f97316',
+  RB_HERO:          '#4bf1db',
+  RB_VALUE:         '#ef4444',
+  RB_SUBOPTIMAL:    '#6b7280',
+  QB_ELITE:         '#f59e0b',
+  QB_CORE:          '#60a5fa',
+  QB_LATE:          '#94a3b8',
+  TE_ELITE:         '#a855f7',
+  TE_ANCHOR:        '#34d399',
+  TE_LATE:          '#94a3b8',
+};
+
+function archetypeColor(key) { return ARCHETYPE_COLORS[key] || '#6b7280'; }
+
+function ArchetypePill({ archetypeKey }) {
+  const meta = ARCHETYPE_METADATA[archetypeKey];
+  const color = archetypeColor(archetypeKey);
+  if (!meta) return <span style={{ color: '#f3f3f3', fontSize: 11 }}>—</span>;
+  return (
+    <span title={meta.desc} style={{
+      fontFamily: "'Space Mono', monospace", fontSize: 10,
+      background: color + '1a', color, border: `1px solid ${color}44`,
+      borderRadius: 4, padding: '2px 7px', letterSpacing: 0.3,
+      whiteSpace: 'nowrap', cursor: 'default',
+    }}>
+      {meta.name}
+    </span>
+  );
+}
+
+// ── Position snapshot ─────────────────────────────────────────────────────────
 
 const POS_COLORS = {
   QB: '#f59e0b', RB: '#10b981', WR: '#3b82f6', TE: '#a855f7',
-  K: '#6b7280', DEF: '#ef4444', DST: '#ef4444', default: '#6b7280'
+  K: '#6b7280', DEF: '#ef4444', DST: '#ef4444', default: '#eeeeee',
 };
 function posColor(pos) { return POS_COLORS[pos] || POS_COLORS.default; }
 
-// Abbreviate entry IDs for display
+function PositionSnapshot({ snap }) {
+  const ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DEF'];
+  const entries = ORDER.filter(p => snap[p]).map(p => ({ pos: p, count: snap[p] }));
+  Object.keys(snap).forEach(p => { if (!ORDER.includes(p)) entries.push({ pos: p, count: snap[p] }); });
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+      {entries.map(({ pos, count }) => (
+        <span key={pos} style={{
+          fontSize: 10, fontFamily: "'Space Mono', monospace",
+          background: posColor(pos) + '22', color: posColor(pos),
+          border: `1px solid ${posColor(pos)}55`, borderRadius: 3,
+          padding: '1px 5px', letterSpacing: 0.5,
+        }}>
+          {count}{pos}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function shortEntry(id) {
   if (!id) return '???';
   if (id.length <= 10) return id;
   return id.slice(0, 6) + '…' + id.slice(-4);
 }
 
-// ── main component ────────────────────────────────────────────────────────────
+// ── Filter options ────────────────────────────────────────────────────────────
+
+const RB_OPTIONS = ['all', 'RB_ZERO', 'RB_HERO', 'RB_HYPER_FRAGILE', 'RB_VALUE', 'RB_SUBOPTIMAL'];
+const QB_OPTIONS = ['all', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
+const TE_OPTIONS = ['all', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function RosterViewer({ rosterData = [] }) {
   const [expandedEntry, setExpandedEntry] = useState(null);
   const [sortKey, setSortKey] = useState('avgCLV');
   const [sortDir, setSortDir] = useState('desc');
-  const [clvFilter, setClvFilter] = useState('all'); // all | positive | negative
-  // α controls how steeply value decays with pick — lower = gentler curve
-  const [alpha, setAlpha] = useState(0.5);
+  const [alpha, setAlpha]     = useState(0.5);
+  const [clvFilter, setClvFilter] = useState('all');
+  const [rbFilter,  setRbFilter]  = useState('all');
+  const [qbFilter,  setQbFilter]  = useState('all');
+  const [teFilter,  setTeFilter]  = useState('all');
 
-  // Group players by entry_id
+  // Group + classify each entry
   const rosters = useMemo(() => {
     const map = {};
     rosterData.forEach(p => {
@@ -82,22 +125,19 @@ export default function RosterViewer({ rosterData = [] }) {
       const clvValues = players
         .map(p => calcCLV(p.pick, p.latestADP, alpha))
         .filter(v => v !== null);
-
       const avgCLV = clvValues.length
         ? clvValues.reduce((a, b) => a + b, 0) / clvValues.length
         : null;
 
-      const totalPick = players.reduce((s, p) => s + (p.pick || 0), 0);
-      const avgPick = players.length ? totalPick / players.length : 0;
-
-      // positional snapshot for preview dots
       const posSnap = players.reduce((acc, p) => {
         const pos = p.position || 'N/A';
         acc[pos] = (acc[pos] || 0) + 1;
         return acc;
       }, {});
 
-      return { entry_id, players, avgCLV, avgPick, posSnap, count: players.length };
+      const path = classifyRosterPath(players);
+
+      return { entry_id, players, avgCLV, posSnap, count: players.length, path };
     });
   }, [rosterData, alpha]);
 
@@ -106,8 +146,16 @@ export default function RosterViewer({ rosterData = [] }) {
     let list = [...rosters];
     if (clvFilter === 'positive') list = list.filter(r => r.avgCLV !== null && r.avgCLV >= 0);
     if (clvFilter === 'negative') list = list.filter(r => r.avgCLV !== null && r.avgCLV < 0);
+    if (rbFilter !== 'all') list = list.filter(r => r.path.rb === rbFilter);
+    if (qbFilter !== 'all') list = list.filter(r => r.path.qb === qbFilter);
+    if (teFilter !== 'all') list = list.filter(r => r.path.te === teFilter);
 
     list.sort((a, b) => {
+      if (['path.rb', 'path.qb', 'path.te'].includes(sortKey)) {
+        const seg = sortKey.split('.')[1];
+        const av = a.path[seg]; const bv = b.path[seg];
+        return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
       let av = a[sortKey] ?? -Infinity;
       let bv = b[sortKey] ?? -Infinity;
       if (sortKey === 'entry_id') { av = a.entry_id; bv = b.entry_id; }
@@ -115,15 +163,20 @@ export default function RosterViewer({ rosterData = [] }) {
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-  }, [rosters, sortKey, sortDir, clvFilter]);
+  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter]);
+
+  // Counts per archetype for filter badges
+  const rbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.rb] = (acc[r.path.rb] || 0) + 1; return acc; }, {}), [rosters]);
+  const qbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.qb] = (acc[r.path.qb] || 0) + 1; return acc; }, {}), [rosters]);
+  const teCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.te] = (acc[r.path.te] || 0) + 1; return acc; }, {}), [rosters]);
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortKey(key); setSortDir('desc'); }
+    else { setSortKey(key); setSortDir(key === 'avgCLV' ? 'desc' : 'asc'); }
   }
 
   function SortIcon({ col }) {
-    if (sortKey !== col) return <span style={{ opacity: 0.3, marginLeft: 4 }}>↕</span>;
+    if (sortKey !== col) return <span style={{ opacity: 0.25, marginLeft: 4 }}>↕</span>;
     return <span style={{ marginLeft: 4 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
   }
 
@@ -138,116 +191,85 @@ export default function RosterViewer({ rosterData = [] }) {
 
   return (
     <div style={styles.root}>
-      {/* Header */}
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');`}</style>
+
+      {/* ── Header ── */}
       <div style={styles.header}>
         <div>
           <h2 style={styles.title}>ROSTER VIEWER</h2>
-          <p style={styles.subtitle}>
-            {rosters.length} entries · {rosterData.length} players
-          </p>
+          <p style={styles.subtitle}>{displayed.length} / {rosters.length} entries · {rosterData.length} players</p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
-          {/* CLV curve tuner */}
-          <div style={styles.alphaRow}>
-            <span style={styles.alphaLabel}>CLV Curve</span>
-            <div style={styles.alphaPresets}>
-              {[
-                { v: 0.35, label: 'Flat' },
-                { v: 0.5,  label: 'Balanced' },
-                { v: 0.75, label: 'Steep' },
-                { v: 1.0,  label: 'Raw' },
-              ].map(({ v, label }) => (
-                <button
-                  key={v}
-                  style={{ ...styles.filterBtn, ...(alpha === v ? styles.filterBtnActive : {}) }}
-                  onClick={() => setAlpha(v)}
-                  title={`α = ${v}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <span style={styles.alphaExplain}>
-              α={alpha} · pick 6→4 = {calcCLV(6, 4, alpha) !== null ? `+${calcCLV(6, 4, alpha).toFixed(1)}%` : 'N/A'}
-            </span>
+        <div style={styles.alphaRow}>
+          <span style={styles.alphaLabel}>CLV Curve</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[{ v: 0.35, label: 'Flat' }, { v: 0.5, label: 'Balanced' }, { v: 0.75, label: 'Steep' }, { v: 1.0, label: 'Raw' }].map(({ v, label }) => (
+              <button key={v} style={{ ...styles.filterBtn, ...(alpha === v ? styles.filterBtnActive : {}) }} onClick={() => setAlpha(v)} title={`α=${v}`}>
+                {label}
+              </button>
+            ))}
           </div>
-          {/* Filters */}
-          <div style={styles.filters}>
-            {['all', 'positive', 'negative'].map(f => (
-              <button
-                key={f}
-                style={{ ...styles.filterBtn, ...(clvFilter === f ? styles.filterBtnActive : {}) }}
-                onClick={() => setClvFilter(f)}
-              >
-                {f === 'all' ? 'All' : f === 'positive' ? '▲ +CLV' : '▼ −CLV'}
+          <span style={styles.alphaExplain}>α={alpha} · pick 6→4 = +{calcCLV(6, 4, alpha)?.toFixed(2)}%</span>
+        </div>
+      </div>
+
+      {/* ── Filters ── */}
+      <div style={styles.filterBar}>
+        <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
+        <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
+        <FilterGroup label="TE" options={TE_OPTIONS} value={teFilter} onChange={setTeFilter} counts={teCounts} />
+        <div style={styles.filterGroupWrap}>
+          <span style={styles.filterGroupLabel}>CLV</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[['all', 'All'], ['positive', '▲ +CLV'], ['negative', '▼ −CLV']].map(([v, lbl]) => (
+              <button key={v} style={{ ...styles.filterBtn, ...(clvFilter === v ? styles.filterBtnActive : {}) }} onClick={() => setClvFilter(v)}>
+                {lbl}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── Table ── */}
       <div style={styles.tableWrap}>
         <table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
-              <th style={styles.th} onClick={() => toggleSort('entry_id')}>
-                Entry <SortIcon col="entry_id" />
-              </th>
-              <th style={{ ...styles.th, textAlign: 'center' }}>Roster Snapshot</th>
-              <th style={styles.th} onClick={() => toggleSort('count')}>
-                Players <SortIcon col="count" />
-              </th>
-              <th style={styles.th} onClick={() => toggleSort('avgPick')}>
-                Avg Pick <SortIcon col="avgPick" />
-              </th>
-              <th style={{ ...styles.th, color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>
-                Avg CLV% <SortIcon col="avgCLV" />
-              </th>
-              <th style={{ ...styles.th, textAlign: 'center' }}>Expand</th>
+              <th style={styles.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" /></th>
+              <th style={{ ...styles.th, textAlign: 'center' }}>Snapshot</th>
+              <th style={{ ...styles.th, textAlign: 'center' }} onClick={() => toggleSort('count')}>Players <SortIcon col="count" /></th>
+              <th style={{ ...styles.th, color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" /></th>
+              <th style={{ ...styles.th, color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" /></th>
+              <th style={{ ...styles.th, color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" /></th>
+              <th style={{ ...styles.th, textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" /></th>
+              <th style={{ ...styles.th, textAlign: 'center', cursor: 'default' }}></th>
             </tr>
           </thead>
           <tbody>
             {displayed.map((roster) => {
               const clv = clvLabel(roster.avgCLV);
               const isOpen = expandedEntry === roster.entry_id;
-
               return (
                 <React.Fragment key={roster.entry_id}>
-                  {/* Summary Row */}
                   <tr
-                    style={{
-                      ...styles.row,
-                      ...(isOpen ? styles.rowOpen : {}),
-                    }}
+                    style={{ ...styles.row, ...(isOpen ? styles.rowOpen : {}) }}
                     onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
                   >
-                    <td style={styles.td}>
-                      <span style={styles.entryId}>{shortEntry(roster.entry_id)}</span>
-                    </td>
+                    <td style={styles.td}><span style={styles.entryId}>{shortEntry(roster.entry_id)}</span></td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
+                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{roster.count}</td>
+                    <td style={styles.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
+                    <td style={styles.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
+                    <td style={styles.td}><ArchetypePill archetypeKey={roster.path.te} /></td>
                     <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <PositionSnapshot snap={roster.posSnap} />
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      {roster.count}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-                      {roster.avgPick.toFixed(1)}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <span style={{ ...styles.clvBadge, color: clv.color, borderColor: clv.color + '44' }}>
-                        {clv.text}
-                      </span>
+                      <span style={{ ...styles.clvBadge, color: clv.color, borderColor: clv.color + '44' }}>{clv.text}</span>
                     </td>
                     <td style={{ ...styles.td, textAlign: 'center' }}>
                       <span style={styles.chevron}>{isOpen ? '▲' : '▼'}</span>
                     </td>
                   </tr>
-
-                  {/* Expanded Player Detail */}
                   {isOpen && (
                     <tr>
-                      <td colSpan={6} style={styles.expandTd}>
+                      <td colSpan={8} style={{ padding: 0 }}>
                         <PlayerDetail players={roster.players} alpha={alpha} />
                       </td>
                     </tr>
@@ -258,103 +280,78 @@ export default function RosterViewer({ rosterData = [] }) {
           </tbody>
         </table>
       </div>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-        .rv-row-hover:hover { background: rgba(255,255,255,0.04) !important; cursor: pointer; }
-      `}</style>
     </div>
   );
 }
 
-// ── Position dots snapshot ────────────────────────────────────────────────────
+// ── Filter group sub-component ────────────────────────────────────────────────
 
-function PositionSnapshot({ snap }) {
-  const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DEF'];
-  const entries = positions
-    .filter(p => snap[p])
-    .map(p => ({ pos: p, count: snap[p] }));
-
-  // Also add any unexpected positions
-  Object.keys(snap).forEach(p => {
-    if (!positions.includes(p)) entries.push({ pos: p, count: snap[p] });
-  });
-
+function FilterGroup({ label, options, value, onChange, counts = {} }) {
   return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
-      {entries.map(({ pos, count }) => (
-        <span key={pos} style={{
-          fontSize: 10, fontFamily: "'Space Mono', monospace",
-          background: posColor(pos) + '22',
-          color: posColor(pos),
-          border: `1px solid ${posColor(pos)}55`,
-          borderRadius: 3,
-          padding: '1px 5px',
-          letterSpacing: 0.5,
-        }}>
-          {count}{pos}
-        </span>
-      ))}
+    <div style={styles.filterGroupWrap}>
+      <span style={styles.filterGroupLabel}>{label}</span>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {options.map(opt => {
+          const isActive = value === opt;
+          const color = opt === 'all' ? '#00e5a0' : archetypeColor(opt);
+          const name = opt === 'all' ? 'All' : (ARCHETYPE_METADATA[opt]?.name || opt);
+          const count = counts[opt];
+          return (
+            <button
+              key={opt}
+              title={ARCHETYPE_METADATA[opt]?.desc}
+              style={{
+                ...styles.filterBtn,
+                ...(isActive ? { background: color + '1a', borderColor: color, color } : {}),
+              }}
+              onClick={() => onChange(opt)}
+            >
+              {name}{count !== undefined && opt !== 'all' ? ` (${count})` : ''}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-// ── Expanded player detail table ──────────────────────────────────────────────
+// ── Expanded player detail ────────────────────────────────────────────────────
 
 function PlayerDetail({ players, alpha = 0.5 }) {
   const [pSort, setPSort] = useState('pick');
-  const [pDir, setPDir] = useState('asc');
+  const [pDir,  setPDir]  = useState('asc');
 
-  const sorted = useMemo(() => {
-    return [...players].sort((a, b) => {
-      let av, bv;
-      if (pSort === 'clv') {
-        av = calcCLV(a.pick, a.latestADP, alpha) ?? -Infinity;
-        bv = calcCLV(b.pick, b.latestADP, alpha) ?? -Infinity;
-      } else if (pSort === 'pick') {
-        av = a.pick || 0;
-        bv = b.pick || 0;
-      } else if (pSort === 'adp') {
-        av = a.latestADP || 9999;
-        bv = b.latestADP || 9999;
-      } else if (pSort === 'name') {
-        return pDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-      } else {
-        av = a[pSort] ?? -Infinity;
-        bv = b[pSort] ?? -Infinity;
-      }
-      return pDir === 'asc' ? av - bv : bv - av;
-    });
-  }, [players, pSort, pDir]);
+  const sorted = useMemo(() => [...players].sort((a, b) => {
+    let av, bv;
+    if (pSort === 'clv')  { av = calcCLV(a.pick, a.latestADP, alpha) ?? -Infinity; bv = calcCLV(b.pick, b.latestADP, alpha) ?? -Infinity; }
+    else if (pSort === 'pick') { av = a.pick || 0; bv = b.pick || 0; }
+    else if (pSort === 'adp')  { av = a.latestADP || 9999; bv = b.latestADP || 9999; }
+    else if (pSort === 'name') { return pDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name); }
+    else { av = a[pSort] ?? -Infinity; bv = b[pSort] ?? -Infinity; }
+    return pDir === 'asc' ? av - bv : bv - av;
+  }), [players, pSort, pDir, alpha]);
 
-  function toggleP(key) {
+  function tp(key) {
     if (pSort === key) setPDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setPSort(key); setPDir(key === 'clv' ? 'desc' : 'asc'); }
   }
-
-  function PSortIcon({ col }) {
-    if (pSort !== col) return <span style={{ opacity: 0.25, marginLeft: 3 }}>↕</span>;
+  function PI({ col }) {
+    if (pSort !== col) return <span style={{ opacity: 0.2, marginLeft: 3 }}>↕</span>;
     return <span style={{ marginLeft: 3 }}>{pDir === 'desc' ? '↓' : '↑'}</span>;
   }
 
   return (
     <div style={styles.detail}>
-      <table style={{ ...styles.table, marginTop: 0 }}>
+      <table style={{ ...styles.table }}>
         <thead>
-          <tr style={{ ...styles.thead, background: '#111' }}>
-            <th style={styles.dth} onClick={() => toggleP('name')}>Player <PSortIcon col="name" /></th>
+          <tr style={{ ...styles.thead, background: '#080808' }}>
+            <th style={styles.dth} onClick={() => tp('name')}>Player <PI col="name" /></th>
             <th style={{ ...styles.dth, textAlign: 'center' }}>Pos</th>
             <th style={{ ...styles.dth, textAlign: 'center' }}>Team</th>
-            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => toggleP('pick')}>
-              Draft Pick <PSortIcon col="pick" />
-            </th>
+            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('pick')}>Draft Pick <PI col="pick" /></th>
             <th style={{ ...styles.dth, textAlign: 'center' }}>Round</th>
-            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => toggleP('adp')}>
-              Cur ADP <PSortIcon col="adp" />
-            </th>
-            <th style={{ ...styles.dth, textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleP('clv')}>
-              CLV% <PSortIcon col="clv" />
-            </th>
+            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('adp')}>Cur ADP <PI col="adp" /></th>
+            <th style={{ ...styles.dth, textAlign: 'center', color: '#00e5a055' }} onClick={() => tp('clv')}>CLV% <PI col="clv" /></th>
           </tr>
         </thead>
         <tbody>
@@ -363,41 +360,29 @@ function PlayerDetail({ players, alpha = 0.5 }) {
             const clv = clvLabel(clvPct);
             return (
               <tr key={`${p.name}-${i}`} style={styles.drow}>
-                <td style={styles.dtd}>
-                  <span style={styles.playerName}>{p.name}</span>
-                </td>
+                <td style={styles.dtd}><span style={styles.playerName}>{p.name}</span></td>
                 <td style={{ ...styles.dtd, textAlign: 'center' }}>
                   <span style={{ ...styles.posPill, background: posColor(p.position) + '22', color: posColor(p.position), borderColor: posColor(p.position) + '55' }}>
                     {p.position}
                   </span>
                 </td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#aaa', fontFamily: "'Space Mono', monospace", fontSize: 11 }}>
-                  {p.team}
-                </td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>
-                  {p.pick || '—'}
-                </td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#888', fontSize: 12 }}>
-                  {p.round || '—'}
-                </td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#aaa' }}>
-                  {p.latestADPDisplay || '—'}
-                </td>
+                <td style={{ ...styles.dtd, textAlign: 'center', color: '#e0e0e0', fontFamily: "'Space Mono', monospace", fontSize: 11 }}>{p.team}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{p.pick || '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontSize: 12 }}>{p.round || '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
                 <td style={{ ...styles.dtd, textAlign: 'center' }}>
                   {clvPct !== null ? (
                     <div style={styles.clvBar}>
-                      <div
-                        style={{
-                          ...styles.clvFill,
-                          width: `${Math.min(Math.abs(clvPct), 100)}%`,
-                          background: clv.color,
-                          marginLeft: clvPct >= 0 ? '50%' : `${50 - Math.min(Math.abs(clvPct), 50)}%`,
-                        }}
-                      />
+                      <div style={{
+                        ...styles.clvFill,
+                        width: `${Math.min(Math.abs(clvPct), 100)}%`,
+                        background: clv.color,
+                        marginLeft: clvPct >= 0 ? '50%' : `${50 - Math.min(Math.abs(clvPct), 50)}%`,
+                      }} />
                       <span style={{ ...styles.clvText, color: clv.color }}>{clv.text}</span>
                     </div>
                   ) : (
-                    <span style={{ color: '#555', fontSize: 11 }}>N/A</span>
+                    <span style={{ color: '#e2e2e2', fontSize: 11 }}>N/A</span>
                   )}
                 </td>
               </tr>
@@ -409,205 +394,73 @@ function PlayerDetail({ players, alpha = 0.5 }) {
   );
 }
 
-// ── styles ────────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = {
-  root: {
-    fontFamily: "'DM Sans', sans-serif",
-    color: '#e0e0e0',
-    padding: '0 0 32px',
-  },
+  root: { fontFamily: "'DM Sans', sans-serif", color: '#ffffff', padding: '0 0 32px' },
   header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottom: '1px solid #222',
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid #1a1a1a',
   },
-  title: {
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 18,
-    fontWeight: 700,
-    letterSpacing: 3,
-    color: '#fff',
-    margin: 0,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#666',
-    margin: '4px 0 0',
-    fontFamily: "'Space Mono', monospace",
-  },
-  alphaRow: {
-    display: 'flex',
+  title: { fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700, letterSpacing: 3, color: '#e6e6e6', margin: 0 },
+  subtitle: { fontSize: 11, color: '#e4e4e4', margin: '4px 0 0', fontFamily: "'Space Mono', monospace" },
+  alphaRow: { display: 'flex', alignItems: 'center', gap: 8 },
+  alphaLabel: { fontFamily: "'Space Mono', monospace", fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: '#444' },
+  alphaExplain: { fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#00e5a055', marginLeft: 4 },
+
+  filterBar: {
+    display: 'flex', flexWrap: 'wrap', gap: '10px 24px',
+    padding: '12px 0 14px', borderBottom: '1px solid #181818', marginBottom: 14,
     alignItems: 'center',
-    gap: 8,
   },
-  alphaLabel: {
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 9,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: '#444',
-  },
-  alphaPresets: {
-    display: 'flex',
-    gap: 4,
-  },
-  alphaExplain: {
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 10,
-    color: '#00e5a077',
-    marginLeft: 4,
+  filterGroupWrap: { display: 'flex', alignItems: 'center', gap: 8 },
+  filterGroupLabel: {
+    fontFamily: "'Space Mono', monospace", fontSize: 9, letterSpacing: 1.5,
+    textTransform: 'uppercase', color: '#fafafa', minWidth: 22,
   },
   filterBtn: {
-    background: 'transparent',
-    border: '1px solid #333',
-    color: '#666',
-    borderRadius: 4,
-    padding: '5px 12px',
-    fontSize: 11,
-    fontFamily: "'Space Mono', monospace",
-    cursor: 'pointer',
-    letterSpacing: 0.5,
-    transition: 'all 0.15s',
+    background: 'transparent', border: '1px solid #a1a3a2', color: '#fafafa',
+    borderRadius: 4, padding: '4px 9px', fontSize: 10,
+    fontFamily: "'Space Mono', monospace", cursor: 'pointer',
+    letterSpacing: 0.3, transition: 'all 0.12s', whiteSpace: 'nowrap',
   },
-  filterBtnActive: {
-    background: '#00e5a022',
-    borderColor: '#00e5a0',
-    color: '#00e5a0',
-  },
-  tableWrap: {
-    overflowX: 'auto',
-    borderRadius: 8,
-    border: '1px solid #1e1e1e',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: 13,
-  },
-  thead: {
-    background: '#0d0d0d',
-  },
+  filterBtnActive: {},  // overridden inline per-archetype color
+
+  tableWrap: { overflowX: 'auto', borderRadius: 8, border: '1px solid #1a1a1a' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
+  thead: { background: '#0d0d0d' },
   th: {
-    padding: '12px 16px',
-    textAlign: 'left',
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 1.5,
-    color: '#555',
-    textTransform: 'uppercase',
-    cursor: 'pointer',
-    userSelect: 'none',
-    borderBottom: '1px solid #1e1e1e',
-    whiteSpace: 'nowrap',
+    padding: '11px 14px', textAlign: 'left',
+    fontFamily: "'Space Mono', monospace", fontSize: 9, fontWeight: 700,
+    letterSpacing: 1.5, color: '#dadada', textTransform: 'uppercase',
+    cursor: 'pointer', userSelect: 'none',
+    borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap',
   },
-  row: {
-    borderBottom: '1px solid #1a1a1a',
-    cursor: 'pointer',
-    transition: 'background 0.1s',
-  },
-  rowOpen: {
-    background: '#0a1a14',
-    borderBottom: '1px solid #00e5a033',
-  },
-  td: {
-    padding: '12px 16px',
-    verticalAlign: 'middle',
-  },
-  entryId: {
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 11,
-    color: '#ccc',
-    letterSpacing: 0.5,
-  },
+  row: { borderBottom: '1px solid #141414', cursor: 'pointer', transition: 'background 0.1s' },
+  rowOpen: { background: '#080f0c', borderBottom: '1px solid #00e5a07a' },
+  td: { padding: '11px 14px', verticalAlign: 'middle' },
+  entryId: { fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#bbb', letterSpacing: 0.5 },
   clvBadge: {
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 12,
-    fontWeight: 700,
-    border: '1px solid',
-    borderRadius: 4,
-    padding: '3px 8px',
+    fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
+    border: '1px solid', borderRadius: 4, padding: '2px 7px',
   },
-  chevron: {
-    color: '#444',
-    fontSize: 10,
-    fontFamily: "'Space Mono', monospace",
-  },
-  // Detail table
-  detail: {
-    background: '#070f0b',
-    borderTop: '1px solid #00e5a022',
-    borderBottom: '1px solid #1a1a1a',
-    padding: '0 0 8px',
-  },
+  chevron: { color: '#dddddd', fontSize: 10, fontFamily: "'Space Mono', monospace" },
+
+  detail: { background: '#060c09', borderTop: '1px solid #00e5a01a' },
   dth: {
-    padding: '10px 14px',
-    textAlign: 'left',
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 9,
-    fontWeight: 700,
-    letterSpacing: 1.5,
-    color: '#444',
-    textTransform: 'uppercase',
-    cursor: 'pointer',
-    userSelect: 'none',
-    borderBottom: '1px solid #1a1a1a',
-    whiteSpace: 'nowrap',
+    padding: '9px 14px', textAlign: 'left',
+    fontFamily: "'Space Mono', monospace", fontSize: 9, fontWeight: 700,
+    letterSpacing: 1.5, color: '#ffffff', textTransform: 'uppercase',
+    cursor: 'pointer', userSelect: 'none',
+    borderBottom: '1px solid #0f0f0f', whiteSpace: 'nowrap',
   },
-  drow: {
-    borderBottom: '1px solid #111',
-  },
-  dtd: {
-    padding: '9px 14px',
-    verticalAlign: 'middle',
-  },
-  playerName: {
-    fontWeight: 500,
-    color: '#ddd',
-    fontSize: 13,
-  },
-  posPill: {
-    fontSize: 10,
-    fontFamily: "'Space Mono', monospace",
-    border: '1px solid',
-    borderRadius: 3,
-    padding: '1px 5px',
-    letterSpacing: 0.5,
-  },
-  clvBar: {
-    position: 'relative',
-    width: '100%',
-    height: 18,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clvFill: {
-    position: 'absolute',
-    height: 3,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    borderRadius: 2,
-    opacity: 0.6,
-    maxWidth: '50%',
-  },
-  clvText: {
-    position: 'relative',
-    fontFamily: "'Space Mono', monospace",
-    fontSize: 11,
-    fontWeight: 700,
-    zIndex: 1,
-    background: '#070f0b',
-    padding: '0 4px',
-  },
-  empty: {
-    textAlign: 'center',
-    padding: '60px 20px',
-    color: '#555',
-    fontFamily: "'Space Mono', monospace",
-  },
+  drow: { borderBottom: '1px solid #0d0d0d' },
+  dtd: { padding: '8px 14px', verticalAlign: 'middle' },
+  playerName: { fontWeight: 500, color: '#ccc', fontSize: 13 },
+  posPill: { fontSize: 10, fontFamily: "'Space Mono', monospace", border: '1px solid', borderRadius: 3, padding: '1px 5px', letterSpacing: 0.5 },
+  clvBar: { position: 'relative', width: '100%', height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  clvFill: { position: 'absolute', height: 3, top: '50%', transform: 'translateY(-50%)', borderRadius: 2, opacity: 0.5, maxWidth: '50%' },
+  clvText: { position: 'relative', fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700, zIndex: 1, background: '#060c09', padding: '0 4px' },
+
+  empty: { textAlign: 'center', padding: '60px 20px', color: '#e2e2e2', fontFamily: "'Space Mono', monospace" },
 };

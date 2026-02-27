@@ -73,7 +73,7 @@ function countPosition(roster, position, start, end) {
  * Returns specific path tags for a roster
  */
 export function classifyRosterPath(roster) {
-  const path = { rb: 'RB_SUBOPTIMAL', qb: 'QB_LATE', te: 'TE_LATE' };
+  const path = { rb: 'RB_VALUE', qb: 'QB_LATE', te: 'TE_LATE' };
 
   // RB Logic
   const rb1to4 = countPosition(roster, 'RB', 1, 4);
