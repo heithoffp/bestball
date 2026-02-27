@@ -19,10 +19,9 @@ function calcCLV(pick, latestADP, alpha = 0.5) {
 function clvLabel(pct) {
   if (pct === null) return { text: 'N/A', color: '#d6d6d6' };
   const sign = pct >= 0 ? '+' : '';
-  const color = pct > 5 ? '#00e5a0'
-              : pct > 2.5  ? '#7dffcc'
-              : pct > 0  ? '#fcff55'
-              : pct > -2.5 ? '#ff9f43'
+  const color = pct > 15 ? '#00e5a0'
+              : pct > 5  ? '#7dffcc'
+              : pct > -5 ? '#ff9f43'
               :             '#ff4d6d';
   return { text: `${sign}${pct.toFixed(2)}%`, color };
 }
@@ -48,6 +47,66 @@ function uniquenessColor(t) {
     return lerpColor([255, 77, 109], [255, 159, 67], t * 2);
   }
   return lerpColor([255, 159, 67], [0, 229, 160], (t - 0.5) * 2);
+}
+
+// ── RB Archetype rarity model ─────────────────────────────────────────────────
+
+/**
+ * Prevalence priors: estimated % of field in each RB archetype.
+ * Source: user-provided field composition estimates.
+ * Balanced/Value (~60%) is split across RB_VALUE and RB_SUBOPTIMAL.
+ */
+const RB_ARCHETYPE_PREVALENCE = {
+  RB_VALUE:         0.6,
+  RB_HERO:          0.20,
+  RB_ZERO:          0.15,
+  RB_HYPER_FRAGILE: 0.05,
+};
+
+/**
+ * Shannon surprisal: -log2(p)
+ * Rare archetypes = high surprisal = more unique.
+ * Normalized to [0,1] relative to the spread across known archetypes.
+ */
+const _surprisalValues = Object.values(RB_ARCHETYPE_PREVALENCE).map(p => -Math.log2(p));
+const _surprisalMin = Math.min(..._surprisalValues);
+const _surprisalMax = Math.max(..._surprisalValues);
+
+function archetypeRarityNorm(rbArchetype) {
+  const p = RB_ARCHETYPE_PREVALENCE[rbArchetype];
+  if (p == null) return 0.5; // unknown archetype → neutral
+  const raw = -Math.log2(p);
+  return (raw - _surprisalMin) / (_surprisalMax - _surprisalMin); // 0..1
+}
+
+/**
+ * Composite Rarity = draft deviation rarity × archetype rarity multiplier
+ *
+ * Formula: draftRarity × (1 + archetypeBoostMax × archetypeRarityNorm)
+ *
+ * - Common archetype (norm ≈ 0): no boost — pure draft deviation signal
+ * - Rare archetype (norm = 1): score boosted by archetypeBoostMax (default 0.5 = +50%)
+ * - The signals compound: a contrarian drafter in a rare archetype scores highest
+ *
+ * archetypeBoostMax is tunable: 0 = archetype ignored, 1 = archetype can double the score
+ */
+function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
+  const { alphaPhase = 1.0, betaPhase = 0.5, archetypeBoostMax = 0.5 } = opts;
+
+  // Draft deviation component: sum of pick deviations scaled by expected σ at that ADP
+  let draftRarity = 0;
+  rosterPlayers.forEach(p => {
+    const pick   = Number(p.pick || 0) || 0;
+    const adpRaw = Number(p.latestADP || p.adp || p.latestADPValue || 0) || (pick || 1000);
+    const adp    = Math.max(1, adpRaw);
+    const denom  = alphaPhase * Math.sqrt(adp) + betaPhase;
+    draftRarity += Math.abs(pick - adp) / denom;
+  });
+
+  // Multiplicative archetype boost — compounds with draft deviation
+  const archBoost = 1 + archetypeBoostMax * archetypeRarityNorm(rbArchetype);
+
+  return draftRarity * archBoost;
 }
 
 // ── Archetype display helpers ─────────────────────────────────────────────────
@@ -124,7 +183,7 @@ const RB_OPTIONS = ['all', 'RB_ZERO', 'RB_HERO', 'RB_HYPER_FRAGILE', 'RB_VALUE',
 const QB_OPTIONS = ['all', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['all', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 
-// ── Utility helpers for uniqueness metrics ────────────────────────────────────
+// ── Percentile rank ───────────────────────────────────────────────────────────
 
 function percentileRank(value, arr) {
   if (!arr || arr.length === 0) return 0;
@@ -135,25 +194,6 @@ function percentileRank(value, arr) {
     else break;
   }
   return (count / sorted.length) * 100;
-}
-
-/**
- * Combinatorial rarity (per-player deviation scaled by a draft-phase σ model).
- * Uses: deviation = |pick - adp| / (alpha * sqrt(adp) + beta)
- * Sum deviations across roster (higher => rarer/contrarian).
- */
-function calculateCombinatorialRarity(rosterPlayers, opts = {}) {
-  const { alphaPhase = 1.0, betaPhase = 0.5 } = opts || {};
-  let total = 0;
-  rosterPlayers.forEach(p => {
-    const pick = Number(p.pick || 0) || 0;
-    const adpRaw = Number(p.latestADP || p.adp || p.latestADPValue || 0) || (pick || 1000);
-    const adp = Math.max(1, adpRaw);
-    const denom = (alphaPhase * Math.sqrt(adp) + betaPhase);
-    const deviation = Math.abs(pick - adp) / denom;
-    total += deviation;
-  });
-  return total;
 }
 
 // ── Min-max normalizer ────────────────────────────────────────────────────────
@@ -174,17 +214,19 @@ function normalize(list, key, outKey) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RosterViewer({ rosterData = [] }) {
-  const [expandedEntry, setExpandedEntry] = useState(null);
-  const [sortKey, setSortKey] = useState('avgCLV');
-  const [sortDir, setSortDir] = useState('desc');
-  const [alpha, setAlpha]     = useState(0.5);
-  const [clvFilter, setClvFilter] = useState('all');
-  const [rbFilter,  setRbFilter]  = useState('all');
-  const [qbFilter,  setQbFilter]  = useState('all');
-  const [teFilter,  setTeFilter]  = useState('all');
+  const [expandedEntry, setExpandedEntry]   = useState(null);
+  const [sortKey, setSortKey]               = useState('avgCLV');
+  const [sortDir, setSortDir]               = useState('desc');
+  const [alpha, setAlpha]                   = useState(0.5);
+  const [clvFilter, setClvFilter]           = useState('all');
+  const [rbFilter,  setRbFilter]            = useState('all');
+  const [qbFilter,  setQbFilter]            = useState('all');
+  const [teFilter,  setTeFilter]            = useState('all');
 
-  const [alphaPhase] = useState(1.0);
-  const [betaPhase]  = useState(0.5);
+  // Rarity model tunables
+  const [alphaPhase]       = useState(1.0);
+  const [betaPhase]        = useState(0.5);
+  const [archetypeBoostMax] = useState(0.5); // 0 = ignore archetype, 1 = can double score
 
   // Group + classify each entry
   const rosters = useMemo(() => {
@@ -215,16 +257,20 @@ export default function RosterViewer({ rosterData = [] }) {
     });
   }, [rosterData, alpha]);
 
-  // Compute per-roster Draft Rarity scores, percentile-rank + normalize for color
+  // Compute per-roster composite rarity, percentile-rank + normalize for color
   const rosterScores = useMemo(() => {
     if (!rosters || rosters.length === 0) return {};
 
     const rawRarity = [];
 
     const tmp = rosters.map(r => {
-      const rarity = calculateCombinatorialRarity(r.players, { alphaPhase, betaPhase });
+      const rarity = calculateCompositeRarity(r.players, r.path.rb, {
+        alphaPhase,
+        betaPhase,
+        archetypeBoostMax,
+      });
       rawRarity.push(rarity);
-      return { entry_id: r.entry_id, rarity };
+      return { entry_id: r.entry_id, rarity, rbArchetype: r.path.rb };
     });
 
     const rarityPercentiles = {};
@@ -241,10 +287,12 @@ export default function RosterViewer({ rosterData = [] }) {
         rarity:           Number(t.rarity.toFixed(4)),
         rarityPercentile: Math.round(rarityPercentiles[t.entry_id]),
         uniqLiftNorm:     t.uniqLiftNorm ?? 0.5,
+        // Expose archetype boost factor for tooltip
+        archBoost:        Number((1 + archetypeBoostMax * archetypeRarityNorm(t.rbArchetype)).toFixed(3)),
       };
     });
     return byId;
-  }, [rosters, alphaPhase, betaPhase]);
+  }, [rosters, alphaPhase, betaPhase, archetypeBoostMax]);
 
   // Filter + sort
   const displayed = useMemo(() => {
@@ -275,7 +323,6 @@ export default function RosterViewer({ rosterData = [] }) {
     return list;
   }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, rosterScores]);
 
-  // Counts per archetype for filter badges
   const rbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.rb] = (acc[r.path.rb] || 0) + 1; return acc; }, {}), [rosters]);
   const qbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.qb] = (acc[r.path.qb] || 0) + 1; return acc; }, []), [rosters]);
   const teCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.te] = (acc[r.path.te] || 0) + 1; return acc; }, {}), [rosters]);
@@ -362,9 +409,13 @@ export default function RosterViewer({ rosterData = [] }) {
           </thead>
           <tbody>
             {displayed.map((roster) => {
-              const clv = clvLabel(roster.avgCLV);
+              const clv    = clvLabel(roster.avgCLV);
               const isOpen = expandedEntry === roster.entry_id;
               const scores = rosterScores[roster.entry_id] || {};
+              // Tooltip: show archetype boost contribution
+              const archNorm  = archetypeRarityNorm(roster.path.rb);
+              const boostPct  = Math.round(archetypeBoostMax * archNorm * 100);
+              const tooltipTxt = `Draft rarity × ${scores.archBoost ?? '—'}× arch boost (+${boostPct}% from ${roster.path.rb})`;
               return (
                 <React.Fragment key={roster.entry_id}>
                   <tr
@@ -378,9 +429,10 @@ export default function RosterViewer({ rosterData = [] }) {
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.te} /></td>
 
-                    {/* Draft Rarity — rank-normalized color */}
+                    {/* Composite Uniq Lift — rank-normalized color, archetype boost shown on hover */}
                     <td style={{ ...styles.td, textAlign: 'center' }}>
                       <span
+                        title={tooltipTxt}
                         style={{
                           ...styles.uniqBadge,
                           color: uniquenessColor(scores.uniqLiftNorm ?? 0.5),
@@ -388,6 +440,11 @@ export default function RosterViewer({ rosterData = [] }) {
                         }}
                       >
                         {scores.rarity?.toFixed(2) ?? '—'}
+                        {boostPct > 0 && (
+                          <span style={{ fontSize: 9, opacity: 0.6, marginLeft: 4 }}>
+                            ×{scores.archBoost}
+                          </span>
+                        )}
                       </span>
                     </td>
 
@@ -602,5 +659,6 @@ const styles = {
     border: '1px solid',
     borderRadius: 4,
     padding: '2px 7px',
+    cursor: 'help',
   },
 };
