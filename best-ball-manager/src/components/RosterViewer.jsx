@@ -134,93 +134,13 @@ function percentileRank(value, arr) {
     if (sorted[i] <= value) count++;
     else break;
   }
-  return (count / sorted.length) * 100; // percentile 0..100
-}
-
-/** Build exposures and joint exposures from rosterData (list of player rows) */
-function buildExposuresFromRosterData(rosterData) {
-  const entries = {};
-  rosterData.forEach(p => {
-    const id = p.entry_id || 'Unknown';
-    if (!entries[id]) entries[id] = new Set();
-    const playerKey = p.name || p.player_name || p.player || `${p.team || ''}-${p.position || ''}-${p.name || ''}`;
-    entries[id].add(playerKey);
-  });
-
-  const totalEntries = Object.keys(entries).length || 1;
-  const counts = {};
-  const jointCounts = {};
-
-  Object.values(entries).forEach(set => {
-    const players = Array.from(set);
-    players.forEach(p => { counts[p] = (counts[p] || 0) + 1; });
-    for (let i = 0; i < players.length; i++) {
-      for (let j = i + 1; j < players.length; j++) {
-        const key = players[i] < players[j] ? `${players[i]}||${players[j]}` : `${players[j]}||${players[i]}`;
-        jointCounts[key] = (jointCounts[key] || 0) + 1;
-      }
-    }
-  });
-
-  const exposures = {};
-  Object.keys(counts).forEach(k => { exposures[k] = counts[k] / totalEntries; });
-
-  const jointExposures = {};
-  Object.keys(jointCounts).forEach(k => { jointExposures[k] = jointCounts[k] / totalEntries; });
-
-  return { exposures, jointExposures, totalEntries };
-}
-
-/** Portfolio Overlap (weighted RMS with optional pairwise penalty) */
-function calculatePortfolioOverlap(rosterPlayers, exposures, jointExposures, opts = {}) {
-  const {
-    positionWeights = {},
-    benchWeight = 0.5,
-    lambdaPairwise = 0.5,
-  } = opts || {};
-
-  const n = rosterPlayers.length;
-  if (n === 0) return { overlap_score: 0, pairwise_penalty: 0, overlap_adj: 0, uniqueness: 1 };
-
-  let weightedSum = 0;
-  let weightTotal = 0;
-  rosterPlayers.forEach(p => {
-    const playerKey = p.name || p.player_name || `${p.team || ''}-${p.position || ''}-${p.name || ''}`;
-    const E = Number(exposures[playerKey] || 0);
-    const pos = p.position || 'NA';
-    const isBench = pos === 'BN' || pos === 'BENCH';
-    const w = isBench ? benchWeight : (positionWeights[pos] || 1.0);
-    weightedSum += w * (E * E);
-    weightTotal += w;
-  });
-
-  const overlapRMS = Math.sqrt(weightedSum / Math.max(1e-9, weightTotal));
-
-  let pairSum = 0;
-  if (jointExposures && n >= 2) {
-    let pairs = 0;
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        pairs++;
-        const a = rosterPlayers[i].name || rosterPlayers[i].player_name;
-        const b = rosterPlayers[j].name || rosterPlayers[j].player_name;
-        const key = a < b ? `${a}||${b}` : `${b}||${a}`;
-        pairSum += Number(jointExposures[key] || 0);
-      }
-    }
-    if (pairs > 0) pairSum = pairSum / pairs;
-  }
-
-  let overlapAdj = overlapRMS + lambdaPairwise * pairSum;
-  overlapAdj = Math.max(0, Math.min(1, overlapAdj));
-
-  const uniqueness = 1 - overlapAdj;
-
-  return { overlap_score: overlapRMS, pairwise_penalty: pairSum, overlap_adj: overlapAdj, uniqueness };
+  return (count / sorted.length) * 100;
 }
 
 /**
  * Combinatorial rarity (per-player deviation scaled by a draft-phase σ model).
+ * Uses: deviation = |pick - adp| / (alpha * sqrt(adp) + beta)
+ * Sum deviations across roster (higher => rarer/contrarian).
  */
 function calculateCombinatorialRarity(rosterPlayers, opts = {}) {
   const { alphaPhase = 1.0, betaPhase = 0.5 } = opts || {};
@@ -263,10 +183,8 @@ export default function RosterViewer({ rosterData = [] }) {
   const [qbFilter,  setQbFilter]  = useState('all');
   const [teFilter,  setTeFilter]  = useState('all');
 
-  const [benchWeight] = useState(0.5);
-  const [lambdaPairwise] = useState(0.5);
   const [alphaPhase] = useState(1.0);
-  const [betaPhase] = useState(0.5);
+  const [betaPhase]  = useState(0.5);
 
   // Group + classify each entry
   const rosters = useMemo(() => {
@@ -297,64 +215,36 @@ export default function RosterViewer({ rosterData = [] }) {
     });
   }, [rosterData, alpha]);
 
-  // Build exposures / joint-exposures
-  const { exposures, jointExposures } = useMemo(() => {
-    const { exposures, jointExposures } = buildExposuresFromRosterData(rosterData);
-    return { exposures, jointExposures };
-  }, [rosterData]);
-
-  // Compute per-roster uniqueness scores, percentile-rank them, and min-max normalize for color scale
+  // Compute per-roster Draft Rarity scores, percentile-rank + normalize for color
   const rosterScores = useMemo(() => {
     if (!rosters || rosters.length === 0) return {};
 
-    const rawOverlapUniq = [];
     const rawRarity = [];
 
     const tmp = rosters.map(r => {
-      const overlap = calculatePortfolioOverlap(r.players, exposures, jointExposures, {
-        benchWeight, lambdaPairwise,
-      });
-      const overlapUniq = overlap.uniqueness;
       const rarity = calculateCombinatorialRarity(r.players, { alphaPhase, betaPhase });
-      rawOverlapUniq.push(overlapUniq);
       rawRarity.push(rarity);
-      return { entry_id: r.entry_id, overlapUniq, rarity, overlapRaw: overlap.overlap_adj };
+      return { entry_id: r.entry_id, rarity };
     });
 
-    // Percentile ranks
-    const overlapPercentiles = {};
-    const rarityPercentiles  = {};
+    const rarityPercentiles = {};
     tmp.forEach(t => {
-      overlapPercentiles[t.entry_id] = percentileRank(t.overlapUniq, rawOverlapUniq);
-      rarityPercentiles[t.entry_id]  = percentileRank(t.rarity, rawRarity);
+      rarityPercentiles[t.entry_id] = percentileRank(t.rarity, rawRarity);
     });
 
-    // Min-max normalize to [0,1] for color scale (per-render, rank-normalized)
-    let withUniqCorr = tmp.map(t => ({ ...t, uniqCorr: t.overlapUniq }));
-    let withUniqLift = tmp.map(t => ({ ...t, uniqLift: t.rarity }));
-    withUniqCorr = normalize(withUniqCorr, 'uniqCorr', 'uniqCorrNorm');
-    withUniqLift = normalize(withUniqLift, 'uniqLift', 'uniqLiftNorm');
-
-    // Merge everything into a map keyed by entry_id
-    const normMapCorr = {};
-    const normMapLift = {};
-    withUniqCorr.forEach(t => { normMapCorr[t.entry_id] = t.uniqCorrNorm; });
-    withUniqLift.forEach(t => { normMapLift[t.entry_id] = t.uniqLiftNorm; });
+    let withNorm = tmp.map(t => ({ ...t, uniqLift: t.rarity }));
+    withNorm = normalize(withNorm, 'uniqLift', 'uniqLiftNorm');
 
     const byId = {};
-    tmp.forEach(t => {
+    withNorm.forEach(t => {
       byId[t.entry_id] = {
-        overlapUniq:       t.overlapUniq,
-        overlapPercentile: Math.round(overlapPercentiles[t.entry_id]),
-        overlapRaw:        Number(t.overlapRaw.toFixed(4)),
-        rarity:            Number(t.rarity.toFixed(4)),
-        rarityPercentile:  Math.round(rarityPercentiles[t.entry_id]),
-        uniqCorrNorm:      normMapCorr[t.entry_id] ?? 0.5,
-        uniqLiftNorm:      normMapLift[t.entry_id] ?? 0.5,
+        rarity:           Number(t.rarity.toFixed(4)),
+        rarityPercentile: Math.round(rarityPercentiles[t.entry_id]),
+        uniqLiftNorm:     t.uniqLiftNorm ?? 0.5,
       };
     });
     return byId;
-  }, [rosters, exposures, jointExposures, benchWeight, lambdaPairwise, alphaPhase, betaPhase]);
+  }, [rosters, alphaPhase, betaPhase]);
 
   // Filter + sort
   const displayed = useMemo(() => {
@@ -374,9 +264,9 @@ export default function RosterViewer({ rosterData = [] }) {
       let av = a[sortKey] ?? -Infinity;
       let bv = b[sortKey] ?? -Infinity;
       if (sortKey === 'entry_id') { av = a.entry_id; bv = b.entry_id; }
-      if (sortKey === 'overlapPercentile' || sortKey === 'rarityPercentile') {
-        const aid = rosterScores[a.entry_id]?.[sortKey] ?? -Infinity;
-        const bid = rosterScores[b.entry_id]?.[sortKey] ?? -Infinity;
+      if (sortKey === 'rarityPercentile') {
+        const aid = rosterScores[a.entry_id]?.rarityPercentile ?? -Infinity;
+        const bid = rosterScores[b.entry_id]?.rarityPercentile ?? -Infinity;
         return sortDir === 'asc' ? aid - bid : bid - aid;
       }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
@@ -460,23 +350,12 @@ export default function RosterViewer({ rosterData = [] }) {
               <th style={{ ...styles.th, color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" /></th>
               <th style={{ ...styles.th, color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" /></th>
               <th style={{ ...styles.th, color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" /></th>
-
-              {/* Uniqueness columns — colored headers */}
-              <th
-                style={{ ...styles.th, textAlign: 'center', color: '#7dffcc' }}
-                onClick={() => toggleSort('overlapPercentile')}
-              >
-                Uniq Corr
-                <SortIcon col="overlapPercentile" />
-              </th>
               <th
                 style={{ ...styles.th, textAlign: 'center', color: '#7dffcc' }}
                 onClick={() => toggleSort('rarityPercentile')}
               >
-                Uniq Lift
-                <SortIcon col="rarityPercentile" />
+                Uniq Lift <SortIcon col="rarityPercentile" />
               </th>
-
               <th style={{ ...styles.th, textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" /></th>
               <th style={{ ...styles.th, textAlign: 'center', cursor: 'default' }}></th>
             </tr>
@@ -498,19 +377,6 @@ export default function RosterViewer({ rosterData = [] }) {
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.te} /></td>
-
-                    {/* Portfolio Uniqueness — rank-normalized color */}
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <span
-                        style={{
-                          ...styles.uniqBadge,
-                          color: uniquenessColor(scores.uniqCorrNorm ?? 0.5),
-                          borderColor: uniquenessColor(scores.uniqCorrNorm ?? 0.5) + '55',
-                        }}
-                      >
-                        {scores.overlapUniq?.toFixed(2) ?? '—'}
-                      </span>
-                    </td>
 
                     {/* Draft Rarity — rank-normalized color */}
                     <td style={{ ...styles.td, textAlign: 'center' }}>
@@ -534,7 +400,7 @@ export default function RosterViewer({ rosterData = [] }) {
                   </tr>
                   {isOpen && (
                     <tr>
-                      <td colSpan={10} style={{ padding: 0 }}>
+                      <td colSpan={9} style={{ padding: 0 }}>
                         <PlayerDetail players={roster.players} alpha={alpha} />
                       </td>
                     </tr>
@@ -729,7 +595,6 @@ const styles = {
 
   empty: { textAlign: 'center', padding: '60px 20px', color: '#e2e2e2', fontFamily: "'Space Mono', monospace" },
 
-  // Rank-normalized uniqueness badge (red → amber → green)
   uniqBadge: {
     fontFamily: "'Space Mono', monospace",
     fontSize: 11,
