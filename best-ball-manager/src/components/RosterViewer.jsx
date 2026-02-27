@@ -19,8 +19,8 @@ function calcCLV(pick, latestADP, alpha = 0.5) {
 function clvLabel(pct) {
   if (pct === null) return { text: 'N/A', color: '#d6d6d6' };
   const sign = pct >= 0 ? '+' : '';
-  const color = pct > 5 ? '#00e5a0'
-              : pct > 2.5  ? '#7dffcc'
+  const color = pct > 5 ? '#00f700'
+              : pct > 2.5  ? '#bcfc45'
               : pct > 0  ? '#fcff55'
               : pct > -2.5 ? '#ff9f43'
               :             '#ff4d6d';
@@ -54,10 +54,10 @@ function uniquenessColor(t) {
 // ── Helpers & priors (unchanged) ──────────
 
 const RB_ARCHETYPE_PREVALENCE = {
-  RB_VALUE:         0.6,
-  RB_HERO:          0.20,
-  RB_ZERO:          0.15,
-  RB_HYPER_FRAGILE: 0.05,
+  RB_VALUE:         0.5,
+  RB_HERO:          0.25,
+  RB_ZERO:          0.17,
+  RB_HYPER_FRAGILE: 0.08,
 };
 
 const _surprisalValues = Object.values(RB_ARCHETYPE_PREVALENCE).map(p => -Math.log2(p));

@@ -4,26 +4,8 @@
  */
 export const PROTOCOL_TREE = {
   // --- LEVEL 1: RB (Capital Spend) ---
-  RB_ZERO: {
-    target: 35,
-    color: '#8b5cf6',
-    children: {
-      QB_ELITE: { target: 70, children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } },
-      QB_CORE: { target: 30, children: { TE_ELITE: 70, TE_ANCHOR: 30, TE_LATE: 0 } },
-      QB_LATE: { target: 0, children: { TE_ELITE: 80, TE_ANCHOR: 20, TE_LATE: 0 } }
-    }
-  },
-  RB_HYPER_FRAGILE: {
-    target: 25,
-    color: '#f97316',
-    children: {
-      QB_LATE: { target: 60, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
-      QB_CORE: { target: 20, children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
-      QB_ELITE: { target: 20, children: { TE_LATE: 100, TE_ANCHOR: 0, TE_ELITE: 0} }
-    }
-  },
   RB_HERO: {
-    target: 40,
+    target: 45, // Primary strategy: reliable ceiling + WR firepower
     color: '#4bf1db',
     children: {
       QB_CORE: { target: 60, children: { TE_ANCHOR: 50, TE_ELITE: 30, TE_LATE: 20 } },
@@ -31,13 +13,29 @@ export const PROTOCOL_TREE = {
       QB_LATE: { target: 20, children: { TE_ELITE: 50, TE_ANCHOR: 50, TE_LATE: 0 } }
     }
   },
+  RB_ZERO: {
+    target: 40, // High-variance play: elite WR/QB/TE stacks
+    color: '#8b5cf6',
+    children: {
+      QB_ELITE: { target: 70, children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } }, // Zero RB NEEDS elite onesies
+      QB_CORE: { target: 30, children: { TE_ELITE: 70, TE_ANCHOR: 30, TE_LATE: 0 } },
+      QB_LATE: { target: 0, children: { TE_ELITE: 100, TE_ANCHOR: 0, TE_LATE: 0 } } // Disallow Zero RB + Late QB
+    }
+  },
+  RB_HYPER_FRAGILE: {
+    target: 15, // The Contrarian Hammer
+    color: '#f97316',
+    children: {
+      QB_LATE: { target: 60, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
+      QB_CORE: { target: 20, children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
+      QB_ELITE: { target: 20, children: { TE_LATE: 100, TE_ANCHOR: 0, TE_ELITE: 0} }
+    }
+  },
   RB_VALUE: {
-    target: 0,
+    target: 0, // "Balanced" strategies are discouraged for top 0.1% hunting
     color: '#ef4444',
     children: {
-      QB_CORE: { target: 60, children: { TE_ANCHOR: 50, TE_ELITE: 30, TE_LATE: 20 } },
-      QB_ELITE: { target: 20, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
-      QB_LATE: { target: 20, children: { TE_ELITE: 50, TE_ANCHOR: 50, TE_LATE: 0 } }
+      QB_CORE: { target: 100, children: { TE_LATE: 100 } }
     }
   }
 };
@@ -72,30 +70,42 @@ function countPosition(roster, position, start, end) {
 /**
  * Returns specific path tags for a roster
  */
+/**
+ * Classifies roster based on the strict structural rules for top-0.1% optimization
+ */
 export function classifyRosterPath(roster) {
   const path = { rb: 'RB_VALUE', qb: 'QB_LATE', te: 'TE_LATE' };
 
-  // RB Logic
-  const rb1to4 = countPosition(roster, 'RB', 1, 4);
-  const rb1to5 = countPosition(roster, 'RB', 1, 5);
-  const rb1to2 = countPosition(roster, 'RB', 1, 2);
-  const rb3to6 = countPosition(roster, 'RB', 3, 6);
-  const rb1to18 = countPosition(roster, 'RB', 1, 18);
+  // RB Capital Counts
+  const rbRounds1to2 = countPosition(roster, 'RB', 1, 2);
+  const rbRounds1to5 = countPosition(roster, 'RB', 1, 5);
+  const rbRounds3to7 = countPosition(roster, 'RB', 3, 7);
+  const totalRBs = countPosition(roster, 'RB', 1, 20);
 
-  if (rb1to4 >= 3 && rb1to18 <= 5) path.rb = 'RB_HYPER_FRAGILE';
-  else if (rb1to5 === 0) path.rb = 'RB_ZERO';
-  else if (rb1to2 === 1 && rb3to6 === 0) path.rb = 'RB_HERO';
-  else path.rb = 'RB_VALUE';
+  // RB Logic Implementation
+  if (rbRounds1to5 === 0) {
+    // Pure Zero RB: No RBs in the first 5 rounds
+    path.rb = 'RB_ZERO';
+  } else if (rbRounds1to5 >= 3 && totalRBs <= 4) {
+    // Hyper Fragile: 3+ early RBs and a hard stop at 4 total
+    path.rb = 'RB_HYPER_FRAGILE';
+  } else if (rbRounds1to2 === 1 && rbRounds3to7 === 0) {
+    // Hero RB: Exactly one elite RB and NO secondary RB until Round 8
+    path.rb = 'RB_HERO';
+  } else {
+    // Failed to meet strict structural thresholds
+    path.rb = 'RB_VALUE';
+  }
 
-  // QB Logic
+  // QB Logic (Elite = Top 4 Rounds, Core = 5-9, Late = 10+)
   if (countPosition(roster, 'QB', 1, 4) >= 1) path.qb = 'QB_ELITE';
-  else if (countPosition(roster, 'QB', 5, 8) >= 1) path.qb = 'QB_CORE';
-  else if ( countPosition(roster, 'QB', 9, 20) >= 1) path.qb = 'QB_LATE';
+  else if (countPosition(roster, 'QB', 5, 9) >= 1) path.qb = 'QB_CORE';
+  else path.qb = 'QB_LATE';
 
-  // TE Logic
+  // TE Logic (Elite = Top 4 Rounds, Anchor = 5-9, Late = 10+)
   if (countPosition(roster, 'TE', 1, 4) >= 1) path.te = 'TE_ELITE';
-  else if (countPosition(roster, 'TE', 5, 8) >= 1) path.te = 'TE_ANCHOR';
-  else if (countPosition(roster, 'TE', 9, 20) >= 1) path.te = 'TE_LATE';
+  else if (countPosition(roster, 'TE', 5, 9) >= 1) path.te = 'TE_ANCHOR';
+  else path.te = 'TE_LATE';
 
   return path;
 }

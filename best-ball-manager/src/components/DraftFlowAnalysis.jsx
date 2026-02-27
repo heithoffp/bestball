@@ -19,21 +19,21 @@ const TE_META = {
 const RB_BLURBS = {
   RB_ZERO: {
     title: 'Zero RB Protocol',
-    protocol: 'Absolute moratorium on RBs until Round 6; use early capital to lock in an Elite QB/TE and a massive WR advantage.',
-    execution: 'Hammer "Ambiguous Backfield" RBs in Rounds 7–10 to find breakout starters through sheer volume.',
-    constraint: 'If you miss on Elite QB/TE, this build often lacks the ceiling to win.'
+    protocol: 'Absolute moratorium on RBs until Round 7+; your draft must be dominated by WR volume and elite "onesie" positions.',
+    execution: 'Draft 5-6 WRs and at least one Elite QB or TE before clicking your first RB. Target 6-7 total RBs.',
+    constraint: 'If you take a "Value RB" in Round 5 or 6, you have compromised the structural advantage of the build.'
   },
   RB_HYPER_FRAGILE: {
     title: 'Hyper Fragile Protocol',
-    protocol: 'Draft 3 Elite RBs in the first 4 rounds, then enforce a hard stop on the position until Round 10+.',
-    execution: 'Spend Rounds 5–9 exclusively on a high-upside "WR Avalanche" to catch up on pass-catcher depth.',
-    constraint: 'Do not draft a "Value" RB in Round 6. You are playing for 3 healthy studs; a 4th RB is a wasted pick.'
+    protocol: 'Draft 3 Elite RBs in the first 5 rounds, then enforce a hard stop. You are betting on health and a total RB monopoly.',
+    execution: 'Draft exactly 4 RBs. Use the saved roster spots to hammer 10 WRs and elite battery partners (QB/TE).',
+    constraint: 'Drafting a 5th RB is a fatal error. If your top 3 fail, the roster is dead; if they hit, a 5th RB adds 0 ceiling.'
   },
   RB_HERO: {
     title: 'Hero RB Protocol',
-    protocol: 'Anchor with exactly one "Legendary" RB in Rounds 1–2, then pivot immediately to dominantly drafting WRs.',
-    execution: 'Strictly avoid drafting your RB2 in the "Dead Zone" (Rounds 3–6); wait for the "Value Pocket" in Round 7+ to add depth.',
-    constraint: 'This is a "Barbell" approach—balance your one elite RB with a deep WR room, not a "balanced" RB room.'
+    protocol: 'Anchor with exactly one "Legendary" RB in Rounds 1-2. No RB2 until the double-digit rounds.',
+    execution: 'Spend Rounds 3-9 building a "Super-Room" of WRs. Aim for 5-6 total RBs, focusing on high-contingency upside.',
+    constraint: 'Strictly avoid the RB "Dead Zone" (Rounds 3-6). Reaching for a mid-tier RB2 turns this into a failing "Balanced" build.'
   }
 };
 
@@ -138,40 +138,69 @@ const analyzeStack = (player, currentPicks) => {
   };
 };
 
-// --- MULTI-DIMENSIONAL VIABILITY CHECKER (Enhanced from V2) ---
+// --- MULTI-DIMENSIONAL VIABILITY CHECKER (Strict Top-0.1% Edition) ---
 function checkStrategyViability(strategyKey, currentPicks, currentRound) {
   const countPos = (pos, start, end) => currentPicks.filter(p => {
       const r = p.round;
       return p.position === pos && r >= start && r <= end;
   }).length;
 
+  const totalPos = (pos) => currentPicks.filter(p => p.position === pos).length;
+
   // --- RB LOGIC ---
   if (strategyKey === 'RB_HYPER_FRAGILE') {
-    const rb1to3 = countPos('RB', 1, 3);
-    if (currentRound > 3) return rb1to3 >= 3;
-    return (rb1to3 + (4 - currentRound)) >= 3;
+    const rb1to5 = countPos('RB', 1, 5);
+    // CRITICAL: Hard cap at 4 RBs total. If pick #5 is an RB, the strategy is dead.
+    if (countPos('RB', 1, 18) > 4) return false;
+    // Must secure 3 RBs by end of Round 5.
+    if (currentRound > 5) return rb1to5 >= 3;
+    // Check if it's still mathematically possible to get 3 RBs by Round 5.
+    return (rb1to5 + (5 - (currentRound - 1))) >= 3;
   }
+
   if (strategyKey === 'RB_ZERO') {
-    return countPos('RB', 1, 5) === 0;
+    // Strict: Absolute moratorium on RBs until Round 7.
+    return countPos('RB', 1, 6) === 0;
   }
+
   if (strategyKey === 'RB_HERO') {
     const rb1to2 = countPos('RB', 1, 2);
+    // Must have exactly 1 RB in Rounds 1-2. No "Double Hero" allowed.
     if (rb1to2 > 1) return false;
-    if (countPos('RB', 3, 6) > 0) return false;
+    // The "Dead Zone" is now expanded: No RB2 until Round 8.
+    if (countPos('RB', 3, 7) > 0) return false;
+    // If we've finished Round 2 without an RB, we have defaulted to Zero RB.
     if (currentRound > 2 && rb1to2 === 0) return false;
     return true;
   }
+
   if (strategyKey === 'RB_VALUE') return true;
 
-  // --- QB LOGIC (from V2) ---
-  if (strategyKey === 'QB_ELITE') return countPos('QB', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'QB_CORE')  return (countPos('QB', 1, 4) === 0 && countPos('QB', 5, 9) >= 1) || (countPos('QB', 1, 4) === 0 && currentRound <= 9);
-  if (strategyKey === 'QB_LATE')  return countPos('QB', 1, 9) === 0;
+  // --- QB LOGIC (Elite: 1-4, Core: 5-9, Late: 10+) ---
+  if (strategyKey === 'QB_ELITE') {
+    return countPos('QB', 1, 4) >= 1 || currentRound <= 4;
+  }
+  if (strategyKey === 'QB_CORE') {
+    // Core QB strategy assumes you did NOT take an elite one.
+    if (countPos('QB', 1, 4) > 0) return false;
+    return countPos('QB', 5, 9) >= 1 || currentRound <= 9;
+  }
+  if (strategyKey === 'QB_LATE') {
+    return countPos('QB', 1, 9) === 0;
+  }
 
-  // --- TE LOGIC (from V2) ---
-  if (strategyKey === 'TE_ELITE') return countPos('TE', 1, 4) >= 1 || currentRound <= 4;
-  if (strategyKey === 'TE_ANCHOR') return (countPos('TE', 1, 4) === 0 && countPos('TE', 5, 9) >= 1) || (countPos('TE', 1, 4) === 0 && currentRound <= 9);
-  if (strategyKey === 'TE_LATE')  return countPos('TE', 1, 9) === 0;
+  // --- TE LOGIC (Elite: 1-4, Anchor: 5-9, Late: 10+) ---
+  if (strategyKey === 'TE_ELITE') {
+    return countPos('TE', 1, 4) >= 1 || currentRound <= 4;
+  }
+  if (strategyKey === 'TE_ANCHOR') {
+    // Anchor TE strategy assumes you did NOT take an elite one.
+    if (countPos('TE', 1, 4) > 0) return false;
+    return countPos('TE', 5, 9) >= 1 || currentRound <= 9;
+  }
+  if (strategyKey === 'TE_LATE') {
+    return countPos('TE', 1, 9) === 0;
+  }
 
   return true;
 }
