@@ -149,28 +149,28 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
 
   // --- RB LOGIC ---
   if (strategyKey === 'RB_HYPER_FRAGILE') {
-    const rb1to5 = countPos('RB', 1, 5);
+    const rb1to4 = countPos('RB', 1, 4);
     // CRITICAL: Hard cap at 4 RBs total. If pick #5 is an RB, the strategy is dead.
     if (countPos('RB', 1, 18) > 4) return false;
     // Must secure 3 RBs by end of Round 5.
-    if (currentRound > 5) return rb1to5 >= 3;
+    if (currentRound > 4) return rb1to4 >= 3;
     // Check if it's still mathematically possible to get 3 RBs by Round 5.
-    return (rb1to5 + (5 - (currentRound - 1))) >= 3;
+    return (rb1to4 + (4 - (currentRound - 1))) >= 3;
   }
 
   if (strategyKey === 'RB_ZERO') {
-    // Strict: Absolute moratorium on RBs until Round 7.
-    return countPos('RB', 1, 6) === 0;
+    // Strict: Absolute moratorium on RBs until Round 6.
+    return countPos('RB', 1, 5) === 0;
   }
 
   if (strategyKey === 'RB_HERO') {
-    const rb1to2 = countPos('RB', 1, 2);
+    const rb1to3 = countPos('RB', 1, 3);
     // Must have exactly 1 RB in Rounds 1-2. No "Double Hero" allowed.
-    if (rb1to2 > 1) return false;
+    if (rb1to3 > 1) return false;
     // The "Dead Zone" is now expanded: No RB2 until Round 8.
     if (countPos('RB', 3, 7) > 0) return false;
     // If we've finished Round 2 without an RB, we have defaulted to Zero RB.
-    if (currentRound > 2 && rb1to2 === 0) return false;
+    if (currentRound > 3 && rb1to3 === 0) return false;
     return true;
   }
 

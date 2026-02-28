@@ -77,19 +77,19 @@ export function classifyRosterPath(roster) {
   const path = { rb: 'RB_VALUE', qb: 'QB_LATE', te: 'TE_LATE' };
 
   // RB Capital Counts
-  const rbRounds1to2 = countPosition(roster, 'RB', 1, 2);
-  const rbRounds1to5 = countPosition(roster, 'RB', 1, 5);
-  const rbRounds3to7 = countPosition(roster, 'RB', 3, 7);
-  const totalRBs = countPosition(roster, 'RB', 1, 20);
+  const rbRounds1to3 = countPosition(roster, 'RB', 1, 3);
+  const rbRounds1to4 = countPosition(roster, 'RB', 1, 4);
+  const rbRounds4to7 = countPosition(roster, 'RB', 4, 7);
+  const totalRBs = countPosition(roster, 'RB', 1, 18);
 
   // RB Logic Implementation
-  if (rbRounds1to5 === 0) {
+  if (rbRounds1to4 === 0) {
     // Pure Zero RB: No RBs in the first 5 rounds
     path.rb = 'RB_ZERO';
-  } else if (rbRounds1to5 >= 3 && totalRBs <= 4) {
+  } else if (rbRounds1to4 >= 3 && totalRBs <= 4) {
     // Hyper Fragile: 3+ early RBs and a hard stop at 4 total
     path.rb = 'RB_HYPER_FRAGILE';
-  } else if (rbRounds1to2 === 1 && rbRounds3to7 === 0) {
+  } else if (rbRounds1to3 === 1 && rbRounds4to7 === 0) {
     // Hero RB: Exactly one elite RB and NO secondary RB until Round 8
     path.rb = 'RB_HERO';
   } else {
