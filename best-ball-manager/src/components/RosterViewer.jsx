@@ -66,7 +66,7 @@ const _surprisalMax = Math.max(..._surprisalValues);
 
 function archetypeRarityNorm(rbArchetype) {
   const p = RB_ARCHETYPE_PREVALENCE[rbArchetype];
-  if (p == null) return 0.5;
+  if (p == null) return 0.0;
   const raw = -Math.log2(p);
   return (_surprisalMax === _surprisalMin)
     ? 0.5
@@ -88,8 +88,8 @@ function survivalProbability(reachMagnitude, scale) {
 
 function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
   const {
-    alphaPhase = 1.0,
-    betaPhase = 0.5,
+    alphaPhase = 1.2,
+    betaPhase = -0.5,
     archetypeWeight = 1.5, // Increased default to balance against draft RSS scale
     numTeams = 12,
     reachThreshold = 0,
@@ -112,7 +112,8 @@ function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
     
     // Use absolute deviation so both Reaches AND Steals (CLV) make the roster unique
     const rawDeviation = Math.abs(adp - pick); 
-    const deviationScaled = rawDeviation / Math.max(1e-9, denom);
+    // Floor the denominator at 0.5 to prevent explosive early-round scaling
+    const deviationScaled = rawDeviation / Math.max(0.5, denom);
     
     rawReachDevs.push(deviationScaled); // (You may want to rename this array to rawDevs)
 
@@ -301,8 +302,8 @@ export default function RosterViewer({ rosterData = [] }) {
   const [playerSearch, setPlayerSearch] = useState('');
 
   // Rarity model tunables
-  const [alphaPhase]       = useState(1.0);
-  const [betaPhase]        = useState(0.5);
+  const [alphaPhase]       = useState(1.2);
+  const [betaPhase]        = useState(-0.5);
   const [archetypeBoostMax] = useState(0.5); // 0 = ignore archetype, 1 = can double score
 
   // Group + classify each entry
