@@ -167,8 +167,8 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
     const rb1to3 = countPos('RB', 1, 3);
     // Must have exactly 1 RB in Rounds 1-2. No "Double Hero" allowed.
     if (rb1to3 > 1) return false;
-    // The "Dead Zone" is now expanded: No RB2 until Round 8.
-    if (countPos('RB', 3, 7) > 0) return false;
+    // The "Dead Zone" is now expanded: No RB2 until Round 7.
+    if (countPos('RB', 3, 6) > 0) return false;
     // If we've finished Round 2 without an RB, we have defaulted to Zero RB.
     if (currentRound > 3 && rb1to3 === 0) return false;
     return true;

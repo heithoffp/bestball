@@ -79,18 +79,18 @@ export function classifyRosterPath(roster) {
   // RB Capital Counts
   const rbRounds1to3 = countPosition(roster, 'RB', 1, 3);
   const rbRounds1to4 = countPosition(roster, 'RB', 1, 4);
-  const rbRounds4to7 = countPosition(roster, 'RB', 4, 7);
+  const rbRounds4to6 = countPosition(roster, 'RB', 4, 6);
   const totalRBs = countPosition(roster, 'RB', 1, 18);
 
   // RB Logic Implementation
   if (rbRounds1to4 === 0) {
-    // Pure Zero RB: No RBs in the first 5 rounds
+    // Pure Zero RB: No RBs in the first 4 rounds
     path.rb = 'RB_ZERO';
   } else if (rbRounds1to4 >= 3 && totalRBs <= 4) {
     // Hyper Fragile: 3+ early RBs and a hard stop at 4 total
     path.rb = 'RB_HYPER_FRAGILE';
-  } else if (rbRounds1to3 === 1 && rbRounds4to7 === 0) {
-    // Hero RB: Exactly one elite RB and NO secondary RB until Round 8
+  } else if (rbRounds1to3 === 1 && rbRounds4to6 === 0) {
+    // Hero RB: Exactly one elite RB and NO secondary RB until Round 7
     path.rb = 'RB_HERO';
   } else {
     // Failed to meet strict structural thresholds
@@ -99,12 +99,12 @@ export function classifyRosterPath(roster) {
 
   // QB Logic (Elite = Top 4 Rounds, Core = 5-9, Late = 10+)
   if (countPosition(roster, 'QB', 1, 4) >= 1) path.qb = 'QB_ELITE';
-  else if (countPosition(roster, 'QB', 5, 9) >= 1) path.qb = 'QB_CORE';
+  else if (countPosition(roster, 'QB', 5, 8) >= 1) path.qb = 'QB_CORE';
   else path.qb = 'QB_LATE';
 
   // TE Logic (Elite = Top 4 Rounds, Anchor = 5-9, Late = 10+)
   if (countPosition(roster, 'TE', 1, 4) >= 1) path.te = 'TE_ELITE';
-  else if (countPosition(roster, 'TE', 5, 9) >= 1) path.te = 'TE_ANCHOR';
+  else if (countPosition(roster, 'TE', 5, 8) >= 1) path.te = 'TE_ANCHOR';
   else path.te = 'TE_LATE';
 
   return path;

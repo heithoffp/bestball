@@ -274,17 +274,31 @@ function normalize(list, key, outKey) {
   }));
 }
 
+function HighlightedName({ name, query }) {
+  if (!query) return <span style={styles.playerName}>{name}</span>;
+  const idx = name.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <span style={styles.playerName}>{name}</span>;
+  return (
+    <span style={styles.playerName}>
+      {name.slice(0, idx)}
+      <mark style={styles.searchHighlight}>{name.slice(idx, idx + query.length)}</mark>
+      {name.slice(idx + query.length)}
+    </span>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RosterViewer({ rosterData = [] }) {
   const [expandedEntry, setExpandedEntry]   = useState(null);
   const [sortKey, setSortKey]               = useState('avgCLV');
   const [sortDir, setSortDir]               = useState('desc');
-  const [alpha, setAlpha]                   = useState(0.5);
+  const [alpha, setAlpha]                   = useState(0.6);
   const [clvFilter, setClvFilter]           = useState('all');
   const [rbFilter,  setRbFilter]            = useState('all');
   const [qbFilter,  setQbFilter]            = useState('all');
   const [teFilter,  setTeFilter]            = useState('all');
+  const [playerSearch, setPlayerSearch] = useState('');
 
   // Rarity model tunables
   const [alphaPhase]       = useState(1.0);
@@ -366,9 +380,23 @@ export default function RosterViewer({ rosterData = [] }) {
     return byId;
   }, [rosters, alphaPhase, betaPhase, archetypeBoostMax]);
 
+  const searchQuery = playerSearch.trim();
+
+  const rosterSearchMatches = useMemo(() => {
+    if (!searchQuery) return {};
+    const q = searchQuery.toLowerCase();
+    const out = {};
+    rosters.forEach(r => {
+      const hits = r.players.filter(p => p.name?.toLowerCase().includes(q));
+      if (hits.length) out[r.entry_id] = hits.map(p => p.name);
+    });
+    return out;
+  }, [rosters, searchQuery]);
+
   // Filter + sort
   const displayed = useMemo(() => {
     let list = [...rosters];
+    if (searchQuery) list = list.filter(r => r.entry_id in rosterSearchMatches);
     if (clvFilter === 'positive') list = list.filter(r => r.avgCLV !== null && r.avgCLV >= 0);
     if (clvFilter === 'negative') list = list.filter(r => r.avgCLV !== null && r.avgCLV < 0);
     if (rbFilter !== 'all') list = list.filter(r => r.path.rb === rbFilter);
@@ -393,7 +421,7 @@ export default function RosterViewer({ rosterData = [] }) {
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, rosterScores]);
+}, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, rosterScores, searchQuery, rosterSearchMatches]);
 
   const rbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.rb] = (acc[r.path.rb] || 0) + 1; return acc; }, {}), [rosters]);
   const qbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.qb] = (acc[r.path.qb] || 0) + 1; return acc; }, []), [rosters]);
@@ -439,6 +467,34 @@ export default function RosterViewer({ rosterData = [] }) {
           </div>
           <span style={styles.alphaExplain}>α={alpha} · pick 6→4 = +{calcCLV(6, 4, alpha)?.toFixed(2)}%</span>
         </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 12 }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: '0 0 280px' }}>
+          <span style={{ position: 'absolute', left: 10, color: '#555', pointerEvents: 'none', fontSize: 14 }}>⌕</span>
+          <input
+            type="text"
+            placeholder="Search by player name…"
+            value={playerSearch}
+            onChange={e => setPlayerSearch(e.target.value)}
+            style={{
+              width: '100%', background: '#0c0c0c', border: '1px solid #232323',
+              borderRadius: 6, color: '#e6e6e6', fontFamily: "'Space Mono', monospace",
+              fontSize: 11, padding: '7px 30px 7px 28px', boxSizing: 'border-box',
+            }}
+          />
+          {playerSearch && (
+            <button onClick={() => setPlayerSearch('')}
+              style={{ position: 'absolute', right: 8, background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11 }}>
+              ✕
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#666' }}>
+            <span style={{ color: '#00e5a0', fontWeight: 700 }}>{Object.keys(rosterSearchMatches).length}</span>
+            {' '}roster{Object.keys(rosterSearchMatches).length !== 1 ? 's' : ''} contain "{searchQuery}"
+          </span>
+        )}
       </div>
 
       {/* ── Filters ── */}
@@ -494,7 +550,19 @@ export default function RosterViewer({ rosterData = [] }) {
                     style={{ ...styles.row, ...(isOpen ? styles.rowOpen : {}) }}
                     onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
                   >
-                    <td style={styles.td}><span style={styles.entryId}>{shortEntry(roster.entry_id)}</span></td>
+                    <td style={styles.td}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={styles.entryId}>{shortEntry(roster.entry_id)}</span>
+                        {searchQuery && rosterSearchMatches[roster.entry_id]?.map(name => (
+                          <span key={name} style={{
+                            fontFamily: "'Space Mono', monospace", fontSize: 9,
+                            background: '#00e5a010', color: '#00e5a0',
+                            border: '1px solid #00e5a030', borderRadius: 3,
+                            padding: '1px 5px', whiteSpace: 'nowrap',
+                          }}>✦ {name}</span>
+                        ))}
+                      </div>
+                    </td>
                     <td style={{ ...styles.td, textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
                     <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{roster.count}</td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
@@ -652,6 +720,10 @@ function PlayerDetail({ players, alpha = 0.5 }) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = {
+  searchHighlight: {
+    background: '#00e5a025', color: '#00e5a0',
+    borderRadius: 2, padding: '0 1px', fontWeight: 700,
+  },
   root: { fontFamily: "'DM Sans', sans-serif", color: '#ffffff', padding: '0 0 32px' },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
