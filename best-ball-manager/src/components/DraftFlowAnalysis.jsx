@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
+import { analyzeStack } from '../utils/stackAnalysis';
 
 // --- EXTENDED CONFIGURATION: QB & TE ARCHETYPES (from V2) ---
 const QB_META = {
@@ -52,91 +53,7 @@ const getGlobalExposureColor = (percent) => {
   return '#f59e0b';
 };
 
-// --- STACK ANALYSIS (from V1) ---
-const analyzeStack = (player, currentPicks) => {
-  const team = player.team;
-  if (!team || team === 'FA' || team === 'N/A') return null;
-
-  const teammates = currentPicks.filter(p => p.team === team);
-  if (teammates.length === 0) return null;
-
-  const playerPos = player.position;
-  const qbs = teammates.filter(p => p.position === 'QB');
-  const wrs = teammates.filter(p => p.position === 'WR');
-  const tes = teammates.filter(p => p.position === 'TE');
-  const rbs = teammates.filter(p => p.position === 'RB');
-
-  let stackType = '';
-  let priority = 0;
-  let color = '#64748b';
-  let icon = '●';
-
-  if (playerPos === 'QB' && (wrs.length > 0 || tes.length > 0)) {
-    const passTargets = wrs.length + tes.length;
-    if (passTargets >= 2) {
-      stackType = '🔥 ELITE OVERSTACK';
-      priority = 100;
-      color = '#a855f7';
-      icon = '⚡⚡';
-    } else {
-      stackType = '⚡ ELITE STACK';
-      priority = 90;
-      color = '#8b5cf6';
-      icon = '⚡';
-    }
-  } else if ((playerPos === 'WR' || playerPos === 'TE') && qbs.length > 0) {
-    const passTargets = wrs.length + tes.length;
-    if (passTargets >= 1) {
-      stackType = '🔥 ELITE OVERSTACK';
-      priority = 100;
-      color = '#a855f7';
-      icon = '⚡⚡';
-    } else {
-      stackType = '⚡ ELITE STACK';
-      priority = 90;
-      color = '#8b5cf6';
-      icon = '⚡';
-    }
-  } else if (playerPos === 'WR' && wrs.length >= 1) {
-    stackType = `💎 WR OVERSTACK (${wrs.length + 1})`;
-    priority = 80;
-    color = '#06b6d4';
-    icon = '💎';
-  } else if (playerPos === 'TE' && tes.length >= 1) {
-    stackType = `💎 TE OVERSTACK (${tes.length + 1})`;
-    priority = 80;
-    color = '#06b6d4';
-    icon = '💎';
-  } else if (playerPos === 'RB' && rbs.length >= 1) {
-    stackType = `🔄 RB STACK (${rbs.length + 1})`;
-    priority = 60;
-    color = '#f59e0b';
-    icon = '🔄';
-  } else if (playerPos === 'RB' && (wrs.length > 0 || tes.length > 0)) {
-    stackType = '○ Game Stack';
-    priority = 40;
-    color = '#64748b';
-    icon = '○';
-  } else if ((playerPos === 'WR' || playerPos === 'TE') && rbs.length > 0) {
-    stackType = '○ Game Stack';
-    priority = 40;
-    color = '#64748b';
-    icon = '○';
-  } else {
-    stackType = '● Stack';
-    priority = 30;
-    color = '#64748b';
-    icon = '●';
-  }
-
-  return {
-    type: stackType,
-    priority,
-    color,
-    icon,
-    teammates: teammates.map(t => `${t.position} ${t.name}`).join(', ')
-  };
-};
+// Stack analysis imported from ../utils/stackAnalysis.js
 
 // --- MULTI-DIMENSIONAL VIABILITY CHECKER (Strict Top-0.1% Edition) ---
 function checkStrategyViability(strategyKey, currentPicks, currentRound) {

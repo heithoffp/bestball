@@ -46,7 +46,9 @@ export default function App() {
           team: row['Team'] || row.team || 'N/A',
           entry_id: entry,
           pick,
-          round
+          round,
+          pickedAt: row['Picked At'] || null,
+          tournamentTitle: row['Tournament Title'] || null,
         };
       }).filter(p => p.name !== 'Unknown');
 
@@ -74,10 +76,11 @@ export default function App() {
       snapshots.sort((a, b) => a.date.localeCompare(b.date));
       setAdpSnapshots(snapshots);
 
-      // 3) Build ADP & Team Lookup from the LATEST snapshot
+      // 3) Build ADP & Team & Projected Points Lookup from the LATEST snapshot
       const latest = snapshots[snapshots.length - 1];
       const localAdpMap = {};
       const teamLookup = {};
+      const projPointsMap = {};
 
       if (latest && latest.rows) {
         latest.rows.forEach(row => {
@@ -98,6 +101,13 @@ export default function App() {
           const rawAdp = row.adp ?? row.ADP ?? row['ADP'] ?? row['Adp'] ?? row['Round.Pick'] ?? '';
           const parsed = parseAdpString(rawAdp, 12);
           localAdpMap[normalizedName] = parsed ? parsed : { display: String(rawAdp), pick: NaN };
+
+          // 4. Identify Projected Points
+          const rawProj = row.projectedPoints || row.projected_points || row['Projected Points'] || '';
+          const projVal = parseFloat(rawProj);
+          if (!isNaN(projVal)) {
+            projPointsMap[normalizedName] = projVal;
+          }
         });
       }
 
@@ -130,7 +140,8 @@ export default function App() {
           latestADP: adpData ? adpData.pick : null,
           latestADPDisplay: adpData ? adpData.display : 'N/A',
           // Optional: Calculate "Value" (Draft Pick vs ADP)
-          adpDiff: adpData && player.pick ? (adpData.pick - player.pick).toFixed(2) : null
+          adpDiff: adpData && player.pick ? (adpData.pick - player.pick).toFixed(2) : null,
+          projectedPoints: projPointsMap[player.name] || null,
         };
       });
 

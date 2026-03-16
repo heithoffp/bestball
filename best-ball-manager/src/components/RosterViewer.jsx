@@ -1,6 +1,7 @@
 // src/components/RosterViewer.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
+import { analyzeRosterStacks, scoreRosterStacks } from '../utils/stackAnalysis';
 
 // ── CLV helpers ───────────────────────────────────────────────────────────────
 
@@ -275,6 +276,27 @@ function normalize(list, key, outKey) {
   }));
 }
 
+// ── Composite Grade helpers ──────────────────────────────────────────────────
+
+function computeLetterGrade(score) {
+  if (score >= 95) return { letter: 'A+', color: '#00f700' };
+  if (score >= 88) return { letter: 'A',  color: '#00e060' };
+  if (score >= 82) return { letter: 'A-', color: '#4dd88a' };
+  if (score >= 75) return { letter: 'B+', color: '#7dcc80' };
+  if (score >= 68) return { letter: 'B',  color: '#bcfc45' };
+  if (score >= 60) return { letter: 'B-', color: '#d4e040' };
+  if (score >= 50) return { letter: 'C+', color: '#fcff55' };
+  if (score >= 40) return { letter: 'C',  color: '#ff9f43' };
+  if (score >= 25) return { letter: 'D',  color: '#ff6b6b' };
+  return { letter: 'F', color: '#ff4d6d' };
+}
+
+function percentileRankArray(value, arr) {
+  if (!arr || arr.length === 0) return 0;
+  const count = arr.filter(v => v <= value).length;
+  return (count / arr.length) * 100;
+}
+
 function HighlightedName({ name, query }) {
   if (!query) return <span style={styles.playerName}>{name}</span>;
   const idx = name.toLowerCase().indexOf(query.toLowerCase());
@@ -294,12 +316,120 @@ export default function RosterViewer({ rosterData = [] }) {
   const [expandedEntry, setExpandedEntry]   = useState(null);
   const [sortKey, setSortKey]               = useState('avgCLV');
   const [sortDir, setSortDir]               = useState('desc');
-  const [alpha, setAlpha]                   = useState(0.6);
+  const alpha = 0.5; // Balanced CLV curve
   const [clvFilter, setClvFilter]           = useState('all');
   const [rbFilter,  setRbFilter]            = useState('all');
   const [qbFilter,  setQbFilter]            = useState('all');
   const [teFilter,  setTeFilter]            = useState('all');
+  const [tournamentFilter, setTournamentFilter] = useState('all');
   const [playerSearch, setPlayerSearch] = useState('');
+  const [selectedPlayers, setSelectedPlayers] = useState([]);
+  const [selectedTeams, setSelectedTeams] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showTeamDropdown, setShowTeamDropdown] = useState(false);
+  const [teamSearch, setTeamSearch] = useState('');
+  const [highlightIdx, setHighlightIdx] = useState(0);
+  const [teamHighlightIdx, setTeamHighlightIdx] = useState(0);
+  const searchRef = useRef(null);
+  const teamSearchRef = useRef(null);
+  const blurTimeout = useRef(null);
+  const teamBlurTimeout = useRef(null);
+
+  // Unique player names for autocomplete
+  const allPlayerNames = useMemo(() => {
+    const names = new Set();
+    rosterData.forEach(p => { if (p.name) names.add(p.name); });
+    return [...names].sort();
+  }, [rosterData]);
+
+  const searchQuery = playerSearch.trim();
+  const autocompleteSuggestions = useMemo(() => {
+    if (!searchQuery) return [];
+    const q = searchQuery.toLowerCase();
+    return allPlayerNames
+      .filter(n => n.toLowerCase().includes(q) && !selectedPlayers.includes(n))
+      .slice(0, 8);
+  }, [searchQuery, allPlayerNames, selectedPlayers]);
+
+  // Unique team names for autocomplete
+  const allTeamNames = useMemo(() => {
+    const teams = new Set();
+    rosterData.forEach(p => { if (p.team) teams.add(p.team); });
+    return [...teams].sort();
+  }, [rosterData]);
+
+  const teamSearchQuery = teamSearch.trim();
+  const teamAutocompleteSuggestions = useMemo(() => {
+    if (!teamSearchQuery) return allTeamNames.filter(t => !selectedTeams.includes(t));
+    const q = teamSearchQuery.toLowerCase();
+    return allTeamNames
+      .filter(t => t.toLowerCase().includes(q) && !selectedTeams.includes(t))
+      .slice(0, 8);
+  }, [teamSearchQuery, allTeamNames, selectedTeams]);
+
+  const addTeam = useCallback((team) => {
+    if (team && !selectedTeams.includes(team)) {
+      setSelectedTeams(prev => [...prev, team]);
+    }
+    setTeamSearch('');
+    setShowTeamDropdown(false);
+    setTeamHighlightIdx(0);
+  }, [selectedTeams]);
+
+  const removeTeam = useCallback((team) => {
+    setSelectedTeams(prev => prev.filter(t => t !== team));
+  }, []);
+
+  const handleTeamKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (teamAutocompleteSuggestions.length > 0) {
+        addTeam(teamAutocompleteSuggestions[teamHighlightIdx] || teamAutocompleteSuggestions[0]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setTeamHighlightIdx(i => Math.min(i + 1, teamAutocompleteSuggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setTeamHighlightIdx(i => Math.max(i - 1, 0));
+    } else if (e.key === 'Escape') {
+      setShowTeamDropdown(false);
+    } else if (e.key === 'Backspace' && !teamSearch && selectedTeams.length > 0) {
+      setSelectedTeams(prev => prev.slice(0, -1));
+    }
+  }, [teamAutocompleteSuggestions, teamHighlightIdx, addTeam, teamSearch, selectedTeams]);
+
+  const addPlayer = useCallback((name) => {
+    if (name && !selectedPlayers.includes(name)) {
+      setSelectedPlayers(prev => [...prev, name]);
+    }
+    setPlayerSearch('');
+    setShowDropdown(false);
+    setHighlightIdx(0);
+  }, [selectedPlayers]);
+
+  const removePlayer = useCallback((name) => {
+    setSelectedPlayers(prev => prev.filter(n => n !== name));
+  }, []);
+
+  const handleSearchKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (autocompleteSuggestions.length > 0) {
+        addPlayer(autocompleteSuggestions[highlightIdx] || autocompleteSuggestions[0]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIdx(i => Math.min(i + 1, autocompleteSuggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIdx(i => Math.max(i - 1, 0));
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+    } else if (e.key === 'Backspace' && !playerSearch && selectedPlayers.length > 0) {
+      setSelectedPlayers(prev => prev.slice(0, -1));
+    }
+  }, [autocompleteSuggestions, highlightIdx, addPlayer, playerSearch, selectedPlayers]);
 
   // Rarity model tunables
   const [alphaPhase]       = useState(1.2);
@@ -331,7 +461,19 @@ export default function RosterViewer({ rosterData = [] }) {
 
       const path = classifyRosterPath(players);
 
-      return { entry_id, players, avgCLV, posSnap, count: players.length, path };
+      // Derive draft date from earliest pick timestamp
+      const timestamps = players
+        .map(p => p.pickedAt ? new Date(p.pickedAt) : null)
+        .filter(d => d && !isNaN(d));
+      const draftDate = timestamps.length > 0
+        ? new Date(Math.min(...timestamps))
+        : null;
+
+      const tournamentTitle = players[0]?.tournamentTitle || null;
+
+      const projectedPoints = players.reduce((sum, p) => sum + (p.projectedPoints || 0), 0);
+
+      return { entry_id, players, avgCLV, posSnap, count: players.length, path, draftDate, tournamentTitle, projectedPoints };
     });
   }, [rosterData, alpha]);
 
@@ -381,28 +523,92 @@ export default function RosterViewer({ rosterData = [] }) {
     return byId;
   }, [rosters, alphaPhase, betaPhase, archetypeBoostMax]);
 
-  const searchQuery = playerSearch.trim();
+  // Per-roster stack analysis
+  const rosterStacks = useMemo(() => {
+    const byId = {};
+    rosters.forEach(r => {
+      byId[r.entry_id] = analyzeRosterStacks(r.players);
+    });
+    return byId;
+  }, [rosters]);
+
+  // Composite roster grades
+  const rosterGrades = useMemo(() => {
+    if (!rosters || rosters.length === 0) return {};
+
+    // Collect raw values for percentile ranking
+    const projTotals = [];
+    const clvValues = [];
+    const rarityValues = [];
+
+    const rawData = rosters.map(r => {
+      const projTotal = r.players.reduce((sum, p) => sum + (p.projectedPoints || 0), 0);
+      projTotals.push(projTotal);
+
+      const avgCLV = r.avgCLV ?? 0;
+      clvValues.push(avgCLV);
+
+      const rarityPct = rosterScores[r.entry_id]?.rarityPercentile ?? 50;
+      rarityValues.push(rarityPct);
+
+      const stacks = rosterStacks[r.entry_id] || [];
+      const stackQuality = scoreRosterStacks(stacks, r.players);
+
+      return { entry_id: r.entry_id, projTotal, avgCLV, rarityPct, stackQuality };
+    });
+
+    const byId = {};
+    rawData.forEach(d => {
+      const projScore = percentileRankArray(d.projTotal, projTotals);
+      const clvScore = percentileRankArray(d.avgCLV, clvValues);
+      const rarityScore = d.rarityPct;
+      const stackScore = d.stackQuality;
+
+      const composite = 0.30 * projScore + 0.25 * clvScore + 0.20 * rarityScore + 0.25 * stackScore;
+      const grade = computeLetterGrade(composite);
+
+      byId[d.entry_id] = {
+        composite: Math.round(composite),
+        grade,
+        projScore: Math.round(projScore),
+        clvScore: Math.round(clvScore),
+        rarityScore: Math.round(rarityScore),
+        stackScore: Math.round(stackScore),
+      };
+    });
+    return byId;
+  }, [rosters, rosterScores, rosterStacks]);
 
   const rosterSearchMatches = useMemo(() => {
-    if (!searchQuery) return {};
-    const q = searchQuery.toLowerCase();
+    if (selectedPlayers.length === 0) return {};
     const out = {};
     rosters.forEach(r => {
-      const hits = r.players.filter(p => p.name?.toLowerCase().includes(q));
-      if (hits.length) out[r.entry_id] = hits.map(p => p.name);
+      const playerNames = r.players.map(p => p.name);
+      const allMatch = selectedPlayers.every(sp =>
+        playerNames.some(pn => pn === sp)
+      );
+      if (allMatch) out[r.entry_id] = selectedPlayers;
     });
     return out;
-  }, [rosters, searchQuery]);
+  }, [rosters, selectedPlayers]);
 
   // Filter + sort
   const displayed = useMemo(() => {
     let list = [...rosters];
-    if (searchQuery) list = list.filter(r => r.entry_id in rosterSearchMatches);
+    if (selectedPlayers.length > 0) list = list.filter(r => r.entry_id in rosterSearchMatches);
+    if (selectedTeams.length > 0) {
+      list = list.filter(r =>
+        selectedTeams.every(team =>
+          r.players.some(p => p.team === team && !selectedPlayers.includes(p.name))
+        )
+      );
+    }
     if (clvFilter === 'positive') list = list.filter(r => r.avgCLV !== null && r.avgCLV >= 0);
     if (clvFilter === 'negative') list = list.filter(r => r.avgCLV !== null && r.avgCLV < 0);
     if (rbFilter !== 'all') list = list.filter(r => r.path.rb === rbFilter);
     if (qbFilter !== 'all') list = list.filter(r => r.path.qb === qbFilter);
     if (teFilter !== 'all') list = list.filter(r => r.path.te === teFilter);
+    if (tournamentFilter !== 'all') list = list.filter(r => r.tournamentTitle === tournamentFilter);
 
     list.sort((a, b) => {
       if (['path.rb', 'path.qb', 'path.te'].includes(sortKey)) {
@@ -413,16 +619,32 @@ export default function RosterViewer({ rosterData = [] }) {
       let av = a[sortKey] ?? -Infinity;
       let bv = b[sortKey] ?? -Infinity;
       if (sortKey === 'entry_id') { av = a.entry_id; bv = b.entry_id; }
+      if (sortKey === 'draftDate') {
+        const at = a.draftDate ? a.draftDate.getTime() : -Infinity;
+        const bt = b.draftDate ? b.draftDate.getTime() : -Infinity;
+        return sortDir === 'asc' ? at - bt : bt - at;
+      }
       if (sortKey === 'rarityPercentile') {
         const aid = rosterScores[a.entry_id]?.rarityPercentile ?? -Infinity;
         const bid = rosterScores[b.entry_id]?.rarityPercentile ?? -Infinity;
+        return sortDir === 'asc' ? aid - bid : bid - aid;
+      }
+      if (sortKey === 'grade') {
+        const aid = rosterGrades[a.entry_id]?.composite ?? -Infinity;
+        const bid = rosterGrades[b.entry_id]?.composite ?? -Infinity;
         return sortDir === 'asc' ? aid - bid : bid - aid;
       }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-}, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, rosterScores, searchQuery, rosterSearchMatches]);
+}, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, rosterGrades, selectedPlayers, selectedTeams, rosterSearchMatches]);
+
+  const allTournaments = useMemo(() => {
+    const titles = new Set();
+    rosters.forEach(r => { if (r.tournamentTitle) titles.add(r.tournamentTitle); });
+    return ['all', ...[...titles].sort()];
+  }, [rosters]);
 
   const rbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.rb] = (acc[r.path.rb] || 0) + 1; return acc; }, {}), [rosters]);
   const qbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.qb] = (acc[r.path.qb] || 0) + 1; return acc; }, []), [rosters]);
@@ -457,43 +679,150 @@ export default function RosterViewer({ rosterData = [] }) {
           <h2 style={styles.title}>ROSTER VIEWER</h2>
           <p style={styles.subtitle}>{displayed.length} / {rosters.length} entries · {rosterData.length} players</p>
         </div>
-        <div style={styles.alphaRow}>
-          <span style={styles.alphaLabel}>CLV Curve</span>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {[{ v: 0.35, label: 'Flat' }, { v: 0.5, label: 'Balanced' }, { v: 0.75, label: 'Steep' }, { v: 1.0, label: 'Raw' }].map(({ v, label }) => (
-              <button key={v} style={{ ...styles.filterBtn, ...(alpha === v ? styles.filterBtnActive : {}) }} onClick={() => setAlpha(v)} title={`α=${v}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <span style={styles.alphaExplain}>α={alpha} · pick 6→4 = +{calcCLV(6, 4, alpha)?.toFixed(2)}%</span>
-        </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 12 }}>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: '0 0 280px' }}>
-          <span style={{ position: 'absolute', left: 10, color: '#555', pointerEvents: 'none', fontSize: 14 }}>⌕</span>
-          <input
-            type="text"
-            placeholder="Search by player name…"
-            value={playerSearch}
-            onChange={e => setPlayerSearch(e.target.value)}
-            style={{
-              width: '100%', background: '#0c0c0c', border: '1px solid #232323',
-              borderRadius: 6, color: '#e6e6e6', fontFamily: "'Space Mono', monospace",
-              fontSize: 11, padding: '7px 30px 7px 28px', boxSizing: 'border-box',
-            }}
-          />
-          {playerSearch && (
-            <button onClick={() => setPlayerSearch('')}
-              style={{ position: 'absolute', right: 8, background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11 }}>
-              ✕
-            </button>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, paddingBottom: 12, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '0 0 320px' }}>
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4,
+            background: '#0c0c0c', border: '1px solid #232323', borderRadius: 6,
+            padding: '4px 8px', minHeight: 32, boxSizing: 'border-box',
+          }}>
+            {selectedPlayers.map(name => (
+              <span key={name} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontFamily: "'Space Mono', monospace", fontSize: 10,
+                background: '#00e5a015', color: '#00e5a0',
+                border: '1px solid #00e5a035', borderRadius: 4,
+                padding: '2px 6px', whiteSpace: 'nowrap',
+              }}>
+                {name}
+                <button
+                  onClick={(e) => { e.stopPropagation(); removePlayer(name); }}
+                  style={{
+                    background: 'none', border: 'none', color: '#00e5a066',
+                    cursor: 'pointer', fontSize: 10, padding: 0, lineHeight: 1,
+                  }}
+                >✕</button>
+              </span>
+            ))}
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder={selectedPlayers.length === 0 ? 'Search players to filter…' : 'Add player…'}
+              value={playerSearch}
+              onChange={e => { setPlayerSearch(e.target.value); setShowDropdown(true); setHighlightIdx(0); }}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
+              onKeyDown={handleSearchKeyDown}
+              style={{
+                flex: 1, minWidth: 100, background: 'transparent', border: 'none', outline: 'none',
+                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 11,
+                padding: '3px 0',
+              }}
+            />
+            {(selectedPlayers.length > 0 || playerSearch) && (
+              <button
+                onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }}
+                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, padding: '0 2px' }}
+              >✕</button>
+            )}
+          </div>
+          {showDropdown && autocompleteSuggestions.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+              background: '#111', border: '1px solid #2a2a2a', borderRadius: 6,
+              marginTop: 2, maxHeight: 200, overflowY: 'auto',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            }}>
+              {autocompleteSuggestions.map((name, i) => (
+                <div
+                  key={name}
+                  onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
+                  onMouseEnter={() => setHighlightIdx(i)}
+                  style={{
+                    padding: '6px 12px', cursor: 'pointer',
+                    fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#ddd',
+                    background: i === highlightIdx ? '#00e5a015' : 'transparent',
+                    borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid #1a1a1a' : 'none',
+                  }}
+                >{name}</div>
+              ))}
+            </div>
           )}
         </div>
-        {searchQuery && (
-          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#666' }}>
-            <span style={{ color: '#00e5a0', fontWeight: 700 }}>{Object.keys(rosterSearchMatches).length}</span>
-            {' '}roster{Object.keys(rosterSearchMatches).length !== 1 ? 's' : ''} contain "{searchQuery}"
+        <div style={{ position: 'relative', flex: '0 0 200px' }}>
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4,
+            background: '#0c0c0c', border: '1px solid #232323', borderRadius: 6,
+            padding: '4px 8px', minHeight: 32, boxSizing: 'border-box',
+          }}>
+            {selectedTeams.map(team => (
+              <span key={team} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontFamily: "'Space Mono', monospace", fontSize: 10,
+                background: '#3b82f615', color: '#60a5fa',
+                border: '1px solid #3b82f635', borderRadius: 4,
+                padding: '2px 6px', whiteSpace: 'nowrap',
+              }}>
+                {team}
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeTeam(team); }}
+                  style={{
+                    background: 'none', border: 'none', color: '#60a5fa66',
+                    cursor: 'pointer', fontSize: 10, padding: 0, lineHeight: 1,
+                  }}
+                >✕</button>
+              </span>
+            ))}
+            <input
+              ref={teamSearchRef}
+              type="text"
+              placeholder={selectedTeams.length === 0 ? 'Stack team…' : 'Add team…'}
+              value={teamSearch}
+              onChange={e => { setTeamSearch(e.target.value); setShowTeamDropdown(true); setTeamHighlightIdx(0); }}
+              onFocus={() => setShowTeamDropdown(true)}
+              onBlur={() => { teamBlurTimeout.current = setTimeout(() => setShowTeamDropdown(false), 150); }}
+              onKeyDown={handleTeamKeyDown}
+              style={{
+                flex: 1, minWidth: 60, background: 'transparent', border: 'none', outline: 'none',
+                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 11,
+                padding: '3px 0',
+              }}
+            />
+            {(selectedTeams.length > 0 || teamSearch) && (
+              <button
+                onClick={() => { setSelectedTeams([]); setTeamSearch(''); }}
+                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, padding: '0 2px' }}
+              >✕</button>
+            )}
+          </div>
+          {showTeamDropdown && teamAutocompleteSuggestions.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+              background: '#111', border: '1px solid #2a2a2a', borderRadius: 6,
+              marginTop: 2, maxHeight: 200, overflowY: 'auto',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            }}>
+              {teamAutocompleteSuggestions.map((team, i) => (
+                <div
+                  key={team}
+                  onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
+                  onMouseEnter={() => setTeamHighlightIdx(i)}
+                  style={{
+                    padding: '6px 12px', cursor: 'pointer',
+                    fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#ddd',
+                    background: i === teamHighlightIdx ? '#3b82f615' : 'transparent',
+                    borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid #1a1a1a' : 'none',
+                  }}
+                >{team}</div>
+              ))}
+            </div>
+          )}
+        </div>
+        {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
+          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#666', paddingTop: 8 }}>
+            <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
+            {' '}roster{displayed.length !== 1 ? 's' : ''} match
           </span>
         )}
       </div>
@@ -503,6 +832,22 @@ export default function RosterViewer({ rosterData = [] }) {
         <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
         <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
         <FilterGroup label="TE" options={TE_OPTIONS} value={teFilter} onChange={setTeFilter} counts={teCounts} />
+        <div style={styles.filterGroupWrap}>
+          <span style={styles.filterGroupLabel}>TOURNEY</span>
+          <select
+            value={tournamentFilter}
+            onChange={e => setTournamentFilter(e.target.value)}
+            style={{
+              background: '#0c0c0c', border: '1px solid #232323', borderRadius: 4,
+              color: '#fafafa', fontFamily: "'Space Mono', monospace", fontSize: 10,
+              padding: '4px 8px', cursor: 'pointer',
+            }}
+          >
+            {allTournaments.map(t => (
+              <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
+            ))}
+          </select>
+        </div>
         <div style={styles.filterGroupWrap}>
           <span style={styles.filterGroupLabel}>CLV</span>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -521,8 +866,10 @@ export default function RosterViewer({ rosterData = [] }) {
           <thead>
             <tr style={styles.thead}>
               <th style={styles.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" /></th>
+              <th style={{ ...styles.th, textAlign: 'center', color: '#fbbf24' }} onClick={() => toggleSort('grade')}>Grade <SortIcon col="grade" /></th>
+              <th style={{ ...styles.th, textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" /></th>
               <th style={{ ...styles.th, textAlign: 'center' }}>Snapshot</th>
-              <th style={{ ...styles.th, textAlign: 'center' }} onClick={() => toggleSort('count')}>Players <SortIcon col="count" /></th>
+              <th style={{ ...styles.th, textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" /></th>
               <th style={{ ...styles.th, color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" /></th>
               <th style={{ ...styles.th, color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" /></th>
               <th style={{ ...styles.th, color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" /></th>
@@ -541,10 +888,13 @@ export default function RosterViewer({ rosterData = [] }) {
               const clv    = clvLabel(roster.avgCLV);
               const isOpen = expandedEntry === roster.entry_id;
               const scores = rosterScores[roster.entry_id] || {};
+              const grade  = rosterGrades[roster.entry_id] || {};
+              const stacks = rosterStacks[roster.entry_id] || [];
               // Tooltip: show archetype boost contribution
               const archNorm  = archetypeRarityNorm(roster.path.rb);
               const boostPct  = Math.round(archetypeBoostMax * archNorm * 100);
               const tooltipTxt = `Draft rarity × ${scores.archBoost ?? '—'}× arch boost (+${boostPct}% from ${roster.path.rb})`;
+              const gradeTooltip = grade.grade ? `Proj: ${grade.projScore} | CLV: ${grade.clvScore} | Rarity: ${grade.rarityScore} | Stack: ${grade.stackScore} → ${grade.composite}` : '';
               return (
                 <React.Fragment key={roster.entry_id}>
                   <tr
@@ -554,7 +904,7 @@ export default function RosterViewer({ rosterData = [] }) {
                     <td style={styles.td}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <span style={styles.entryId}>{shortEntry(roster.entry_id)}</span>
-                        {searchQuery && rosterSearchMatches[roster.entry_id]?.map(name => (
+                        {selectedPlayers.length > 0 && rosterSearchMatches[roster.entry_id]?.map(name => (
                           <span key={name} style={{
                             fontFamily: "'Space Mono', monospace", fontSize: 9,
                             background: '#00e5a010', color: '#00e5a0',
@@ -562,10 +912,46 @@ export default function RosterViewer({ rosterData = [] }) {
                             padding: '1px 5px', whiteSpace: 'nowrap',
                           }}>✦ {name}</span>
                         ))}
+                        {selectedTeams.length > 0 && roster.players
+                          .filter(p => selectedTeams.includes(p.team) && !selectedPlayers.includes(p.name))
+                          .map(p => (
+                          <span key={`team-${p.name}`} style={{
+                            fontFamily: "'Space Mono', monospace", fontSize: 9,
+                            background: '#3b82f610', color: '#60a5fa',
+                            border: '1px solid #3b82f630', borderRadius: 3,
+                            padding: '1px 5px', whiteSpace: 'nowrap',
+                          }}>✦ {p.name} ({p.team})</span>
+                        ))}
+                        {roster.tournamentTitle && (
+                          <span style={{
+                            fontFamily: "'Space Mono', monospace", fontSize: 9,
+                            color: '#666', whiteSpace: 'nowrap',
+                          }}>{roster.tournamentTitle}</span>
+                        )}
                       </div>
                     </td>
+
+                    {/* Grade */}
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                      {grade.grade ? (
+                        <span title={gradeTooltip} style={{
+                          fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700,
+                          color: grade.grade.color, cursor: 'help',
+                        }}>
+                          {grade.grade.letter}
+                        </span>
+                      ) : <span style={{ color: '#555' }}>—</span>}
+                    </td>
+
+                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#bbb' }}>
+                      {roster.draftDate
+                        ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '—'}
+                    </td>
                     <td style={{ ...styles.td, textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
-                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{roster.count}</td>
+                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#60a5fa' }}>
+                      {roster.projectedPoints > 0 ? roster.projectedPoints.toFixed(1) : '—'}
+                    </td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.te} /></td>
@@ -593,8 +979,8 @@ export default function RosterViewer({ rosterData = [] }) {
                   </tr>
                   {isOpen && (
                     <tr>
-                      <td colSpan={9} style={{ padding: 0 }}>
-                        <PlayerDetail players={roster.players} alpha={alpha} />
+                      <td colSpan={11} style={{ padding: 0 }}>
+                        <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} />
                       </td>
                     </tr>
                   )}
@@ -639,11 +1025,157 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
   );
 }
 
+// ── Draft Capital Map ────────────────────────────────────────────────────────
+
+function DraftCapitalMap({ players }) {
+  const maxRound = 18;
+  // Group picks by round
+  const byRound = {};
+  players.forEach(p => {
+    const r = parseInt(p.round) || 0;
+    if (r >= 1 && r <= maxRound) {
+      if (!byRound[r]) byRound[r] = [];
+      byRound[r].push(p);
+    }
+  });
+
+  // Position summary
+  const posByRound = {};
+  players.forEach(p => {
+    const pos = p.position || 'N/A';
+    const r = parseInt(p.round) || 0;
+    if (r < 1) return;
+    if (!posByRound[pos]) posByRound[pos] = [];
+    posByRound[pos].push(r);
+  });
+  const posOrder = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DEF'];
+  const summaryParts = posOrder
+    .filter(pos => posByRound[pos])
+    .map(pos => `${pos}s: R${posByRound[pos].sort((a, b) => a - b).join(',R')}`);
+
+  return (
+    <div style={{ padding: '10px 14px 6px', borderBottom: '1px solid #0f0f0f' }}>
+      <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+        {Array.from({ length: maxRound }, (_, i) => i + 1).map(round => {
+          const picks = byRound[round] || [];
+          return (
+            <div key={round} style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', gap: 1, minWidth: 26 }}>
+              {picks.map((p, j) => (
+                <div key={j} title={`${p.name} (${p.position} R${round})`} style={{
+                  width: 24, height: 18, borderRadius: 3,
+                  background: posColor(p.position) + '33',
+                  border: `1px solid ${posColor(p.position)}66`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 8, fontFamily: "'Space Mono', monospace",
+                  color: posColor(p.position), fontWeight: 700, cursor: 'default',
+                }}>
+                  {p.position}
+                </div>
+              ))}
+              {picks.length === 0 && (
+                <div style={{ width: 24, height: 18, borderRadius: 3, background: '#111', border: '1px solid #1a1a1a' }} />
+              )}
+              <span style={{ fontSize: 7, color: '#555', fontFamily: "'Space Mono', monospace", marginTop: 2 }}>R{round}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{
+        fontFamily: "'Space Mono', monospace", fontSize: 9, color: '#888',
+        marginTop: 6, letterSpacing: 0.3,
+      }}>
+        {summaryParts.join(' | ')}
+      </div>
+    </div>
+  );
+}
+
+// ── Stack summary bar ────────────────────────────────────────────────────────
+
+function StackSummaryBar({ stacks }) {
+  if (!stacks || stacks.length === 0) return null;
+  return (
+    <div style={{
+      padding: '8px 14px', borderBottom: '1px solid #0f0f0f',
+      display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center',
+    }}>
+      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: '#666', letterSpacing: 1.5, textTransform: 'uppercase' }}>STACKS</span>
+      {stacks.map((s, i) => (
+        <span key={i} style={{
+          fontFamily: "'Space Mono', monospace", fontSize: 10,
+          background: s.color + '15', color: s.color,
+          border: `1px solid ${s.color}33`, borderRadius: 4,
+          padding: '3px 8px',
+        }}>
+          <span style={{ fontWeight: 700 }}>{s.team}:</span>{' '}
+          {s.members.map(m => m.name.split(' ').pop()).join(' + ')}{' '}
+          <span style={{ opacity: 0.7 }}>({s.type.replace(/^[^\w]*/, '')})</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── Grade detail card ────────────────────────────────────────────────────────
+
+function GradeCard({ grade }) {
+  if (!grade || !grade.grade) return null;
+  const bars = [
+    { label: 'PROJ', score: grade.projScore, color: '#3b82f6' },
+    { label: 'CLV',  score: grade.clvScore,  color: '#00e5a0' },
+    { label: 'RARE', score: grade.rarityScore, color: '#c084fc' },
+    { label: 'STACK', score: grade.stackScore, color: '#f59e0b' },
+  ];
+  return (
+    <div style={{
+      padding: '8px 14px', borderBottom: '1px solid #0f0f0f',
+      display: 'flex', gap: 16, alignItems: 'center',
+    }}>
+      <div style={{
+        fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700,
+        color: grade.grade.color, minWidth: 40, textAlign: 'center',
+      }}>
+        {grade.grade.letter}
+      </div>
+      <div style={{ display: 'flex', gap: 12, flex: 1 }}>
+        {bars.map(b => (
+          <div key={b.label} style={{ flex: 1, minWidth: 60 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 8, color: '#888', letterSpacing: 1 }}>{b.label}</span>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: b.color, fontWeight: 700 }}>{b.score}</span>
+            </div>
+            <div style={{ height: 4, background: '#1a1a1a', borderRadius: 2 }}>
+              <div style={{
+                height: 4, borderRadius: 2, background: b.color,
+                width: `${b.score}%`, transition: 'width 0.3s',
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{
+        fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#666',
+      }}>
+        {grade.composite}/100
+      </div>
+    </div>
+  );
+}
+
 // ── Expanded player detail ────────────────────────────────────────────────────
 
-function PlayerDetail({ players, alpha = 0.5 }) {
+function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
   const [pSort, setPSort] = useState('pick');
   const [pDir,  setPDir]  = useState('asc');
+
+  // Build a set of player names that are in stacks for dot indicators
+  const stackPlayerTeams = useMemo(() => {
+    const map = {};
+    stacks.forEach(s => {
+      s.members.forEach(m => { map[m.name] = s.color; });
+    });
+    return map;
+  }, [stacks]);
 
   const sorted = useMemo(() => [...players].sort((a, b) => {
     let av, bv;
@@ -666,6 +1198,9 @@ function PlayerDetail({ players, alpha = 0.5 }) {
 
   return (
     <div style={styles.detail}>
+      <GradeCard grade={grade} />
+      <DraftCapitalMap players={players} />
+      <StackSummaryBar stacks={stacks} />
       <table style={{ ...styles.table }}>
         <thead>
           <tr style={{ ...styles.thead, background: '#080808' }}>
@@ -682,9 +1217,15 @@ function PlayerDetail({ players, alpha = 0.5 }) {
           {sorted.map((p, i) => {
             const clvPct = calcCLV(p.pick, p.latestADP, alpha);
             const clv = clvLabel(clvPct);
+            const stackColor = stackPlayerTeams[p.name];
             return (
               <tr key={`${p.name}-${i}`} style={styles.drow}>
-                <td style={styles.dtd}><span style={styles.playerName}>{p.name}</span></td>
+                <td style={styles.dtd}>
+                  <span style={styles.playerName}>
+                    {stackColor && <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: stackColor, marginRight: 5, verticalAlign: 'middle' }} />}
+                    {p.name}
+                  </span>
+                </td>
                 <td style={{ ...styles.dtd, textAlign: 'center' }}>
                   <span style={{ ...styles.posPill, background: posColor(p.position) + '22', color: posColor(p.position), borderColor: posColor(p.position) + '55' }}>
                     {p.position}
@@ -732,9 +1273,6 @@ const styles = {
   },
   title: { fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700, letterSpacing: 3, color: '#e6e6e6', margin: 0 },
   subtitle: { fontSize: 11, color: '#e4e4e4', margin: '4px 0 0', fontFamily: "'Space Mono', monospace" },
-  alphaRow: { display: 'flex', alignItems: 'center', gap: 8 },
-  alphaLabel: { fontFamily: "'Space Mono', monospace", fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: '#444' },
-  alphaExplain: { fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#00e5a055', marginLeft: 4 },
 
   filterBar: {
     display: 'flex', flexWrap: 'wrap', gap: '10px 24px',
