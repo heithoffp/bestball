@@ -80,7 +80,7 @@ export function classifyRosterPath(roster) {
   const rbRounds1to3 = countPosition(roster, 'RB', 1, 3);
   const rbRounds1to4 = countPosition(roster, 'RB', 1, 4);
   const rbRounds4to6 = countPosition(roster, 'RB', 4, 6);
-  const totalRBs = countPosition(roster, 'RB', 1, 18);
+  const totalRBs = countPosition(roster, 'RB', 1, 17);
 
   // RB Logic Implementation
   if (rbRounds1to4 === 0) {
