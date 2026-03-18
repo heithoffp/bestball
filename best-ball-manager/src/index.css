@@ -128,3 +128,13 @@ td { padding: 1rem; border-bottom: 1px solid var(--border); }
 .recharts-default-tooltip {
   background: rgba(15, 23, 36, 0.95);
 }
+
+/* Player Rankings — tier toggle hover zone */
+.tier-toggle-zone td {
+  transition: background 0.15s;
+}
+.tier-toggle-zone:hover td {
+  background: rgba(59, 130, 246, 0.15);
+  border-top: 1px dashed var(--accent-blue) !important;
+  border-bottom: 1px dashed var(--accent-blue) !important;
+}

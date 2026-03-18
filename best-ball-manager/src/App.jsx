@@ -9,9 +9,13 @@ import ComboAnalysis from './components/ComboAnalysis';
 import RosterConstruction from './components/RosterConstruction';
 import DraftFlowAnalysis from './components/DraftFlowAnalysis';
 import RosterViewer from './components/RosterViewer';
+import JaccardAnalysis from './components/JaccardAnalysis';
+import PlayerRankings from './components/PlayerRankings';
 
 import rosterRaw from './assets/rosters.csv?raw';
 const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
+const projectionsModules = import.meta.glob('./assets/projections.csv', { as: 'raw', eager: true });
+const rankingsModules = import.meta.glob('./assets/rankings.csv', { as: 'raw', eager: true });
 
 export default function App() {
   const [rosterData, setRosterData] = useState([]);
@@ -19,6 +23,7 @@ export default function App() {
   const [adpSnapshots, setAdpSnapshots] = useState([]);
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [activeTab, setActiveTab] = useState('exposures');
+  const [rankingsSource, setRankingsSource] = useState([]);
 
   useEffect(() => {
     autoLoadFromAssets();
@@ -152,6 +157,19 @@ export default function App() {
       const master = processMasterList(enrichedRosters, localAdpMap, 12, snapshots, universePlayers);
       setMasterPlayers(master);
 
+      // Load rankings source: projections.csv first, then rankings.csv, then latest ADP
+      const projectionsRaw = Object.values(projectionsModules)[0];
+      const rankingsRaw = Object.values(rankingsModules)[0];
+      if (projectionsRaw) {
+        const projRows = await parseCSVText(String(projectionsRaw));
+        setRankingsSource(projRows);
+      } else if (rankingsRaw) {
+        const rankRows = await parseCSVText(String(rankingsRaw));
+        setRankingsSource(rankRows);
+      } else if (latest) {
+        setRankingsSource(latest.rows);
+      }
+
       setStatus({ type: 'success', msg: `Sync Complete: ${snapshots.length} snapshots loaded.` });
     } catch (err) {
       console.error('Auto-load failed', err);
@@ -177,7 +195,9 @@ export default function App() {
             <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Flow</button>
             <button className={`tab-button ${activeTab === 'combos' ? 'active' : ''}`} onClick={() => setActiveTab('combos')}>Combo Analysis</button>
             <button className={`tab-button ${activeTab === 'construction' ? 'active' : ''}`} onClick={() => setActiveTab('construction')}>Roster Construction</button>
-            <button className={`tab-button ${activeTab === 'construction' ? 'active' : ''}`} onClick={() => setActiveTab('rosters')}>Rosters</button>
+            <button className={`tab-button ${activeTab === 'rosters' ? 'active' : ''}`} onClick={() => setActiveTab('rosters')}>Rosters</button>
+            <button className={`tab-button ${activeTab === 'jaccard' ? 'active' : ''}`} onClick={() => setActiveTab('jaccard')}>Jaccard Analysis</button>
+            <button className={`tab-button ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
           </div>
 
           {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
@@ -185,6 +205,8 @@ export default function App() {
           {activeTab === 'combos' && <ComboAnalysis rosterData={rosterData} />}
           {activeTab === 'construction' && <RosterConstruction rosterData={rosterData} />}
           {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
+          {activeTab === 'jaccard' && <JaccardAnalysis rosterData={rosterData} />}
+          {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} />}
           {activeTab === 'timeseries' && (
             <AdpTimeSeries
               adpSnapshots={adpSnapshots}

@@ -1,7 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity } from 'lucide-react';
+import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity, Search, X } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 import { analyzeStack } from '../utils/stackAnalysis';
+
+// ADP delta: positive = I drafted later than current ADP (got value), negative = I drafted earlier (overpaid)
+const getAdpDeltaColor = (delta) => {
+  if (delta == null) return '#64748b';
+  const t = Math.min(1, Math.abs(delta) / 12); // fully saturated at ±12 picks (~1 round)
+  if (delta >= 0) {
+    // neutral → green
+    const r = Math.round(100 - t * 84);   // 100→16
+    const g = Math.round(116 + t * 69);   // 116→185
+    const b = Math.round(139 - t * 10);   // 139→129
+    return `rgb(${r},${g},${b})`;
+  } else {
+    // neutral → red
+    const r = Math.round(100 + t * 139);  // 100→239
+    const g = Math.round(116 - t * 48);   // 116→68
+    const b = Math.round(139 - t * 71);   // 139→68
+    return `rgb(${r},${g},${b})`;
+  }
+};
 
 // --- EXTENDED CONFIGURATION: QB & TE ARCHETYPES (from V2) ---
 const QB_META = {
@@ -149,6 +168,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
   const [debugPlayer, setDebugPlayer] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Add animation styles
   React.useEffect(() => {
@@ -387,7 +407,23 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     };
   }, [allRosters, strategyStatus]);
 
-  // --- 7. CANDIDATE PLAYERS (FULL V1 LOGIC) ---
+  // --- 7. MY AVG PICK MAP ---
+  const myAvgPickMap = useMemo(() => {
+    const buckets = new Map();
+    rosterData.forEach(p => {
+      const pick = Number(p.pick);
+      if (!p.name || !Number.isFinite(pick)) return;
+      if (!buckets.has(p.name)) buckets.set(p.name, []);
+      buckets.get(p.name).push(pick);
+    });
+    const result = new Map();
+    buckets.forEach((picks, name) => {
+      result.set(name, picks.reduce((a, b) => a + b, 0) / picks.length);
+    });
+    return result;
+  }, [rosterData]);
+
+  // --- 8. CANDIDATE PLAYERS (FULL V1 LOGIC) ---
   const parseRoundNum = (r) => {
     if (r == null) return NaN;
     if (typeof r === 'number') return r;
@@ -515,16 +551,17 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         ? (candidate.totalGlobalCount / totalRosters) * 100 
         : 0;
 
-      // 4. Correlation Score
+      // 4. Correlation Score (with per-pick breakdown)
       let sumProb = 0;
       let comparisons = 0;
-      
+      const correlationBreakdown = [];
+
       const candidateRosters = playerIndexMap.get(candidate.name) || new Set();
 
       if (currentPicks.length > 0) {
         currentPicks.forEach(pick => {
           const pickRosters = playerIndexMap.get(pick.name) || new Set();
-          
+
           if (pickRosters.size > 0) {
             let intersection = 0;
             if (pickRosters.size < candidateRosters.size) {
@@ -536,6 +573,14 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
             const prob = intersection / pickRosters.size;
             sumProb += prob;
             comparisons++;
+            correlationBreakdown.push({
+              name: pick.name,
+              position: pick.position,
+              round: pick.round,
+              pGivenPick: prob,
+              sharedCount: intersection,
+              pickRosterCount: pickRosters.size
+            });
           }
         });
       }
@@ -559,6 +604,17 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         if (!checkStrategyViability(strategyStatus.te.locked.key, nextPicks, currentRound)) killsStrategy = true;
       }
 
+      const myAvgPick = myAvgPickMap.get(candidate.name) ?? null;
+      const currentAdp = candidate._sortAdp;
+      const adpDelta = (myAvgPick != null && Number.isFinite(currentAdp) && currentAdp !== Infinity)
+        ? myAvgPick - currentAdp
+        : null;
+
+      const hist = (candidate.history || []).filter(h => Number.isFinite(h.adpPick));
+      const adpTrend = hist.length >= 2 ? hist[hist.length - 1].adpPick - hist[0].adpPick : null;
+
+      const isFallingKnife = adpDelta != null && adpTrend != null && adpDelta < -5 && adpTrend > 3;
+
       return {
         ...candidate,
         portfolioExposure: pathPercent,
@@ -566,8 +622,13 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         globalExposure: globalPercent,
         liftScore,
         correlationScore,
+        correlationBreakdown,
         killsStrategy,
-        _sortAdp: candidate._sortAdp
+        _sortAdp: candidate._sortAdp,
+        myAvgPick,
+        adpDelta,
+        adpTrend,
+        isFallingKnife
       };
     });
 
@@ -578,7 +639,119 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     });
 
     return finalCandidates;
-  }, [masterPlayers, allRosters, matchingPathRosters, currentRound, draftSlot, currentPicks, playerIndexMap, strategyStatus]);
+  }, [masterPlayers, allRosters, matchingPathRosters, currentRound, draftSlot, currentPicks, playerIndexMap, strategyStatus, myAvgPickMap]);
+
+  // --- 8. SEARCH RESULTS (bypass ADP window, search full player list) ---
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || !masterPlayers?.length) return [];
+
+    const query = searchQuery.trim().toLowerCase();
+    const globalPlayerCounts = new Map();
+    allRosters.forEach(roster => {
+      roster.forEach(p => {
+        if (p.name) globalPlayerCounts.set(p.name, (globalPlayerCounts.get(p.name) || 0) + 1);
+      });
+    });
+
+    const matchingRosterTotal = matchingPathRosters.length;
+    const targetStratKey = strategyStatus.referenceStrategyKey;
+    const targetStratRosters = strategyStatus.strategyPools[targetStratKey] || [];
+    const targetStratTotal = targetStratRosters.length;
+    const totalRosters = allRosters.length;
+
+    // Search across all master players, not just the ADP window
+    const matches = masterPlayers
+      .filter(mp => mp.name?.toLowerCase().includes(query) && !currentPicks.some(cp => cp.name === mp.name))
+      .slice(0, 25)
+      .map(mp => {
+        const adp = normalizeAdp(mp);
+        const totalGlobalCount = globalPlayerCounts.get(mp.name) || 0;
+
+        // Match count from path-matching rosters (any round)
+        let matchCount = 0;
+        matchingPathRosters.forEach(roster => {
+          if (roster.some(p => p.name === mp.name)) matchCount++;
+        });
+
+        const pathPercent = matchingRosterTotal > 0 ? (matchCount / matchingRosterTotal) * 100 : 0;
+
+        const inStrat = targetStratRosters.filter(r => r.some(x => x.name === mp.name)).length;
+        const stratPercent = targetStratTotal > 0 ? (inStrat / targetStratTotal) * 100 : 0;
+
+        const globalPercent = totalRosters > 0 ? (totalGlobalCount / totalRosters) * 100 : 0;
+
+        const candidateRosters = playerIndexMap.get(mp.name) || new Set();
+        let sumProb = 0, comparisons = 0;
+        const correlationBreakdown = [];
+        currentPicks.forEach(pick => {
+          const pickRosters = playerIndexMap.get(pick.name) || new Set();
+          if (pickRosters.size > 0) {
+            let intersection = 0;
+            if (pickRosters.size < candidateRosters.size) {
+              pickRosters.forEach(rid => { if (candidateRosters.has(rid)) intersection++; });
+            } else {
+              candidateRosters.forEach(rid => { if (pickRosters.has(rid)) intersection++; });
+            }
+            const prob = intersection / pickRosters.size;
+            sumProb += prob;
+            comparisons++;
+            correlationBreakdown.push({
+              name: pick.name,
+              position: pick.position,
+              round: pick.round,
+              pGivenPick: prob,
+              sharedCount: intersection,
+              pickRosterCount: pickRosters.size
+            });
+          }
+        });
+        const correlationScore = comparisons > 0 ? (sumProb / comparisons) * 100 : 0;
+        const liftScore = globalPercent > 0 ? (correlationScore / globalPercent) : 0;
+
+        let killsStrategy = false;
+        const nextPicks = [...currentPicks, { ...mp, round: currentRound, position: mp.position }];
+        if (strategyStatus.rb.locked && mp.position === 'RB') {
+          if (!checkStrategyViability(strategyStatus.rb.locked.key, nextPicks, currentRound)) killsStrategy = true;
+        }
+        if (strategyStatus.qb.locked && mp.position === 'QB') {
+          if (!checkStrategyViability(strategyStatus.qb.locked.key, nextPicks, currentRound)) killsStrategy = true;
+        }
+        if (strategyStatus.te.locked && mp.position === 'TE') {
+          if (!checkStrategyViability(strategyStatus.te.locked.key, nextPicks, currentRound)) killsStrategy = true;
+        }
+
+        const myAvgPick = myAvgPickMap.get(mp.name) ?? null;
+        const adpDelta = (myAvgPick != null && Number.isFinite(adp) && adp !== Infinity)
+          ? myAvgPick - adp
+          : null;
+        const hist = (mp.history || []).filter(h => Number.isFinite(h.adpPick));
+        const adpTrend = hist.length >= 2 ? hist[hist.length - 1].adpPick - hist[0].adpPick : null;
+        const isFallingKnife = adpDelta != null && adpTrend != null && adpDelta < -5 && adpTrend > 3;
+
+        return {
+          ...mp,
+          _sortAdp: adp,
+          totalGlobalCount,
+          matchCount,
+          portfolioExposure: pathPercent,
+          strategyExposure: stratPercent,
+          globalExposure: globalPercent,
+          liftScore,
+          correlationScore,
+          correlationBreakdown,
+          killsStrategy,
+          myAvgPick,
+          adpDelta,
+          adpTrend,
+          isFallingKnife,
+        };
+      });
+
+    matches.sort((a, b) => a._sortAdp - b._sortAdp);
+    return matches;
+  }, [searchQuery, masterPlayers, allRosters, matchingPathRosters, currentPicks, currentRound, playerIndexMap, strategyStatus, myAvgPickMap]);
+
+  const displayPlayers = searchQuery.trim() ? searchResults : candidatePlayers;
 
   // --- SUB-COMPONENTS (from V2) ---
   
@@ -813,7 +986,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       {/* RIGHT COLUMN: PLAYER LIST (Full V1 Logic) */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', background: '#1e293b' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
              <div>
                <h2 style={{ fontSize: 16, margin: 0, fontWeight: 800, color: '#fff' }}>Available Players</h2>
                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
@@ -822,24 +995,62 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
              </div>
              <div style={{ fontSize: 11, color: '#64748b', textAlign: 'right' }}>
                <div>Round {currentRound}</div>
-               <div style={{ color: '#475569' }}>~{candidatePlayers.length} shown</div>
+               <div style={{ color: '#475569' }}>~{displayPlayers.length} shown</div>
              </div>
            </div>
+           <div style={{ position: 'relative' }}>
+             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+             <input
+               type="text"
+               value={searchQuery}
+               onChange={e => setSearchQuery(e.target.value)}
+               placeholder="Search all players..."
+               style={{
+                 width: '100%',
+                 padding: '8px 32px 8px 32px',
+                 background: '#0f172a',
+                 border: '1px solid #334155',
+                 borderRadius: 6,
+                 color: '#e2e8f0',
+                 fontSize: 13,
+                 outline: 'none',
+                 boxSizing: 'border-box',
+               }}
+               onFocus={e => e.currentTarget.style.borderColor = '#3b82f6'}
+               onBlur={e => e.currentTarget.style.borderColor = '#334155'}
+             />
+             {searchQuery && (
+               <button
+                 onClick={() => setSearchQuery('')}
+                 style={{
+                   position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                   background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center',
+                 }}
+               >
+                 <X size={14} color="#64748b" />
+               </button>
+             )}
+           </div>
         </div>
-        
+
         <div style={{ flex: 1, overflowY: 'auto', padding: 16 }} className="thin-scrollbar">
-            {candidatePlayers.length === 0 ? (
+            {displayPlayers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
-                No player data available for this round.<br/>
-                <span style={{ fontSize: 12, color: '#475569' }}>Check if Master Players or ADP data is loaded.</span>
+                {searchQuery.trim() ? (
+                  <>No players found matching "{searchQuery}"<br/>
+                  <span style={{ fontSize: 12, color: '#475569' }}>Try a different name or clear the search.</span></>
+                ) : (
+                  <>No player data available for this round.<br/>
+                  <span style={{ fontSize: 12, color: '#475569' }}>Check if Master Players or ADP data is loaded.</span></>
+                )}
               </div>
             ) : (
-              candidatePlayers.map(p => (
-                  <PlayerCard 
-                      key={p.name} 
+              displayPlayers.map(p => (
+                  <PlayerCard
+                      key={p.name}
                       player={p}
                       currentPicks={currentPicks}
-                      onSelect={() => handleSelect(p)} 
+                      onSelect={() => handleSelect(p)}
                       stratName={referenceStrategyName}
                       debugOpen={debugPlayer === p.name}
                       setDebugOpen={(isOpen) => setDebugPlayer(isOpen ? p.name : null)}
@@ -928,6 +1139,13 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
     const killsStrategy = player.killsStrategy;
+    const breakdown = player.correlationBreakdown || [];
+    const myAvgPick = player.myAvgPick ?? null;
+    const adpDelta = player.adpDelta ?? null;
+    const adpTrend = player.adpTrend ?? null;
+    const isFallingKnife = player.isFallingKnife ?? false;
+
+    const adpDeltaColor = getAdpDeltaColor(adpDelta);
 
     const displayAdp = player.adpDisplay || (Number.isFinite(player.adpPick) ? player.adpPick.toFixed(1) : '—');
 
@@ -957,11 +1175,12 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
             alignItems: 'center',
             background: '#0f172a',
             padding: '14px 16px',
-            borderRadius: 10,
+            borderRadius: breakdown.length > 0 ? '10px 10px 0 0' : 10,
             borderLeft: `4px solid ${color}`,
             cursor: 'pointer',
             transition: 'all 0.15s',
-            border: '1px solid #1e293b'
+            border: '1px solid #1e293b',
+            borderBottom: breakdown.length > 0 ? '1px solid #1e293b22' : '1px solid #1e293b'
           }}
           onMouseEnter={e => {
             e.currentTarget.style.background = '#1e293b';
@@ -1011,21 +1230,43 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
                 )}
               </div>
 
-              <div style={{ fontSize: 11, color: '#64748b', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ fontSize: 11, color: '#64748b', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span>{player.team || 'FA'}</span>
                 <span>•</span>
                 <span>ADP {displayAdp}</span>
+                {myAvgPick != null && (
+                  <>
+                    <span>•</span>
+                    <span>My Avg: {myAvgPick.toFixed(1)}</span>
+                    {adpDelta != null && (
+                      <span style={{ color: adpDeltaColor, fontWeight: 600 }}>
+                        ({adpDelta > 0 ? '+' : ''}{adpDelta.toFixed(1)})
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
 
-              {killsStrategy && (
-                <div style={{ 
-                  display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, 
-                  color: '#ef4444', fontSize: 9, background: 'rgba(239,68,68,0.1)', 
-                  padding: '3px 7px', borderRadius: 4, fontWeight: 700
-                }}>
-                  <AlertTriangle size={10} /> Limits Path
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {killsStrategy && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+                    color: '#ef4444', fontSize: 9, background: 'rgba(239,68,68,0.1)',
+                    padding: '3px 7px', borderRadius: 4, fontWeight: 700
+                  }}>
+                    <AlertTriangle size={10} /> Limits Path
+                  </div>
+                )}
+                {isFallingKnife && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+                    color: '#f97316', fontSize: 9, background: 'rgba(249,115,22,0.1)',
+                    padding: '3px 7px', borderRadius: 4, fontWeight: 700
+                  }}>
+                    <TrendingUp size={10} /> Falling Knife
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1114,6 +1355,65 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
           </div>
         </div>
 
+        {/* Correlation Breakdown Bar */}
+        {breakdown.length > 0 && (() => {
+          const getBarColor = (pct) => {
+            if (pct > 25) return '#ef4444';
+            if (pct > 15) return '#f59e0b';
+            if (pct > 5) return '#fbbf24';
+            return '#10b981';
+          };
+          const sorted = [...breakdown].sort((a, b) => a.round - b.round);
+          const lastName = (name) => {
+            const parts = (name || '').split(' ');
+            return parts.length > 1 ? parts[parts.length - 1] : name;
+          };
+
+          return (
+            <div style={{
+              display: 'flex', gap: 2, padding: '6px 16px 8px',
+              background: '#0a0f1a',
+              border: '1px solid #1e293b', borderTop: 'none',
+              borderRadius: '0 0 10px 10px', overflowX: 'auto'
+            }}>
+              {sorted.map((entry, i) => {
+                const pct = entry.pGivenPick * 100;
+                const barColor = getBarColor(pct);
+                const posColor = getPosColor(entry.position);
+                return (
+                  <div key={entry.name + '-' + i} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    flex: '1 1 0', minWidth: 44, maxWidth: 80
+                  }}>
+                    <div style={{
+                      fontSize: 9, fontWeight: 700, color: posColor,
+                      marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden',
+                      textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center'
+                    }}>
+                      {lastName(entry.name)}
+                    </div>
+                    <div style={{
+                      width: '100%', height: 6, background: '#1e293b',
+                      borderRadius: 3, overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: `${Math.min(pct, 100)}%`, height: '100%',
+                        background: barColor, borderRadius: 3
+                      }} />
+                    </div>
+                    <div style={{
+                      fontSize: 8, fontWeight: 700, color: barColor,
+                      marginTop: 2, fontFamily: 'monospace'
+                    }}>
+                      {Math.round(pct)}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         {/* Debug Panel */}
         {debugOpen && (
           <div style={{ 
@@ -1125,7 +1425,29 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
               <Row k="Position" v={player.position} />
               <Row k="Team" v={player.team} />
               <Row k="ADP" v={player.adpPick?.toFixed(2)} />
+              {myAvgPick != null && <Row k="My Avg Pick" v={myAvgPick.toFixed(1)} />}
+              {adpDelta != null && (
+                <Row k="ADP Delta" v={
+                  <span style={{ color: adpDeltaColor, fontWeight: 700 }}>
+                    {adpDelta > 0 ? '+' : ''}{adpDelta.toFixed(1)}
+                  </span>
+                } />
+              )}
             </div>
+            {(() => {
+              const hist = (player.history || []).filter(h => Number.isFinite(h.adpPick));
+              if (hist.length < 2) return null;
+              const trending = adpTrend != null ? (adpTrend > 0 ? ' ↑' : adpTrend < 0 ? ' ↓' : ' →') : '';
+              const histStr = hist.map(h => h.adpPick.toFixed(1)).join(' → ') + trending;
+              return (
+                <div style={{ borderTop: '1px solid #1e293b', paddingTop: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>ADP History</div>
+                  <div style={{ fontSize: 11, color: adpTrend > 3 ? '#f97316' : adpTrend < -3 ? '#10b981' : '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                    {histStr}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ borderTop: '1px solid #1e293b', paddingTop: 10, marginTop: 10 }}>
               <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', fontWeight: 600 }}>Exposure Metrics</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

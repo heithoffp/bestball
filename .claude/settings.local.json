@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(npm run:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(python:*)",
+      "WebSearch",
+      "WebFetch(domain:www.cbssports.com)",
+      "WebFetch(domain:www.fantasypros.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(grep -v \"^$\")",
+      "WebFetch(domain:g.espncdn.com)"
     ]
   }
 }

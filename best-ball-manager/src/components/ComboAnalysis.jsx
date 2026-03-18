@@ -99,7 +99,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
           for (let i = 0; i < qbs.length; i++) {
             for (let j = i + 1; j < qbs.length; j++) {
               // Because qbs is already sorted by ADP, names[0] is higher ADP than names[1]
-              const names = [qbs[i].name, qbs[j].name];
+              const names = [qbs[i].name, qbs[j].name].sort();
               const key = names.join('||');
               pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
             }
