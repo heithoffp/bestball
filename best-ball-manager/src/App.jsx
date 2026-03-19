@@ -173,7 +173,7 @@ export default function App() {
         setRankingsSource(latest.rows);
       }
 
-      setStatus({ type: 'success', msg: `Sync Complete: ${snapshots.length} snapshots loaded.` });
+      setStatus({ type: '', msg: '' });
     } catch (err) {
       console.error('Auto-load failed', err);
       setStatus({ type: 'error', msg: String(err) });
@@ -201,20 +201,22 @@ export default function App() {
             <button className={`tab-button ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
           </div>
 
-          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading tab...</div>}>
-            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
-            {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
-            {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
-            {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} />}
-            {activeTab === 'timeseries' && (
-              <AdpTimeSeries
-                adpSnapshots={adpSnapshots}
-                masterPlayers={masterPlayers}
-                teams={12}
-                rosterData={rosterData}
-              />
-            )}
-          </Suspense>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading tab...</div>}>
+              {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
+              {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
+              {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
+              {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} />}
+              {activeTab === 'timeseries' && (
+                <AdpTimeSeries
+                  adpSnapshots={adpSnapshots}
+                  masterPlayers={masterPlayers}
+                  teams={12}
+                  rosterData={rosterData}
+                />
+              )}
+            </Suspense>
+          </div>
         </div>
       )}
     </div>

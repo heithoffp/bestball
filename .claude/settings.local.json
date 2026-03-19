@@ -11,7 +11,8 @@
       "WebFetch(domain:gist.github.com)",
       "Bash(grep -v \"^$\")",
       "WebFetch(domain:g.espncdn.com)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

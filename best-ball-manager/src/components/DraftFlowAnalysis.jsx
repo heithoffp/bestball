@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity, Search, X } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 import { analyzeStack } from '../utils/stackAnalysis';
@@ -168,7 +168,13 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
   const [debugPlayer, setDebugPlayer] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Add animation styles
   React.useEffect(() => {
@@ -1002,8 +1008,8 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
              <input
                type="text"
-               value={searchQuery}
-               onChange={e => setSearchQuery(e.target.value)}
+               value={searchInput}
+               onChange={e => setSearchInput(e.target.value)}
                placeholder="Search all players..."
                style={{
                  width: '100%',
@@ -1019,9 +1025,9 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
                onFocus={e => e.currentTarget.style.borderColor = '#3b82f6'}
                onBlur={e => e.currentTarget.style.borderColor = '#334155'}
              />
-             {searchQuery && (
+             {searchInput && (
                <button
-                 onClick={() => setSearchQuery('')}
+                 onClick={() => { setSearchInput(''); setSearchQuery(''); }}
                  style={{
                    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
                    background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center',
@@ -1036,8 +1042,8 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         <div style={{ flex: 1, overflowY: 'auto', padding: 16 }} className="thin-scrollbar">
             {displayPlayers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
-                {searchQuery.trim() ? (
-                  <>No players found matching "{searchQuery}"<br/>
+                {searchInput.trim() ? (
+                  <>No players found matching "{searchInput}"<br/>
                   <span style={{ fontSize: 12, color: '#475569' }}>Try a different name or clear the search.</span></>
                 ) : (
                   <>No player data available for this round.<br/>

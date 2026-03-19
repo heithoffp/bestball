@@ -14,13 +14,13 @@
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg-dark); color: var(--text-primary); }
-.app-container { min-height: 100vh; padding: 2rem; }
-h1 { font-family: 'JetBrains Mono', monospace; font-size: 2rem; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+.app-container { height: 100vh; padding: 0.75rem 2rem 0.5rem; display: flex; flex-direction: column; overflow: hidden; }
+h1 { font-family: 'JetBrains Mono', monospace; font-size: 2rem; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.25rem; flex-shrink: 0; }
 .config-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
 .path-input { width: 100%; background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace; }
 .load-button { background: var(--gradient-primary); color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
 .load-button:hover { transform: translateY(-2px); }
-.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 0.5rem; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
 td { padding: 1rem; border-bottom: 1px solid var(--border); }
@@ -29,7 +29,7 @@ td { padding: 1rem; border-bottom: 1px solid var(--border); }
 .badge-wr { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
 .badge-qb { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
 .badge-te { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
-.tab-bar { display:flex; gap: 8px; margin-bottom: 12px; }
+.tab-bar { display:flex; gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
 .tab-button { background: transparent; border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; cursor:pointer; color: var(--text-primary); }
 .tab-button.active { background: var(--bg-hover); }
 .exposure-table table thead th {
@@ -41,7 +41,8 @@ td { padding: 1rem; border-bottom: 1px solid var(--border); }
 }
 
 .exposure-scroll {
-  max-height: 56vh;   /* scrollable window height — adjust as needed */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   border-top: 1px solid var(--border);
 }
@@ -64,27 +65,7 @@ td { padding: 1rem; border-bottom: 1px solid var(--border); }
   table-layout: fixed; /* critical for header/body alignment */
 }
 
-/* Make thead behave like a table-row group and keep it visible */
-.exposure-fixed-table thead {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
-}
-
-/* tbody becomes a block with its own scroll */
-.exposure-fixed-table tbody {
-  display: block;
-  max-height: 56vh; /* adjust height as you prefer */
-  overflow-y: auto;
-  width: 100%;
-}
-
-/* tbody rows need to be table-row display for width calc */
-.exposure-fixed-table tbody tr {
-  display: table;
-  table-layout: fixed;
-  width: 100%;
-}
+/* thead/tbody use default table display — outer .table-container handles scrolling */
 
 /* cells */
 .exposure-fixed-table th,

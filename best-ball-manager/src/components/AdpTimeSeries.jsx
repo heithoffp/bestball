@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
   Tooltip, Legend, CartesianGrid, ReferenceArea, ReferenceLine
@@ -35,7 +35,13 @@ const calculateBoxPlot = (values) => {
 };
 
 export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], rosterData = [], teams = 12 }) {
+  const [queryInput, setQueryInput] = useState('');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(queryInput), 250);
+    return () => clearTimeout(timer);
+  }, [queryInput]);
   const [showPickRanges, setShowPickRanges] = useState(true);
   const [selectedIds, setSelectedIds] = useState(() => {
     return [...masterPlayers]
@@ -296,8 +302,8 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
         <input
             className="path-input"
             placeholder="Filter by name, team, pos..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
+            value={queryInput}
+            onChange={e => setQueryInput(e.target.value)}
             style={{ width: 250 }}
         />
         <div style={{ display: 'flex', gap: 8 }}>
@@ -322,7 +328,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', height: 500 }}>
         
         {/* --- Left Pane: Data Table --- */}
-        <div className="card" style={{ width: 480, padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
+        <div className="card" style={{ flex: '0 0 30%', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
             
             {/* Header */}
             <div style={{ 

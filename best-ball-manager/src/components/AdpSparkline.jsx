@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   LineChart,
   Line,
@@ -53,4 +54,4 @@ function AdpSparkline({ history }) {
   );
 }
 
-export default AdpSparkline;
+export default memo(AdpSparkline);

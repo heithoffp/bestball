@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import AdpSparkline from './AdpSparkline';
 import { ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 
@@ -24,7 +25,13 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   // For clarity I'm keeping only the render part here — assume the rest of your logic remains.
 
   // --- (Start of unchanged logic - paste all your useState/useMemo/etc from original) ---
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
   const [sortField, setSortField] = useState('exposure');
   const [sortDir, setSortDir] = useState('desc');
   const [showUndrafted, setShowUndrafted] = useState(false);
@@ -38,7 +45,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
       setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
-      if (field === 'adp' || field === 'name') setSortDir('asc');
+      if (field === 'adp' || field === 'name' || field === 'adpTrend') setSortDir('asc');
       else setSortDir('desc');
     }
   };
@@ -95,12 +102,38 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   }, [rosterData, rbFilter, qbFilter, teFilter]);
 
   const playersWithFilteredExposure = useMemo(() => {
+    const now = new Date();
+    const twoWeeksAgo = new Date(now);
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
     return masterPlayers.map(p => {
       const nameKey = String(p.name || '').trim();
       const filtered = playerExposures[nameKey];
 
+      // Compute 2-week ADP trend
+      let trendValue = null;
+      if (p.history && p.history.length >= 2) {
+        const valid = p.history.filter(h => h.adpPick !== null);
+        if (valid.length >= 2) {
+          const latest = valid[valid.length - 1];
+          // Find the entry closest to 14 days ago
+          let baseline = valid[0];
+          for (const h of valid) {
+            if (new Date(h.date) <= twoWeeksAgo) {
+              baseline = h;
+            } else {
+              break;
+            }
+          }
+          if (baseline !== latest) {
+            trendValue = latest.adpPick - baseline.adpPick;
+          }
+        }
+      }
+
       return {
         ...p,
+        trendValue,
         filteredExposure: filtered ? filtered.exposure : 0,
         filteredCount: filtered ? filtered.count : 0
       };
@@ -111,7 +144,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
 
   const filteredAndSorted = useMemo(() => {
     const q = normalizedQuery(search);
-    const dataToUse = hasActiveFilter ? playersWithFilteredExposure : masterPlayers;
+    const dataToUse = playersWithFilteredExposure;
 
     let list = showUndrafted
       ? dataToUse
@@ -144,6 +177,11 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
         const bPick = (b.adpPick ?? Number.POSITIVE_INFINITY);
         return aPick - bPick;
       }
+      if (sortField === 'adpTrend') {
+        const aTrend = (a.trendValue ?? Number.POSITIVE_INFINITY);
+        const bTrend = (b.trendValue ?? Number.POSITIVE_INFINITY);
+        return aTrend - bTrend;
+      }
       return (parseFloat(aVal) || 0) - (parseFloat(bVal) || 0);
     };
 
@@ -159,6 +197,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   };
 
   const resetFilters = () => {
+    setSearchInput('');
     setSearch('');
     setSortField('exposure');
     setSortDir('desc');
@@ -168,6 +207,15 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
     setTeFilter('Any');
   };
   // --- (End of unchanged logic) ---
+
+  const tableContainerRef = useRef(null);
+
+  const virtualizer = useVirtualizer({
+    count: filteredAndSorted.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 41,
+    overscan: 10,
+  });
 
   // Shared cell styles for consistent alignment
   const cellBaseStyle = {
@@ -189,8 +237,8 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   };
 
   return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexShrink: 0 }}>
         <h2 style={{ margin: 0 }}>Exposures</h2>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <label style={{
@@ -214,8 +262,8 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
           <input
             aria-label="Search players"
             placeholder="Search name, team, pos..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
             className="path-input"
             style={{ width: 250, margin: 0 }}
           />
@@ -240,7 +288,8 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
         border: '1px solid rgba(255,255,255,0.1)',
         marginBottom: 16,
         alignItems: 'center',
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
           <span style={{
@@ -389,24 +438,27 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
         )}
       </div>
 
-      <div className="exposure-table card" style={{ padding: 0 }}>
-        <div className="table-container" style={{ overflowX: 'auto' }}>
-          {/* table-layout: fixed + colgroup ensures headers and data line up */}
+      <div className="exposure-table card" style={{ padding: 0, flex: 1, minHeight: 0 }}>
+        <div
+          className="table-container"
+          ref={tableContainerRef}
+          style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}
+        >
           <table
             className="exposure-fixed-table"
-            style={{ width: '100%', minWidth: 4800, borderCollapse: 'collapse', tableLayout: 'fixed' }}
+            style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
           >
             <colgroup>
-              <col style={{ width: '30%' }} />
-              <col style={{ width: '6%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '8%' }} />
-              <col style={{ width: '8%' }} />
-              <col style={{ width: '24%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '5%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '20%' }} />
             </colgroup>
 
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card-bg, #1a1a2e)' }}>
               <tr>
                 <th style={headerStyle} onClick={() => onSort('name')}>Player {sortArrow('name')}</th>
                 <th style={headerStyle} onClick={() => onSort('position')}>Pos {sortArrow('position')}</th>
@@ -414,7 +466,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
                 <th style={headerStyle} onClick={() => onSort('exposure')}>Exposure % {sortArrow('exposure')}</th>
                 <th style={{ ...headerStyle, textAlign: 'right' }} onClick={() => onSort('count')}>Count {sortArrow('count')}</th>
                 <th style={{ ...headerStyle, textAlign: 'right' }} onClick={() => onSort('adp')}>ADP {sortArrow('adp')}</th>
-                <th style={headerStyle}>ADP Trend</th>
+                <th style={headerStyle} onClick={() => onSort('adpTrend')}>ADP Trend {sortArrow('adpTrend')}</th>
               </tr>
             </thead>
 
@@ -424,32 +476,49 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
                   <td colSpan={7} style={{ padding: '2rem', textAlign: 'center' }}>No players match.</td>
                 </tr>
               ) : (
-                filteredAndSorted.map(p => {
-                  const posColor = getPosColor(p.position);
-                  const displayExp = hasActiveFilter ? (p.filteredExposure || 0) : (p.exposure || 0);
-                  const displayCount = hasActiveFilter ? (p.filteredCount || 0) : (p.count || 0);
+                <>
+                  {virtualizer.getVirtualItems().length > 0 && (
+                    <tr><td colSpan={7} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
+                  )}
+                  {virtualizer.getVirtualItems().map(virtualRow => {
+                    const p = filteredAndSorted[virtualRow.index];
+                    const posColor = getPosColor(p.position);
+                    const displayExp = hasActiveFilter ? (p.filteredExposure || 0) : (p.exposure || 0);
+                    const displayCount = hasActiveFilter ? (p.filteredCount || 0) : (p.count || 0);
 
-                  return (
-                    <tr key={p.name} style={{ opacity: displayCount === 0 ? 0.5 : 1 }}>
-                      <td style={{ ...cellBaseStyle, fontWeight: 600, borderLeft: `4px solid ${posColor}` }}>{p.name}</td>
-                      <td style={cellBaseStyle}>{p.position}</td>
-                      <td style={cellBaseStyle}>{p.team}</td>
-                      <td style={cellBaseStyle}>{parseFloat(displayExp).toFixed(1)}%</td>
-                      <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{displayCount}</td>
-                      <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{p.adpDisplay}</td>
-                      <td style={{ ...cellBaseStyle, padding: '6px 8px' }}>
-                        <div style={{ width: '100%', height: '30px', minWidth: '100px' }}>
-                          <AdpSparkline history={p.history} />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                    return (
+                      <tr
+                        key={virtualRow.key}
+                        data-index={virtualRow.index}
+                        ref={virtualizer.measureElement}
+                        style={{ opacity: displayCount === 0 ? 0.5 : 1 }}
+                      >
+                        <td style={{ ...cellBaseStyle, fontWeight: 600, borderLeft: `4px solid ${posColor}` }}>{p.name}</td>
+                        <td style={cellBaseStyle}>{p.position}</td>
+                        <td style={cellBaseStyle}>{p.team}</td>
+                        <td style={cellBaseStyle}>{parseFloat(displayExp).toFixed(1)}%</td>
+                        <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{displayCount}</td>
+                        <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{p.adpDisplay}</td>
+                        <td style={{ ...cellBaseStyle, padding: '6px 8px' }}>
+                          <div style={{ width: '100%', height: '30px', minWidth: '100px' }}>
+                            <AdpSparkline history={p.history} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {virtualizer.getVirtualItems().length > 0 && (
+                    <tr><td colSpan={7} style={{
+                      height: virtualizer.getTotalSize() - (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
+                      padding: 0, border: 'none'
+                    }} /></tr>
+                  )}
+                </>
               )}
             </tbody>
           </table>
         </div>
       </div>
-    </>
+    </div>
   );
 }

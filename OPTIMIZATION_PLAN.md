@@ -85,7 +85,7 @@ Three heavy components have been disabled in `src/App.jsx` to reduce computation
 | **P1** | Disable 3 heavy components | Low | High | None | `App.jsx` |
 | **P2** | React.lazy + Suspense | Low | High | Low | `App.jsx` |
 | **P3** | React.memo on AdpSparkline | Low | Medium | None | `AdpSparkline.jsx` |
-| **P4** | Debounce search/filter inputs | Low | Medium | Low | ExposureTable, DraftFlowAnalysis, AdpTimeSeries |
+| **P4** | Debounce search/filter inputs | Low | Medium | Low | ExposureTable, DraftFlowAnalysis, AdpTimeSeries | **DONE** |
 | **P5** | Virtualize ExposureTable rows | Medium | Medium-High | Medium | `ExposureTable.jsx` |
 | **P6** | Extract inline styles to module scope | Low | Low | None | All components |
 | **P7** | Web Worker for DraftFlow scoring | High | Medium | High | Future |
@@ -97,7 +97,7 @@ Three heavy components have been disabled in `src/App.jsx` to reduce computation
 ### P1: Disable Heavy Components *(DONE)*
 Already implemented — see Section 1 above.
 
-### P2: React.lazy + Suspense
+### P2: React.lazy + Suspense *(DONE)*
 
 **What:** Convert remaining 5 tab imports from static to dynamic using `React.lazy()`.
 
@@ -126,7 +126,7 @@ const PlayerRankings = React.lazy(() => import('./components/PlayerRankings'));
 
 **Risk:** First tab switch has a brief loading flash. Mitigated by the fallback UI.
 
-### P3: React.memo on AdpSparkline
+### P3: React.memo on AdpSparkline *(DONE)*
 
 **What:** Wrap `AdpSparkline` component in `React.memo()`.
 
@@ -140,7 +140,7 @@ export default AdpSparkline;
 export default React.memo(AdpSparkline);
 ```
 
-### P4: Debounce Search/Filter Inputs
+### P4: Debounce Search/Filter Inputs *(DONE)*
 
 **What:** Add 200-300ms debounce to text inputs that drive expensive `useMemo` chains.
 
@@ -165,7 +165,7 @@ useEffect(() => {
 // In useMemo dependencies: use `search` (debounced), not `searchInput`
 ```
 
-### P5: Virtualize ExposureTable Rows
+### P5: Virtualize ExposureTable Rows *(DONE)*
 
 **What:** Use `@tanstack/react-virtual` to only render visible table rows instead of all ~1000.
 
