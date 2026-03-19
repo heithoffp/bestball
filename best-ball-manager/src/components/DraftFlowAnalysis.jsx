@@ -110,7 +110,7 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
     return true;
   }
 
-  if (strategyKey === 'RB_VALUE') return true;
+  if (strategyKey === 'RB_BALANCED') return true;
 
   // --- QB LOGIC (Elite: 1-4, Core: 5-9, Late: 10+) ---
   if (strategyKey === 'QB_ELITE') {
@@ -143,7 +143,7 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
 
 // --- LOCAL CLASSIFIER FOR QB/TE (from V2) ---
 const classifyStructure = (roster) => {
-  let rbPath = 'RB_VALUE';
+  let rbPath = 'RB_BALANCED';
   try {
     rbPath = classifyRosterPath(roster).rb;
   } catch (e) { /* fallback */ }
@@ -266,12 +266,12 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       return { items, locked };
     };
 
-    // RB Strategy - Gray out RB_VALUE after 3 picks
+    // RB Strategy - Gray out RB_BALANCED after 3 picks
     const rbStatus = Object.keys(PROTOCOL_TREE).map(key => {
       let viable = checkStrategyViability(key, currentPicks, currentRound);
       
-      // Gray out RB_VALUE after round 3 - archetype should be determined by then
-      if (key === 'RB_VALUE' && currentPicks.length >= 3) {
+      // Gray out RB_BALANCED after round 3 - archetype should be determined by then
+      if (key === 'RB_BALANCED' && currentPicks.length >= 3) {
         viable = false;
       }
       
@@ -283,8 +283,8 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       };
     });
     
-    const strictRbActive = rbStatus.filter(s => s.viable && s.key !== 'RB_VALUE');
-    const rbLocked = strictRbActive.length === 1 ? strictRbActive[0] : (strictRbActive.length === 0 ? rbStatus.find(s=>s.key === 'RB_VALUE') : null);
+    const strictRbActive = rbStatus.filter(s => s.viable && s.key !== 'RB_BALANCED');
+    const rbLocked = strictRbActive.length === 1 ? strictRbActive[0] : (strictRbActive.length === 0 ? rbStatus.find(s=>s.key === 'RB_BALANCED') : null);
 
     // QB & TE Strategy
     const qbStatus = checkGroup(QB_META);
@@ -292,11 +292,11 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
     // Reference Strategy (for player comparison)
     const referenceStrategyKey = rbLocked ? rbLocked.key : 
-        (rbStatus.find(s => s.viable && s.key === 'RB_HERO') ? 'RB_HERO' : 'RB_VALUE');
+        (rbStatus.find(s => s.viable && s.key === 'RB_HERO') ? 'RB_HERO' : 'RB_BALANCED');
 
     // Strategy Pools
     const strategyPools = {
-        RB_ZERO: [], RB_HERO: [], RB_HYPER_FRAGILE: [], RB_VALUE: []
+        RB_ZERO: [], RB_HERO: [], RB_HYPER_FRAGILE: [], RB_BALANCED: []
     };
     
     allRosters.forEach(roster => {
@@ -1152,7 +1152,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
             )}
         </div>
               {/* RB STRATEGY REMINDER - Collapsible bar */}
-        {strategyStatus.rb.locked && strategyStatus.rb.locked.key !== 'RB_VALUE' && RB_BLURBS[strategyStatus.rb.locked.key] && (
+        {strategyStatus.rb.locked && strategyStatus.rb.locked.key !== 'RB_BALANCED' && RB_BLURBS[strategyStatus.rb.locked.key] && (
           <div style={{ flexShrink: 0 }}>
             <div
               onClick={() => setRbReminderOpen(!rbReminderOpen)}

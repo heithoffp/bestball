@@ -55,7 +55,7 @@ function uniquenessColor(t) {
 // ── Helpers & priors (unchanged) ──────────
 
 const RB_ARCHETYPE_PREVALENCE = {
-  RB_VALUE:         0.5,
+  RB_BALANCED:         0.5,
   RB_HERO:          0.25,
   RB_ZERO:          0.17,
   RB_HYPER_FRAGILE: 0.08,
@@ -180,8 +180,8 @@ const ARCHETYPE_COLORS = {
   RB_ZERO:          '#8b5cf6',
   RB_HYPER_FRAGILE: '#f97316',
   RB_HERO:          '#4bf1db',
-  RB_VALUE:         '#ef4444',
-  RB_SUBOPTIMAL:    '#6b7280',
+  RB_BALANCED:         '#ef4444',
+
   QB_ELITE:         '#f59e0b',
   QB_CORE:          '#60a5fa',
   QB_LATE:          '#94a3b8',
@@ -198,7 +198,7 @@ function ArchetypePill({ archetypeKey }) {
   if (!meta) return <span style={{ color: '#f3f3f3', fontSize: 14 }}>—</span>;
   return (
     <span title={meta.desc} style={{
-      fontFamily: "'Space Mono', monospace", fontSize: 13,
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
       background: color + '1a', color, border: `1px solid ${color}44`,
       borderRadius: 4, padding: '3px 9px', letterSpacing: 0.3,
       whiteSpace: 'nowrap', cursor: 'default',
@@ -224,7 +224,7 @@ function PositionSnapshot({ snap }) {
     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
       {entries.map(({ pos, count }) => (
         <span key={pos} style={{
-          fontSize: 13, fontFamily: "'Space Mono', monospace",
+          fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
           background: posColor(pos) + '22', color: posColor(pos),
           border: `1px solid ${posColor(pos)}55`, borderRadius: 3,
           padding: '2px 6px', letterSpacing: 0.5,
@@ -244,7 +244,7 @@ function shortEntry(id) {
 
 // ── Filter options ────────────────────────────────────────────────────────────
 
-const RB_OPTIONS = ['all', 'RB_ZERO', 'RB_HERO', 'RB_HYPER_FRAGILE', 'RB_VALUE', 'RB_SUBOPTIMAL'];
+const RB_OPTIONS = ['all', 'RB_ZERO', 'RB_HERO', 'RB_HYPER_FRAGILE', 'RB_BALANCED'];
 const QB_OPTIONS = ['all', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['all', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 
@@ -671,8 +671,6 @@ export default function RosterViewer({ rosterData = [] }) {
 
   return (
     <div style={styles.root}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');`}</style>
-
       {/* ── Header ── */}
       <div style={styles.header}>
         <div>
@@ -680,182 +678,202 @@ export default function RosterViewer({ rosterData = [] }) {
           <p style={styles.subtitle}>{displayed.length} / {rosters.length} entries · {rosterData.length} players</p>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, paddingBottom: 15, flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: '0 0 320px' }}>
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
-            background: '#0c0c0c', border: '1px solid #232323', borderRadius: 6,
-            padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
-          }}>
-            {selectedPlayers.map(name => (
-              <span key={name} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontFamily: "'Space Mono', monospace", fontSize: 13,
-                background: '#00e5a015', color: '#00e5a0',
-                border: '1px solid #00e5a035', borderRadius: 4,
-                padding: '3px 8px', whiteSpace: 'nowrap',
-              }}>
-                {name}
-                <button
-                  onClick={(e) => { e.stopPropagation(); removePlayer(name); }}
-                  style={{
-                    background: 'none', border: 'none', color: '#00e5a066',
-                    cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
-                  }}
-                >✕</button>
-              </span>
-            ))}
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder={selectedPlayers.length === 0 ? 'Search players to filter…' : 'Add player…'}
-              value={playerSearch}
-              onChange={e => { setPlayerSearch(e.target.value); setShowDropdown(true); setHighlightIdx(0); }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
-              onKeyDown={handleSearchKeyDown}
-              style={{
-                flex: 1, minWidth: 125, background: 'transparent', border: 'none', outline: 'none',
-                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 14,
-                padding: '4px 0',
-              }}
-            />
-            {(selectedPlayers.length > 0 || playerSearch) && (
-              <button
-                onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }}
-                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
-              >✕</button>
-            )}
-          </div>
-          {showDropdown && autocompleteSuggestions.length > 0 && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-              background: '#111', border: '1px solid #2a2a2a', borderRadius: 6,
-              marginTop: 3, maxHeight: 200, overflowY: 'auto',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-            }}>
-              {autocompleteSuggestions.map((name, i) => (
-                <div
-                  key={name}
-                  onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
-                  onMouseEnter={() => setHighlightIdx(i)}
-                  style={{
-                    padding: '8px 15px', cursor: 'pointer',
-                    fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#ddd',
-                    background: i === highlightIdx ? '#00e5a015' : 'transparent',
-                    borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid #1a1a1a' : 'none',
-                  }}
-                >{name}</div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={{ position: 'relative', flex: '0 0 200px' }}>
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
-            background: '#0c0c0c', border: '1px solid #232323', borderRadius: 6,
-            padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
-          }}>
-            {selectedTeams.map(team => (
-              <span key={team} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontFamily: "'Space Mono', monospace", fontSize: 13,
-                background: '#3b82f615', color: '#60a5fa',
-                border: '1px solid #3b82f635', borderRadius: 4,
-                padding: '3px 8px', whiteSpace: 'nowrap',
-              }}>
-                {team}
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeTeam(team); }}
-                  style={{
-                    background: 'none', border: 'none', color: '#60a5fa66',
-                    cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
-                  }}
-                >✕</button>
-              </span>
-            ))}
-            <input
-              ref={teamSearchRef}
-              type="text"
-              placeholder={selectedTeams.length === 0 ? 'Stack team…' : 'Add team…'}
-              value={teamSearch}
-              onChange={e => { setTeamSearch(e.target.value); setShowTeamDropdown(true); setTeamHighlightIdx(0); }}
-              onFocus={() => setShowTeamDropdown(true)}
-              onBlur={() => { teamBlurTimeout.current = setTimeout(() => setShowTeamDropdown(false), 150); }}
-              onKeyDown={handleTeamKeyDown}
-              style={{
-                flex: 1, minWidth: 75, background: 'transparent', border: 'none', outline: 'none',
-                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 14,
-                padding: '4px 0',
-              }}
-            />
-            {(selectedTeams.length > 0 || teamSearch) && (
-              <button
-                onClick={() => { setSelectedTeams([]); setTeamSearch(''); }}
-                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
-              >✕</button>
-            )}
-          </div>
-          {showTeamDropdown && teamAutocompleteSuggestions.length > 0 && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-              background: '#111', border: '1px solid #2a2a2a', borderRadius: 6,
-              marginTop: 3, maxHeight: 200, overflowY: 'auto',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-            }}>
-              {teamAutocompleteSuggestions.map((team, i) => (
-                <div
-                  key={team}
-                  onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
-                  onMouseEnter={() => setTeamHighlightIdx(i)}
-                  style={{
-                    padding: '8px 15px', cursor: 'pointer',
-                    fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#ddd',
-                    background: i === teamHighlightIdx ? '#3b82f615' : 'transparent',
-                    borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid #1a1a1a' : 'none',
-                  }}
-                >{team}</div>
-              ))}
-            </div>
-          )}
-        </div>
-        {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
-          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 13, color: '#666', paddingTop: 10 }}>
-            <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
-            {' '}roster{displayed.length !== 1 ? 's' : ''} match
-          </span>
-        )}
-      </div>
 
-      {/* ── Filters ── */}
-      <div style={styles.filterBar}>
-        <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
-        <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
-        <FilterGroup label="TE" options={TE_OPTIONS} value={teFilter} onChange={setTeFilter} counts={teCounts} />
-        <div style={styles.filterGroupWrap}>
-          <span style={styles.filterGroupLabel}>TOURNEY</span>
-          <select
-            value={tournamentFilter}
-            onChange={e => setTournamentFilter(e.target.value)}
-            style={{
-              background: '#0c0c0c', border: '1px solid #232323', borderRadius: 4,
-              color: '#fafafa', fontFamily: "'Space Mono', monospace", fontSize: 13,
-              padding: '5px 10px', cursor: 'pointer',
-            }}
-          >
-            {allTournaments.map(t => (
-              <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
-            ))}
-          </select>
+      {/* ── Control Panel ── */}
+      <div style={styles.controlPanel}>
+        {/* Section A: Search */}
+        <div>
+          <span style={styles.sectionLabel}>Search</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, marginTop: 10, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: '1 1 55%', minWidth: 250 }}>
+              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>Player Search</label>
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
+                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
+                padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
+              }}>
+                {selectedPlayers.map(name => (
+                  <span key={name} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+                    background: '#00e5a015', color: '#00e5a0',
+                    border: '1px solid #00e5a035', borderRadius: 4,
+                    padding: '3px 8px', whiteSpace: 'nowrap',
+                  }}>
+                    {name}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removePlayer(name); }}
+                      style={{
+                        background: 'none', border: 'none', color: '#00e5a066',
+                        cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
+                      }}
+                    >✕</button>
+                  </span>
+                ))}
+                <input
+                  ref={searchRef}
+                  type="text"
+                  placeholder={selectedPlayers.length === 0 ? 'Search players to filter…' : 'Add player…'}
+                  value={playerSearch}
+                  onChange={e => { setPlayerSearch(e.target.value); setShowDropdown(true); setHighlightIdx(0); }}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
+                  onKeyDown={handleSearchKeyDown}
+                  style={{
+                    flex: 1, minWidth: 125, background: 'transparent', border: 'none', outline: 'none',
+                    color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
+                    padding: '4px 0',
+                  }}
+                />
+                {(selectedPlayers.length > 0 || playerSearch) && (
+                  <button
+                    onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
+                  >✕</button>
+                )}
+              </div>
+              {showDropdown && autocompleteSuggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6,
+                  marginTop: 3, maxHeight: 200, overflowY: 'auto',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                }}>
+                  {autocompleteSuggestions.map((name, i) => (
+                    <div
+                      key={name}
+                      onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
+                      onMouseEnter={() => setHighlightIdx(i)}
+                      style={{
+                        padding: '8px 15px', cursor: 'pointer',
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: 'var(--text-secondary)',
+                        background: i === highlightIdx ? '#00e5a015' : 'transparent',
+                        borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none',
+                      }}
+                    >{name}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ position: 'relative', flex: '1 1 35%', minWidth: 180 }}>
+              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>Team Stack</label>
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
+                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
+                padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
+              }}>
+                {selectedTeams.map(team => (
+                  <span key={team} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+                    background: '#3b82f615', color: '#60a5fa',
+                    border: '1px solid #3b82f635', borderRadius: 4,
+                    padding: '3px 8px', whiteSpace: 'nowrap',
+                  }}>
+                    {team}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeTeam(team); }}
+                      style={{
+                        background: 'none', border: 'none', color: '#60a5fa66',
+                        cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
+                      }}
+                    >✕</button>
+                  </span>
+                ))}
+                <input
+                  ref={teamSearchRef}
+                  type="text"
+                  placeholder={selectedTeams.length === 0 ? 'Stack team…' : 'Add team…'}
+                  value={teamSearch}
+                  onChange={e => { setTeamSearch(e.target.value); setShowTeamDropdown(true); setTeamHighlightIdx(0); }}
+                  onFocus={() => setShowTeamDropdown(true)}
+                  onBlur={() => { teamBlurTimeout.current = setTimeout(() => setShowTeamDropdown(false), 150); }}
+                  onKeyDown={handleTeamKeyDown}
+                  style={{
+                    flex: 1, minWidth: 75, background: 'transparent', border: 'none', outline: 'none',
+                    color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
+                    padding: '4px 0',
+                  }}
+                />
+                {(selectedTeams.length > 0 || teamSearch) && (
+                  <button
+                    onClick={() => { setSelectedTeams([]); setTeamSearch(''); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
+                  >✕</button>
+                )}
+              </div>
+              {showTeamDropdown && teamAutocompleteSuggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6,
+                  marginTop: 3, maxHeight: 200, overflowY: 'auto',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                }}>
+                  {teamAutocompleteSuggestions.map((team, i) => (
+                    <div
+                      key={team}
+                      onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
+                      onMouseEnter={() => setTeamHighlightIdx(i)}
+                      style={{
+                        padding: '8px 15px', cursor: 'pointer',
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: 'var(--text-secondary)',
+                        background: i === teamHighlightIdx ? '#3b82f615' : 'transparent',
+                        borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none',
+                      }}
+                    >{team}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text-muted)', paddingTop: 24, whiteSpace: 'nowrap' }}>
+                <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
+                {' '}roster{displayed.length !== 1 ? 's' : ''} match
+              </span>
+            )}
+          </div>
         </div>
-        <div style={styles.filterGroupWrap}>
-          <span style={styles.filterGroupLabel}>CLV</span>
-          <div style={{ display: 'flex', gap: 5 }}>
-            {[['all', 'All'], ['positive', '▲ +CLV'], ['negative', '▼ −CLV']].map(([v, lbl]) => (
-              <button key={v} style={{ ...styles.filterBtn, ...(clvFilter === v ? styles.filterBtnActive : {}) }} onClick={() => setClvFilter(v)}>
-                {lbl}
-              </button>
-            ))}
+
+        {/* Section B: Archetype Filters */}
+        <div style={styles.sectionDivider}>
+          <span style={styles.sectionLabel}>Archetype Filters</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+            <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
+            <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
+            <FilterGroup label="TE" options={TE_OPTIONS} value={teFilter} onChange={setTeFilter} counts={teCounts} />
+          </div>
+        </div>
+
+        {/* Section C: Additional Filters */}
+        <div style={styles.sectionDivider}>
+          <span style={styles.sectionLabel}>Additional Filters</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 30, marginTop: 10, flexWrap: 'wrap' }}>
+            <div>
+              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>Tournament</label>
+              <select
+                value={tournamentFilter}
+                onChange={e => setTournamentFilter(e.target.value)}
+                style={{
+                  background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
+                  color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+                  padding: '5px 10px', cursor: 'pointer',
+                }}
+              >
+                {allTournaments.map(t => (
+                  <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>CLV Filter</label>
+              <div style={{ display: 'flex', gap: 5 }}>
+                {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
+                  <button key={v} style={{ ...styles.filterBtn, ...(clvFilter === v ? { background: '#00e5a01a', borderColor: '#00e5a0', color: '#00e5a0' } : {}) }} onClick={() => setClvFilter(v)}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -906,7 +924,7 @@ export default function RosterViewer({ rosterData = [] }) {
                         <span style={styles.entryId}>{shortEntry(roster.entry_id)}</span>
                         {selectedPlayers.length > 0 && rosterSearchMatches[roster.entry_id]?.map(name => (
                           <span key={name} style={{
-                            fontFamily: "'Space Mono', monospace", fontSize: 11,
+                            fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                             background: '#00e5a010', color: '#00e5a0',
                             border: '1px solid #00e5a030', borderRadius: 3,
                             padding: '2px 6px', whiteSpace: 'nowrap',
@@ -916,7 +934,7 @@ export default function RosterViewer({ rosterData = [] }) {
                           .filter(p => selectedTeams.includes(p.team) && !selectedPlayers.includes(p.name))
                           .map(p => (
                           <span key={`team-${p.name}`} style={{
-                            fontFamily: "'Space Mono', monospace", fontSize: 11,
+                            fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                             background: '#3b82f610', color: '#60a5fa',
                             border: '1px solid #3b82f630', borderRadius: 3,
                             padding: '2px 6px', whiteSpace: 'nowrap',
@@ -924,7 +942,7 @@ export default function RosterViewer({ rosterData = [] }) {
                         ))}
                         {roster.tournamentTitle && (
                           <span style={{
-                            fontFamily: "'Space Mono', monospace", fontSize: 11,
+                            fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                             color: '#666', whiteSpace: 'nowrap',
                           }}>{roster.tournamentTitle}</span>
                         )}
@@ -935,7 +953,7 @@ export default function RosterViewer({ rosterData = [] }) {
                     <td style={{ ...styles.td, textAlign: 'center' }}>
                       {grade.grade ? (
                         <span title={gradeTooltip} style={{
-                          fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700,
+                          fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700,
                           color: grade.grade.color, cursor: 'help',
                         }}>
                           {grade.grade.letter}
@@ -943,13 +961,13 @@ export default function RosterViewer({ rosterData = [] }) {
                       ) : <span style={{ color: '#555' }}>—</span>}
                     </td>
 
-                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#bbb' }}>
+                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: '#bbb' }}>
                       {roster.draftDate
                         ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                         : '—'}
                     </td>
                     <td style={{ ...styles.td, textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
-                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 15, color: '#60a5fa' }}>
+                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#60a5fa' }}>
                       {roster.projectedPoints > 0 ? roster.projectedPoints.toFixed(1) : '—'}
                     </td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
@@ -998,8 +1016,8 @@ export default function RosterViewer({ rosterData = [] }) {
 
 function FilterGroup({ label, options, value, onChange, counts = {} }) {
   return (
-    <div style={styles.filterGroupWrap}>
-      <span style={styles.filterGroupLabel}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <span style={{ ...styles.filterGroupLabel, minWidth: 32 }}>{label}</span>
       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
         {options.map(opt => {
           const isActive = value === opt;
@@ -1066,7 +1084,7 @@ function DraftCapitalMap({ players }) {
                   background: posColor(p.position) + '33',
                   border: `1px solid ${posColor(p.position)}66`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontFamily: "'Space Mono', monospace",
+                  fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
                   color: posColor(p.position), fontWeight: 700, cursor: 'default',
                 }}>
                   {p.position}
@@ -1075,13 +1093,13 @@ function DraftCapitalMap({ players }) {
               {picks.length === 0 && (
                 <div style={{ width: 30, height: 22, borderRadius: 3, background: '#111', border: '1px solid #1a1a1a' }} />
               )}
-              <span style={{ fontSize: 9, color: '#555', fontFamily: "'Space Mono', monospace", marginTop: 3 }}>R{round}</span>
+              <span style={{ fontSize: 9, color: '#555', fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>R{round}</span>
             </div>
           );
         })}
       </div>
       <div style={{
-        fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#888',
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#888',
         marginTop: 8, letterSpacing: 0.3,
       }}>
         {summaryParts.join(' | ')}
@@ -1099,10 +1117,10 @@ function StackSummaryBar({ stacks }) {
       padding: '10px 18px', borderBottom: '1px solid #0f0f0f',
       display: 'flex', gap: 15, flexWrap: 'wrap', alignItems: 'center',
     }}>
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#666', letterSpacing: 1.5, textTransform: 'uppercase' }}>STACKS</span>
+      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#666', letterSpacing: 1.5, textTransform: 'uppercase' }}>STACKS</span>
       {stacks.map((s, i) => (
         <span key={i} style={{
-          fontFamily: "'Space Mono', monospace", fontSize: 13,
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
           background: s.color + '15', color: s.color,
           border: `1px solid ${s.color}33`, borderRadius: 4,
           padding: '4px 10px',
@@ -1132,7 +1150,7 @@ function GradeCard({ grade }) {
       display: 'flex', gap: 20, alignItems: 'center',
     }}>
       <div style={{
-        fontFamily: "'Space Mono', monospace", fontSize: 28, fontWeight: 700,
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 28, fontWeight: 700,
         color: grade.grade.color, minWidth: 50, textAlign: 'center',
       }}>
         {grade.grade.letter}
@@ -1141,8 +1159,8 @@ function GradeCard({ grade }) {
         {bars.map(b => (
           <div key={b.label} style={{ flex: 1, minWidth: 75 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#888', letterSpacing: 1 }}>{b.label}</span>
-              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: b.color, fontWeight: 700 }}>{b.score}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#888', letterSpacing: 1 }}>{b.label}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: b.color, fontWeight: 700 }}>{b.score}</span>
             </div>
             <div style={{ height: 5, background: '#1a1a1a', borderRadius: 2 }}>
               <div style={{
@@ -1154,7 +1172,7 @@ function GradeCard({ grade }) {
         ))}
       </div>
       <div style={{
-        fontFamily: "'Space Mono', monospace", fontSize: 13, color: '#666',
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: '#666',
       }}>
         {grade.composite}/100
       </div>
@@ -1231,10 +1249,10 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
                     {p.position}
                   </span>
                 </td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#e0e0e0', fontFamily: "'Space Mono', monospace", fontSize: 14 }}>{p.team}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontFamily: "'Space Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', color: '#e0e0e0', fontFamily: "'JetBrains Mono', monospace", fontSize: 14 }}>{p.team}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
                 <td style={{ ...styles.dtd, textAlign: 'center' }}>
                   {clvPct !== null ? (
                     <div style={styles.clvBar}>
@@ -1266,72 +1284,77 @@ const styles = {
     background: '#00e5a025', color: '#00e5a0',
     borderRadius: 2, padding: '0 1px', fontWeight: 700,
   },
-  root: { fontFamily: "'DM Sans', sans-serif", color: '#ffffff', padding: '0 0 40px' },
+  root: { fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', padding: '0 0 40px', overflowY: 'auto', flex: 1, minHeight: 0 },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 20, paddingBottom: 18, borderBottom: '1px solid #1a1a1a',
+    marginBottom: 20, paddingBottom: 18, borderBottom: '1px solid var(--border)',
   },
-  title: { fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700, letterSpacing: 3, color: '#e6e6e6', margin: 0 },
-  subtitle: { fontSize: 14, color: '#e4e4e4', margin: '5px 0 0', fontFamily: "'Space Mono', monospace" },
+  title: { fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, letterSpacing: 3, color: 'var(--text-primary)', margin: 0 },
+  subtitle: { fontSize: 14, color: 'var(--text-primary)', margin: '5px 0 0', fontFamily: "'JetBrains Mono', monospace" },
 
-  filterBar: {
-    display: 'flex', flexWrap: 'wrap', gap: '13px 30px',
-    padding: '15px 0 18px', borderBottom: '1px solid #181818', marginBottom: 18,
-    alignItems: 'center',
+  controlPanel: {
+    background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
+    padding: 20, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 18,
   },
-  filterGroupWrap: { display: 'flex', alignItems: 'center', gap: 10 },
+  sectionLabel: {
+    fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
+    letterSpacing: '0.05em', color: 'var(--text-secondary)',
+    fontFamily: "'JetBrains Mono', monospace",
+  },
+  sectionDivider: { borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 },
+
   filterGroupLabel: {
-    fontFamily: "'Space Mono', monospace", fontSize: 11, letterSpacing: 1.5,
-    textTransform: 'uppercase', color: '#fafafa', minWidth: 28,
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: 1.5,
+    textTransform: 'uppercase', color: 'var(--text-primary)', minWidth: 28,
   },
   filterBtn: {
-    background: 'transparent', border: '1px solid #a1a3a2', color: '#fafafa',
-    borderRadius: 4, padding: '5px 11px', fontSize: 13,
-    fontFamily: "'Space Mono', monospace", cursor: 'pointer',
+    background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)',
+    borderRadius: 6, padding: '5px 11px', fontSize: 13,
+    fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer',
     letterSpacing: 0.3, transition: 'all 0.12s', whiteSpace: 'nowrap',
   },
   filterBtnActive: {},
 
-  tableWrap: { overflowX: 'auto', borderRadius: 8, border: '1px solid #1a1a1a' },
+  tableWrap: { overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 16 },
-  thead: { background: '#0d0d0d' },
+  thead: { background: 'rgba(0,0,0,0.2)' },
   th: {
     padding: '14px 18px', textAlign: 'left',
-    fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
-    letterSpacing: 1.5, color: '#dadada', textTransform: 'uppercase',
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+    letterSpacing: 1.5, color: 'var(--text-secondary)', textTransform: 'uppercase',
     cursor: 'pointer', userSelect: 'none',
-    borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap',
+    borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
   },
-  row: { borderBottom: '1px solid #141414', cursor: 'pointer', transition: 'background 0.1s' },
-  rowOpen: { background: '#080f0c', borderBottom: '1px solid #00e5a07a' },
+  row: { borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.1s' },
+  rowOpen: { background: 'var(--bg-dark)', borderBottom: '1px solid #00e5a07a' },
   td: { padding: '14px 18px', verticalAlign: 'middle' },
-  entryId: { fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#bbb', letterSpacing: 0.5 },
+  entryId: { fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: 'var(--text-secondary)', letterSpacing: 0.5 },
   clvBadge: {
-    fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700,
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700,
     border: '1px solid', borderRadius: 4, padding: '3px 9px',
   },
-  chevron: { color: '#dddddd', fontSize: 13, fontFamily: "'Space Mono', monospace" },
+  chevron: { color: 'var(--text-secondary)', fontSize: 13, fontFamily: "'JetBrains Mono', monospace" },
 
-  detail: { background: '#060c09', borderTop: '1px solid #00e5a01a' },
+  detail: { background: 'var(--bg-dark)', borderTop: '1px solid #00e5a01a' },
   dth: {
     padding: '11px 18px', textAlign: 'left',
-    fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
-    letterSpacing: 1.5, color: '#ffffff', textTransform: 'uppercase',
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+    letterSpacing: 1.5, color: 'var(--text-primary)', textTransform: 'uppercase',
     cursor: 'pointer', userSelect: 'none',
-    borderBottom: '1px solid #0f0f0f', whiteSpace: 'nowrap',
+    borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
   },
-  drow: { borderBottom: '1px solid #0d0d0d' },
+  drow: { borderBottom: '1px solid var(--border)' },
   dtd: { padding: '10px 18px', verticalAlign: 'middle' },
-  playerName: { fontWeight: 500, color: '#ccc', fontSize: 16 },
-  posPill: { fontSize: 13, fontFamily: "'Space Mono', monospace", border: '1px solid', borderRadius: 3, padding: '2px 6px', letterSpacing: 0.5 },
+  playerName: { fontWeight: 500, color: 'var(--text-secondary)', fontSize: 16 },
+  posPill: { fontSize: 13, fontFamily: "'JetBrains Mono', monospace", border: '1px solid', borderRadius: 3, padding: '2px 6px', letterSpacing: 0.5 },
   clvBar: { position: 'relative', width: '100%', height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   clvFill: { position: 'absolute', height: 4, top: '50%', transform: 'translateY(-50%)', borderRadius: 2, opacity: 0.5, maxWidth: '50%' },
-  clvText: { position: 'relative', fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700, zIndex: 1, background: '#060c09', padding: '0 5px' },
+  clvText: { position: 'relative', fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700, zIndex: 1, background: 'var(--bg-dark)', padding: '0 5px' },
 
-  empty: { textAlign: 'center', padding: '75px 25px', color: '#e2e2e2', fontFamily: "'Space Mono', monospace" },
+  empty: { textAlign: 'center', padding: '75px 25px', color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" },
 
   uniqBadge: {
-    fontFamily: "'Space Mono', monospace",
+    fontFamily: "'JetBrains Mono', monospace",
     fontSize: 14,
     fontWeight: 700,
     border: '1px solid',

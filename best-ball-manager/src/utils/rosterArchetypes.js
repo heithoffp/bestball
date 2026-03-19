@@ -31,7 +31,7 @@ export const PROTOCOL_TREE = {
       QB_ELITE: { target: 20, children: { TE_LATE: 100, TE_ANCHOR: 0, TE_ELITE: 0} }
     }
   },
-  RB_VALUE: {
+  RB_BALANCED: {
     target: 0, // "Balanced" strategies are discouraged for top 0.1% hunting
     color: '#ef4444',
     children: {
@@ -47,7 +47,7 @@ export const ARCHETYPE_METADATA = {
   RB_ZERO: { name: 'Zero RB', desc: 'No RB R1-6. Capital Rich.' },
   RB_HYPER_FRAGILE: { name: 'Hyper Fragile', desc: '3 RB R1-3. Capital Poor.' },
   RB_HERO: { name: 'Hero RB', desc: '1 RB R1-2. Middle Class.' },
-  RB_VALUE: { name: 'Value', desc: 'Value Picks' },
+  RB_BALANCED: { name: 'Balanced', desc: 'Balanced Approach' },
   QB_ELITE: { name: 'Elite QB', desc: 'Rounds 1-3' },
   QB_CORE: { name: 'Core QB', desc: 'Rounds 4-9' },
   QB_LATE: { name: 'Late QB', desc: 'Round 10+' },
@@ -74,7 +74,7 @@ function countPosition(roster, position, start, end) {
  * Classifies roster based on the strict structural rules for top-0.1% optimization
  */
 export function classifyRosterPath(roster) {
-  const path = { rb: 'RB_VALUE', qb: 'QB_LATE', te: 'TE_LATE' };
+  const path = { rb: 'RB_BALANCED', qb: 'QB_LATE', te: 'TE_LATE' };
 
   // RB Capital Counts
   const rbRounds1to3 = countPosition(roster, 'RB', 1, 3);
@@ -94,7 +94,7 @@ export function classifyRosterPath(roster) {
     path.rb = 'RB_HERO';
   } else {
     // Failed to meet strict structural thresholds
-    path.rb = 'RB_VALUE';
+    path.rb = 'RB_BALANCED';
   }
 
   // QB Logic (Elite = Top 4 Rounds, Core = 5-9, Late = 10+)

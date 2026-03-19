@@ -16,7 +16,7 @@ const COLORS = {
 const getPosColor = (pos) => COLORS[pos] || COLORS.default;
 
 // Archetype filter options
-const RB_OPTIONS = ['Any', 'RB_ZERO', 'RB_HYPER_FRAGILE', 'RB_HERO', 'RB_VALUE'];
+const RB_OPTIONS = ['Any', 'RB_ZERO', 'RB_HYPER_FRAGILE', 'RB_HERO', 'RB_BALANCED'];
 const QB_OPTIONS = ['Any', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['Any', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 

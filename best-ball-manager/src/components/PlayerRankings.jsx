@@ -78,7 +78,7 @@ const RankingRow = React.memo(function RankingRow({
       {hasTierAbove && (
         <tr>
           <td colSpan={10} style={{
-            padding: 0, height: 24, border: 'none',
+            padding: 0, height: 36, border: 'none',
             background: tierColor.border,
             position: 'relative',
           }}>
@@ -96,7 +96,7 @@ const RankingRow = React.memo(function RankingRow({
                   background: 'rgba(0,0,0,0.4)', color: '#fff',
                   border: 'none', borderRadius: 0,
                   padding: '0 8px', boxSizing: 'border-box',
-                  fontSize: 11, fontWeight: 700, textAlign: 'center',
+                  fontSize: 16, fontWeight: 700, textAlign: 'center',
                   fontFamily: 'inherit', outline: 'none',
                 }}
               />
@@ -107,11 +107,11 @@ const RankingRow = React.memo(function RankingRow({
                 style={{
                   position: 'absolute', top: '50%', left: '50%',
                   transform: 'translate(-50%, -50%)',
-                  fontSize: 11, fontWeight: 700, color: '#fff',
+                  fontSize: 16, fontWeight: 700, color: '#fff',
                   textShadow: '0 1px 3px rgba(0,0,0,0.5)',
                   cursor: 'pointer', userSelect: 'none',
                   background: 'rgba(0,0,0,0.25)', borderRadius: 4,
-                  padding: '1px 8px',
+                  padding: '2px 12px',
                 }}
               >
                 {tierLabelText}
@@ -146,39 +146,40 @@ const RankingRow = React.memo(function RankingRow({
           cursor: canDrag ? 'grab' : 'default',
         }}
       >
-        <td style={{ padding: '6px 4px', color: 'var(--text-muted)' }}>
-          {canDrag && <GripVertical size={14} />}
+        <td style={{ padding: '8px 5px', color: 'var(--text-muted)' }}>
+          {canDrag && <GripVertical size={16} />}
         </td>
-        <td style={{ padding: '6px 4px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
+        <td style={{ padding: '8px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 16 }}>
           {displayRank}
         </td>
-        <td style={{ padding: '6px 4px', textAlign: 'center', color: POS_COLORS[pos] || 'var(--text-muted)', fontSize: 12 }}>
+        <td style={{ padding: '8px 5px', textAlign: 'center', color: POS_COLORS[pos] || 'var(--text-muted)', fontSize: 15 }}>
           {posRank}
         </td>
-        <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+        <td style={{ padding: '8px 5px', textAlign: 'center' }}>
           <span style={{
-            fontSize: 11, fontWeight: 700, color: tierColor.text,
-            background: tierColor.bg, borderRadius: 4, padding: '2px 5px',
+            fontSize: 14, fontWeight: 700, color: tierColor.text,
+            background: tierColor.bg, borderRadius: 4, padding: '2px 6px',
             border: `1px solid ${tierColor.border}40`,
           }}>{tierLabel}</span>
         </td>
         <td style={{
-          padding: '6px 6px', fontWeight: 500,
+          padding: '8px 6px', fontWeight: 500,
           borderLeft: `3px solid ${color}`, paddingLeft: 8,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontSize: 16,
         }}>
           {player.name}
         </td>
-        <td style={{ padding: '6px 4px' }}>
+        <td style={{ padding: '8px 5px' }}>
           <span className={badgeClass}>{pos}</span>
         </td>
-        <td style={{ padding: '6px 4px', color: 'var(--text-secondary)', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <td style={{ padding: '8px 5px', color: 'var(--text-secondary)', fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {player.teamName || '-'}
         </td>
-        <td style={{ padding: '6px 4px', color: 'var(--text-secondary)', fontSize: 13 }}>
+        <td style={{ padding: '8px 5px', color: 'var(--text-secondary)', fontSize: 16 }}>
           {player.latestAdp ?? player.originalAdp ?? '-'}
         </td>
-        <td style={{ padding: '6px 4px', fontSize: 13 }}>
+        <td style={{ padding: '8px 5px', fontSize: 16 }}>
           {(() => {
             const adpStr = player.latestAdp ?? player.originalAdp;
             const adpNum = parseFloat(adpStr);
@@ -188,7 +189,7 @@ const RankingRow = React.memo(function RankingRow({
             return <span style={{ color, fontWeight: 600 }}>{diff > 0 ? '+' : ''}{diff}</span>;
           })()}
         </td>
-        <td style={{ padding: '6px 4px', color: 'var(--text-secondary)', fontSize: 13 }}>
+        <td style={{ padding: '8px 5px', color: 'var(--text-secondary)', fontSize: 16 }}>
           {player.projectedPoints || '-'}
         </td>
       </tr>
@@ -494,7 +495,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -588,9 +589,9 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
       {/* Table */}
       <div
         ref={scrollContainerRef}
-        style={{ maxHeight: '60vh', overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 16, tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '3%' }} />
             <col style={{ width: '4%' }} />
@@ -605,16 +606,16 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
           </colgroup>
           <thead>
             <tr style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 2 }}>
-              <th style={{ padding: '8px 4px' }} />
-              <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600 }}>#</th>
-              <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600 }}>Pos#</th>
-              <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600 }}>Tier</th>
-              <th style={{ padding: '8px 6px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Player</th>
-              <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600 }}>Pos</th>
-              <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600 }}>Team</th>
-              <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600 }}>ADP</th>
-              <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600 }}>Diff</th>
-              <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600 }}>Proj</th>
+              <th style={{ padding: '10px 5px' }} />
+              <th style={{ padding: '10px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>#</th>
+              <th style={{ padding: '10px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Pos#</th>
+              <th style={{ padding: '10px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Tier</th>
+              <th style={{ padding: '10px 6px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Player</th>
+              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Pos</th>
+              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Team</th>
+              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>ADP</th>
+              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Diff</th>
+              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Proj</th>
             </tr>
           </thead>
           <tbody>
