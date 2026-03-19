@@ -195,12 +195,12 @@ function archetypeColor(key) { return ARCHETYPE_COLORS[key] || '#6b7280'; }
 function ArchetypePill({ archetypeKey }) {
   const meta = ARCHETYPE_METADATA[archetypeKey];
   const color = archetypeColor(archetypeKey);
-  if (!meta) return <span style={{ color: '#f3f3f3', fontSize: 11 }}>—</span>;
+  if (!meta) return <span style={{ color: '#f3f3f3', fontSize: 14 }}>—</span>;
   return (
     <span title={meta.desc} style={{
-      fontFamily: "'Space Mono', monospace", fontSize: 10,
+      fontFamily: "'Space Mono', monospace", fontSize: 13,
       background: color + '1a', color, border: `1px solid ${color}44`,
-      borderRadius: 4, padding: '2px 7px', letterSpacing: 0.3,
+      borderRadius: 4, padding: '3px 9px', letterSpacing: 0.3,
       whiteSpace: 'nowrap', cursor: 'default',
     }}>
       {meta.name}
@@ -221,13 +221,13 @@ function PositionSnapshot({ snap }) {
   const entries = ORDER.filter(p => snap[p]).map(p => ({ pos: p, count: snap[p] }));
   Object.keys(snap).forEach(p => { if (!ORDER.includes(p)) entries.push({ pos: p, count: snap[p] }); });
   return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
       {entries.map(({ pos, count }) => (
         <span key={pos} style={{
-          fontSize: 10, fontFamily: "'Space Mono', monospace",
+          fontSize: 13, fontFamily: "'Space Mono', monospace",
           background: posColor(pos) + '22', color: posColor(pos),
           border: `1px solid ${posColor(pos)}55`, borderRadius: 3,
-          padding: '1px 5px', letterSpacing: 0.5,
+          padding: '2px 6px', letterSpacing: 0.5,
         }}>
           {count}{pos}
         </span>
@@ -656,14 +656,14 @@ export default function RosterViewer({ rosterData = [] }) {
   }
 
   function SortIcon({ col }) {
-    if (sortKey !== col) return <span style={{ opacity: 0.25, marginLeft: 4 }}>↕</span>;
-    return <span style={{ marginLeft: 4 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
+    if (sortKey !== col) return <span style={{ opacity: 0.25, marginLeft: 5 }}>↕</span>;
+    return <span style={{ marginLeft: 5 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
   }
 
   if (!rosterData.length) {
     return (
       <div style={styles.empty}>
-        <span style={{ fontSize: 40 }}>📋</span>
+        <span style={{ fontSize: 50 }}>📋</span>
         <p>No roster data loaded. Go to the Exposures tab and use the Upload button to import your Underdog Exposure CSV.</p>
       </div>
     );
@@ -680,27 +680,27 @@ export default function RosterViewer({ rosterData = [] }) {
           <p style={styles.subtitle}>{displayed.length} / {rosters.length} entries · {rosterData.length} players</p>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, paddingBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, paddingBottom: 15, flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: '0 0 320px' }}>
           <div style={{
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4,
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
             background: '#0c0c0c', border: '1px solid #232323', borderRadius: 6,
-            padding: '4px 8px', minHeight: 32, boxSizing: 'border-box',
+            padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
           }}>
             {selectedPlayers.map(name => (
               <span key={name} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                fontFamily: "'Space Mono', monospace", fontSize: 10,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontFamily: "'Space Mono', monospace", fontSize: 13,
                 background: '#00e5a015', color: '#00e5a0',
                 border: '1px solid #00e5a035', borderRadius: 4,
-                padding: '2px 6px', whiteSpace: 'nowrap',
+                padding: '3px 8px', whiteSpace: 'nowrap',
               }}>
                 {name}
                 <button
                   onClick={(e) => { e.stopPropagation(); removePlayer(name); }}
                   style={{
                     background: 'none', border: 'none', color: '#00e5a066',
-                    cursor: 'pointer', fontSize: 10, padding: 0, lineHeight: 1,
+                    cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
                   }}
                 >✕</button>
               </span>
@@ -715,15 +715,15 @@ export default function RosterViewer({ rosterData = [] }) {
               onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
               onKeyDown={handleSearchKeyDown}
               style={{
-                flex: 1, minWidth: 100, background: 'transparent', border: 'none', outline: 'none',
-                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 11,
-                padding: '3px 0',
+                flex: 1, minWidth: 125, background: 'transparent', border: 'none', outline: 'none',
+                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 14,
+                padding: '4px 0',
               }}
             />
             {(selectedPlayers.length > 0 || playerSearch) && (
               <button
                 onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }}
-                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, padding: '0 2px' }}
+                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
               >✕</button>
             )}
           </div>
@@ -731,7 +731,7 @@ export default function RosterViewer({ rosterData = [] }) {
             <div style={{
               position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
               background: '#111', border: '1px solid #2a2a2a', borderRadius: 6,
-              marginTop: 2, maxHeight: 200, overflowY: 'auto',
+              marginTop: 3, maxHeight: 200, overflowY: 'auto',
               boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             }}>
               {autocompleteSuggestions.map((name, i) => (
@@ -740,8 +740,8 @@ export default function RosterViewer({ rosterData = [] }) {
                   onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
                   onMouseEnter={() => setHighlightIdx(i)}
                   style={{
-                    padding: '6px 12px', cursor: 'pointer',
-                    fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#ddd',
+                    padding: '8px 15px', cursor: 'pointer',
+                    fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#ddd',
                     background: i === highlightIdx ? '#00e5a015' : 'transparent',
                     borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid #1a1a1a' : 'none',
                   }}
@@ -752,24 +752,24 @@ export default function RosterViewer({ rosterData = [] }) {
         </div>
         <div style={{ position: 'relative', flex: '0 0 200px' }}>
           <div style={{
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4,
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
             background: '#0c0c0c', border: '1px solid #232323', borderRadius: 6,
-            padding: '4px 8px', minHeight: 32, boxSizing: 'border-box',
+            padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
           }}>
             {selectedTeams.map(team => (
               <span key={team} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                fontFamily: "'Space Mono', monospace", fontSize: 10,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontFamily: "'Space Mono', monospace", fontSize: 13,
                 background: '#3b82f615', color: '#60a5fa',
                 border: '1px solid #3b82f635', borderRadius: 4,
-                padding: '2px 6px', whiteSpace: 'nowrap',
+                padding: '3px 8px', whiteSpace: 'nowrap',
               }}>
                 {team}
                 <button
                   onClick={(e) => { e.stopPropagation(); removeTeam(team); }}
                   style={{
                     background: 'none', border: 'none', color: '#60a5fa66',
-                    cursor: 'pointer', fontSize: 10, padding: 0, lineHeight: 1,
+                    cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
                   }}
                 >✕</button>
               </span>
@@ -784,15 +784,15 @@ export default function RosterViewer({ rosterData = [] }) {
               onBlur={() => { teamBlurTimeout.current = setTimeout(() => setShowTeamDropdown(false), 150); }}
               onKeyDown={handleTeamKeyDown}
               style={{
-                flex: 1, minWidth: 60, background: 'transparent', border: 'none', outline: 'none',
-                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 11,
-                padding: '3px 0',
+                flex: 1, minWidth: 75, background: 'transparent', border: 'none', outline: 'none',
+                color: '#e6e6e6', fontFamily: "'Space Mono', monospace", fontSize: 14,
+                padding: '4px 0',
               }}
             />
             {(selectedTeams.length > 0 || teamSearch) && (
               <button
                 onClick={() => { setSelectedTeams([]); setTeamSearch(''); }}
-                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, padding: '0 2px' }}
+                style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
               >✕</button>
             )}
           </div>
@@ -800,7 +800,7 @@ export default function RosterViewer({ rosterData = [] }) {
             <div style={{
               position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
               background: '#111', border: '1px solid #2a2a2a', borderRadius: 6,
-              marginTop: 2, maxHeight: 200, overflowY: 'auto',
+              marginTop: 3, maxHeight: 200, overflowY: 'auto',
               boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             }}>
               {teamAutocompleteSuggestions.map((team, i) => (
@@ -809,8 +809,8 @@ export default function RosterViewer({ rosterData = [] }) {
                   onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
                   onMouseEnter={() => setTeamHighlightIdx(i)}
                   style={{
-                    padding: '6px 12px', cursor: 'pointer',
-                    fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#ddd',
+                    padding: '8px 15px', cursor: 'pointer',
+                    fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#ddd',
                     background: i === teamHighlightIdx ? '#3b82f615' : 'transparent',
                     borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid #1a1a1a' : 'none',
                   }}
@@ -820,7 +820,7 @@ export default function RosterViewer({ rosterData = [] }) {
           )}
         </div>
         {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
-          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#666', paddingTop: 8 }}>
+          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 13, color: '#666', paddingTop: 10 }}>
             <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
             {' '}roster{displayed.length !== 1 ? 's' : ''} match
           </span>
@@ -839,8 +839,8 @@ export default function RosterViewer({ rosterData = [] }) {
             onChange={e => setTournamentFilter(e.target.value)}
             style={{
               background: '#0c0c0c', border: '1px solid #232323', borderRadius: 4,
-              color: '#fafafa', fontFamily: "'Space Mono', monospace", fontSize: 10,
-              padding: '4px 8px', cursor: 'pointer',
+              color: '#fafafa', fontFamily: "'Space Mono', monospace", fontSize: 13,
+              padding: '5px 10px', cursor: 'pointer',
             }}
           >
             {allTournaments.map(t => (
@@ -850,7 +850,7 @@ export default function RosterViewer({ rosterData = [] }) {
         </div>
         <div style={styles.filterGroupWrap}>
           <span style={styles.filterGroupLabel}>CLV</span>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 5 }}>
             {[['all', 'All'], ['positive', '▲ +CLV'], ['negative', '▼ −CLV']].map(([v, lbl]) => (
               <button key={v} style={{ ...styles.filterBtn, ...(clvFilter === v ? styles.filterBtnActive : {}) }} onClick={() => setClvFilter(v)}>
                 {lbl}
@@ -902,29 +902,29 @@ export default function RosterViewer({ rosterData = [] }) {
                     onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
                   >
                     <td style={styles.td}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <span style={styles.entryId}>{shortEntry(roster.entry_id)}</span>
                         {selectedPlayers.length > 0 && rosterSearchMatches[roster.entry_id]?.map(name => (
                           <span key={name} style={{
-                            fontFamily: "'Space Mono', monospace", fontSize: 9,
+                            fontFamily: "'Space Mono', monospace", fontSize: 11,
                             background: '#00e5a010', color: '#00e5a0',
                             border: '1px solid #00e5a030', borderRadius: 3,
-                            padding: '1px 5px', whiteSpace: 'nowrap',
+                            padding: '2px 6px', whiteSpace: 'nowrap',
                           }}>✦ {name}</span>
                         ))}
                         {selectedTeams.length > 0 && roster.players
                           .filter(p => selectedTeams.includes(p.team) && !selectedPlayers.includes(p.name))
                           .map(p => (
                           <span key={`team-${p.name}`} style={{
-                            fontFamily: "'Space Mono', monospace", fontSize: 9,
+                            fontFamily: "'Space Mono', monospace", fontSize: 11,
                             background: '#3b82f610', color: '#60a5fa',
                             border: '1px solid #3b82f630', borderRadius: 3,
-                            padding: '1px 5px', whiteSpace: 'nowrap',
+                            padding: '2px 6px', whiteSpace: 'nowrap',
                           }}>✦ {p.name} ({p.team})</span>
                         ))}
                         {roster.tournamentTitle && (
                           <span style={{
-                            fontFamily: "'Space Mono', monospace", fontSize: 9,
+                            fontFamily: "'Space Mono', monospace", fontSize: 11,
                             color: '#666', whiteSpace: 'nowrap',
                           }}>{roster.tournamentTitle}</span>
                         )}
@@ -935,7 +935,7 @@ export default function RosterViewer({ rosterData = [] }) {
                     <td style={{ ...styles.td, textAlign: 'center' }}>
                       {grade.grade ? (
                         <span title={gradeTooltip} style={{
-                          fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700,
+                          fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700,
                           color: grade.grade.color, cursor: 'help',
                         }}>
                           {grade.grade.letter}
@@ -943,13 +943,13 @@ export default function RosterViewer({ rosterData = [] }) {
                       ) : <span style={{ color: '#555' }}>—</span>}
                     </td>
 
-                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#bbb' }}>
+                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#bbb' }}>
                       {roster.draftDate
                         ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                         : '—'}
                     </td>
                     <td style={{ ...styles.td, textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
-                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#60a5fa' }}>
+                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 15, color: '#60a5fa' }}>
                       {roster.projectedPoints > 0 ? roster.projectedPoints.toFixed(1) : '—'}
                     </td>
                     <td style={styles.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
@@ -1000,7 +1000,7 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
   return (
     <div style={styles.filterGroupWrap}>
       <span style={styles.filterGroupLabel}>{label}</span>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
         {options.map(opt => {
           const isActive = value === opt;
           const color = opt === 'all' ? '#00e5a0' : archetypeColor(opt);
@@ -1054,35 +1054,35 @@ function DraftCapitalMap({ players }) {
     .map(pos => `${pos}s: R${posByRound[pos].sort((a, b) => a - b).join(',R')}`);
 
   return (
-    <div style={{ padding: '10px 14px 6px', borderBottom: '1px solid #0f0f0f' }}>
-      <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+    <div style={{ padding: '13px 18px 8px', borderBottom: '1px solid #0f0f0f' }}>
+      <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end' }}>
         {Array.from({ length: maxRound }, (_, i) => i + 1).map(round => {
           const picks = byRound[round] || [];
           return (
-            <div key={round} style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', gap: 1, minWidth: 26 }}>
+            <div key={round} style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', gap: 1, minWidth: 33 }}>
               {picks.map((p, j) => (
                 <div key={j} title={`${p.name} (${p.position} R${round})`} style={{
-                  width: 24, height: 18, borderRadius: 3,
+                  width: 30, height: 22, borderRadius: 3,
                   background: posColor(p.position) + '33',
                   border: `1px solid ${posColor(p.position)}66`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 8, fontFamily: "'Space Mono', monospace",
+                  fontSize: 10, fontFamily: "'Space Mono', monospace",
                   color: posColor(p.position), fontWeight: 700, cursor: 'default',
                 }}>
                   {p.position}
                 </div>
               ))}
               {picks.length === 0 && (
-                <div style={{ width: 24, height: 18, borderRadius: 3, background: '#111', border: '1px solid #1a1a1a' }} />
+                <div style={{ width: 30, height: 22, borderRadius: 3, background: '#111', border: '1px solid #1a1a1a' }} />
               )}
-              <span style={{ fontSize: 7, color: '#555', fontFamily: "'Space Mono', monospace", marginTop: 2 }}>R{round}</span>
+              <span style={{ fontSize: 9, color: '#555', fontFamily: "'Space Mono', monospace", marginTop: 3 }}>R{round}</span>
             </div>
           );
         })}
       </div>
       <div style={{
-        fontFamily: "'Space Mono', monospace", fontSize: 9, color: '#888',
-        marginTop: 6, letterSpacing: 0.3,
+        fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#888',
+        marginTop: 8, letterSpacing: 0.3,
       }}>
         {summaryParts.join(' | ')}
       </div>
@@ -1096,16 +1096,16 @@ function StackSummaryBar({ stacks }) {
   if (!stacks || stacks.length === 0) return null;
   return (
     <div style={{
-      padding: '8px 14px', borderBottom: '1px solid #0f0f0f',
-      display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center',
+      padding: '10px 18px', borderBottom: '1px solid #0f0f0f',
+      display: 'flex', gap: 15, flexWrap: 'wrap', alignItems: 'center',
     }}>
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: '#666', letterSpacing: 1.5, textTransform: 'uppercase' }}>STACKS</span>
+      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#666', letterSpacing: 1.5, textTransform: 'uppercase' }}>STACKS</span>
       {stacks.map((s, i) => (
         <span key={i} style={{
-          fontFamily: "'Space Mono', monospace", fontSize: 10,
+          fontFamily: "'Space Mono', monospace", fontSize: 13,
           background: s.color + '15', color: s.color,
           border: `1px solid ${s.color}33`, borderRadius: 4,
-          padding: '3px 8px',
+          padding: '4px 10px',
         }}>
           <span style={{ fontWeight: 700 }}>{s.team}:</span>{' '}
           {s.members.map(m => m.name.split(' ').pop()).join(' + ')}{' '}
@@ -1128,25 +1128,25 @@ function GradeCard({ grade }) {
   ];
   return (
     <div style={{
-      padding: '8px 14px', borderBottom: '1px solid #0f0f0f',
-      display: 'flex', gap: 16, alignItems: 'center',
+      padding: '10px 18px', borderBottom: '1px solid #0f0f0f',
+      display: 'flex', gap: 20, alignItems: 'center',
     }}>
       <div style={{
-        fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700,
-        color: grade.grade.color, minWidth: 40, textAlign: 'center',
+        fontFamily: "'Space Mono', monospace", fontSize: 28, fontWeight: 700,
+        color: grade.grade.color, minWidth: 50, textAlign: 'center',
       }}>
         {grade.grade.letter}
       </div>
-      <div style={{ display: 'flex', gap: 12, flex: 1 }}>
+      <div style={{ display: 'flex', gap: 15, flex: 1 }}>
         {bars.map(b => (
-          <div key={b.label} style={{ flex: 1, minWidth: 60 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 8, color: '#888', letterSpacing: 1 }}>{b.label}</span>
-              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: b.color, fontWeight: 700 }}>{b.score}</span>
+          <div key={b.label} style={{ flex: 1, minWidth: 75 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#888', letterSpacing: 1 }}>{b.label}</span>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: b.color, fontWeight: 700 }}>{b.score}</span>
             </div>
-            <div style={{ height: 4, background: '#1a1a1a', borderRadius: 2 }}>
+            <div style={{ height: 5, background: '#1a1a1a', borderRadius: 2 }}>
               <div style={{
-                height: 4, borderRadius: 2, background: b.color,
+                height: 5, borderRadius: 2, background: b.color,
                 width: `${b.score}%`, transition: 'width 0.3s',
               }} />
             </div>
@@ -1154,7 +1154,7 @@ function GradeCard({ grade }) {
         ))}
       </div>
       <div style={{
-        fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#666',
+        fontFamily: "'Space Mono', monospace", fontSize: 13, color: '#666',
       }}>
         {grade.composite}/100
       </div>
@@ -1192,8 +1192,8 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
     else { setPSort(key); setPDir(key === 'clv' ? 'desc' : 'asc'); }
   }
   function PI({ col }) {
-    if (pSort !== col) return <span style={{ opacity: 0.2, marginLeft: 3 }}>↕</span>;
-    return <span style={{ marginLeft: 3 }}>{pDir === 'desc' ? '↓' : '↑'}</span>;
+    if (pSort !== col) return <span style={{ opacity: 0.2, marginLeft: 4 }}>↕</span>;
+    return <span style={{ marginLeft: 4 }}>{pDir === 'desc' ? '↓' : '↑'}</span>;
   }
 
   return (
@@ -1222,7 +1222,7 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
               <tr key={`${p.name}-${i}`} style={styles.drow}>
                 <td style={styles.dtd}>
                   <span style={styles.playerName}>
-                    {stackColor && <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: stackColor, marginRight: 5, verticalAlign: 'middle' }} />}
+                    {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
                     {p.name}
                   </span>
                 </td>
@@ -1231,10 +1231,10 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
                     {p.position}
                   </span>
                 </td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#e0e0e0', fontFamily: "'Space Mono', monospace", fontSize: 11 }}>{p.team}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{p.pick || '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', color: '#e0e0e0', fontFamily: "'Space Mono', monospace", fontSize: 14 }}>{p.team}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontFamily: "'Space Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
                 <td style={{ ...styles.dtd, textAlign: 'center' }}>
                   {clvPct !== null ? (
                     <div style={styles.clvBar}>
@@ -1247,7 +1247,7 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
                       <span style={{ ...styles.clvText, color: clv.color }}>{clv.text}</span>
                     </div>
                   ) : (
-                    <span style={{ color: '#e2e2e2', fontSize: 11 }}>N/A</span>
+                    <span style={{ color: '#e2e2e2', fontSize: 14 }}>N/A</span>
                   )}
                 </td>
               </tr>
@@ -1266,77 +1266,77 @@ const styles = {
     background: '#00e5a025', color: '#00e5a0',
     borderRadius: 2, padding: '0 1px', fontWeight: 700,
   },
-  root: { fontFamily: "'DM Sans', sans-serif", color: '#ffffff', padding: '0 0 32px' },
+  root: { fontFamily: "'DM Sans', sans-serif", color: '#ffffff', padding: '0 0 40px' },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid #1a1a1a',
+    marginBottom: 20, paddingBottom: 18, borderBottom: '1px solid #1a1a1a',
   },
-  title: { fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700, letterSpacing: 3, color: '#e6e6e6', margin: 0 },
-  subtitle: { fontSize: 11, color: '#e4e4e4', margin: '4px 0 0', fontFamily: "'Space Mono', monospace" },
+  title: { fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700, letterSpacing: 3, color: '#e6e6e6', margin: 0 },
+  subtitle: { fontSize: 14, color: '#e4e4e4', margin: '5px 0 0', fontFamily: "'Space Mono', monospace" },
 
   filterBar: {
-    display: 'flex', flexWrap: 'wrap', gap: '10px 24px',
-    padding: '12px 0 14px', borderBottom: '1px solid #181818', marginBottom: 14,
+    display: 'flex', flexWrap: 'wrap', gap: '13px 30px',
+    padding: '15px 0 18px', borderBottom: '1px solid #181818', marginBottom: 18,
     alignItems: 'center',
   },
-  filterGroupWrap: { display: 'flex', alignItems: 'center', gap: 8 },
+  filterGroupWrap: { display: 'flex', alignItems: 'center', gap: 10 },
   filterGroupLabel: {
-    fontFamily: "'Space Mono', monospace", fontSize: 9, letterSpacing: 1.5,
-    textTransform: 'uppercase', color: '#fafafa', minWidth: 22,
+    fontFamily: "'Space Mono', monospace", fontSize: 11, letterSpacing: 1.5,
+    textTransform: 'uppercase', color: '#fafafa', minWidth: 28,
   },
   filterBtn: {
     background: 'transparent', border: '1px solid #a1a3a2', color: '#fafafa',
-    borderRadius: 4, padding: '4px 9px', fontSize: 10,
+    borderRadius: 4, padding: '5px 11px', fontSize: 13,
     fontFamily: "'Space Mono', monospace", cursor: 'pointer',
     letterSpacing: 0.3, transition: 'all 0.12s', whiteSpace: 'nowrap',
   },
   filterBtnActive: {},
 
   tableWrap: { overflowX: 'auto', borderRadius: 8, border: '1px solid #1a1a1a' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 16 },
   thead: { background: '#0d0d0d' },
   th: {
-    padding: '11px 14px', textAlign: 'left',
-    fontFamily: "'Space Mono', monospace", fontSize: 9, fontWeight: 700,
+    padding: '14px 18px', textAlign: 'left',
+    fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
     letterSpacing: 1.5, color: '#dadada', textTransform: 'uppercase',
     cursor: 'pointer', userSelect: 'none',
     borderBottom: '1px solid #1a1a1a', whiteSpace: 'nowrap',
   },
   row: { borderBottom: '1px solid #141414', cursor: 'pointer', transition: 'background 0.1s' },
   rowOpen: { background: '#080f0c', borderBottom: '1px solid #00e5a07a' },
-  td: { padding: '11px 14px', verticalAlign: 'middle' },
-  entryId: { fontFamily: "'Space Mono', monospace", fontSize: 11, color: '#bbb', letterSpacing: 0.5 },
+  td: { padding: '14px 18px', verticalAlign: 'middle' },
+  entryId: { fontFamily: "'Space Mono', monospace", fontSize: 14, color: '#bbb', letterSpacing: 0.5 },
   clvBadge: {
-    fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
-    border: '1px solid', borderRadius: 4, padding: '2px 7px',
+    fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700,
+    border: '1px solid', borderRadius: 4, padding: '3px 9px',
   },
-  chevron: { color: '#dddddd', fontSize: 10, fontFamily: "'Space Mono', monospace" },
+  chevron: { color: '#dddddd', fontSize: 13, fontFamily: "'Space Mono', monospace" },
 
   detail: { background: '#060c09', borderTop: '1px solid #00e5a01a' },
   dth: {
-    padding: '9px 14px', textAlign: 'left',
-    fontFamily: "'Space Mono', monospace", fontSize: 9, fontWeight: 700,
+    padding: '11px 18px', textAlign: 'left',
+    fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
     letterSpacing: 1.5, color: '#ffffff', textTransform: 'uppercase',
     cursor: 'pointer', userSelect: 'none',
     borderBottom: '1px solid #0f0f0f', whiteSpace: 'nowrap',
   },
   drow: { borderBottom: '1px solid #0d0d0d' },
-  dtd: { padding: '8px 14px', verticalAlign: 'middle' },
-  playerName: { fontWeight: 500, color: '#ccc', fontSize: 13 },
-  posPill: { fontSize: 10, fontFamily: "'Space Mono', monospace", border: '1px solid', borderRadius: 3, padding: '1px 5px', letterSpacing: 0.5 },
-  clvBar: { position: 'relative', width: '100%', height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  clvFill: { position: 'absolute', height: 3, top: '50%', transform: 'translateY(-50%)', borderRadius: 2, opacity: 0.5, maxWidth: '50%' },
-  clvText: { position: 'relative', fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700, zIndex: 1, background: '#060c09', padding: '0 4px' },
+  dtd: { padding: '10px 18px', verticalAlign: 'middle' },
+  playerName: { fontWeight: 500, color: '#ccc', fontSize: 16 },
+  posPill: { fontSize: 13, fontFamily: "'Space Mono', monospace", border: '1px solid', borderRadius: 3, padding: '2px 6px', letterSpacing: 0.5 },
+  clvBar: { position: 'relative', width: '100%', height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  clvFill: { position: 'absolute', height: 4, top: '50%', transform: 'translateY(-50%)', borderRadius: 2, opacity: 0.5, maxWidth: '50%' },
+  clvText: { position: 'relative', fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700, zIndex: 1, background: '#060c09', padding: '0 5px' },
 
-  empty: { textAlign: 'center', padding: '60px 20px', color: '#e2e2e2', fontFamily: "'Space Mono', monospace" },
+  empty: { textAlign: 'center', padding: '75px 25px', color: '#e2e2e2', fontFamily: "'Space Mono', monospace" },
 
   uniqBadge: {
     fontFamily: "'Space Mono', monospace",
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: 700,
     border: '1px solid',
     borderRadius: 4,
-    padding: '2px 7px',
+    padding: '3px 9px',
     cursor: 'help',
   },
 };

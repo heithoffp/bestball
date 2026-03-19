@@ -65,24 +65,24 @@ export default function RosterConstruction({ rosterData = [] }) {
   return (
     <div className="protocol-container">
       <style>{`
-        .protocol-container { padding: 1rem 0; }
-        
+        .protocol-container { padding: 1.25rem 0; }
+
         .player-search-panel {
           background: var(--bg-card);
           border: 1px solid var(--border);
           border-radius: 12px;
-          padding: 1.5rem;
-          margin-bottom: 2rem;
+          padding: 1.9rem;
+          margin-bottom: 2.5rem;
         }
-        
+
         .search-input {
           width: 100%;
           background: var(--bg-dark);
           border: 1px solid var(--border);
           border-radius: 8px;
-          padding: 12px 16px;
+          padding: 15px 20px;
           color: var(--text-primary);
-          font-size: 1rem;
+          font-size: 1.25rem;
           font-family: 'JetBrains Mono', monospace;
           transition: border-color 0.2s;
         }
@@ -95,16 +95,16 @@ export default function RosterConstruction({ rosterData = [] }) {
         }
 
         .search-results {
-          margin-top: 1rem;
+          margin-top: 1.25rem;
         }
         .search-result-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px;
+          padding: 15px;
           background: var(--bg-dark);
           border-radius: 6px;
-          margin-bottom: 8px;
+          margin-bottom: 10px;
           cursor: pointer;
           transition: all 0.2s;
         }
@@ -114,54 +114,54 @@ export default function RosterConstruction({ rosterData = [] }) {
         }
         .search-path {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.85rem;
+          font-size: 1.05rem;
           color: var(--text-secondary);
         }
         .search-path-sep {
           color: var(--text-muted);
-          margin: 0 8px;
+          margin: 0 10px;
         }
         .search-count {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 15px;
         }
         .search-pct {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 1.1rem;
+          font-size: 1.4rem;
           font-weight: 700;
           color: var(--accent-blue);
         }
         .search-teams {
-          font-size: 0.75rem;
+          font-size: 0.95rem;
           color: var(--text-muted);
         }
         
-        .section-label { 
-          font-family: 'JetBrains Mono', monospace; 
-          font-size: 0.8rem; 
-          color: var(--text-muted); 
-          text-transform: uppercase; 
-          margin-bottom: 1rem;
+        .section-label {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 1rem;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          margin-bottom: 1.25rem;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 13px;
         }
         .section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
         
-        .tree-grid { 
-          display: grid; 
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-          gap: 1rem; 
-          margin-bottom: 2.5rem; 
+        .tree-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 1.25rem;
+          margin-bottom: 3.1rem;
         }
 
-        .tree-card { 
-          background: var(--bg-card); 
-          border: 1px solid var(--border); 
-          border-radius: 12px; 
-          padding: 1.5rem; 
-          cursor: pointer; 
+        .tree-card {
+          background: var(--bg-card);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 1.9rem;
+          cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
         }
@@ -176,40 +176,40 @@ export default function RosterConstruction({ rosterData = [] }) {
           box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); 
         }
         
-        .card-header { 
-          display: flex; 
-          justify-content: space-between; 
-          align-items: flex-start; 
-          margin-bottom: 1rem; 
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 1.25rem;
         }
-        .card-title { 
-          font-weight: 700; 
-          color: var(--text-primary); 
-          margin-bottom: 4px;
+        .card-title {
+          font-weight: 700;
+          color: var(--text-primary);
+          margin-bottom: 5px;
         }
         .card-count {
-          font-size: 0.75rem;
+          font-size: 0.95rem;
           color: var(--text-muted);
         }
-        .card-pct { 
-          font-family: 'JetBrains Mono', monospace; 
-          font-size: 1.5rem; 
-          font-weight: 800; 
-          color: var(--text-primary); 
+        .card-pct {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 1.9rem;
+          font-weight: 800;
+          color: var(--text-primary);
         }
         
         .dual-progress {
-          margin: 12px 0;
+          margin: 15px 0;
         }
         .progress-label {
           display: flex;
           justify-content: space-between;
-          font-size: 0.7rem;
-          margin-bottom: 6px;
+          font-size: 0.9rem;
+          margin-bottom: 8px;
           font-family: 'JetBrains Mono', monospace;
         }
         .progress-track { 
-          height: 6px; 
+          height: 8px; 
           background: var(--bg-dark); 
           border-radius: 3px; 
           position: relative; 
@@ -221,21 +221,21 @@ export default function RosterConstruction({ rosterData = [] }) {
           transition: width 1s ease; 
           position: relative;
         }
-        .target-marker { 
-          position: absolute; 
-          top: -2px; 
-          width: 3px; 
-          height: 10px; 
-          background: white; 
+        .target-marker {
+          position: absolute;
+          top: -2px;
+          width: 4px;
+          height: 13px;
+          background: white;
           border-radius: 2px;
-          z-index: 2; 
+          z-index: 2;
           box-shadow: 0 0 8px rgba(255,255,255,0.8);
           transition: left 0.3s;
         }
         .target-marker::before {
           content: '';
           position: absolute;
-          top: -8px;
+          top: -10px;
           left: 50%;
           transform: translateX(-50%);
           border: 4px solid transparent;
@@ -245,11 +245,11 @@ export default function RosterConstruction({ rosterData = [] }) {
         .delta-badge {
           display: inline-block;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.7rem;
+          font-size: 0.9rem;
           font-weight: 700;
-          padding: 2px 8px;
+          padding: 3px 10px;
           border-radius: 4px;
-          margin-top: 8px;
+          margin-top: 10px;
         }
         .delta-over {
           background: rgba(34, 197, 94, 0.15);
@@ -264,48 +264,48 @@ export default function RosterConstruction({ rosterData = [] }) {
           color: var(--accent-blue);
         }
 
-        .breadcrumb-nav { 
-          display: flex; 
-          gap: 12px; 
-          margin-bottom: 2rem; 
+        .breadcrumb-nav {
+          display: flex;
+          gap: 15px;
+          margin-bottom: 2.5rem;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.9rem;
+          font-size: 1.1rem;
         }
         .bc-node { color: var(--accent-blue); }
         .bc-sep { color: var(--text-muted); }
 
-        .roster-grid { 
-          display: grid; 
-          grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); 
-          gap: 1rem; 
+        .roster-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+          gap: 1.25rem;
         }
-        .mini-card { 
-          background: var(--bg-card); 
-          border: 1px solid var(--border); 
-          border-radius: 8px; 
-          padding: 1rem; 
+        .mini-card {
+          background: var(--bg-card);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 1.25rem;
         }
         .mini-card:hover { border-color: var(--accent-blue); }
         
-        .draft-strip { display: flex; gap: 3px; margin: 12px 0; }
-        .pick-block { 
-          flex: 1; 
-          height: 22px; 
-          border-radius: 3px; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          font-size: 10px; 
-          font-weight: 900; 
-          color: white; 
+        .draft-strip { display: flex; gap: 4px; margin: 15px 0; }
+        .pick-block {
+          flex: 1;
+          height: 28px;
+          border-radius: 3px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: 900;
+          color: white;
           text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
-        .player-preview { 
-          font-size: 0.75rem; 
-          color: var(--text-secondary); 
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis; 
+        .player-preview {
+          font-size: 0.95rem;
+          color: var(--text-secondary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       `}</style>
 
@@ -321,10 +321,10 @@ export default function RosterConstruction({ rosterData = [] }) {
         
         {playerArchetypes && playerArchetypes.totalOccurrences > 0 && (
           <div className="search-results">
-            <div style={{ 
-              fontSize: '0.75rem', 
-              color: 'var(--text-muted)', 
-              marginBottom: '12px',
+            <div style={{
+              fontSize: '0.95rem',
+              color: 'var(--text-muted)',
+              marginBottom: '15px',
               fontFamily: 'JetBrains Mono'
             }}>
               Found in {playerArchetypes.totalOccurrences} teams across {playerArchetypes.results.length} archetypes
@@ -356,12 +356,12 @@ export default function RosterConstruction({ rosterData = [] }) {
         )}
         
         {playerArchetypes && playerArchetypes.totalOccurrences === 0 && (
-          <div style={{ 
-            marginTop: '12px', 
-            fontSize: '0.85rem', 
+          <div style={{
+            marginTop: '15px',
+            fontSize: '1.05rem',
             color: 'var(--text-muted)',
             textAlign: 'center',
-            padding: '20px'
+            padding: '25px'
           }}>
             No teams found with this player
           </div>
@@ -528,7 +528,7 @@ export default function RosterConstruction({ rosterData = [] }) {
 
       {/* DEEP DIVE: ROSTER LIST */}
       {nav.te && (
-        <div className="config-section" style={{ padding: '1.5rem' }}>
+        <div className="config-section" style={{ padding: '1.9rem' }}>
           <div className="breadcrumb-nav">
             <span className="bc-node">{ARCHETYPE_METADATA[nav.rb].name}</span>
             <span className="bc-sep">/</span>
@@ -553,12 +553,12 @@ function RosterMiniCard({ entry }) {
   
   return (
     <div className="mini-card">
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        fontSize: '0.7rem', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: '0.9rem',
         fontFamily: 'JetBrains Mono',
-        marginBottom: '8px'
+        marginBottom: '10px'
       }}>
         <span style={{ color: 'var(--text-secondary)' }}>ID: {entry.id.substring(0, 10)}</span>
       </div>

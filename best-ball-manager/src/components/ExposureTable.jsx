@@ -214,13 +214,13 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
   const virtualizer = useVirtualizer({
     count: filteredAndSorted.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 41,
+    estimateSize: () => 51,
     overscan: 10,
   });
 
   // Shared cell styles for consistent alignment
   const cellBaseStyle = {
-    padding: '8px 10px',
+    padding: '10px 13px',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -230,7 +230,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
 
   const headerStyle = {
     ...cellBaseStyle,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: 700,
     textTransform: 'uppercase',
     cursor: 'pointer',
@@ -239,16 +239,16 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 15, marginBottom: 15, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
           <h2 style={{ margin: 0 }}>Exposures</h2>
         </div>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <label style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            fontSize: '12px',
+            gap: 8,
+            fontSize: '15px',
             fontWeight: 600,
             cursor: 'pointer',
             color: 'var(--text-secondary)'
@@ -285,19 +285,19 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
       {/* (Filters area unchanged) */}
       <div style={{
         display: 'flex',
-        gap: 12,
-        padding: '16px',
+        gap: 15,
+        padding: '20px',
         background: 'rgba(0,0,0,0.2)',
         borderRadius: 8,
         border: '1px solid rgba(255,255,255,0.1)',
-        marginBottom: 16,
+        marginBottom: 20,
         alignItems: 'center',
         flexWrap: 'wrap',
         flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '0 0 auto' }}>
           <span style={{
-            fontSize: 12,
+            fontSize: 15,
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -307,20 +307,20 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           </span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 180 }}>
-          <label style={{ fontSize: 10, fontWeight: 600, color: getPosColor('RB'), textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('RB'), textTransform: 'uppercase' }}>
             RB Strategy
           </label>
           <select
             value={rbFilter}
             onChange={e => setRbFilter(e.target.value)}
             style={{
-              padding: '6px 8px',
+              padding: '8px 10px',
               borderRadius: 4,
               border: '1px solid rgba(255,255,255,0.2)',
               background: 'rgba(0,0,0,0.3)',
               color: 'inherit',
-              fontSize: 12,
+              fontSize: 15,
               cursor: 'pointer'
             }}
           >
@@ -332,20 +332,20 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           </select>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 180 }}>
-          <label style={{ fontSize: 10, fontWeight: 600, color: getPosColor('QB'), textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('QB'), textTransform: 'uppercase' }}>
             QB Strategy
           </label>
           <select
             value={qbFilter}
             onChange={e => setQbFilter(e.target.value)}
             style={{
-              padding: '6px 8px',
+              padding: '8px 10px',
               borderRadius: 4,
               border: '1px solid rgba(255,255,255,0.2)',
               background: 'rgba(0,0,0,0.3)',
               color: 'inherit',
-              fontSize: 12,
+              fontSize: 15,
               cursor: 'pointer'
             }}
           >
@@ -357,20 +357,20 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           </select>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 180 }}>
-          <label style={{ fontSize: 10, fontWeight: 600, color: getPosColor('TE'), textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('TE'), textTransform: 'uppercase' }}>
             TE Strategy
           </label>
           <select
             value={teFilter}
             onChange={e => setTeFilter(e.target.value)}
             style={{
-              padding: '6px 8px',
+              padding: '8px 10px',
               borderRadius: 4,
               border: '1px solid rgba(255,255,255,0.2)',
               background: 'rgba(0,0,0,0.3)',
               color: 'inherit',
-              fontSize: 12,
+              fontSize: 15,
               cursor: 'pointer'
             }}
           >
@@ -388,21 +388,21 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            gap: 8
+            gap: 10
           }}>
             <span style={{
-              fontSize: 11,
+              fontSize: 14,
               color: 'var(--text-secondary)',
               fontStyle: 'italic'
             }}>
               Showing {totalFilteredEntries} rosters matching:
             </span>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
               {rbFilter !== 'Any' && (
                 <span style={{
-                  padding: '3px 8px',
+                  padding: '4px 10px',
                   borderRadius: 4,
-                  fontSize: 10,
+                  fontSize: 13,
                   fontWeight: 700,
                   background: `${getPosColor('RB')}20`,
                   border: `1px solid ${getPosColor('RB')}40`,
@@ -413,9 +413,9 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
               )}
               {qbFilter !== 'Any' && (
                 <span style={{
-                  padding: '3px 8px',
+                  padding: '4px 10px',
                   borderRadius: 4,
-                  fontSize: 10,
+                  fontSize: 13,
                   fontWeight: 700,
                   background: `${getPosColor('QB')}20`,
                   border: `1px solid ${getPosColor('QB')}40`,
@@ -426,9 +426,9 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
               )}
               {teFilter !== 'Any' && (
                 <span style={{
-                  padding: '3px 8px',
+                  padding: '4px 10px',
                   borderRadius: 4,
-                  fontSize: 10,
+                  fontSize: 13,
                   fontWeight: 700,
                   background: `${getPosColor('TE')}20`,
                   border: `1px solid ${getPosColor('TE')}40`,
@@ -444,12 +444,12 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
 
       {rosterData.length === 0 && masterPlayers.length > 0 && (
         <div style={{
-          padding: '10px 16px',
-          marginBottom: 12,
+          padding: '13px 20px',
+          marginBottom: 15,
           borderRadius: 8,
           background: 'rgba(59,130,246,0.1)',
           border: '1px solid rgba(59,130,246,0.25)',
-          fontSize: 13,
+          fontSize: 16,
           color: 'var(--text-secondary)',
           flexShrink: 0,
         }}>
@@ -522,7 +522,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
                         <td style={cellBaseStyle}>{parseFloat(displayExp).toFixed(1)}%</td>
                         <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{displayCount}</td>
                         <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{p.adpDisplay}</td>
-                        <td style={{ ...cellBaseStyle, padding: '6px 8px' }}>
+                        <td style={{ ...cellBaseStyle, padding: '8px 10px' }}>
                           <div style={{ width: '100%', height: '30px', minWidth: '100px' }}>
                             <AdpSparkline history={p.history} />
                           </div>

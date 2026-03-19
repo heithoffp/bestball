@@ -267,28 +267,28 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
   };
 
   const SortIcon = ({ col }) => {
-      if (sortConfig.key !== col) return <span style={{opacity:0.3, fontSize: 10}}>⇅</span>;
+      if (sortConfig.key !== col) return <span style={{opacity:0.3, fontSize: 13}}>⇅</span>;
       return sortConfig.direction === 'asc' ? '▲' : '▼';
   };
 
   const CustomTooltip = ({ active, label, payload }) => {
     if (!active || !label) return null;
     return (
-      <div className="card" style={{ padding: '8px 12px', minWidth: 180, border: '1px solid #444', backgroundColor: 'rgba(20,20,20, 0.95)' }}>
-        <div style={{ fontSize: 13, marginBottom: 8, borderBottom:'1px solid #333', paddingBottom:4 }}>{label}</div>
+      <div className="card" style={{ padding: '10px 15px', minWidth: 225, border: '1px solid #444', backgroundColor: 'rgba(20,20,20, 0.95)' }}>
+        <div style={{ fontSize: 16, marginBottom: 10, borderBottom:'1px solid #333', paddingBottom:5 }}>{label}</div>
         {payload && payload.map((entry, i) => {
             const player = richPlayerList.find(p => p.id === entry.dataKey);
             const stats = player?.pickStats;
             const hasStats = stats && stats.count > 0;
             
             return (
-                <div key={entry.dataKey} style={{ marginBottom: 6 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: entry.stroke }}>
+                <div key={entry.dataKey} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, color: entry.stroke }}>
                         <span style={{ fontWeight: 600 }}>{player?.name || entry.dataKey}:</span>
                         <span>{entry.value?.toFixed(1)} (ADP)</span>
                     </div>
                     {hasStats && (
-                        <div style={{ fontSize: 10, color: '#aaa', marginLeft: 8 }}>
+                        <div style={{ fontSize: 13, color: '#aaa', marginLeft: 10 }}>
                             My Picks: Avg {stats.mean.toFixed(1)} • Med {stats.median.toFixed(1)} (Range: {stats.min}-{stats.max})
                         </div>
                     )}
@@ -303,10 +303,10 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
   const gridTemplate = '30px 1fr 50px 50px 75px 50px';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 20 }}>
       
       {/* --- Controls --- */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 15, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
             className="path-input"
             placeholder="Filter by name, team, pos..."
@@ -314,12 +314,12 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
             onChange={e => setQueryInput(e.target.value)}
             style={{ width: 250 }}
         />
-        <div style={{ display: 'flex', gap: 8 }}>
-            <button className="load-button" onClick={() => selectTopN(5)} style={{ width: 'auto', padding: '0.4rem 0.8rem' }}>Select Top 5</button>
-            <button className="load-button" onClick={() => setSelectedIds([])} style={{ width: 'auto', padding: '0.4rem 0.8rem' }}>Clear All</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+            <button className="load-button" onClick={() => selectTopN(5)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>Select Top 5</button>
+            <button className="load-button" onClick={() => setSelectedIds([])} style={{ width: 'auto', padding: '0.5rem 1rem' }}>Clear All</button>
         </div>
         
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', userSelect: 'none', marginLeft: 8 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, cursor: 'pointer', userSelect: 'none', marginLeft: 10 }}>
             <input 
                 type="checkbox" 
                 checked={showPickRanges} 
@@ -328,12 +328,12 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
             Show My Pick Ranges
         </label>
 
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
+        <div style={{ marginLeft: 'auto', fontSize: 15, color: 'var(--text-secondary)' }}>
             Showing {filteredAndSortedList.length} players ({selectedIds.length} selected)
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', height: 500 }}>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', height: 625 }}>
         
         {/* --- Left Pane: Data Table --- */}
         <div className="card" style={{ flex: '0 0 30%', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
@@ -342,11 +342,11 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
             <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: gridTemplate, 
-                padding: '8px 12px', 
-                background: 'rgba(255,255,255,0.03)', 
-                borderBottom: '1px solid var(--border)', 
-                fontWeight: 600, 
-                fontSize: 12 
+                padding: '10px 15px',
+                background: 'rgba(255,255,255,0.03)',
+                borderBottom: '1px solid var(--border)',
+                fontWeight: 600,
+                fontSize: 15 
             }}>
                 <div></div>
                 <div style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Player <SortIcon col="name"/></div>
@@ -382,10 +382,10 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                             style={{ 
                                 display: 'grid', 
                                 gridTemplateColumns: gridTemplate, // Use the shared template
-                                padding: '6px 12px', 
+                                padding: '8px 15px',
                                 borderBottom: '1px solid var(--border)',
-                                alignItems: 'center', 
-                                fontSize: 13, 
+                                alignItems: 'center',
+                                fontSize: 16, 
                                 cursor: 'pointer',
                                 background: checked ? 'rgba(255,255,255,0.04)' : 'transparent',
                                 borderLeft: checked ? `4px solid ${strokeColor}` : '4px solid transparent'
@@ -394,9 +394,9 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                             <input type="checkbox" checked={checked} readOnly style={{ cursor: 'pointer' }} />
                             
                             {/* Name */}
-                            <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', paddingRight:8 }}>
+                            <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', paddingRight:10 }}>
                                 <div style={{ fontWeight: 500 }}>{p.name}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{p.team} • {p.position}</div>
+                                <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{p.team} • {p.position}</div>
                             </div>
 
                             {/* Exposure */}
@@ -412,7 +412,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                                         <div style={{ fontWeight: 600, color: valueColor }}>
                                             {valueDisplay}
                                         </div>
-                                        <div style={{ fontSize: 10, color: '#888' }}>
+                                        <div style={{ fontSize: 13, color: '#888' }}>
                                             {myAvgDisplay} avg • {adpDisplayRaw}
                                         </div>
                                     </>
@@ -422,7 +422,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                             </div>
 
                             {/* Trend */}
-                            <div style={{ textAlign: 'right', color: trendColor, fontWeight: 600, fontSize: 12 }}>
+                            <div style={{ textAlign: 'right', color: trendColor, fontWeight: 600, fontSize: 15 }}>
                                 {p.change !== 0 && trendIcon} {Math.abs(p.change).toFixed(1)}
                             </div>
                         </div>
@@ -441,10 +441,10 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} stroke="#4b5563" />
-                        <YAxis reversed domain={chartDomain} tick={{ fontSize: 11, fill: '#9ca3af' }} stroke="#4b5563" width={40} />
+                        <XAxis dataKey="date" tick={{ fontSize: 14, fill: '#9ca3af' }} stroke="#4b5563" />
+                        <YAxis reversed domain={chartDomain} tick={{ fontSize: 14, fill: '#9ca3af' }} stroke="#4b5563" width={50} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }}/>
-                        <Legend wrapperStyle={{ paddingTop: 10 }} />
+                        <Legend wrapperStyle={{ paddingTop: 13 }} />
                         
                         {showPickRanges && selectedIds.map((id, idx) => {
                             const player = richPlayerList.find(p => p.id === id);

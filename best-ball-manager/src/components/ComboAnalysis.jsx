@@ -182,11 +182,11 @@ export default function ComboAnalysis({ rosterData = [] }) {
 
   const Badge = ({ p }) => (
     <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      background: 'rgba(255,255,255,0.04)', padding: '2px 8px',
-      borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', fontSize: 12
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+      background: 'rgba(255,255,255,0.04)', padding: '3px 10px',
+      borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', fontSize: 15
     }}>
-      <span style={{ color: getPosColor(p.position), fontWeight: 800, fontSize: 10 }}>{p.position}</span>
+      <span style={{ color: getPosColor(p.position), fontWeight: 800, fontSize: 13 }}>{p.position}</span>
       <span style={{ fontWeight: 500 }}>{p.name}</span>
     </div>
   );
@@ -206,10 +206,10 @@ export default function ComboAnalysis({ rosterData = [] }) {
 
   // --- RENDER ---
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* Controls */}
-      <div className="card" style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap', padding: '12px 20px' }}>
+      <div className="card" style={{ display: 'flex', gap: 25, alignItems: 'center', flexWrap: 'wrap', padding: '15px 25px' }}>
         <div style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 8 }}>
           {['starts', 'stacks', 'qbqb'].map(t => (
             <button
@@ -227,7 +227,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
           <input className="path-input" placeholder="Filter QB..." value={qbFilter} onChange={e => setQbFilter(e.target.value)} style={{ width: 140 }} />
         )}
 
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 15 }}>
           {activeTab === 'starts' && (
             <>
               <input
@@ -240,18 +240,18 @@ export default function ComboAnalysis({ rosterData = [] }) {
               <button
                 onClick={() => setStartSearch('')}
                 title="Clear"
-                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                style={{ padding: '8px 13px', borderRadius: 6, cursor: 'pointer' }}
               >
                 Clear
               </button>
-              <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Top N:</label>
+              <label style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Top N:</label>
               <input type="number" value={topN} onChange={e => setTopN(Math.max(1, Number(e.target.value) || 1))} style={{ width: 70 }} />
-              <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Only with R3:</label>
+              <label style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Only with R3:</label>
               <input type="checkbox" checked={onlyWithR3} onChange={e => setOnlyWithR3(e.target.checked)} />
             </>
           )}
 
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Min Count:</span>
+          <span style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Min Count:</span>
           <input type="number" value={minCount} onChange={e => setMinCount(Number(e.target.value))} style={{ width: 50 }} />
         </div>
       </div>
@@ -263,45 +263,45 @@ export default function ComboAnalysis({ rosterData = [] }) {
         {activeTab === 'stacks' && (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'rgba(255,255,255,0.03)', fontSize: 12, color: 'var(--text-secondary)' }}>
+              <thead style={{ background: 'rgba(255,255,255,0.03)', fontSize: 15, color: 'var(--text-secondary)' }}>
                 <tr>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', width: '220px' }}>QB / NAKED %</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'left' }}>STACK COMBINATIONS</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'center', width: '80px' }}>COUNT</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'center', width: '100px' }}>EXP %</th>
+                  <th style={{ padding: '15px 25px', textAlign: 'left', width: '220px' }}>QB / NAKED %</th>
+                  <th style={{ padding: '15px 25px', textAlign: 'left' }}>STACK COMBINATIONS</th>
+                  <th style={{ padding: '15px 25px', textAlign: 'center', width: '80px' }}>COUNT</th>
+                  <th style={{ padding: '15px 25px', textAlign: 'center', width: '100px' }}>EXP %</th>
                 </tr>
               </thead>
               <tbody>
                 {processedData.map((group) => (
                   <tr key={group.qb.name} style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
-                    <td style={{ padding: '16px 20px', verticalAlign: 'top', borderRight: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <td style={{ padding: '20px 25px', verticalAlign: 'top', borderRight: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <Badge p={group.qb} />
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-muted)' }}>{group.qb.team}</span>
-                          <div style={{ fontSize: 11, color: group.nakedPercent > 25 ? '#ef4444' : '#10b981', fontWeight: 700 }}>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-muted)' }}>{group.qb.team}</span>
+                          <div style={{ fontSize: 14, color: group.nakedPercent > 25 ? '#ef4444' : '#10b981', fontWeight: 700 }}>
                             {group.nakedPercent.toFixed(1)}% NAKED
                           </div>
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                           {group.totalDrafts} Total Drafts
                         </div>
                       </div>
                     </td>
                     <td colSpan={3} style={{ padding: 0 }}>
                       {group.sortedCombos.filter(c => c.count >= minCount).map((combo, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: idx === group.sortedCombos.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
-                          <div style={{ flex: 1, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: '15px 25px', borderBottom: idx === group.sortedCombos.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
+                          <div style={{ flex: 1, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             {combo.teammates.map((t, i) => <Badge key={i} p={t} />)}
                           </div>
                           <div style={{ width: 80, textAlign: 'center', fontWeight: 600 }}>{combo.count}</div>
-                          <div style={{ width: 100, textAlign: 'center', fontFamily: 'monospace', fontSize: 13, color: 'var(--text-secondary)' }}>
+                          <div style={{ width: 100, textAlign: 'center', fontFamily: 'monospace', fontSize: 16, color: 'var(--text-secondary)' }}>
                             {((combo.count / totalTeams) * 100).toFixed(1)}%
                           </div>
                         </div>
                       ))}
                       {group.sortedCombos.filter(c => c.count >= minCount).length === 0 && (
-                        <div style={{ padding: '12px 20px', fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>No stacks meeting min count</div>
+                        <div style={{ padding: '15px 25px', fontSize: 15, color: 'var(--text-muted)', fontStyle: 'italic' }}>No stacks meeting min count</div>
                       )}
                     </td>
                   </tr>
@@ -312,26 +312,26 @@ export default function ComboAnalysis({ rosterData = [] }) {
         )}
 
         {activeTab === 'qbqb' && (
-          <div style={{ padding: '40px 20px', overflowX: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+          <div style={{ padding: '50px 25px', overflowX: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
 
             {/* Back Button Logic */}
             {selectedQB && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
                 <button
                   onClick={() => setSelectedQB(null)}
                   style={{
-                    padding: '8px 16px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6',
-                    borderRadius: 6, color: '#3b82f6', cursor: 'pointer', fontSize: 12, fontWeight: 600
+                    padding: '10px 20px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6',
+                    borderRadius: 6, color: '#3b82f6', cursor: 'pointer', fontSize: 15, fontWeight: 600
                   }}>
                   ← Back to Full Grid
                 </button>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
                   Showing Pairs for: {selectedQB}
                 </span>
               </div>
             )}
 
-            <table style={{ borderCollapse: 'separate', borderSpacing: '3px', width: 'auto', margin: '0 auto', tableLayout: 'fixed' }}>
+            <table style={{ borderCollapse: 'separate', borderSpacing: '4px', width: 'auto', margin: '0 auto', tableLayout: 'fixed' }}>
               <thead>
                 <tr>
                   <th style={{ background: 'transparent' }}></th>
@@ -346,7 +346,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                         onClick={() => setSelectedQB(isSelected ? null : name)}
                         onMouseEnter={() => setHoveredQB(name)}
                         onMouseLeave={() => setHoveredQB(null)}
-                        style={{ position: 'relative', height: '100px', verticalAlign: 'bottom', padding: '0', cursor: 'pointer' }}
+                        style={{ position: 'relative', height: '125px', verticalAlign: 'bottom', padding: '0', cursor: 'pointer' }}
                       >
                         <div style={{
                           position: 'absolute', bottom: '0', left: '50%', transform: 'translateX(-50%)',
@@ -357,7 +357,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                           transformOrigin: 'bottom left',
                           whiteSpace: 'nowrap',
                           width: '30px',
-                          fontSize: '11px',
+                          fontSize: '14px',
                           fontWeight: '800',
                           color: isSelected || hoveredQB === name ? '#3b82f6' : 'var(--text-secondary)',
                           transition: 'all 0.2s'
@@ -382,14 +382,14 @@ export default function ComboAnalysis({ rosterData = [] }) {
                         onMouseEnter={() => setHoveredQB(rowName)}
                         onMouseLeave={() => setHoveredQB(null)}
                         style={{
-                          padding: '4px 12px', fontSize: '11px', fontWeight: '700', textAlign: 'right',
+                          padding: '5px 15px', fontSize: '14px', fontWeight: '700', textAlign: 'right',
                           borderRight: `3px solid ${rowTier.color}`,
                           background: 'rgba(255,255,255,0.03)',
                           whiteSpace: 'nowrap',
                           cursor: 'pointer',
                           color: isRowSelected || hoveredQB === rowName ? '#3b82f6' : 'var(--text-primary)'
                         }}>
-                        {rowName} <span style={{ opacity: 0.4, fontSize: '9px' }}>{rowAdp}</span>
+                        {rowName} <span style={{ opacity: 0.4, fontSize: '11px' }}>{rowAdp}</span>
                       </td>
 
                       {processedData.sortedQBs.map((colName) => {
@@ -412,7 +412,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                             onMouseEnter={() => setHoveredCell(`${rowName}||${colName}`)}
                             onMouseLeave={() => setHoveredCell(null)}
                             style={{
-                              width: '38px', height: '38px', textAlign: 'center', fontSize: '12px', fontWeight: '800',
+                              width: '48px', height: '48px', textAlign: 'center', fontSize: '15px', fontWeight: '800',
                               borderRadius: '3px',
                               background: cellBg,
                               color: count > 0 ? '#fff' : 'transparent',
@@ -438,7 +438,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
 
         {/* STARTS GRID (ORIGINAL) */}
         {activeTab === 'starts' && (
-          <div style={{ maxHeight: '65vh', overflowY: 'auto', padding: 16 }}>
+          <div style={{ maxHeight: '65vh', overflowY: 'auto', padding: 20 }}>
             {(() => {
               const search = startSearch.trim().toLowerCase();
               const tokens = search ? search.split(/\s+/).filter(Boolean) : [];
@@ -459,36 +459,36 @@ export default function ComboAnalysis({ rosterData = [] }) {
               const top = filtered.slice(0, topN);
 
               if (top.length === 0) {
-                return <div style={{ padding: 20, color: 'var(--text-muted)' }}>No early combos match the filters.</div>;
+                return <div style={{ padding: 25, color: 'var(--text-muted)' }}>No early combos match the filters.</div>;
               }
 
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 15 }}>
                   {top.map(entry => {
                     const pct = ((entry.count / totalTeams) * 100).toFixed(1);
                     const barPct = Math.max(6, (entry.count / maxCount) * 100);
                     const isExpanded = expandedCombo.has(entry.key);
 
                     return (
-                      <div key={entry.key} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div key={entry.key} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 8, padding: 15 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                               {entry.players2.map((p, i) => <Badge key={i} p={p} />)}
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                              <div style={{ fontSize: 13, fontWeight: 800 }}>{entry.count} teams</div>
-                              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pct}%</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                              <div style={{ fontSize: 16, fontWeight: 800 }}>{entry.count} teams</div>
+                              <div style={{ fontSize: 15, color: 'var(--text-secondary)' }}>{pct}%</div>
                             </div>
-                            <div style={{ height: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 6, marginTop: 8 }}>
+                            <div style={{ height: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 6, marginTop: 10 }}>
                               <div style={{ height: '100%', width: `${barPct}%`, background: 'linear-gradient(90deg,#3b82f6,#60a5fa)', borderRadius: 6 }} />
                             </div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                             <button
                               onClick={() => toggleExpand(entry.key)}
                               style={{
-                                padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontWeight: 700,
+                                padding: '8px 13px', borderRadius: 6, cursor: 'pointer', fontWeight: 700,
                                 background: isExpanded ? 'rgba(59,130,246,0.18)' : 'transparent',
                                 border: `1px solid ${isExpanded ? '#3b82f6' : 'rgba(255,255,255,0.06)'}`,
                                 color: isExpanded ? '#3b82f6' : 'var(--text-primary)',
@@ -496,35 +496,35 @@ export default function ComboAnalysis({ rosterData = [] }) {
                               {isExpanded ? 'Collapse' : 'Expand'}
                             </button>
                             {entry.r3Total > 0 ? (
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{entry.r3Total} R3 picks</div>
+                              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{entry.r3Total} R3 picks</div>
                             ) : (
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No R3</div>
+                              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>No R3</div>
                             )}
                           </div>
                         </div>
 
                         {isExpanded && (
-                          <div style={{ marginTop: 12, borderTop: '1px dashed rgba(255,255,255,0.03)', paddingTop: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <div style={{ fontSize: 13, fontWeight: 700 }}>Round 3 breakdown</div>
-                              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{entry.r3Map.size} unique</div>
+                          <div style={{ marginTop: 15, borderTop: '1px dashed rgba(255,255,255,0.03)', paddingTop: 15 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                              <div style={{ fontSize: 16, fontWeight: 700 }}>Round 3 breakdown</div>
+                              <div style={{ fontSize: 15, color: 'var(--text-secondary)' }}>{entry.r3Map.size} unique</div>
                             </div>
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                               {Array.from(entry.r3Map.values()).sort((a, b) => b.count - a.count).map((r3Entry, i) => {
                                 const name = r3Entry.player.name;
                                 const c = r3Entry.count;
                                 const pctOfPair = ((c / entry.count) * 100).toFixed(1);
                                 const playerObj = r3Entry.player;
                                 return (
-                                  <div key={name + i} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 130, background: 'rgba(255,255,255,0.01)', padding: 8, borderRadius: 8, border: '1px solid rgba(255,255,255,0.03)' }}>
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
-                                        <span style={{ fontSize: 12, fontWeight: 700 }}>{name}</span>
-                                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{playerObj.team || ''}</span>
+                                  <div key={name + i} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 130, background: 'rgba(255,255,255,0.01)', padding: 10, borderRadius: 8, border: '1px solid rgba(255,255,255,0.03)' }}>
+                                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1 }}>
+                                        <span style={{ fontSize: 15, fontWeight: 700 }}>{name}</span>
+                                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{playerObj.team || ''}</span>
                                       </div>
                                       <div style={{ textAlign: 'right' }}>
                                         <div style={{ fontWeight: 800 }}>{c}</div>
-                                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{pctOfPair}%</div>
+                                        <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{pctOfPair}%</div>
                                       </div>
                                     </div>
                                   </div>

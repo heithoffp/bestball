@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity, Search, X } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 import { analyzeStack } from '../utils/stackAnalysis';
@@ -167,14 +167,29 @@ const classifyStructure = (roster) => {
 export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}) {
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
-  const [debugPlayer, setDebugPlayer] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [rbReminderOpen, setRbReminderOpen] = useState(false);
+  const playerListRef = useRef(null);
+  const adpDividerRef = useRef(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearchQuery(searchInput), 250);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Scroll player list to center the ADP divider after each pick
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (adpDividerRef.current && playerListRef.current) {
+        const container = playerListRef.current;
+        const divider = adpDividerRef.current;
+        const dividerTop = divider.offsetTop - container.offsetTop;
+        const scrollTarget = dividerTop - container.clientHeight / 2;
+        container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+      }
+    });
+  }, [currentPicks]);
 
   // Add animation styles
   React.useEffect(() => {
@@ -766,7 +781,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     const isLocked = !!locked;
     
     return (
-      <div style={{ background: '#1e293b', borderRadius: 8, padding: '10px', marginBottom: 8, border: `1px solid ${isLocked ? locked.meta.color : '#334155'}` }}>
+      <div style={{ background: '#1e293b', borderRadius: 8, padding: '8px', marginBottom: 4, border: `1px solid ${isLocked ? locked.meta.color : '#334155'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon size={14} color={isLocked ? locked.meta.color : '#94a3b8'} />
@@ -813,9 +828,9 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     const isLow = diff < -5;
     
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-           <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.color }} />
+           <div style={{ width: 7, height: 7, borderRadius: '50%', background: item.color }} />
            <span style={{ color: '#cbd5e1' }}>{item.name}</span>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -837,106 +852,114 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
   const slotNum = Number(draftSlot) || 1;
   const overallPick = (currentRound - 1) * 12 + slotNum;
+  const snakePickPos = getSnakePickPosition(currentRound, slotNum, 12) || 1;
+  const snakeOverallPick = (currentRound - 1) * 12 + snakePickPos;
   const { referenceStrategyName } = strategyStatus;
 
   return (
-    <div style={{ display: 'flex', gap: 20, height: '130vh', fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: 20 }}>
+    <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0, fontFamily: 'sans-serif', color: '#e5e7eb', background: '#0f172a', padding: '12px 16px' }}>
       
       {/* LEFT COLUMN */}
-      <div style={{ width: '340px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
         
-        {/* Draft Controls */}
-        <div style={{ display: 'flex', gap: 10 }}>
-           <div style={{ flex: 1, background: '#1e293b', padding: '12px', borderRadius: 8, border: '1px solid #334155' }}>
-             <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Draft Slot</span>
-             <select 
-               value={draftSlot} 
-               onChange={e => setDraftSlot(Number(e.target.value))}
-               style={{ display: 'block', width: '100%', background: 'transparent', border: 'none', color: '#fff', fontWeight: 700, fontSize: 16, marginTop: 4, cursor: 'pointer' }}
-             >
-               {Array.from({length:12},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}
-             </select>
-           </div>
-           <div style={{ flex: 1, background: '#1e293b', padding: '12px', borderRadius: 8, border: '1px solid #334155', textAlign: 'center' }}>
-             <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Current Pick</div>
-             <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>
-               {currentRound}.{overallPick}
+        {/* Draft Controls + Strategy Status */}
+        <div style={{ flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+             <div style={{ flex: 1, background: '#1e293b', padding: '12px', borderRadius: 8, border: '1px solid #334155' }}>
+               <span style={{ fontSize: 13, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Draft Slot</span>
+               <select
+                 value={draftSlot}
+                 onChange={e => setDraftSlot(Number(e.target.value))}
+                 style={{ display: 'block', width: '100%', background: 'transparent', border: 'none', color: '#fff', fontWeight: 700, fontSize: 20, marginTop: 4, cursor: 'pointer' }}
+               >
+                 {Array.from({length:12},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}
+               </select>
              </div>
-           </div>
-        </div>
-        
-        {/* CONSTRUCTION BOARD (from V2) */}
-        <div style={{ background: '#1e293b22', borderRadius: 12, border: '1px solid #334155', padding: 12 }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
-             <Activity size={16} color="#f59e0b" />
-             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#f59e0b', fontWeight: 800 }}>Construction Board</h3>
-           </div>
-           
-           <StrategyCard title="Rushing Structure" statusObj={strategyStatus.rb} icon={Shield} />
-           <StrategyCard title="QB Approach" statusObj={strategyStatus.qb} icon={Zap} />
-           <StrategyCard title="TE Approach" statusObj={strategyStatus.te} icon={Anchor} />
-        </div>
-
-        {/* PORTFOLIO TARGETS (Hierarchical from PROTOCOL_TREE) */}
-        <div style={{ flex: 1, background: '#1e293b', borderRadius: 12, border: '1px solid #334155', padding: 16, overflowY: 'auto', maxHeight: 380 }} className="thin-scrollbar">
-           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-             <Target size={16} color="#3b82f6" />
-             <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', color: '#3b82f6', fontWeight: 800 }}>Portfolio Targets</h3>
-           </div>
-           
-           {/* Active Path Indicator */}
-           {portfolioHealth.activePath && (
-             <div style={{ 
-               fontSize: 10, 
-               color: '#94a3b8', 
-               marginBottom: 12, 
-               padding: '8px 10px', 
-               background: '#0f172a', 
-               borderRadius: 6,
-               borderLeft: '3px solid #3b82f6'
-             }}>
-               <div style={{ fontWeight: 700, color: '#cbd5e1', marginBottom: 4 }}>ACTIVE PATH:</div>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                 <div>RB: <span style={{ color: '#f59e0b', fontWeight: 600 }}>{portfolioHealth.activePath.rb}</span></div>
-                 {portfolioHealth.activePath.qb && (
-                   <div>QB: <span style={{ color: '#a855f7', fontWeight: 600 }}>{portfolioHealth.activePath.qb}</span></div>
-                 )}
-                 {portfolioHealth.activePath.te && (
-                   <div>TE: <span style={{ color: '#3b82f6', fontWeight: 600 }}>{portfolioHealth.activePath.te}</span></div>
-                 )}
+             <div style={{ flex: 1, background: '#1e293b', padding: '12px', borderRadius: 8, border: '1px solid #334155', textAlign: 'center' }}>
+               <div style={{ fontSize: 13, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Current Pick</div>
+               <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginTop: 4 }}>
+                 {currentRound}.{overallPick}
                </div>
              </div>
-           )}
+          </div>
 
-           <div style={{ marginBottom: 12 }}>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>RB ALLOCATION</div>
-             {portfolioHealth.rb?.map(i => <PortfolioRow key={i.key} item={i} />)}
-           </div>
-           
-           <div style={{ marginBottom: 12 }}>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
-               QB ALLOCATION
-               {!strategyStatus.rb.locked && <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>(default)</span>}
+        </div>
+
+        {/* PORTFOLIO TARGETS */}
+        <div style={{ flex: 1, minHeight: 0, background: '#1e293b', borderRadius: 10, border: '1px solid #334155', padding: '10px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }} className="thin-scrollbar">
+           {/* Header with current path status */}
+           <div style={{ marginBottom: 10, flexShrink: 0 }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+               <Target size={18} color="#94a3b8" />
+               <h3 style={{ margin: 0, fontSize: 16, textTransform: 'uppercase', color: '#e2e8f0', fontWeight: 800 }}>Portfolio Targets</h3>
              </div>
-             {portfolioHealth.qb?.map(i => <PortfolioRow key={i.key} item={i} />)}
+
+             {/* Current Path Pills */}
+             <div style={{ display: 'flex', gap: 6 }}>
+               {[
+                 { label: 'RB', statusObj: strategyStatus.rb, color: '#10b981' },
+                 { label: 'QB', statusObj: strategyStatus.qb, color: '#bf44ef' },
+                 { label: 'TE', statusObj: strategyStatus.te, color: '#3b82f6' }
+               ].map(({ label, statusObj, color }) => {
+                 const locked = statusObj.locked;
+                 return (
+                   <div key={label} style={{
+                     flex: 1,
+                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                     background: locked ? `${color}18` : '#0f172a',
+                     border: `1px solid ${locked ? color + '55' : '#334155'}`,
+                     borderRadius: 5,
+                     padding: '4px 6px',
+                     transition: 'all 0.3s'
+                   }}>
+                     <span style={{ fontSize: 11, fontWeight: 800, color: color, opacity: locked ? 1 : 0.4 }}>{label}</span>
+                     {locked ? (
+                       <span style={{ fontSize: 11, fontWeight: 700, color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                         {locked.name}
+                       </span>
+                     ) : (
+                       <span style={{ fontSize: 11, color: '#475569', whiteSpace: 'nowrap' }}>
+                         {statusObj.items.filter(i => i.viable).length} open
+                       </span>
+                     )}
+                   </div>
+                 );
+               })}
+             </div>
            </div>
 
-           <div>
-             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
-               TE ALLOCATION
-               {(!strategyStatus.rb.locked || !strategyStatus.qb.locked) && (
-                 <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>
-                   {!strategyStatus.rb.locked && !strategyStatus.qb.locked ? '(default)' : '(avg)'}
-                 </span>
-               )}
+           {/* Allocations */}
+           <div style={{ flex: 1, minHeight: 0 }}>
+             <div style={{ marginBottom: 10 }}>
+               <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981', marginBottom: 4 }}>RB ALLOCATION</div>
+               {portfolioHealth.rb?.map(i => <PortfolioRow key={i.key} item={i} />)}
              </div>
-             {portfolioHealth.te?.map(i => <PortfolioRow key={i.key} item={i} />)}
+
+             <div style={{ marginBottom: 10 }}>
+               <div style={{ fontSize: 13, fontWeight: 700, color: '#bf44ef', marginBottom: 4 }}>
+                 QB ALLOCATION
+                 {!strategyStatus.rb.locked && <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>(default)</span>}
+               </div>
+               {portfolioHealth.qb?.map(i => <PortfolioRow key={i.key} item={i} />)}
+             </div>
+
+             <div>
+               <div style={{ fontSize: 13, fontWeight: 700, color: '#3b82f6', marginBottom: 4 }}>
+                 TE ALLOCATION
+                 {(!strategyStatus.rb.locked || !strategyStatus.qb.locked) && (
+                   <span style={{ color: '#475569', fontWeight: 400, marginLeft: 6 }}>
+                     {!strategyStatus.rb.locked && !strategyStatus.qb.locked ? '(default)' : '(avg)'}
+                   </span>
+                 )}
+               </div>
+               {portfolioHealth.te?.map(i => <PortfolioRow key={i.key} item={i} />)}
+             </div>
            </div>
         </div>
         {/* Drafted Roster */}
-        <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', display: 'flex', flexDirection: 'column', minHeight: 200, maxHeight: 280 }}>
+        <div style={{ background: '#1e293b', borderRadius: 10, border: '1px solid #334155', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155' }}>
-            <h2 style={{ fontSize: 14, fontWeight: 800, margin: '0 0 12px 0', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 12px 0', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Draft Board
             </h2>
             {currentPicks.length > 0 && (
@@ -944,21 +967,21 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
                 <button 
                   onClick={handleUndo} 
                   style={{ 
-                    flex: 1, padding: '8px', background: '#334155', 
-                    color: '#cbd5e1', border: 'none', borderRadius: 6, cursor: 'pointer', 
-                    fontSize: 11, fontWeight: 600, transition: 'background 0.2s'
+                    flex: 1, padding: '8px', background: '#334155',
+                    color: '#cbd5e1', border: 'none', borderRadius: 6, cursor: 'pointer',
+                    fontSize: 14, fontWeight: 600, transition: 'background 0.2s'
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = '#475569'}
                   onMouseLeave={e => e.currentTarget.style.background = '#334155'}
                 >
                   Undo Last
                 </button>
-                <button 
-                  onClick={() => setCurrentPicks([])} 
-                  style={{ 
-                    flex: 1, padding: '8px', background: '#334155', 
-                    color: '#cbd5e1', border: 'none', borderRadius: 6, cursor: 'pointer', 
-                    fontSize: 11, fontWeight: 600, transition: 'background 0.2s'
+                <button
+                  onClick={() => setCurrentPicks([])}
+                  style={{
+                    flex: 1, padding: '8px', background: '#334155',
+                    color: '#cbd5e1', border: 'none', borderRadius: 6, cursor: 'pointer',
+                    fontSize: 14, fontWeight: 600, transition: 'background 0.2s'
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = '#475569'}
                   onMouseLeave={e => e.currentTarget.style.background = '#334155'}
@@ -972,14 +995,14 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }} className="thin-scrollbar">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {currentPicks.map((p, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, paddingBottom: 8, borderBottom: i < currentPicks.length - 1 ? '1px solid #334155' : 'none' }}>
-                  <span style={{ color: getPosColor(p.position), fontWeight: 800, width: 28, fontSize: 11 }}>{p.position}</span>
-                  <span style={{ color: '#64748b', fontSize: 11, width: 20 }}>{p.round}.</span>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 16, paddingBottom: 8, borderBottom: i < currentPicks.length - 1 ? '1px solid #334155' : 'none' }}>
+                  <span style={{ color: getPosColor(p.position), fontWeight: 800, width: 32, fontSize: 14 }}>{p.position}</span>
+                  <span style={{ color: '#64748b', fontSize: 14, width: 22 }}>{p.round}.</span>
                   <span style={{ fontWeight: 600, color: '#e2e8f0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                 </div>
               ))}
               {currentPicks.length === 0 && (
-                <div style={{ color: '#475569', fontSize: 13, fontStyle: 'italic', textAlign: 'center', padding: 30 }}>
+                <div style={{ color: '#475569', fontSize: 16, fontStyle: 'italic', textAlign: 'center', padding: 30 }}>
                   No picks yet...
                 </div>
               )}
@@ -990,22 +1013,22 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       
 
       {/* RIGHT COLUMN: PLAYER LIST (Full V1 Logic) */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155', background: '#1e293b' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#1e293b', borderRadius: 10, border: '1px solid #334155', overflow: 'hidden' }}>
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid #334155', background: '#1e293b', flexShrink: 0 }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
              <div>
-               <h2 style={{ fontSize: 16, margin: 0, fontWeight: 800, color: '#fff' }}>Available Players</h2>
-               <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+               <h2 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: '#fff' }}>Available Players</h2>
+               <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 4 }}>
                  Comparing against: <span style={{ color: '#f59e0b', fontWeight: 700 }}>{referenceStrategyName}</span>
                </div>
              </div>
-             <div style={{ fontSize: 11, color: '#64748b', textAlign: 'right' }}>
+             <div style={{ fontSize: 14, color: '#64748b', textAlign: 'right' }}>
                <div>Round {currentRound}</div>
                <div style={{ color: '#475569' }}>~{displayPlayers.length} shown</div>
              </div>
            </div>
            <div style={{ position: 'relative' }}>
-             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+             <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
              <input
                type="text"
                value={searchInput}
@@ -1018,7 +1041,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
                  border: '1px solid #334155',
                  borderRadius: 6,
                  color: '#e2e8f0',
-                 fontSize: 13,
+                 fontSize: 16,
                  outline: 'none',
                  boxSizing: 'border-box',
                }}
@@ -1039,93 +1062,170 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
            </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }} className="thin-scrollbar">
+        {/* Column headers — fixed above scrollable list */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '4px 27px',
+          borderBottom: '1px solid #334155', flexShrink: 0, background: '#1e293b'
+        }}>
+          <div style={{ width: 350, minWidth: 0, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="Player name, position, and any relevant badges (stack type, strategy warnings, ADP trend)">Player</span>
+          </div>
+          <div style={{ width: 200, textAlign: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="NFL team abbreviation">Team</span>
+          </div>
+          <div style={{ width: 55, textAlign: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="Average Draft Position — the consensus pick number where this player is currently being drafted">ADP</span>
+          </div>
+          <div style={{ width: 90, textAlign: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="Your average pick position for this player across your drafts. The +/- delta shows how your avg compares to current ADP (positive = value, negative = reach)">Avg</span>
+          </div>
+          {/* Divider */}
+          <div style={{ width: 1, alignSelf: 'stretch', background: '#334155', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0 }}>
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 70 }}>
+              <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="Path Exposure — percentage of rosters matching your current draft path that include this player. Count shown in parentheses.">Path</span>
+            </div>
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 70, borderLeft: '1px solid #1e293b88' }}>
+              <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="Lift Score — path exposure divided by global exposure. Values above 1.0 mean this player appears more often in rosters matching your strategy than in the general pool.">Lift</span>
+            </div>
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 110, borderLeft: '1px solid #1e293b88' }}>
+              <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="Correlation Score — how often this player co-occurs with your current picks across all rosters. High = commonly paired together, low = unique/diversifying pick.">Correlation</span>
+            </div>
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 120, borderLeft: '1px solid #1e293b88' }}>
+              <span style={{ fontSize: 12, color: '#f1f5f9', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', cursor: 'help' }} title="Global Exposure — percentage of ALL rosters in your portfolio that include this player, regardless of strategy path. Count shown in parentheses.">Global Exposure</span>
+            </div>
+          </div>
+          {/* Spacer for the overlap hover trigger area */}
+          <div style={{ width: 70, flexShrink: 0 }} />
+        </div>
+
+        <div ref={playerListRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 12px' }} className="thin-scrollbar">
             {displayPlayers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
                 {searchInput.trim() ? (
                   <>No players found matching "{searchInput}"<br/>
-                  <span style={{ fontSize: 12, color: '#475569' }}>Try a different name or clear the search.</span></>
+                  <span style={{ fontSize: 15, color: '#475569' }}>Try a different name or clear the search.</span></>
                 ) : (
                   <>No player data available for this round.<br/>
-                  <span style={{ fontSize: 12, color: '#475569' }}>Check if Master Players or ADP data is loaded.</span></>
+                  <span style={{ fontSize: 15, color: '#475569' }}>Check if Master Players or ADP data is loaded.</span></>
                 )}
               </div>
             ) : (
-              displayPlayers.map(p => (
-                  <PlayerCard
-                      key={p.name}
-                      player={p}
-                      currentPicks={currentPicks}
-                      onSelect={() => handleSelect(p)}
-                      stratName={referenceStrategyName}
-                      debugOpen={debugPlayer === p.name}
-                      setDebugOpen={(isOpen) => setDebugPlayer(isOpen ? p.name : null)}
-                  />
-              ))
+              displayPlayers.map((p, i) => {
+                const prevAdp = i > 0 ? displayPlayers[i - 1]._sortAdp : -Infinity;
+                const showDivider = !searchQuery.trim() &&
+                  prevAdp < snakeOverallPick && p._sortAdp >= snakeOverallPick;
+
+                return (
+                  <React.Fragment key={p.name}>
+                    {showDivider && (
+                      <div ref={adpDividerRef} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        margin: '6px 0', padding: '0 4px'
+                      }}>
+                        <div style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                          Before ADP
+                        </div>
+                        <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, #3b82f6, #3b82f644)' }} />
+                        <div style={{
+                          fontSize: 11, fontWeight: 800, color: '#3b82f6',
+                          background: '#3b82f618', padding: '3px 10px', borderRadius: 4,
+                          border: '1px solid #3b82f644', whiteSpace: 'nowrap'
+                        }}>
+                          Pick {snakeOverallPick}
+                        </div>
+                        <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, #3b82f644, #3b82f6)' }} />
+                        <div style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                          After ADP
+                        </div>
+                      </div>
+                    )}
+                    <PlayerCard
+                        player={p}
+                        currentPicks={currentPicks}
+                        onSelect={() => handleSelect(p)}
+                        stratName={referenceStrategyName}
+                    />
+                  </React.Fragment>
+                );
+              })
             )}
         </div>
-              {/* RB STRATEGY REMINDER - Shows when RB archetype is locked */}
+              {/* RB STRATEGY REMINDER - Collapsible bar */}
         {strategyStatus.rb.locked && strategyStatus.rb.locked.key !== 'RB_VALUE' && RB_BLURBS[strategyStatus.rb.locked.key] && (
-          <div style={{ 
-            background: `linear-gradient(135deg, ${strategyStatus.rb.locked.meta.color}15, ${strategyStatus.rb.locked.meta.color}05)`,
-            borderRadius: 12, 
-            border: `2px solid ${strategyStatus.rb.locked.meta.color}`,
-            padding: '16px',
-            boxShadow: `0 0 20px ${strategyStatus.rb.locked.meta.color}33`
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <div style={{ 
-                width: 8, 
-                height: 8, 
-                borderRadius: '50%', 
-                background: strategyStatus.rb.locked.meta.color,
-                boxShadow: `0 0 8px ${strategyStatus.rb.locked.meta.color}`
-              }} />
-              <h3 style={{ 
-                margin: 0, 
-                fontSize: 12, 
-                fontWeight: 800, 
-                color: strategyStatus.rb.locked.meta.color,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                {RB_BLURBS[strategyStatus.rb.locked.key].title}
-              </h3>
+          <div style={{ flexShrink: 0 }}>
+            <div
+              onClick={() => setRbReminderOpen(!rbReminderOpen)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 14px',
+                background: `linear-gradient(135deg, ${strategyStatus.rb.locked.meta.color}15, ${strategyStatus.rb.locked.meta.color}08)`,
+                borderTop: `1px solid ${strategyStatus.rb.locked.meta.color}44`,
+                borderRadius: rbReminderOpen ? '0' : '0 0 10px 10px',
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'background 0.2s'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: strategyStatus.rb.locked.meta.color,
+                  boxShadow: `0 0 8px ${strategyStatus.rb.locked.meta.color}`
+                }} />
+                <span style={{ fontSize: 14, fontWeight: 700, color: strategyStatus.rb.locked.meta.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {RB_BLURBS[strategyStatus.rb.locked.key].title}
+                </span>
+              </div>
+              <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+                {rbReminderOpen ? 'Hide' : 'Show'}
+              </span>
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>
-                  Protocol
-                </div>
-                <div style={{ fontSize: 11, color: '#e2e8f0', lineHeight: 1.5 }}>
-                  {RB_BLURBS[strategyStatus.rb.locked.key].protocol}
+
+            {rbReminderOpen && (
+              <div style={{
+                padding: '12px 14px',
+                background: `${strategyStatus.rb.locked.meta.color}08`,
+                borderTop: `1px solid ${strategyStatus.rb.locked.meta.color}22`,
+                borderRadius: '0 0 10px 10px',
+                maxHeight: 220,
+                overflowY: 'auto'
+              }} className="thin-scrollbar">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>
+                      Protocol
+                    </div>
+                    <div style={{ fontSize: 14, color: '#e2e8f0', lineHeight: 1.4 }}>
+                      {RB_BLURBS[strategyStatus.rb.locked.key].protocol}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>
+                      Execution
+                    </div>
+                    <div style={{ fontSize: 14, color: '#e2e8f0', lineHeight: 1.4 }}>
+                      {RB_BLURBS[strategyStatus.rb.locked.key].execution}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: '8px',
+                    background: '#0f172a',
+                    borderRadius: 6,
+                    borderLeft: '3px solid #ef4444'
+                  }}>
+                    <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>
+                      Key Constraint
+                    </div>
+                    <div style={{ fontSize: 14, color: '#fca5a5', lineHeight: 1.4 }}>
+                      {RB_BLURBS[strategyStatus.rb.locked.key].constraint}
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div>
-                <div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>
-                  Execution
-                </div>
-                <div style={{ fontSize: 11, color: '#e2e8f0', lineHeight: 1.5 }}>
-                  {RB_BLURBS[strategyStatus.rb.locked.key].execution}
-                </div>
-              </div>
-              
-              <div style={{ 
-                padding: '10px', 
-                background: '#0f172a', 
-                borderRadius: 8,
-                borderLeft: '3px solid #ef4444'
-              }}>
-                <div style={{ fontSize: 9, color: '#ef4444', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>
-                  ⚠️ Key Constraint
-                </div>
-                <div style={{ fontSize: 11, color: '#fca5a5', lineHeight: 1.5 }}>
-                  {RB_BLURBS[strategyStatus.rb.locked.key].constraint}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -1135,12 +1235,11 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 }
 
 // --- PLAYER CARD (Full V1 Component) ---
-function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen, setDebugOpen }) {
+function PlayerCard({ player, currentPicks = [], onSelect, stratName }) {
     const color = getPosColor(player.position);
     const stackInfo = analyzeStack(player, currentPicks);
 
     const pathExp = player.portfolioExposure || 0;
-    const stratExp = player.strategyExposure || 0;
     const liftScore = player.liftScore || 0;
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
@@ -1148,7 +1247,6 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
     const breakdown = player.correlationBreakdown || [];
     const myAvgPick = player.myAvgPick ?? null;
     const adpDelta = player.adpDelta ?? null;
-    const adpTrend = player.adpTrend ?? null;
     const isFallingKnife = player.isFallingKnife ?? false;
 
     const adpDeltaColor = getAdpDeltaColor(adpDelta);
@@ -1163,30 +1261,33 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
       else corrColor = '#10b981';
     }
 
-    const Row = ({ k, v }) => (
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11, color: '#cbd5e1' }}>
-        <div style={{ color: '#94a3b8' }}>{k}</div>
-        <div style={{ fontFamily: 'monospace', color: '#e2e8f0' }}>{v ?? '—'}</div>
-      </div>
-    );
+    const getBarColor = (pct) => {
+      if (pct > 25) return '#ef4444';
+      if (pct > 15) return '#f59e0b';
+      if (pct > 5) return '#fbbf24';
+      return '#10b981';
+    };
+    const sorted = breakdown.length > 0 ? [...breakdown].sort((a, b) => a.round - b.round) : [];
+    const lastName = (name) => {
+      const parts = (name || '').split(' ');
+      return parts.length > 1 ? parts[parts.length - 1] : name;
+    };
 
     return (
-      <div style={{ marginBottom: 10 }}>
+      <div style={{ marginBottom: 4 }}>
         <div
           onClick={onSelect}
           style={{
-            display: 'grid',
-            gridTemplateColumns: '240px 1fr auto',
-            gap: 20,
+            display: 'flex',
             alignItems: 'center',
+            gap: 12,
             background: '#0f172a',
-            padding: '14px 16px',
-            borderRadius: breakdown.length > 0 ? '10px 10px 0 0' : 10,
-            borderLeft: `4px solid ${color}`,
+            padding: '8px 12px',
+            borderRadius: 6,
+            borderLeft: `3px solid ${color}`,
             cursor: 'pointer',
             transition: 'all 0.15s',
             border: '1px solid #1e293b',
-            borderBottom: breakdown.length > 0 ? '1px solid #1e293b22' : '1px solid #1e293b'
           }}
           onMouseEnter={e => {
             e.currentTarget.style.background = '#1e293b';
@@ -1197,289 +1298,187 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, debugOpen,
             e.currentTarget.style.borderColor = '#1e293b';
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            <div style={{ 
-              fontSize: 10, fontWeight: 900, color: '#0f172a', background: color, 
-              padding: '3px 7px', borderRadius: 5, minWidth: 28, textAlign: 'center' 
+          {/* Identity: position + name + stack badge + warning badges */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: 350, minWidth: 0, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{
+              fontSize: 12, fontWeight: 900, color: '#0f172a', background: color,
+              padding: '2px 6px', borderRadius: 4, minWidth: 30, textAlign: 'center', lineHeight: 1.2, flexShrink: 0
             }}>
               {player.position || '??'}
             </div>
-
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                <span style={{ 
-                  fontWeight: 700, fontSize: 14, color: '#f1f5f9', 
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' 
-                }}>
-                  {player.name || 'Unknown Player'}
-                </span>
-
-                {stackInfo && (
-                  <span style={{ 
-                    fontSize: stackInfo.priority >= 90 ? 10 : 9,
-                    background: stackInfo.priority >= 90 
-                      ? `linear-gradient(135deg, ${stackInfo.color}22, ${stackInfo.color}33)` 
-                      : `${stackInfo.color}22`,
-                    color: stackInfo.color,
-                    padding: stackInfo.priority >= 90 ? '4px 10px' : '3px 8px',
-                    borderRadius: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    fontWeight: stackInfo.priority >= 80 ? 800 : 600,
-                    border: stackInfo.priority >= 90 ? `1.5px solid ${stackInfo.color}` : 'none',
-                    boxShadow: stackInfo.priority >= 90 ? `0 0 12px ${stackInfo.color}44` : 'none',
-                    animation: stackInfo.priority >= 100 ? 'pulse 2s infinite' : 'none'
-                  }}>
-                    {stackInfo.type}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ fontSize: 11, color: '#64748b', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span>{player.team || 'FA'}</span>
-                <span>•</span>
-                <span>ADP {displayAdp}</span>
-                {myAvgPick != null && (
-                  <>
-                    <span>•</span>
-                    <span>My Avg: {myAvgPick.toFixed(1)}</span>
-                    {adpDelta != null && (
-                      <span style={{ color: adpDeltaColor, fontWeight: 600 }}>
-                        ({adpDelta > 0 ? '+' : ''}{adpDelta.toFixed(1)})
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {killsStrategy && (
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-                    color: '#ef4444', fontSize: 9, background: 'rgba(239,68,68,0.1)',
-                    padding: '3px 7px', borderRadius: 4, fontWeight: 700
-                  }}>
-                    <AlertTriangle size={10} /> Limits Path
-                  </div>
-                )}
-                {isFallingKnife && (
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-                    color: '#f97316', fontSize: 9, background: 'rgba(249,115,22,0.1)',
-                    padding: '3px 7px', borderRadius: 4, fontWeight: 700
-                  }}>
-                    <TrendingUp size={10} /> Falling Knife
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            
-            {/* Path Exposure */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
-                Path
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 3 }}>
-                <Users size={13} color={pathExp > 25 ? '#10b981' : pathExp > 10 ? '#f59e0b' : '#64748b'} />
-                <span style={{ 
-                  fontSize: 15, fontWeight: 800, 
-                  color: pathExp > 25 ? '#10b981' : pathExp > 10 ? '#f59e0b' : '#94a3b8' 
-                }}>
-                  {Math.round(pathExp)}%
-                </span>
-              </div>
-              <div style={{ fontSize: 10, color: '#475569' }}>{(player.matchCount || 0)} here</div>
-            </div>
-
-            {/* Strategy Exposure */}
-            <div style={{ textAlign: 'center', borderLeft: '1px solid #334155', paddingLeft: 12 }}>
-              <div style={{ fontSize: 9, color: '#f59e0b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 700 }}>
-                {'Lift Score'}
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#e2e8f0', marginBottom: 3 }}>
-                {liftScore.toFixed(2)}
-              </div>
-              <div style={{ fontSize: 10, color: '#475569' }}>in strategy</div>
-            </div>
-
-            {/* Correlation Score */}
-            <div style={{ textAlign: 'center', borderLeft: '1px solid #334155', paddingLeft: 12 }}>
-              <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
-                Correlation
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                <LinkIcon size={13} color={corrColor} />
-                <div style={{ fontSize: 15, fontWeight: 800, color: corrColor }}>
-                  {currentPicks.length > 0 ? Math.round(corr) + '%' : '—'}
-                </div>
-              </div>
-              <div style={{ fontSize: 10, color: '#475569' }}>
-                {corr < 5 && currentPicks.length > 0 ? 'unique' : currentPicks.length > 0 ? 'common' : 'n/a'}
-              </div>
-            </div>
-
-            {/* Global Exposure */}
-            <div style={{ textAlign: 'center', borderLeft: '1px solid #334155', paddingLeft: 12 }}>
-              <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
-                Global
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: getGlobalExposureColor(globalExp), marginBottom: 3 }}>
-                {Math.round(globalExp)}%
-              </div>
-              <div style={{ fontSize: 10, color: '#475569' }}>{(player.totalGlobalCount || 0)} total</div>
-            </div>
-          </div>
-
-          {/* Debug Button */}
-          <div>
-            <button
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                setDebugOpen(!debugOpen); 
-              }}
-              style={{ 
-                background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', 
-                padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 11, 
-                fontWeight: 600, transition: 'all 0.2s'
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = '#334155';
-                e.currentTarget.style.color = '#cbd5e1';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = '#1e293b';
-                e.currentTarget.style.color = '#94a3b8';
-              }}
-            >
-              ?
-            </button>
-          </div>
-        </div>
-
-        {/* Correlation Breakdown Bar */}
-        {breakdown.length > 0 && (() => {
-          const getBarColor = (pct) => {
-            if (pct > 25) return '#ef4444';
-            if (pct > 15) return '#f59e0b';
-            if (pct > 5) return '#fbbf24';
-            return '#10b981';
-          };
-          const sorted = [...breakdown].sort((a, b) => a.round - b.round);
-          const lastName = (name) => {
-            const parts = (name || '').split(' ');
-            return parts.length > 1 ? parts[parts.length - 1] : name;
-          };
-
-          return (
-            <div style={{
-              display: 'flex', gap: 2, padding: '6px 16px 8px',
-              background: '#0a0f1a',
-              border: '1px solid #1e293b', borderTop: 'none',
-              borderRadius: '0 0 10px 10px', overflowX: 'auto'
+            <span style={{
+              fontWeight: 700, fontSize: 15, color: '#f1f5f9',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
             }}>
-              {sorted.map((entry, i) => {
-                const pct = entry.pGivenPick * 100;
-                const barColor = getBarColor(pct);
-                const posColor = getPosColor(entry.position);
-                return (
-                  <div key={entry.name + '-' + i} style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    flex: '1 1 0', minWidth: 44, maxWidth: 80
-                  }}>
-                    <div style={{
-                      fontSize: 9, fontWeight: 700, color: posColor,
-                      marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden',
-                      textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center'
-                    }}>
-                      {lastName(entry.name)}
-                    </div>
-                    <div style={{
-                      width: '100%', height: 6, background: '#1e293b',
-                      borderRadius: 3, overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        width: `${Math.min(pct, 100)}%`, height: '100%',
-                        background: barColor, borderRadius: 3
-                      }} />
-                    </div>
-                    <div style={{
-                      fontSize: 8, fontWeight: 700, color: barColor,
-                      marginTop: 2, fontFamily: 'monospace'
-                    }}>
-                      {Math.round(pct)}%
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
-
-        {/* Debug Panel */}
-        {debugOpen && (
-          <div style={{ 
-            background: '#020617', borderRadius: 8, padding: 14, marginTop: 6, 
-            border: '1px solid #1e293b', fontSize: 12, color: '#cbd5e1' 
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <Row k="Name" v={player.name} />
-              <Row k="Position" v={player.position} />
-              <Row k="Team" v={player.team} />
-              <Row k="ADP" v={player.adpPick?.toFixed(2)} />
-              {myAvgPick != null && <Row k="My Avg Pick" v={myAvgPick.toFixed(1)} />}
-              {adpDelta != null && (
-                <Row k="ADP Delta" v={
-                  <span style={{ color: adpDeltaColor, fontWeight: 700 }}>
-                    {adpDelta > 0 ? '+' : ''}{adpDelta.toFixed(1)}
-                  </span>
-                } />
-              )}
-            </div>
-            {(() => {
-              const hist = (player.history || []).filter(h => Number.isFinite(h.adpPick));
-              if (hist.length < 2) return null;
-              const trending = adpTrend != null ? (adpTrend > 0 ? ' ↑' : adpTrend < 0 ? ' ↓' : ' →') : '';
-              const histStr = hist.map(h => h.adpPick.toFixed(1)).join(' → ') + trending;
-              return (
-                <div style={{ borderTop: '1px solid #1e293b', paddingTop: 10, marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>ADP History</div>
-                  <div style={{ fontSize: 11, color: adpTrend > 3 ? '#f97316' : adpTrend < -3 ? '#10b981' : '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                    {histStr}
-                  </div>
-                </div>
-              );
-            })()}
-            <div style={{ borderTop: '1px solid #1e293b', paddingTop: 10, marginTop: 10 }}>
-              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', fontWeight: 600 }}>Exposure Metrics</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <Row k="Path Exposure" v={pathExp.toFixed(1) + '%'} />
-                <Row k="Strategy Exposure" v={stratExp.toFixed(1) + '%'} />
-                <Row k="Global Exposure" v={globalExp.toFixed(1) + '%'} />
-                <Row k="Correlation" v={corr.toFixed(1) + '%'} />
-                <Row k="In Matching Path" v={player.matchCount} />
-                <Row k="Total Rosters" v={player.totalGlobalCount} />
-              </div>
-            </div>
+              {player.name || 'Unknown Player'}
+            </span>
             {stackInfo && (
-              <div style={{ borderTop: '1px solid #1e293b', paddingTop: 10, marginTop: 10 }}>
-                <div style={{ fontSize: 10, color: stackInfo.color, marginBottom: 8, textTransform: 'uppercase', fontWeight: 600 }}>Stack Analysis</div>
-                <div style={{ marginBottom: 6 }}>
-                  <span style={{ color: '#94a3b8', fontSize: 11 }}>Type: </span>
-                  <span style={{ color: stackInfo.color, fontWeight: 700, fontSize: 11 }}>{stackInfo.type}</span>
-                </div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                  <span style={{ color: '#64748b' }}>With: </span>
-                  {stackInfo.teammates}
-                </div>
+              <span style={{
+                fontSize: 11, flexShrink: 0,
+                background: stackInfo.priority >= 90
+                  ? `linear-gradient(135deg, ${stackInfo.color}22, ${stackInfo.color}33)`
+                  : `${stackInfo.color}22`,
+                color: stackInfo.color,
+                padding: stackInfo.priority >= 90 ? '2px 6px' : '1px 5px',
+                borderRadius: 4,
+                display: 'inline-flex', alignItems: 'center', gap: 2,
+                fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap',
+                border: stackInfo.priority >= 90 ? `1.5px solid ${stackInfo.color}` : 'none',
+                boxShadow: stackInfo.priority >= 90 ? `0 0 12px ${stackInfo.color}44` : 'none'
+              }}>
+                {stackInfo.type}
+              </span>
+            )}
+            {killsStrategy && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 2, flexShrink: 0,
+                color: '#ef4444', fontSize: 11, background: 'rgba(239,68,68,0.1)',
+                padding: '1px 5px', borderRadius: 3, fontWeight: 700, lineHeight: 1.2
+              }}>
+                <AlertTriangle size={11} /> Limits
+              </div>
+            )}
+            {isFallingKnife && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 2, flexShrink: 0,
+                color: '#f97316', fontSize: 11, background: 'rgba(249,115,22,0.1)',
+                padding: '1px 5px', borderRadius: 3, fontWeight: 700, lineHeight: 1.2
+              }}>
+                <TrendingUp size={11} /> Falling
               </div>
             )}
           </div>
-        )}
+
+          {/* Team column */}
+          <div style={{ width: 200, textAlign: 'center', flexShrink: 0, fontSize: 13, color: '#f1f5f9', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {player.team || 'FA'}
+          </div>
+
+          {/* ADP column */}
+          <div style={{ width: 55, textAlign: 'center', flexShrink: 0, fontSize: 13, color: '#f1f5f9', whiteSpace: 'nowrap' }}>
+            {displayAdp}
+          </div>
+
+          {/* Avg + Delta column */}
+          <div style={{ width: 90, textAlign: 'center', flexShrink: 0, fontSize: 13, color: '#f1f5f9', whiteSpace: 'nowrap' }}>
+            {myAvgPick != null ? (
+              <span>
+                {myAvgPick.toFixed(1)}
+                {adpDelta != null && (
+                  <span style={{ color: adpDeltaColor, fontWeight: 600, marginLeft: 2 }}>
+                    {adpDelta > 0 ? '+' : ''}{adpDelta.toFixed(1)}
+                  </span>
+                )}
+              </span>
+            ) : '—'}
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: 1, alignSelf: 'stretch', background: '#334155', margin: '2px 0', flexShrink: 0 }} />
+
+          {/* Stats row — values only, headers are in the fixed row above */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0 }}>
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 70 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 3 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: pathExp > 25 ? '#10b981' : pathExp > 10 ? '#f59e0b' : '#94a3b8' }}>
+                  {Math.round(pathExp)}%
+                </span>
+                <span style={{ fontSize: 11, color: '#475569' }}>({player.matchCount || 0})</span>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 70, borderLeft: '1px solid #1e293b88' }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#e2e8f0' }}>
+                {liftScore.toFixed(2)}
+              </span>
+            </div>
+
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 110, borderLeft: '1px solid #1e293b88' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 3 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: corrColor }}>
+                  {currentPicks.length > 0 ? Math.round(corr) + '%' : '—'}
+                </span>
+                <span style={{ fontSize: 11, color: '#475569' }}>
+                  {corr < 5 && currentPicks.length > 0 ? 'unq' : currentPicks.length > 0 ? 'com' : ''}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', padding: '0 10px', minWidth: 120, borderLeft: '1px solid #1e293b88' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 3 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: getGlobalExposureColor(globalExp) }}>
+                  {Math.round(globalExp)}%
+                </span>
+                <span style={{ fontSize: 11, color: '#475569' }}>({player.totalGlobalCount || 0})</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Correlation Breakdown — hover popout */}
+          {sorted.length > 0 && (
+            <div
+              style={{ position: 'relative', flexShrink: 0, marginLeft: 'auto' }}
+              onMouseEnter={e => {
+                const popup = e.currentTarget.querySelector('[data-popup]');
+                if (popup) popup.style.display = 'block';
+              }}
+              onMouseLeave={e => {
+                const popup = e.currentTarget.querySelector('[data-popup]');
+                if (popup) popup.style.display = 'none';
+              }}
+            >
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px',
+                background: '#1e293b', borderRadius: 4, cursor: 'default',
+                fontSize: 12, color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap'
+              }}
+                onClick={e => e.stopPropagation()}
+              >
+                <LinkIcon size={12} color={corrColor} />
+                <span>{sorted.length} picks</span>
+              </div>
+
+              <div data-popup style={{
+                display: 'none', position: 'absolute', right: 0, top: '100%', marginTop: 4,
+                background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
+                padding: '8px 0', zIndex: 50, minWidth: 220, maxWidth: 300,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+              }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ padding: '0 12px 6px', fontSize: 10, color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
+                  Roster Overlap
+                </div>
+                {sorted.map((entry, i) => {
+                  const pct = entry.pGivenPick * 100;
+                  const barColor = getBarColor(pct);
+                  const posColor = getPosColor(entry.position);
+                  return (
+                    <div key={entry.name + '-' + i} style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px',
+                    }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 900, color: '#0f172a', background: posColor,
+                        padding: '1px 4px', borderRadius: 3, minWidth: 22, textAlign: 'center'
+                      }}>
+                        {entry.position}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {lastName(entry.name)}
+                      </span>
+                      <div style={{ width: 40, height: 5, background: '#1e293b', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
+                        <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: barColor, borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: barColor, fontFamily: 'monospace', minWidth: 28, textAlign: 'right' }}>
+                        {Math.round(pct)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
 }
