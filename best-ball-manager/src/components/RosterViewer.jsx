@@ -1208,7 +1208,7 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
             <th style={{ ...styles.dth, textAlign: 'center' }}>Pos</th>
             <th style={{ ...styles.dth, textAlign: 'center' }}>Team</th>
             <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('pick')}>Draft Pick <PI col="pick" /></th>
-            <th style={{ ...styles.dth, textAlign: 'center' }}>Round</th>
+            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('projectedPoints')}>Proj Pts <PI col="projectedPoints" /></th>
             <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('adp')}>Cur ADP <PI col="adp" /></th>
             <th style={{ ...styles.dth, textAlign: 'center', color: '#00e5a055' }} onClick={() => tp('clv')}>CLV% <PI col="clv" /></th>
           </tr>
@@ -1233,7 +1233,7 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
                 </td>
                 <td style={{ ...styles.dtd, textAlign: 'center', color: '#e0e0e0', fontFamily: "'Space Mono', monospace", fontSize: 11 }}>{p.team}</td>
                 <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{p.pick || '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontSize: 12 }}>{p.round || '—'}</td>
+                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
                 <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
                 <td style={{ ...styles.dtd, textAlign: 'center' }}>
                   {clvPct !== null ? (

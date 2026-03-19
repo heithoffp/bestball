@@ -10,7 +10,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:gist.github.com)",
       "Bash(grep -v \"^$\")",
-      "WebFetch(domain:g.espncdn.com)"
+      "WebFetch(domain:g.espncdn.com)",
+      "Bash(wc:*)"
     ]
   }
 }

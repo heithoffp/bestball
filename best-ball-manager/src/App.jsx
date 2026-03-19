@@ -1,16 +1,19 @@
 // src/App.jsx
-import React, { useEffect, useState } from 'react';
-import ExposureTable from './components/ExposureTable';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import CanonicalTable from './components/CanonicalTable';
 import { parseCSVFile, parseCSVText } from './utils/csv';
 import { processMasterList, parseAdpString } from './utils/helpers';
-import AdpTimeSeries from './components/AdpTimeSeries';
-import ComboAnalysis from './components/ComboAnalysis';
-import RosterConstruction from './components/RosterConstruction';
-import DraftFlowAnalysis from './components/DraftFlowAnalysis';
-import RosterViewer from './components/RosterViewer';
-import JaccardAnalysis from './components/JaccardAnalysis';
-import PlayerRankings from './components/PlayerRankings';
+
+// Lazy-loaded tab components (P2: code splitting)
+const ExposureTable = lazy(() => import('./components/ExposureTable'));
+const AdpTimeSeries = lazy(() => import('./components/AdpTimeSeries'));
+const DraftFlowAnalysis = lazy(() => import('./components/DraftFlowAnalysis'));
+const RosterViewer = lazy(() => import('./components/RosterViewer'));
+const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
+// DISABLED for performance — keep source files intact
+// const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
+// const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
+// const JaccardAnalysis = lazy(() => import('./components/JaccardAnalysis'));
 
 import rosterRaw from './assets/rosters.csv?raw';
 const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
@@ -157,15 +160,15 @@ export default function App() {
       const master = processMasterList(enrichedRosters, localAdpMap, 12, snapshots, universePlayers);
       setMasterPlayers(master);
 
-      // Load rankings source: projections.csv first, then rankings.csv, then latest ADP
-      const projectionsRaw = Object.values(projectionsModules)[0];
+      // Load rankings source: rankings.csv first, then projections.csv, then latest ADP
       const rankingsRaw = Object.values(rankingsModules)[0];
-      if (projectionsRaw) {
-        const projRows = await parseCSVText(String(projectionsRaw));
-        setRankingsSource(projRows);
-      } else if (rankingsRaw) {
+      const projectionsRaw = Object.values(projectionsModules)[0];
+      if (rankingsRaw) {
         const rankRows = await parseCSVText(String(rankingsRaw));
         setRankingsSource(rankRows);
+      } else if (projectionsRaw) {
+        const projRows = await parseCSVText(String(projectionsRaw));
+        setRankingsSource(projRows);
       } else if (latest) {
         setRankingsSource(latest.rows);
       }
@@ -193,28 +196,25 @@ export default function App() {
             <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
             <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Time Series</button>
             <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Flow</button>
-            <button className={`tab-button ${activeTab === 'combos' ? 'active' : ''}`} onClick={() => setActiveTab('combos')}>Combo Analysis</button>
-            <button className={`tab-button ${activeTab === 'construction' ? 'active' : ''}`} onClick={() => setActiveTab('construction')}>Roster Construction</button>
+            {/* DISABLED: Combo Analysis, Roster Construction, Jaccard Analysis */}
             <button className={`tab-button ${activeTab === 'rosters' ? 'active' : ''}`} onClick={() => setActiveTab('rosters')}>Rosters</button>
-            <button className={`tab-button ${activeTab === 'jaccard' ? 'active' : ''}`} onClick={() => setActiveTab('jaccard')}>Jaccard Analysis</button>
             <button className={`tab-button ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
           </div>
 
-          {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
-          {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
-          {activeTab === 'combos' && <ComboAnalysis rosterData={rosterData} />}
-          {activeTab === 'construction' && <RosterConstruction rosterData={rosterData} />}
-          {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
-          {activeTab === 'jaccard' && <JaccardAnalysis rosterData={rosterData} />}
-          {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} />}
-          {activeTab === 'timeseries' && (
-            <AdpTimeSeries
-              adpSnapshots={adpSnapshots}
-              masterPlayers={masterPlayers}
-              teams={12}
-              rosterData={rosterData}
-            />
-          )}
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading tab...</div>}>
+            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
+            {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
+            {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
+            {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} />}
+            {activeTab === 'timeseries' && (
+              <AdpTimeSeries
+                adpSnapshots={adpSnapshots}
+                masterPlayers={masterPlayers}
+                teams={12}
+                rosterData={rosterData}
+              />
+            )}
+          </Suspense>
         </div>
       )}
     </div>
