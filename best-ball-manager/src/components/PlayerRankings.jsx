@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { GripVertical, Download, Save, Search } from 'lucide-react';
 import { exportRankingsCSV, saveRankingsToAssets } from '../utils/rankingsExport';
+import FileUploadButton from './FileUploadButton';
 
 const POS_COLORS = {
   QB: '#bf44ef',
@@ -196,7 +197,7 @@ const RankingRow = React.memo(function RankingRow({
 });
 
 /* ── Main component ──────────────────────────────────────────── */
-export default function PlayerRankings({ initialPlayers, masterPlayers }) {
+export default function PlayerRankings({ initialPlayers, masterPlayers, onRankingsUpload }) {
   /* --- state --- */
   const [rankedPlayers, setRankedPlayers] = useState([]);
   const [tierBreaks, setTierBreaks] = useState({
@@ -490,7 +491,10 @@ export default function PlayerRankings({ initialPlayers, masterPlayers }) {
     <div>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Player Rankings</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Player Rankings</h2>
+          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'flex-end' }}>
           {/* Search */}
           <div style={{ position: 'relative', maxWidth: 240 }}>

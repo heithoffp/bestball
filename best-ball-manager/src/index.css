@@ -119,3 +119,24 @@ td { padding: 1rem; border-bottom: 1px solid var(--border); }
   border-top: 1px dashed var(--accent-blue) !important;
   border-bottom: 1px dashed var(--accent-blue) !important;
 }
+
+/* ---- Upload Button ---- */
+.toolbar-btn {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+}
+
+.toolbar-btn:hover {
+  background: var(--border);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import AdpSparkline from './AdpSparkline';
 import { ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
+import FileUploadButton from './FileUploadButton';
 
 // --- Shared Utilities ---
 const COLORS = {
@@ -19,7 +20,7 @@ const RB_OPTIONS = ['Any', 'RB_ZERO', 'RB_HYPER_FRAGILE', 'RB_HERO', 'RB_VALUE']
 const QB_OPTIONS = ['Any', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['Any', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 
-export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
+export default function ExposureTable({ masterPlayers = [], rosterData = [], onRosterUpload }) {
   // ... your existing state and memo logic unchanged (omitted here for brevity)
   // Copy-paste the same logic you already have above (search, sorting, useMemos, etc.)
   // For clarity I'm keeping only the render part here — assume the rest of your logic remains.
@@ -239,7 +240,10 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexShrink: 0 }}>
-        <h2 style={{ margin: 0 }}>Exposures</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h2 style={{ margin: 0 }}>Exposures</h2>
+          {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} />}
+        </div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <label style={{
             display: 'flex',
