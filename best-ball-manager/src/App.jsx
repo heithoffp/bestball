@@ -14,8 +14,8 @@ const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
 // const JaccardAnalysis = lazy(() => import('./components/JaccardAnalysis'));
 
-// Bundled assets (developer-controlled)
-import rosterRaw from './assets/rosters.csv?raw';
+// Bundled assets (developer-controlled) — all use glob so missing files don't break the build
+const rosterModules = import.meta.glob('./assets/rosters.csv', { as: 'raw', eager: true });
 const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
 const projectionsModules = import.meta.glob('./assets/projections.csv', { as: 'raw', eager: true });
 const rankingsModules = import.meta.glob('./assets/rankings.csv', { as: 'raw', eager: true });
@@ -61,12 +61,19 @@ export default function App() {
   }
 
   async function loadFromAssets() {
+    const rosterRaw = Object.values(rosterModules)[0];
     const adpFiles = await loadBundledAdp();
     const rankingsRaw = Object.values(rankingsModules)[0];
     const projectionsRaw = Object.values(projectionsModules)[0];
 
+    if (!rosterRaw && adpFiles.length === 0) {
+      // Nothing at all to load
+      setStatus({ type: '', msg: '' });
+      return;
+    }
+
     const result = await processLoadedData({
-      rosterText: String(rosterRaw),
+      rosterText: rosterRaw ? String(rosterRaw) : undefined,
       adpFiles,
       rankingsText: rankingsRaw ? String(rankingsRaw) : undefined,
       projectionsText: projectionsRaw ? String(projectionsRaw) : undefined,
@@ -128,8 +135,6 @@ export default function App() {
     }
   }, []);
 
-  const hasData = masterPlayers.length > 0;
-
   return (
     <div className="app-container">
       <h1>BEST BALL MANAGER</h1>
@@ -140,35 +145,33 @@ export default function App() {
         </div>
       )}
 
-      {hasData && (
-        <div className="card">
-          <div className="tab-bar">
-            <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
-            <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Time Series</button>
-            <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Flow</button>
-            {/* DISABLED: Combo Analysis, Roster Construction, Jaccard Analysis */}
-            <button className={`tab-button ${activeTab === 'rosters' ? 'active' : ''}`} onClick={() => setActiveTab('rosters')}>Rosters</button>
-            <button className={`tab-button ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
-          </div>
-
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading tab...</div>}>
-              {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onRosterUpload={handleRosterUpload} />}
-              {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
-              {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
-              {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} onRankingsUpload={handleRankingsUpload} />}
-              {activeTab === 'timeseries' && (
-                <AdpTimeSeries
-                  adpSnapshots={adpSnapshots}
-                  masterPlayers={masterPlayers}
-                  teams={12}
-                  rosterData={rosterData}
-                />
-              )}
-            </Suspense>
-          </div>
+      <div className="card">
+        <div className="tab-bar">
+          <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
+          <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Time Series</button>
+          <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Flow</button>
+          {/* DISABLED: Combo Analysis, Roster Construction, Jaccard Analysis */}
+          <button className={`tab-button ${activeTab === 'rosters' ? 'active' : ''}`} onClick={() => setActiveTab('rosters')}>Rosters</button>
+          <button className={`tab-button ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
         </div>
-      )}
+
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading tab...</div>}>
+            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onRosterUpload={handleRosterUpload} />}
+            {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
+            {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
+            {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} onRankingsUpload={handleRankingsUpload} />}
+            {activeTab === 'timeseries' && (
+              <AdpTimeSeries
+                adpSnapshots={adpSnapshots}
+                masterPlayers={masterPlayers}
+                teams={12}
+                rosterData={rosterData}
+              />
+            )}
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

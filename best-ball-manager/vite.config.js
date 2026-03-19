@@ -18,6 +18,7 @@ function saveRankingsPlugin() {
         req.on('end', () => {
           try {
             const filePath = path.resolve(__dirname, 'src/assets/rankings.csv');
+            fs.mkdirSync(path.dirname(filePath), { recursive: true });
             fs.writeFileSync(filePath, body, 'utf-8');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ ok: true }));

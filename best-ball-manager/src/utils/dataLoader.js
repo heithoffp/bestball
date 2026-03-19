@@ -13,8 +13,8 @@ import { processMasterList, parseAdpString } from './helpers';
  * @returns {{ rosterData, masterPlayers, adpSnapshots, rankingsSource }}
  */
 export async function processLoadedData({ rosterText, adpFiles = [], rankingsText, projectionsText }) {
-  // 1) Parse roster
-  const rosterRows = await parseCSVText(String(rosterText));
+  // 1) Parse roster (may be undefined when no roster CSV exists)
+  const rosterRows = rosterText ? await parseCSVText(String(rosterText)) : [];
   const mappedRosters = rosterRows.map(row => {
     let name = row['Player Name'] || row.player_name || row.Player;
     if (!name && (row['First Name'] || row.firstName)) {
@@ -120,14 +120,14 @@ export async function processLoadedData({ rosterText, adpFiles = [], rankingsTex
   // 6) Build master list
   const master = processMasterList(enrichedRosters, localAdpMap, 12, snapshots, universePlayers);
 
-  // 7) Resolve rankings source (rankings > projections > latest ADP)
+  // 7) Resolve rankings source (rankings > latest ADP > projections)
   let rankingsSource = [];
   if (rankingsText) {
     rankingsSource = await parseCSVText(String(rankingsText));
-  } else if (projectionsText) {
-    rankingsSource = await parseCSVText(String(projectionsText));
   } else if (latest) {
     rankingsSource = latest.rows;
+  } else if (projectionsText) {
+    rankingsSource = await parseCSVText(String(projectionsText));
   }
 
   return { rosterData: enrichedRosters, masterPlayers: master, adpSnapshots: snapshots, rankingsSource };

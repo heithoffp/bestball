@@ -664,7 +664,7 @@ export default function RosterViewer({ rosterData = [] }) {
     return (
       <div style={styles.empty}>
         <span style={{ fontSize: 40 }}>📋</span>
-        <p>No roster data loaded yet.</p>
+        <p>No roster data loaded. Go to the Exposures tab and use the Upload button to import your Underdog Exposure CSV.</p>
       </div>
     );
   }

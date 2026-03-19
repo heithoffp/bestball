@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
   Tooltip, Legend, CartesianGrid, ReferenceArea, ReferenceLine
@@ -43,14 +43,13 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
     return () => clearTimeout(timer);
   }, [queryInput]);
   const [showPickRanges, setShowPickRanges] = useState(true);
-  const [selectedIds, setSelectedIds] = useState(() => {
-    return [...masterPlayers]
-      .sort((a, b) => parseFloat(b.exposure || 0) - parseFloat(a.exposure || 0))
-      .slice(0, 5)
-      .map(p => p.player_id);
-  });
+  const [selectedIds, setSelectedIds] = useState([]);
   
-  const [sortConfig, setSortConfig] = useState({ key: 'exposure', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState(
+    rosterData.length === 0
+      ? { key: 'change', direction: 'asc' }
+      : { key: 'exposure', direction: 'desc' }
+  );
 
   const colorPalette = [
     '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
@@ -189,6 +188,15 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
         return 0;
     });
   }, [richPlayerList, query, sortConfig]);
+
+  // Auto-select top 5 from sorted list on initial load
+  const initialSelectionDone = useRef(false);
+  useEffect(() => {
+    if (!initialSelectionDone.current && filteredAndSortedList.length > 0) {
+      initialSelectionDone.current = true;
+      setSelectedIds(filteredAndSortedList.slice(0, 5).map(p => p.id));
+    }
+  }, [filteredAndSortedList]);
 
   // 3. Chart Data
   const chartData = useMemo(() => {

@@ -481,8 +481,14 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   /* --- empty state --- */
   if (!initialPlayers || initialPlayers.length === 0) {
     return (
-      <div style={{ padding: 24, color: 'var(--text-secondary)', textAlign: 'center' }}>
-        No player data available. Load ADP snapshots or add a rankings.csv to src/assets/.
+      <div style={{ padding: 24, textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Player Rankings</h2>
+          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
+        </div>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          No rankings data loaded. Use the Upload button to import a Rankings CSV.
+        </p>
       </div>
     );
   }
@@ -493,7 +499,6 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Player Rankings</h2>
-          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'flex-end' }}>
           {/* Search */}
@@ -541,6 +546,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
           >
             <Download size={14} /> Export
           </button>
+          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
         </div>
       </div>
 

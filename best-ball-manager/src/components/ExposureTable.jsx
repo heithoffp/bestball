@@ -33,9 +33,9 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
     const timer = setTimeout(() => setSearch(searchInput), 250);
     return () => clearTimeout(timer);
   }, [searchInput]);
-  const [sortField, setSortField] = useState('exposure');
-  const [sortDir, setSortDir] = useState('desc');
-  const [showUndrafted, setShowUndrafted] = useState(false);
+  const [sortField, setSortField] = useState(rosterData.length === 0 ? 'adp' : 'exposure');
+  const [sortDir, setSortDir] = useState(rosterData.length === 0 ? 'asc' : 'desc');
+  const [showUndrafted, setShowUndrafted] = useState(rosterData.length === 0);
 
   const [rbFilter, setRbFilter] = useState('Any');
   const [qbFilter, setQbFilter] = useState('Any');
@@ -242,7 +242,6 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ margin: 0 }}>Exposures</h2>
-          {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} />}
         </div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <label style={{
@@ -279,6 +278,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           >
             Reset
           </button>
+          {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} />}
         </div>
       </div>
 
@@ -442,6 +442,21 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
         )}
       </div>
 
+      {rosterData.length === 0 && masterPlayers.length > 0 && (
+        <div style={{
+          padding: '10px 16px',
+          marginBottom: 12,
+          borderRadius: 8,
+          background: 'rgba(59,130,246,0.1)',
+          border: '1px solid rgba(59,130,246,0.25)',
+          fontSize: 13,
+          color: 'var(--text-secondary)',
+          flexShrink: 0,
+        }}>
+          No roster uploaded — showing all ADP players. Upload your Underdog Exposure CSV for exposure data.
+        </div>
+      )}
+
       <div className="exposure-table card" style={{ padding: 0, flex: 1, minHeight: 0 }}>
         <div
           className="table-container"
@@ -477,7 +492,11 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
             <tbody>
               {filteredAndSorted.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '2rem', textAlign: 'center' }}>No players match.</td>
+                  <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    {masterPlayers.length === 0
+                      ? 'No data loaded. Use the Upload button above to import your Underdog Exposure CSV.'
+                      : 'No players match.'}
+                  </td>
                 </tr>
               ) : (
                 <>
