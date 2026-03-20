@@ -1,7 +1,8 @@
 // src/components/RosterViewer.jsx
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
-import { analyzeRosterStacks, scoreRosterStacks } from '../utils/stackAnalysis';
+import { analyzeRosterStacks } from '../utils/stackAnalysis';
+import { calculateSpikeWeekProjection, spikeWeekPercentile } from '../utils/spikeWeekProjection';
 
 // ── CLV helpers ───────────────────────────────────────────────────────────────
 
@@ -532,6 +533,27 @@ export default function RosterViewer({ rosterData = [] }) {
     return byId;
   }, [rosters]);
 
+  // Spike week projections for all rosters
+  const rosterSpikeData = useMemo(() => {
+    const byId = {};
+    const allScores = [];
+    rosters.forEach(r => {
+      const result = calculateSpikeWeekProjection(r.players);
+      byId[r.entry_id] = result;
+      allScores.push(result.spikeScore);
+    });
+    // Compute percentiles
+    const withPercentiles = {};
+    rosters.forEach(r => {
+      const result = byId[r.entry_id];
+      withPercentiles[r.entry_id] = {
+        ...result,
+        percentile: spikeWeekPercentile(result.spikeScore, allScores),
+      };
+    });
+    return withPercentiles;
+  }, [rosters]);
+
   // Composite roster grades
   const rosterGrades = useMemo(() => {
     if (!rosters || rosters.length === 0) return {};
@@ -551,10 +573,11 @@ export default function RosterViewer({ rosterData = [] }) {
       const rarityPct = rosterScores[r.entry_id]?.rarityPercentile ?? 50;
       rarityValues.push(rarityPct);
 
-      const stacks = rosterStacks[r.entry_id] || [];
-      const stackQuality = scoreRosterStacks(stacks, r.players);
+      const spikeData = rosterSpikeData[r.entry_id];
+      const spikePercentile = spikeData?.percentile ?? 0;
+      const spikeRaw = spikeData?.spikeScore ?? 0;
 
-      return { entry_id: r.entry_id, projTotal, avgCLV, rarityPct, stackQuality };
+      return { entry_id: r.entry_id, projTotal, avgCLV, rarityPct, spikePercentile, spikeRaw };
     });
 
     const byId = {};
@@ -562,9 +585,9 @@ export default function RosterViewer({ rosterData = [] }) {
       const projScore = percentileRankArray(d.projTotal, projTotals);
       const clvScore = percentileRankArray(d.avgCLV, clvValues);
       const rarityScore = d.rarityPct;
-      const stackScore = d.stackQuality;
+      const spikeScore = d.spikePercentile;
 
-      const composite = 0.30 * projScore + 0.25 * clvScore + 0.20 * rarityScore + 0.25 * stackScore;
+      const composite = 0.30 * projScore + 0.25 * clvScore + 0.20 * rarityScore + 0.25 * spikeScore;
       const grade = computeLetterGrade(composite);
 
       byId[d.entry_id] = {
@@ -573,11 +596,12 @@ export default function RosterViewer({ rosterData = [] }) {
         projScore: Math.round(projScore),
         clvScore: Math.round(clvScore),
         rarityScore: Math.round(rarityScore),
-        stackScore: Math.round(stackScore),
+        spikeScore: Math.round(spikeScore),
+        spikeRaw: d.spikeRaw,
       };
     });
     return byId;
-  }, [rosters, rosterScores, rosterStacks]);
+  }, [rosters, rosterScores, rosterSpikeData]);
 
   const rosterSearchMatches = useMemo(() => {
     if (selectedPlayers.length === 0) return {};
@@ -634,11 +658,16 @@ export default function RosterViewer({ rosterData = [] }) {
         const bid = rosterGrades[b.entry_id]?.composite ?? -Infinity;
         return sortDir === 'asc' ? aid - bid : bid - aid;
       }
+      if (sortKey === 'spikeRaw') {
+        const aid = rosterSpikeData[a.entry_id]?.spikeScore ?? -Infinity;
+        const bid = rosterSpikeData[b.entry_id]?.spikeScore ?? -Infinity;
+        return sortDir === 'asc' ? aid - bid : bid - aid;
+      }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-}, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, rosterGrades, selectedPlayers, selectedTeams, rosterSearchMatches]);
+}, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, rosterGrades, rosterSpikeData, selectedPlayers, selectedTeams, rosterSearchMatches]);
 
   const allTournaments = useMemo(() => {
     const titles = new Set();
@@ -926,6 +955,7 @@ export default function RosterViewer({ rosterData = [] }) {
               >
                 Uniq Lift <SortIcon col="rarityPercentile" />
               </th>
+              <th style={{ ...styles.th, textAlign: 'center', color: '#f59e0b' }} onClick={() => toggleSort('spikeRaw')}>Spike Pts <SortIcon col="spikeRaw" /></th>
               <th style={{ ...styles.th, textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" /></th>
               <th style={{ ...styles.th, textAlign: 'center', cursor: 'default' }}></th>
             </tr>
@@ -941,7 +971,7 @@ export default function RosterViewer({ rosterData = [] }) {
               const archNorm  = archetypeRarityNorm(roster.path.rb);
               const boostPct  = Math.round(archetypeBoostMax * archNorm * 100);
               const tooltipTxt = `Draft rarity × ${scores.archBoost ?? '—'}× arch boost (+${boostPct}% from ${roster.path.rb})`;
-              const gradeTooltip = grade.grade ? `Proj: ${grade.projScore} | CLV: ${grade.clvScore} | Rarity: ${grade.rarityScore} | Stack: ${grade.stackScore} → ${grade.composite}` : '';
+              const gradeTooltip = grade.grade ? `Proj: ${grade.projScore} | CLV: ${grade.clvScore} | Rarity: ${grade.rarityScore} | Spike: ${grade.spikeScore} → ${grade.composite}` : '';
               return (
                 <React.Fragment key={roster.entry_id}>
                   <tr
@@ -1018,6 +1048,22 @@ export default function RosterViewer({ rosterData = [] }) {
                     </td>
 
                     <td style={{ ...styles.td, textAlign: 'center' }}>
+                      {(() => {
+                        const spike = rosterSpikeData[roster.entry_id];
+                        const raw = spike?.spikeScore ?? 0;
+                        const pct = spike?.percentile ?? 0;
+                        const spikeColor = uniquenessColor(pct / 100);
+                        return raw > 0 ? (
+                          <span style={{
+                            fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700,
+                            color: spikeColor,
+                          }}>
+                            {raw.toFixed(1)}
+                          </span>
+                        ) : <span style={{ color: '#555' }}>—</span>;
+                      })()}
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
                       <span style={{ ...styles.clvBadge, color: clv.color, borderColor: clv.color + '44' }}>{clv.text}</span>
                     </td>
                     <td style={{ ...styles.td, textAlign: 'center' }}>
@@ -1026,8 +1072,8 @@ export default function RosterViewer({ rosterData = [] }) {
                   </tr>
                   {isOpen && (
                     <tr>
-                      <td colSpan={11} style={{ padding: 0 }}>
-                        <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} />
+                      <td colSpan={12} style={{ padding: 0 }}>
+                        <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} />
                       </td>
                     </tr>
                   )}
@@ -1207,7 +1253,7 @@ function GradeCard({ grade }) {
     { label: 'PROJ', score: grade.projScore, color: '#3b82f6' },
     { label: 'CLV',  score: grade.clvScore,  color: '#00e5a0' },
     { label: 'RARE', score: grade.rarityScore, color: '#c084fc' },
-    { label: 'STACK', score: grade.stackScore, color: '#f59e0b' },
+    { label: 'SPIKE', score: grade.spikeScore, color: '#f59e0b' },
   ];
   return (
     <div style={{
@@ -1225,7 +1271,14 @@ function GradeCard({ grade }) {
           <div key={b.label} style={{ flex: 1, minWidth: 75 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#888', letterSpacing: 1 }}>{b.label}</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: b.color, fontWeight: 700 }}>{b.score}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: b.color, fontWeight: 700 }}>
+                {b.score}
+                {b.label === 'SPIKE' && grade.spikeRaw > 0 && (
+                  <span style={{ color: '#888', fontWeight: 400, marginLeft: 4, fontSize: 10 }}>
+                    {grade.spikeRaw.toFixed(1)} pts
+                  </span>
+                )}
+              </span>
             </div>
             <div style={{ height: 5, background: '#1a1a1a', borderRadius: 2 }}>
               <div style={{
@@ -1247,7 +1300,7 @@ function GradeCard({ grade }) {
 
 // ── Expanded player detail ────────────────────────────────────────────────────
 
-function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
+function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData = null }) {
   const [pSort, setPSort] = useState('pick');
   const [pDir,  setPDir]  = useState('asc');
 
@@ -1259,6 +1312,12 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
     });
     return map;
   }, [stacks]);
+
+  // Build set of spike lineup starter names
+  const spikeLineupNames = useMemo(() => {
+    if (!spikeData?.lineup?.length) return new Set();
+    return new Set(spikeData.lineup.map(p => p.name));
+  }, [spikeData]);
 
   const sorted = useMemo(() => [...players].sort((a, b) => {
     let av, bv;
@@ -1301,12 +1360,24 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {} }) {
             const clvPct = calcCLV(p.pick, p.latestADP, alpha);
             const clv = clvLabel(clvPct);
             const stackColor = stackPlayerTeams[p.name];
+            const isSpikeStar = spikeLineupNames.has(p.name);
             return (
-              <tr key={`${p.name}-${i}`} style={styles.drow}>
+              <tr key={`${p.name}-${i}`} style={{
+                ...styles.drow,
+                ...(isSpikeStar ? { borderLeft: '3px solid #f59e0b', background: '#f59e0b08' } : {}),
+              }}>
                 <td style={styles.dtd}>
                   <span style={styles.playerName}>
                     {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
                     {p.name}
+                    {isSpikeStar && (
+                      <span title="Week 17 Spike Lineup starter" style={{
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700,
+                        background: '#f59e0b22', color: '#f59e0b', border: '1px solid #f59e0b44',
+                        borderRadius: 3, padding: '1px 5px', marginLeft: 7, verticalAlign: 'middle',
+                        letterSpacing: 0.5,
+                      }}>W17</span>
+                    )}
                   </span>
                 </td>
                 <td style={{ ...styles.dtd, textAlign: 'center' }}>
