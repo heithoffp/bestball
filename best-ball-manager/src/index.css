@@ -11,6 +11,10 @@
   --accent-yellow: #f59e0b;
   --accent-red: #ef4444;
   --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 select { color-scheme: dark; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
@@ -174,4 +178,154 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border); }
 .toolbar-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ---- Help Guide ---- */
+.help-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.help-section {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem 1.75rem;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.25rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.help-purpose {
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.help-group {
+  margin-bottom: 0.75rem;
+}
+
+.help-group-title {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+}
+
+.help-list li {
+  position: relative;
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.help-list li::before {
+  content: '\2022';
+  position: absolute;
+  left: 0.25rem;
+  color: var(--accent-blue);
+}
+
+.help-tips li::before {
+  content: '\2731';
+  color: var(--accent-yellow);
+}
+
+/* ---- Responsive Utilities ---- */
+.touch-target { min-height: 44px; min-width: 44px; }
+
+/* ---- Tablet (600-899px) ---- */
+@media (max-width: 899px) {
+  .app-container {
+    padding: 0.75rem 1.25rem 0.65rem;
+  }
+  h1 { font-size: 1.8rem; }
+  .tab-button {
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* ---- Mobile (0-599px) ---- */
+@media (max-width: 599px) {
+  :root {
+    --space-xs: 0.125rem;
+    --space-sm: 0.25rem;
+    --space-md: 0.5rem;
+    --space-lg: 1rem;
+  }
+
+  .app-container {
+    padding: 0.5rem 0.75rem 0.65rem;
+    padding-bottom: 64px;
+  }
+
+  h1 { font-size: 1.5rem; }
+
+  .card {
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+  }
+
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin-bottom: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+    padding: 0.25rem;
+    padding-bottom: calc(0.25rem + env(safe-area-inset-bottom));
+    background: var(--bg-card);
+  }
+
+  .tab-button {
+    padding: 0.4rem 0.25rem;
+    font-size: 0.6rem;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 44px;
+  }
+
+  .tab-button .tab-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  table { font-size: 0.85rem; }
+  th, td { padding: 0.6rem 0.5rem; }
+
+  .help-section {
+    padding: 1rem;
+  }
 }

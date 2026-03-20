@@ -4,6 +4,17 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
 import { saveFile, getFile, hasUserData } from './utils/storage';
+import useMediaQuery from './hooks/useMediaQuery';
+import { BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle } from 'lucide-react';
+
+const tabs = [
+  { key: 'exposures', label: 'Exposures', icon: BarChart3 },
+  { key: 'rosters', label: 'Rosters', icon: Users },
+  { key: 'timeseries', label: 'ADP Tracker', icon: TrendingUp },
+  { key: 'rankings', label: 'Rankings', icon: ListOrdered },
+  { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
+  { key: 'help', label: 'Help', icon: HelpCircle },
+];
 
 // Lazy-loaded tab components (P2: code splitting)
 const ExposureTable = lazy(() => import('./components/ExposureTable'));
@@ -11,6 +22,7 @@ const AdpTimeSeries = lazy(() => import('./components/AdpTimeSeries'));
 const DraftFlowAnalysis = lazy(() => import('./components/DraftFlowAnalysis'));
 const RosterViewer = lazy(() => import('./components/RosterViewer'));
 const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
+const HelpGuide = lazy(() => import('./components/HelpGuide'));
 // DISABLED for performance — keep source files intact
 // const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
@@ -43,6 +55,7 @@ export default function App() {
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [activeTab, setActiveTab] = useState('exposures');
   const [rankingsSource, setRankingsSource] = useState([]);
+  const { isMobile } = useMediaQuery();
 
   useEffect(() => {
     loadData();
@@ -139,7 +152,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <h1>BEST BALL EXPOSURES</h1>
+      <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
 
       {status.msg && (
         <div className={`card`} style={{ flex: 'none' }}>
@@ -149,12 +162,22 @@ export default function App() {
 
       <div className="card">
         <div className="tab-bar">
-          <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
-          <button className={`tab-button ${activeTab === 'rosters' ? 'active' : ''}`} onClick={() => setActiveTab('rosters')}>Rosters</button>
-          <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Tracker</button>
-          <button className={`tab-button ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
-          {/* DISABLED: Combo Analysis, Roster Construction, Jaccard Analysis */}
-          <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Assistant</button>
+          {tabs.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              className={`tab-button${activeTab === key ? ' active' : ''}`}
+              onClick={() => setActiveTab(key)}
+            >
+              {isMobile ? (
+                <>
+                  <Icon className="tab-icon" size={20} />
+                  <span>{label}</span>
+                </>
+              ) : (
+                label
+              )}
+            </button>
+          ))}
         </div>
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -171,6 +194,7 @@ export default function App() {
                 rosterData={rosterData}
               />
             )}
+            {activeTab === 'help' && <HelpGuide />}
           </Suspense>
         </div>
       </div>
