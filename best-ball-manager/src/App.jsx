@@ -139,7 +139,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <h1>BEST BALL INSIGHTS</h1>
+      <h1>BEST BALL EXPOSURES</h1>
 
       {status.msg && (
         <div className={`card`} style={{ flex: 'none' }}>

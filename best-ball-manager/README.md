@@ -1,16 +1,32 @@
-# React + Vite
+# Best Ball Exposures
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Your best-ball portfolio, analyzed. One place to track exposures, grade rosters, monitor ADP movement, and make smarter draft decisions.
 
-Currently, two official plugins are available:
+## What it does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Best Ball Exposures is a portfolio-level analytics tool for best-ball fantasy football. Upload your roster CSVs and ADP snapshots, and it surfaces the data that matters — exposure concentrations, roster archetypes, value picks, and draft strategy guidance — so you can manage your portfolio with clarity instead of spreadsheets.
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Exposures** — See your player exposure percentages across the entire portfolio. Filter by roster archetype, sort by any column, and spot concentration risk at a glance with inline ADP sparklines.
 
-## Expanding the ESLint configuration
+**Rosters** — Grade individual rosters on projected points, closing line value, draft rarity, and spike week upside. Each roster is classified into a strategic archetype (Hero RB, Zero RB, Hyper Fragile, etc.) with full stack analysis.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**ADP Tracker** — Historical ADP timelines with your pick ranges overlaid. Instantly see where you got value and where you reached relative to the market.
+
+**Rankings** — Drag-and-drop tier-based player rankings. Import, export, and customize your board to prep for upcoming drafts.
+
+**Draft Assistant** — Live draft companion that tracks strategy viability in real time. Multi-factor candidate scoring weighs projected value, diversification, exposure penalty, strategy fit, and reach — with falling knife detection to flag rapidly sliding players.
+
+## Getting started
+
+```bash
+cd best-ball-manager
+npm install
+npm run dev      # Start dev server
+npm run build    # Production build
+```
+
+## Tech stack
+
+React 19, Vite 7, Recharts, PapaParse, TanStack Virtual
