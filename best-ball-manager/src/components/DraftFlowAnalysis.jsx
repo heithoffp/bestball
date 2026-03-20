@@ -25,14 +25,14 @@ const getAdpDeltaColor = (delta) => {
 // --- EXTENDED CONFIGURATION: QB & TE ARCHETYPES (from V2) ---
 const QB_META = {
   QB_ELITE: { name: 'Elite QB', target: 15, color: '#a855f7', rounds: [1, 4] },
-  QB_CORE:  { name: 'Core QB', target: 25, color: '#d8b4fe', rounds: [5, 9] },
-  QB_LATE:  { name: 'Late Round QB', target: 60, color: '#e9d5ff', rounds: [10, 18] }
+  QB_CORE:  { name: 'Core QB', target: 25, color: '#d8b4fe', rounds: [5, 8] },
+  QB_LATE:  { name: 'Late Round QB', target: 60, color: '#e9d5ff', rounds: [9, 18] }
 };
 
 const TE_META = {
   TE_ELITE: { name: 'Elite TE', target: 20, color: '#3b82f6', rounds: [1, 4] },
-  TE_ANCHOR: { name: 'Anchor TE', target: 30, color: '#60a5fa', rounds: [5, 9] },
-  TE_LATE:  { name: 'Late Round TE', target: 50, color: '#bfdbfe', rounds: [10, 18] }
+  TE_ANCHOR: { name: 'Anchor TE', target: 30, color: '#60a5fa', rounds: [5, 8] },
+  TE_LATE:  { name: 'Late Round TE', target: 50, color: '#bfdbfe', rounds: [9, 18] }
 };
 
 // RB Archetype Reminder Blurbs
@@ -112,30 +112,30 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
 
   if (strategyKey === 'RB_BALANCED') return true;
 
-  // --- QB LOGIC (Elite: 1-4, Core: 5-9, Late: 10+) ---
+  // --- QB LOGIC (Elite: 1-4, Core: 5-8, Late: 9+) ---
   if (strategyKey === 'QB_ELITE') {
     return countPos('QB', 1, 4) >= 1 || currentRound <= 4;
   }
   if (strategyKey === 'QB_CORE') {
     // Core QB strategy assumes you did NOT take an elite one.
     if (countPos('QB', 1, 4) > 0) return false;
-    return countPos('QB', 5, 9) >= 1 || currentRound <= 9;
+    return countPos('QB', 5, 8) >= 1 || currentRound <= 8;
   }
   if (strategyKey === 'QB_LATE') {
-    return countPos('QB', 1, 9) === 0;
+    return countPos('QB', 1, 8) === 0;
   }
 
-  // --- TE LOGIC (Elite: 1-4, Anchor: 5-9, Late: 10+) ---
+  // --- TE LOGIC (Elite: 1-4, Anchor: 5-8, Late: 9+) ---
   if (strategyKey === 'TE_ELITE') {
     return countPos('TE', 1, 4) >= 1 || currentRound <= 4;
   }
   if (strategyKey === 'TE_ANCHOR') {
     // Anchor TE strategy assumes you did NOT take an elite one.
     if (countPos('TE', 1, 4) > 0) return false;
-    return countPos('TE', 5, 9) >= 1 || currentRound <= 9;
+    return countPos('TE', 5, 8) >= 1 || currentRound <= 8;
   }
   if (strategyKey === 'TE_LATE') {
-    return countPos('TE', 1, 9) === 0;
+    return countPos('TE', 1, 8) === 0;
   }
 
   return true;

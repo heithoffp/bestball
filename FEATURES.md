@@ -10,7 +10,7 @@ The vision is a deployable website that is the one-stop shop for managing a best
 
 *Required for anyone besides the developer to use this.*
 
-### 1. CSV Upload UI + Data Persistence
+### 1. CSV Upload UI + Data Persistence - DONE
 
 Upload zone (drag-and-drop) for roster and ADP CSVs. Persist to localStorage/IndexedDB so data survives page reloads. "Clear data" button. Currently data is hardcoded into the build — no one else can use the app without this.
 

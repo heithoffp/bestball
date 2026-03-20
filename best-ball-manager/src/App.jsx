@@ -137,7 +137,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <h1>BEST BALL MANAGER</h1>
+      <h1>BEST BALL INSIGHTS</h1>
 
       {status.msg && (
         <div className={`card`} style={{ flex: 'none' }}>
@@ -148,11 +148,11 @@ export default function App() {
       <div className="card">
         <div className="tab-bar">
           <button className={`tab-button ${activeTab === 'exposures' ? 'active' : ''}`} onClick={() => setActiveTab('exposures')}>Exposures</button>
-          <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Time Series</button>
-          <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Flow</button>
-          {/* DISABLED: Combo Analysis, Roster Construction, Jaccard Analysis */}
           <button className={`tab-button ${activeTab === 'rosters' ? 'active' : ''}`} onClick={() => setActiveTab('rosters')}>Rosters</button>
+          <button className={`tab-button ${activeTab === 'timeseries' ? 'active' : ''}`} onClick={() => setActiveTab('timeseries')}>ADP Tracker</button>
           <button className={`tab-button ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
+          {/* DISABLED: Combo Analysis, Roster Construction, Jaccard Analysis */}
+          <button className={`tab-button ${activeTab === 'draftflow' ? 'active' : ''}`} onClick={() => setActiveTab('draftflow')}>Draft Assistant</button>
         </div>
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>

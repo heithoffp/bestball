@@ -44,16 +44,16 @@ export const PROTOCOL_TREE = {
  * Metadata for UI labels and descriptions
  */
 export const ARCHETYPE_METADATA = {
-  RB_ZERO: { name: 'Zero RB', desc: 'No RB R1-6. Capital Rich.' },
+  RB_ZERO: { name: 'Zero RB', desc: 'No RB R1-6. WR Capital Rich.' },
   RB_HYPER_FRAGILE: { name: 'Hyper Fragile', desc: '3 RB R1-3. Capital Poor.' },
   RB_HERO: { name: 'Hero RB', desc: '1 RB R1-2. Middle Class.' },
   RB_BALANCED: { name: 'Balanced', desc: 'Balanced Approach' },
-  QB_ELITE: { name: 'Elite QB', desc: 'Rounds 1-3' },
-  QB_CORE: { name: 'Core QB', desc: 'Rounds 4-9' },
-  QB_LATE: { name: 'Late QB', desc: 'Round 10+' },
-  TE_ELITE: { name: 'Elite TE', desc: 'Rounds 1-3' },
-  TE_ANCHOR: { name: 'Anchor TE', desc: 'Rounds 4-7' },
-  TE_LATE: { name: 'Late TE', desc: 'Round 8+' }
+  QB_ELITE: { name: 'Elite QB', desc: '1st QB in Rounds 1-4' },
+  QB_CORE: { name: 'Core QB', desc: 'Rounds 5-8' },
+  QB_LATE: { name: 'Late QB', desc: 'Round 9+' },
+  TE_ELITE: { name: 'Elite TE', desc: '1st TE in Rounds 1-4' },
+  TE_ANCHOR: { name: 'Anchor TE', desc: 'Rounds 5-8' },
+  TE_LATE: { name: 'Late TE', desc: 'Round 9+' }
 };
 
 /**
@@ -97,12 +97,12 @@ export function classifyRosterPath(roster) {
     path.rb = 'RB_BALANCED';
   }
 
-  // QB Logic (Elite = Top 4 Rounds, Core = 5-9, Late = 10+)
+  // QB Logic (Elite = Top 4 Rounds, Core = 5-8, Late = 9+)
   if (countPosition(roster, 'QB', 1, 4) >= 1) path.qb = 'QB_ELITE';
   else if (countPosition(roster, 'QB', 5, 8) >= 1) path.qb = 'QB_CORE';
   else path.qb = 'QB_LATE';
 
-  // TE Logic (Elite = Top 4 Rounds, Anchor = 5-9, Late = 10+)
+  // TE Logic (Elite = Top 4 Rounds, Anchor = 5-8, Late = 9+)
   if (countPosition(roster, 'TE', 1, 4) >= 1) path.te = 'TE_ELITE';
   else if (countPosition(roster, 'TE', 5, 8) >= 1) path.te = 'TE_ANCHOR';
   else path.te = 'TE_LATE';

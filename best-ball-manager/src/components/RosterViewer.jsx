@@ -646,9 +646,38 @@ export default function RosterViewer({ rosterData = [] }) {
     return ['all', ...[...titles].sort()];
   }, [rosters]);
 
-  const rbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.rb] = (acc[r.path.rb] || 0) + 1; return acc; }, {}), [rosters]);
-  const qbCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.qb] = (acc[r.path.qb] || 0) + 1; return acc; }, []), [rosters]);
-  const teCounts = useMemo(() => rosters.reduce((acc, r) => { acc[r.path.te] = (acc[r.path.te] || 0) + 1; return acc; }, {}), [rosters]);
+  // Base list with all non-archetype filters applied
+  const baseFiltered = useMemo(() => {
+    let list = [...rosters];
+    if (selectedPlayers.length > 0) list = list.filter(r => r.entry_id in rosterSearchMatches);
+    if (selectedTeams.length > 0) list = list.filter(r => selectedTeams.every(team => r.players.some(p => p.team === team && !selectedPlayers.includes(p.name))));
+    if (clvFilter === 'positive') list = list.filter(r => r.avgCLV !== null && r.avgCLV >= 0);
+    if (clvFilter === 'negative') list = list.filter(r => r.avgCLV !== null && r.avgCLV < 0);
+    if (tournamentFilter !== 'all') list = list.filter(r => r.tournamentTitle === tournamentFilter);
+    return list;
+  }, [rosters, clvFilter, tournamentFilter, selectedPlayers, selectedTeams, rosterSearchMatches]);
+
+  // Each category's counts are based on the base list filtered by the OTHER two archetype filters
+  const rbCounts = useMemo(() => {
+    let list = baseFiltered;
+    if (qbFilter !== 'all') list = list.filter(r => r.path.qb === qbFilter);
+    if (teFilter !== 'all') list = list.filter(r => r.path.te === teFilter);
+    return list.reduce((acc, r) => { acc[r.path.rb] = (acc[r.path.rb] || 0) + 1; return acc; }, {});
+  }, [baseFiltered, qbFilter, teFilter]);
+
+  const qbCounts = useMemo(() => {
+    let list = baseFiltered;
+    if (rbFilter !== 'all') list = list.filter(r => r.path.rb === rbFilter);
+    if (teFilter !== 'all') list = list.filter(r => r.path.te === teFilter);
+    return list.reduce((acc, r) => { acc[r.path.qb] = (acc[r.path.qb] || 0) + 1; return acc; }, {});
+  }, [baseFiltered, rbFilter, teFilter]);
+
+  const teCounts = useMemo(() => {
+    let list = baseFiltered;
+    if (rbFilter !== 'all') list = list.filter(r => r.path.rb === rbFilter);
+    if (qbFilter !== 'all') list = list.filter(r => r.path.qb === qbFilter);
+    return list.reduce((acc, r) => { acc[r.path.te] = (acc[r.path.te] || 0) + 1; return acc; }, {});
+  }, [baseFiltered, rbFilter, qbFilter]);
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -1015,30 +1044,66 @@ export default function RosterViewer({ rosterData = [] }) {
 // ── Filter group sub-component ────────────────────────────────────────────────
 
 function FilterGroup({ label, options, value, onChange, counts = {} }) {
+  const archetypeOptions = options.filter(o => o !== 'all');
+  const total = archetypeOptions.reduce((sum, opt) => sum + (counts[opt] || 0), 0);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span style={{ ...styles.filterGroupLabel, minWidth: 32 }}>{label}</span>
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-        {options.map(opt => {
-          const isActive = value === opt;
-          const color = opt === 'all' ? '#00e5a0' : archetypeColor(opt);
-          const name = opt === 'all' ? 'All' : (ARCHETYPE_METADATA[opt]?.name || opt);
-          const count = counts[opt];
-          return (
-            <button
-              key={opt}
-              title={ARCHETYPE_METADATA[opt]?.desc}
-              style={{
-                ...styles.filterBtn,
-                ...(isActive ? { background: color + '1a', borderColor: color, color } : {}),
-              }}
-              onClick={() => onChange(opt)}
-            >
-              {name}{count !== undefined && opt !== 'all' ? ` (${count})` : ''}
-            </button>
-          );
-        })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ ...styles.filterGroupLabel, minWidth: 32 }}>{label}</span>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {options.map(opt => {
+            const isActive = value === opt;
+            const color = opt === 'all' ? '#00e5a0' : archetypeColor(opt);
+            const name = opt === 'all' ? 'All' : (ARCHETYPE_METADATA[opt]?.name || opt);
+            const count = counts[opt];
+            return (
+              <button
+                key={opt}
+                title={ARCHETYPE_METADATA[opt]?.desc}
+                style={{
+                  ...styles.filterBtn,
+                  ...(opt === 'all'
+                    ? (isActive ? { background: color + '1a', borderColor: color, color } : {})
+                    : {
+                        background: isActive ? color + '30' : color + '12',
+                        borderColor: isActive ? color : color + '44',
+                        color: isActive ? color : color + 'cc',
+                      }),
+                }}
+                onClick={() => onChange(opt)}
+              >
+                {name}{opt !== 'all' && total > 0 ? ` ${((count || 0) / total * 100).toFixed(0)}%` : ''}
+              </button>
+            );
+          })}
+        </div>
       </div>
+      {total > 0 && (
+        <div style={{ display: 'flex', marginLeft: 44, height: 8, borderRadius: 4, overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
+          {archetypeOptions.map(opt => {
+            const count = counts[opt] || 0;
+            if (count === 0) return null;
+            const pct = (count / total) * 100;
+            const color = archetypeColor(opt);
+            const name = ARCHETYPE_METADATA[opt]?.name || opt;
+            return (
+              <div
+                key={opt}
+                title={`${name}: ${pct.toFixed(1)}%`}
+                onClick={() => onChange(opt)}
+                style={{
+                  width: `${pct}%`,
+                  background: color,
+                  opacity: value === 'all' || value === opt ? 0.85 : 0.3,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
