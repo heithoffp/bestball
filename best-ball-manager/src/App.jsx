@@ -3,7 +3,9 @@ import React, { useEffect, useState, Suspense, lazy, useCallback } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
-import { saveFile, getFile, hasUserData } from './utils/storage';
+import { saveFile, getFile, hasUserData, syncSaveFile, syncGetFile, syncHasUserData } from './utils/storage';
+import { useAuth } from './contexts/AuthContext';
+import AuthButton from './components/AuthButton';
 import useMediaQuery from './hooks/useMediaQuery';
 import { BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle } from 'lucide-react';
 
@@ -56,16 +58,38 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('exposures');
   const [rankingsSource, setRankingsSource] = useState([]);
   const { isMobile } = useMediaQuery();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    if (authLoading) return;
     loadData();
-  }, []);
+  }, [user?.id, authLoading]);
+
+  // One-time migration: push local IndexedDB data to cloud on first sign-in
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      try {
+        const hasLocal = await hasUserData();
+        if (!hasLocal) return;
+        const { cloudHasUserData } = await import('./utils/cloudStorage');
+        const hasCloud = await cloudHasUserData(user.id);
+        if (hasCloud) return;
+        const rosterFile = await getFile('roster');
+        if (rosterFile) await syncSaveFile({ ...rosterFile, userId: user.id });
+        const rankingsFile = await getFile('rankings');
+        if (rankingsFile) await syncSaveFile({ ...rankingsFile, userId: user.id });
+      } catch (e) {
+        console.warn('Migration to cloud failed', e);
+      }
+    })();
+  }, [user?.id]);
 
   async function loadData() {
     setStatus({ type: 'loading', msg: 'Loading data...' });
     try {
-      if (await hasUserData()) {
-        await loadFromIndexedDB();
+      if (await syncHasUserData(user?.id)) {
+        await loadFromStorage();
       } else {
         await loadFromAssets();
       }
@@ -97,9 +121,9 @@ export default function App() {
     applyResult(result);
   }
 
-  async function loadFromIndexedDB() {
-    const rosterFile = await getFile('roster');
-    const rankingsFile = await getFile('rankings');
+  async function loadFromStorage() {
+    const rosterFile = await syncGetFile('roster', user?.id);
+    const rankingsFile = await syncGetFile('rankings', user?.id);
 
     if (!rosterFile) {
       await loadFromAssets();
@@ -131,28 +155,31 @@ export default function App() {
   const handleRosterUpload = useCallback(async (text, filename) => {
     setStatus({ type: 'loading', msg: 'Processing exposure data...' });
     try {
-      await saveFile({ id: 'roster', type: 'roster', filename, text });
-      await loadFromIndexedDB();
+      await syncSaveFile({ id: 'roster', type: 'roster', filename, text, userId: user?.id });
+      await loadFromStorage();
     } catch (err) {
       console.error('Roster upload failed', err);
       setStatus({ type: 'error', msg: String(err) });
     }
-  }, []);
+  }, [user?.id]);
 
   const handleRankingsUpload = useCallback(async (text, filename) => {
     setStatus({ type: 'loading', msg: 'Processing rankings...' });
     try {
-      await saveFile({ id: 'rankings', type: 'rankings', filename, text });
-      await loadFromIndexedDB();
+      await syncSaveFile({ id: 'rankings', type: 'rankings', filename, text, userId: user?.id });
+      await loadFromStorage();
     } catch (err) {
       console.error('Rankings upload failed', err);
       setStatus({ type: 'error', msg: String(err) });
     }
-  }, []);
+  }, [user?.id]);
 
   return (
     <div className="app-container">
-      <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
+      <div className="app-header">
+        <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
+        <AuthButton />
+      </div>
 
       {status.msg && (
         <div className={`card`} style={{ flex: 'none' }}>

@@ -22,6 +22,10 @@ select option { background: var(--bg-card); color: var(--text-primary); }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg-dark); color: var(--text-primary); }
 .app-container { height: 100vh; padding: 1rem 2.5rem 0.65rem; display: flex; flex-direction: column; overflow: hidden; }
 h1 { font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.3rem; flex-shrink: 0; }
+.app-header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.app-header h1 { margin-bottom: 0; }
+.auth-button-group { display: flex; align-items: center; gap: 0.5rem; }
+.auth-avatar { width: 28px; height: 28px; border-radius: 50%; }
 .config-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2.5rem; margin-bottom: 2.5rem; }
 .path-input { width: 100%; background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-primary); padding: 1rem; border-radius: 6px; margin-bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; }
 .load-button { background: var(--gradient-primary); color: white; border: none; padding: 1.25rem 2.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }

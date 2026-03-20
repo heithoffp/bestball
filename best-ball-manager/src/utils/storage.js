@@ -76,3 +76,39 @@ export async function hasUserData() {
     request.onerror = (e) => reject(e.target.error);
   });
 }
+
+// --- Cloud-aware sync facade ---
+import { cloudSaveFile, cloudGetFile, cloudHasUserData } from './cloudStorage';
+
+export async function syncSaveFile({ id, type, filename, text, userId }) {
+  await saveFile({ id, type, filename, text });
+  if (userId) {
+    await cloudSaveFile({ id, type, filename, text, userId });
+  }
+}
+
+export async function syncGetFile(id, userId) {
+  if (userId) {
+    try {
+      const cloudFile = await cloudGetFile(id, userId);
+      if (cloudFile) {
+        await saveFile(cloudFile);
+        return cloudFile;
+      }
+    } catch (e) {
+      console.warn('Cloud fetch failed, falling back to local', e);
+    }
+  }
+  return getFile(id);
+}
+
+export async function syncHasUserData(userId) {
+  if (userId) {
+    try {
+      return await cloudHasUserData(userId);
+    } catch {
+      // fall through to local
+    }
+  }
+  return hasUserData();
+}
