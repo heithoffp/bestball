@@ -878,23 +878,20 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
              <div style={{ flex: 1, background: '#1e293b', padding: '12px', borderRadius: 8, border: '1px solid #334155', textAlign: 'center' }}>
                <div style={{ fontSize: 13, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Current Pick</div>
                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginTop: 4 }}>
-                 {currentRound}.{overallPick}
+                 {currentRound}.{snakeOverallPick}
                </div>
              </div>
           </div>
 
         </div>
 
-        {/* PORTFOLIO TARGETS */}
+        {/* PORTFOLIO TARGETS - commented out, archetypes removed from this component
         <div style={{ flex: 1, minHeight: 0, background: '#1e293b', borderRadius: 10, border: '1px solid #334155', padding: '10px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }} className="thin-scrollbar">
-           {/* Header with current path status */}
            <div style={{ marginBottom: 10, flexShrink: 0 }}>
              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                <Target size={18} color="#94a3b8" />
                <h3 style={{ margin: 0, fontSize: 16, textTransform: 'uppercase', color: '#e2e8f0', fontWeight: 800 }}>Portfolio Targets</h3>
              </div>
-
-             {/* Current Path Pills */}
              <div style={{ display: 'flex', gap: 6 }}>
                {[
                  { label: 'RB', statusObj: strategyStatus.rb, color: '#10b981' },
@@ -927,14 +924,11 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
                })}
              </div>
            </div>
-
-           {/* Allocations */}
            <div style={{ flex: 1, minHeight: 0 }}>
              <div style={{ marginBottom: 10 }}>
                <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981', marginBottom: 4 }}>RB ALLOCATION</div>
                {portfolioHealth.rb?.map(i => <PortfolioRow key={i.key} item={i} />)}
              </div>
-
              <div style={{ marginBottom: 10 }}>
                <div style={{ fontSize: 13, fontWeight: 700, color: '#bf44ef', marginBottom: 4 }}>
                  QB ALLOCATION
@@ -942,7 +936,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
                </div>
                {portfolioHealth.qb?.map(i => <PortfolioRow key={i.key} item={i} />)}
              </div>
-
              <div>
                <div style={{ fontSize: 13, fontWeight: 700, color: '#3b82f6', marginBottom: 4 }}>
                  TE ALLOCATION
@@ -956,6 +949,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
              </div>
            </div>
         </div>
+        */}
         {/* Drafted Roster */}
         <div style={{ background: '#1e293b', borderRadius: 10, border: '1px solid #334155', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #334155' }}>
@@ -1018,9 +1012,11 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
              <div>
                <h2 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: '#fff' }}>Available Players</h2>
+               {/* Comparing against archetype - commented out
                <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 4 }}>
                  Comparing against: <span style={{ color: '#f59e0b', fontWeight: 700 }}>{referenceStrategyName}</span>
                </div>
+               */}
              </div>
              <div style={{ fontSize: 14, color: '#64748b', textAlign: 'right' }}>
                <div>Round {currentRound}</div>
@@ -1329,6 +1325,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName }) {
                 {stackInfo.type}
               </span>
             )}
+            {/* Limits badge - commented out, archetypes removed
             {killsStrategy && (
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 2, flexShrink: 0,
@@ -1338,6 +1335,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName }) {
                 <AlertTriangle size={11} /> Limits
               </div>
             )}
+            */}
             {isFallingKnife && (
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 2, flexShrink: 0,
