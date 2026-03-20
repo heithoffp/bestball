@@ -81,9 +81,60 @@ export async function processLoadedData({ rosterText, adpFiles = [], rankingsTex
 
       const rawProj = row.projectedPoints || row.projected_points || row['Projected Points'] || '';
       const projVal = parseFloat(rawProj);
-      if (!isNaN(projVal)) {
+      if (!isNaN(projVal) && projVal > 0) {
         projPointsMap[normalizedName] = projVal;
       }
+    });
+
+    // Backfill missing projections using nearest same-position ADP neighbor
+    const posProjections = {};
+    latest.rows.forEach(row => {
+      const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
+        || row['Player Name'] || row.player_name || row.Player);
+      if (!name) return;
+      const normalizedName = name.trim().replace(/\s+/g, ' ');
+      const pos = (row.position || row.Position || row.pos || row.slotName || 'N/A').toUpperCase();
+      const adp = localAdpMap[normalizedName]?.pick;
+      const proj = projPointsMap[normalizedName];
+      if (proj != null && Number.isFinite(adp)) {
+        (posProjections[pos] ??= []).push({ adp, proj });
+      }
+    });
+    Object.values(posProjections).forEach(arr => arr.sort((a, b) => a.adp - b.adp));
+
+    latest.rows.forEach(row => {
+      const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
+        || row['Player Name'] || row.player_name || row.Player);
+      if (!name) return;
+      const normalizedName = name.trim().replace(/\s+/g, ' ');
+      if (projPointsMap[normalizedName] != null) return;
+      const pos = (row.position || row.Position || row.pos || row.slotName || 'N/A').toUpperCase();
+      const adp = localAdpMap[normalizedName]?.pick;
+      const group = posProjections[pos];
+      if (!group?.length || !Number.isFinite(adp)) return;
+      let lo = 0, hi = group.length - 1, best = group[0];
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (Math.abs(group[mid].adp - adp) < Math.abs(best.adp - adp)) best = group[mid];
+        if (group[mid].adp < adp) lo = mid + 1; else hi = mid - 1;
+      }
+      projPointsMap[normalizedName] = best.proj;
+    });
+
+    // Backfill projections for roster players not in ADP snapshot (rookies/FAs)
+    mappedRosters.forEach(player => {
+      if (projPointsMap[player.name] != null) return;
+      const pos = (player.position || 'N/A').toUpperCase();
+      const adpProxy = player.pick || NaN;
+      const group = posProjections[pos];
+      if (!group?.length || !Number.isFinite(adpProxy)) return;
+      let lo = 0, hi = group.length - 1, best = group[0];
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (Math.abs(group[mid].adp - adpProxy) < Math.abs(best.adp - adpProxy)) best = group[mid];
+        if (group[mid].adp < adpProxy) lo = mid + 1; else hi = mid - 1;
+      }
+      projPointsMap[player.name] = best.proj;
     });
   }
 
@@ -103,7 +154,7 @@ export async function processLoadedData({ rosterText, adpFiles = [], rankingsTex
     });
   }
 
-  // 5) Enrich rosters with ADP data
+  // Enrich rosters with ADP data
   const enrichedRosters = mappedRosters.map(player => {
     const latestTeam = teamLookup[player.name];
     const adpData = localAdpMap[player.name];
