@@ -1,6 +1,7 @@
 // src/App.jsx
 import React, { useEffect, useState, Suspense, lazy, useCallback } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
 import { saveFile, getFile, hasUserData } from './utils/storage';
 
@@ -174,6 +175,7 @@ export default function App() {
         </div>
       </div>
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
