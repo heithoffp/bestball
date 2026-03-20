@@ -855,7 +855,7 @@ export default function RosterViewer({ rosterData = [] }) {
         onChange={e => {
           const key = e.target.value;
           setSortKey(key);
-          setSortDir(key === 'avgCLV' ? 'desc' : 'desc');
+          setSortDir(key === 'avgCLV' ? 'desc' : 'asc');
         }}
       >
         {SORT_OPTIONS.map(opt => (
