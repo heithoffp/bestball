@@ -3,6 +3,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import AdpSparkline from './AdpSparkline';
 import { ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 import FileUploadButton from './FileUploadButton';
+import useMediaQuery from '../hooks/useMediaQuery';
+import styles from './ExposureTable.module.css';
 
 // --- Shared Utilities ---
 const COLORS = {
@@ -20,12 +22,24 @@ const RB_OPTIONS = ['Any', 'RB_ZERO', 'RB_HYPER_FRAGILE', 'RB_HERO', 'RB_BALANCE
 const QB_OPTIONS = ['Any', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['Any', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 
-export default function ExposureTable({ masterPlayers = [], rosterData = [], onRosterUpload }) {
-  // ... your existing state and memo logic unchanged (omitted here for brevity)
-  // Copy-paste the same logic you already have above (search, sorting, useMemos, etc.)
-  // For clarity I'm keeping only the render part here — assume the rest of your logic remains.
+// All chip options grouped by position for mobile filter chips
+const CHIP_GROUPS = [
+  { pos: 'RB', options: RB_OPTIONS.filter(o => o !== 'Any') },
+  { pos: 'QB', options: QB_OPTIONS.filter(o => o !== 'Any') },
+  { pos: 'TE', options: TE_OPTIONS.filter(o => o !== 'Any') },
+];
 
-  // --- (Start of unchanged logic - paste all your useState/useMemo/etc from original) ---
+const SORT_OPTIONS = [
+  { value: 'exposure', label: 'Exposure %' },
+  { value: 'adp', label: 'ADP' },
+  { value: 'name', label: 'Name' },
+  { value: 'count', label: 'Count' },
+  { value: 'adpTrend', label: 'Trend' },
+];
+
+export default function ExposureTable({ masterPlayers = [], rosterData = [], onRosterUpload }) {
+  const { isMobile } = useMediaQuery();
+
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
 
@@ -41,6 +55,13 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
   const [qbFilter, setQbFilter] = useState('Any');
   const [teFilter, setTeFilter] = useState('Any');
 
+  const [expandedId, setExpandedId] = useState(null);
+
+  // Reset expandedId when filters/sort/search change
+  useEffect(() => {
+    setExpandedId(null);
+  }, [search, sortField, sortDir, rbFilter, qbFilter, teFilter, showUndrafted]);
+
   const onSort = (field) => {
     if (field === sortField) {
       setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
@@ -53,9 +74,9 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
 
   const normalizedQuery = (s) => (s || '').toLowerCase().trim();
 
-  const { filteredRosters, totalFilteredEntries, playerExposures } = useMemo(() => {
+  const { totalFilteredEntries, playerExposures } = useMemo(() => {
     if (!rosterData || rosterData.length === 0) {
-      return { filteredRosters: [], totalFilteredEntries: 0, playerExposures: {} };
+      return { totalFilteredEntries: 0, playerExposures: {} };
     }
     const entriesMap = {};
     rosterData.forEach(p => {
@@ -96,7 +117,6 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
     });
 
     return {
-      filteredRosters: filtered,
       totalFilteredEntries: filtered.length,
       playerExposures: exposures
     };
@@ -165,11 +185,11 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
       if (sortField === 'name') return (a.name || '').localeCompare(b.name || '');
       if (sortField === 'position') return (a.position || '').localeCompare(b.position || '');
       if (sortField === 'team') return (a.team || '').localeCompare(b.team || '');
-      
-      const aVal = hasActiveFilter 
+
+      const aVal = hasActiveFilter
         ? (sortField === 'count' ? a.filteredCount : a.filteredExposure)
         : (sortField === 'count' ? a.count : a.exposure);
-      const bVal = hasActiveFilter 
+      const bVal = hasActiveFilter
         ? (sortField === 'count' ? b.filteredCount : b.filteredExposure)
         : (sortField === 'count' ? b.count : b.exposure);
 
@@ -207,52 +227,78 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
     setQbFilter('Any');
     setTeFilter('Any');
   };
-  // --- (End of unchanged logic) ---
 
   const tableContainerRef = useRef(null);
 
   const virtualizer = useVirtualizer({
     count: filteredAndSorted.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 51,
+    estimateSize: () => isMobile ? 72 : 51,
     overscan: 10,
   });
 
-  // Shared cell styles for consistent alignment
-  const cellBaseStyle = {
-    padding: '10px 13px',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    verticalAlign: 'middle',
-    borderBottom: '1px solid rgba(255,255,255,0.04)'
+  // --- Chip filter toggle ---
+  const toggleChip = (optionKey) => {
+    // Determine which position group this belongs to
+    if (RB_OPTIONS.includes(optionKey)) {
+      setRbFilter(prev => prev === optionKey ? 'Any' : optionKey);
+    } else if (QB_OPTIONS.includes(optionKey)) {
+      setQbFilter(prev => prev === optionKey ? 'Any' : optionKey);
+    } else if (TE_OPTIONS.includes(optionKey)) {
+      setTeFilter(prev => prev === optionKey ? 'Any' : optionKey);
+    }
   };
 
-  const headerStyle = {
-    ...cellBaseStyle,
-    fontSize: 15,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    cursor: 'pointer',
-    color: 'var(--text-secondary)'
+  const isChipActive = (optionKey) => {
+    return rbFilter === optionKey || qbFilter === optionKey || teFilter === optionKey;
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 15, marginBottom: 15, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+  // --- Render helpers ---
+
+  const renderToolbar = () => {
+    if (isMobile) {
+      return (
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarRow1}>
+            <h2 style={{ margin: 0 }}>Exposures</h2>
+            {onRosterUpload && <FileUploadButton label="Upload CSV" onUpload={onRosterUpload} />}
+          </div>
+          <input
+            aria-label="Search players"
+            placeholder="Search name, team, pos..."
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            className={`path-input ${styles.searchInput}`}
+          />
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={showUndrafted}
+                onChange={e => setShowUndrafted(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              Show 0%
+            </label>
+            <button
+              className="load-button"
+              onClick={resetFilters}
+              style={{ width: 'auto', padding: '0.5rem 1rem' }}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarLeft}>
           <h2 style={{ margin: 0 }}>Exposures</h2>
         </div>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: '15px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            color: 'var(--text-secondary)'
-          }}>
+        <div className={styles.toolbarRight}>
+          <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               checked={showUndrafted}
@@ -261,16 +307,13 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
             />
             Show 0% Exposure
           </label>
-
           <input
             aria-label="Search players"
             placeholder="Search name, team, pos..."
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
-            className="path-input"
-            style={{ width: 250, margin: 0 }}
+            className={`path-input ${styles.searchInput}`}
           />
-
           <button
             className="load-button"
             onClick={resetFilters}
@@ -281,48 +324,54 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} />}
         </div>
       </div>
+    );
+  };
 
-      {/* (Filters area unchanged) */}
-      <div style={{
-        display: 'flex',
-        gap: 15,
-        padding: '20px',
-        background: 'rgba(0,0,0,0.2)',
-        borderRadius: 8,
-        border: '1px solid rgba(255,255,255,0.1)',
-        marginBottom: 20,
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        flexShrink: 0
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '0 0 auto' }}>
-          <span style={{
-            fontSize: 15,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: 'var(--text-secondary)'
-          }}>
-            Filter by Strategy:
-          </span>
+  const renderFilters = () => {
+    if (isMobile) {
+      return (
+        <div className={styles.chipStrip}>
+          {CHIP_GROUPS.map((group, gi) => (
+            <React.Fragment key={group.pos}>
+              {gi > 0 && <div className={styles.chipSeparator} />}
+              {group.options.map(opt => {
+                const active = isChipActive(opt);
+                const color = getPosColor(group.pos);
+                return (
+                  <button
+                    key={opt}
+                    className={`${styles.chip} ${active ? styles.chipActive : ''}`}
+                    style={active ? {
+                      background: `${color}25`,
+                      borderColor: color,
+                      color: color
+                    } : undefined}
+                    onClick={() => toggleChip(opt)}
+                  >
+                    {ARCHETYPE_METADATA[opt]?.name || opt}
+                  </button>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.filterPanel}>
+        <div className={styles.filterLabel}>
+          <span>Filter by Strategy:</span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+        <div className={styles.filterColumn}>
           <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('RB'), textTransform: 'uppercase' }}>
             RB Strategy
           </label>
           <select
             value={rbFilter}
             onChange={e => setRbFilter(e.target.value)}
-            style={{
-              padding: '8px 10px',
-              borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(0,0,0,0.3)',
-              color: 'inherit',
-              fontSize: 15,
-              cursor: 'pointer'
-            }}
+            className={styles.filterSelect}
           >
             {RB_OPTIONS.map(opt => (
               <option key={opt} value={opt}>
@@ -332,22 +381,14 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           </select>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+        <div className={styles.filterColumn}>
           <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('QB'), textTransform: 'uppercase' }}>
             QB Strategy
           </label>
           <select
             value={qbFilter}
             onChange={e => setQbFilter(e.target.value)}
-            style={{
-              padding: '8px 10px',
-              borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(0,0,0,0.3)',
-              color: 'inherit',
-              fontSize: 15,
-              cursor: 'pointer'
-            }}
+            className={styles.filterSelect}
           >
             {QB_OPTIONS.map(opt => (
               <option key={opt} value={opt}>
@@ -357,22 +398,14 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           </select>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+        <div className={styles.filterColumn}>
           <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('TE'), textTransform: 'uppercase' }}>
             TE Strategy
           </label>
           <select
             value={teFilter}
             onChange={e => setTeFilter(e.target.value)}
-            style={{
-              padding: '8px 10px',
-              borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(0,0,0,0.3)',
-              color: 'inherit',
-              fontSize: 15,
-              cursor: 'pointer'
-            }}
+            className={styles.filterSelect}
           >
             {TE_OPTIONS.map(opt => (
               <option key={opt} value={opt}>
@@ -383,27 +416,13 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
         </div>
 
         {hasActiveFilter && (
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            gap: 10
-          }}>
-            <span style={{
-              fontSize: 14,
-              color: 'var(--text-secondary)',
-              fontStyle: 'italic'
-            }}>
+          <div className={styles.filterResults}>
+            <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
               Showing {totalFilteredEntries} rosters matching:
             </span>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className={styles.filterBadgeRow}>
               {rbFilter !== 'Any' && (
-                <span style={{
-                  padding: '4px 10px',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontWeight: 700,
+                <span className={styles.filterBadge} style={{
                   background: `${getPosColor('RB')}20`,
                   border: `1px solid ${getPosColor('RB')}40`,
                   color: getPosColor('RB')
@@ -412,11 +431,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
                 </span>
               )}
               {qbFilter !== 'Any' && (
-                <span style={{
-                  padding: '4px 10px',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontWeight: 700,
+                <span className={styles.filterBadge} style={{
                   background: `${getPosColor('QB')}20`,
                   border: `1px solid ${getPosColor('QB')}40`,
                   color: getPosColor('QB')
@@ -425,11 +440,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
                 </span>
               )}
               {teFilter !== 'Any' && (
-                <span style={{
-                  padding: '4px 10px',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontWeight: 700,
+                <span className={styles.filterBadge} style={{
                   background: `${getPosColor('TE')}20`,
                   border: `1px solid ${getPosColor('TE')}40`,
                   color: getPosColor('TE')
@@ -441,107 +452,235 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
           </div>
         )}
       </div>
+    );
+  };
+
+  const renderMobileSortBar = () => (
+    <div className={styles.sortBar}>
+      <select
+        className={styles.sortSelect}
+        value={sortField}
+        onChange={e => {
+          const field = e.target.value;
+          setSortField(field);
+          if (field === 'adp' || field === 'name' || field === 'adpTrend') setSortDir('asc');
+          else setSortDir('desc');
+        }}
+      >
+        {SORT_OPTIONS.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <button
+        className={styles.sortDirButton}
+        onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}
+        aria-label={`Sort ${sortDir === 'asc' ? 'ascending' : 'descending'}`}
+      >
+        {sortDir === 'asc' ? '▲' : '▼'}
+      </button>
+    </div>
+  );
+
+  const renderPlayerCard = (p, virtualRow) => {
+    const posColor = getPosColor(p.position);
+    const displayExp = hasActiveFilter ? (p.filteredExposure || 0) : (p.exposure || 0);
+    const displayCount = hasActiveFilter ? (p.filteredCount || 0) : (p.count || 0);
+    const isExpanded = expandedId === (p.stableId || p.name);
+
+    return (
+      <div
+        key={virtualRow.key}
+        data-index={virtualRow.index}
+        ref={virtualizer.measureElement}
+        className={styles.playerCard}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          transform: `translateY(${virtualRow.start}px)`,
+          borderLeft: `4px solid ${posColor}`,
+          opacity: displayCount === 0 ? 0.5 : 1,
+        }}
+        onClick={() => setExpandedId(isExpanded ? null : (p.stableId || p.name))}
+      >
+        <div className={styles.cardRow1}>
+          <span className={styles.cardName}>{p.name}</span>
+          <span
+            className={styles.cardPosBadge}
+            style={{ background: `${posColor}25`, color: posColor }}
+          >
+            {p.position}
+          </span>
+          <span className={styles.cardTeam}>{p.team}</span>
+        </div>
+        <div className={styles.cardRow2}>
+          <div className={styles.cardStat}>
+            <span className={styles.cardStatLabel}>Exp</span>
+            <span className={styles.cardStatValue}>{parseFloat(displayExp).toFixed(1)}%</span>
+          </div>
+          <div className={styles.cardStat}>
+            <span className={styles.cardStatLabel}>Count</span>
+            <span className={styles.cardStatValue}>{displayCount}</span>
+          </div>
+          <div className={styles.cardStat}>
+            <span className={styles.cardStatLabel}>ADP</span>
+            <span className={styles.cardStatValue}>{p.adpDisplay}</span>
+          </div>
+        </div>
+        {isExpanded && (
+          <div className={styles.cardExpanded}>
+            <div className={styles.cardSparkline}>
+              <AdpSparkline history={p.history} />
+            </div>
+            {p.trendValue !== null && (
+              <div className={styles.cardTrend}>
+                2-wk trend: {p.trendValue > 0 ? '+' : ''}{p.trendValue.toFixed(1)} picks
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderCardList = () => (
+    <div
+      className="exposure-table card"
+      style={{ padding: 0, flex: 1, minHeight: 0 }}
+    >
+      <div
+        ref={tableContainerRef}
+        style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}
+      >
+        {filteredAndSorted.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            {masterPlayers.length === 0
+              ? 'No data loaded. Use the Upload button above to import your Underdog Exposure CSV.'
+              : 'No players match.'}
+          </div>
+        ) : (
+          <div
+            className={styles.cardList}
+            style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
+          >
+            {virtualizer.getVirtualItems().map(virtualRow => {
+              const p = filteredAndSorted[virtualRow.index];
+              return renderPlayerCard(p, virtualRow);
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderTable = () => (
+    <div className={`exposure-table card ${styles.tableCard}`}>
+      <div
+        className="table-container"
+        ref={tableContainerRef}
+        style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}
+      >
+        <table
+          className="exposure-fixed-table"
+          style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
+        >
+          <colgroup>
+            <col className={styles.colName} />
+            <col className={styles.colPos} />
+            <col className={styles.colTeam} />
+            <col className={styles.colExposure} />
+            <col className={styles.colCount} />
+            <col className={styles.colAdp} />
+            <col className={`${styles.colTrend} ${styles.trendCol}`} />
+          </colgroup>
+
+          <thead className={styles.thead}>
+            <tr>
+              <th className={styles.headerCell} onClick={() => onSort('name')}>Player {sortArrow('name')}</th>
+              <th className={styles.headerCell} onClick={() => onSort('position')}>Pos {sortArrow('position')}</th>
+              <th className={styles.headerCell} onClick={() => onSort('team')}>Team {sortArrow('team')}</th>
+              <th className={styles.headerCell} onClick={() => onSort('exposure')}>Exposure % {sortArrow('exposure')}</th>
+              <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('count')}>Count {sortArrow('count')}</th>
+              <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('adp')}>ADP {sortArrow('adp')}</th>
+              <th className={`${styles.headerCell} ${styles.trendCol}`} onClick={() => onSort('adpTrend')}>ADP Trend {sortArrow('adpTrend')}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredAndSorted.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  {masterPlayers.length === 0
+                    ? 'No data loaded. Use the Upload button above to import your Underdog Exposure CSV.'
+                    : 'No players match.'}
+                </td>
+              </tr>
+            ) : (
+              <>
+                {virtualizer.getVirtualItems().length > 0 && (
+                  <tr><td colSpan={7} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
+                )}
+                {virtualizer.getVirtualItems().map(virtualRow => {
+                  const p = filteredAndSorted[virtualRow.index];
+                  const posColor = getPosColor(p.position);
+                  const displayExp = hasActiveFilter ? (p.filteredExposure || 0) : (p.exposure || 0);
+                  const displayCount = hasActiveFilter ? (p.filteredCount || 0) : (p.count || 0);
+
+                  return (
+                    <tr
+                      key={virtualRow.key}
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
+                      style={{ opacity: displayCount === 0 ? 0.5 : 1 }}
+                    >
+                      <td className={styles.cell} style={{ fontWeight: 600, borderLeft: `4px solid ${posColor}` }}>{p.name}</td>
+                      <td className={styles.cell}>{p.position}</td>
+                      <td className={styles.cell}>{p.team}</td>
+                      <td className={styles.cell}>{parseFloat(displayExp).toFixed(1)}%</td>
+                      <td className={styles.cell} style={{ textAlign: 'right' }}>{displayCount}</td>
+                      <td className={styles.cell} style={{ textAlign: 'right' }}>{p.adpDisplay}</td>
+                      <td className={`${styles.cell} ${styles.trendCol}`} style={{ padding: '8px 10px' }}>
+                        <div className={styles.sparklineWrap}>
+                          <AdpSparkline history={p.history} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {virtualizer.getVirtualItems().length > 0 && (
+                  <tr><td colSpan={7} style={{
+                    height: virtualizer.getTotalSize() - (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
+                    padding: 0, border: 'none'
+                  }} /></tr>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={styles.root}>
+      {renderToolbar()}
+      {renderFilters()}
+
+      {hasActiveFilter && isMobile && (
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 6 }}>
+          {totalFilteredEntries} rosters matching filters
+        </div>
+      )}
 
       {rosterData.length === 0 && masterPlayers.length > 0 && (
-        <div style={{
-          padding: '13px 20px',
-          marginBottom: 15,
-          borderRadius: 8,
-          background: 'rgba(59,130,246,0.1)',
-          border: '1px solid rgba(59,130,246,0.25)',
-          fontSize: 16,
-          color: 'var(--text-secondary)',
-          flexShrink: 0,
-        }}>
+        <div className={styles.infoBanner}>
           No roster uploaded — showing all ADP players. Upload your Underdog Exposure CSV for exposure data.
         </div>
       )}
 
-      <div className="exposure-table card" style={{ padding: 0, flex: 1, minHeight: 0 }}>
-        <div
-          className="table-container"
-          ref={tableContainerRef}
-          style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}
-        >
-          <table
-            className="exposure-fixed-table"
-            style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
-          >
-            <colgroup>
-              <col style={{ width: '22%' }} />
-              <col style={{ width: '5%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '7%' }} />
-              <col style={{ width: '7%' }} />
-              <col style={{ width: '20%' }} />
-            </colgroup>
-
-            <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card-bg, #1a1a2e)' }}>
-              <tr>
-                <th style={headerStyle} onClick={() => onSort('name')}>Player {sortArrow('name')}</th>
-                <th style={headerStyle} onClick={() => onSort('position')}>Pos {sortArrow('position')}</th>
-                <th style={headerStyle} onClick={() => onSort('team')}>Team {sortArrow('team')}</th>
-                <th style={headerStyle} onClick={() => onSort('exposure')}>Exposure % {sortArrow('exposure')}</th>
-                <th style={{ ...headerStyle, textAlign: 'right' }} onClick={() => onSort('count')}>Count {sortArrow('count')}</th>
-                <th style={{ ...headerStyle, textAlign: 'right' }} onClick={() => onSort('adp')}>ADP {sortArrow('adp')}</th>
-                <th style={headerStyle} onClick={() => onSort('adpTrend')}>ADP Trend {sortArrow('adpTrend')}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredAndSorted.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    {masterPlayers.length === 0
-                      ? 'No data loaded. Use the Upload button above to import your Underdog Exposure CSV.'
-                      : 'No players match.'}
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {virtualizer.getVirtualItems().length > 0 && (
-                    <tr><td colSpan={7} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
-                  )}
-                  {virtualizer.getVirtualItems().map(virtualRow => {
-                    const p = filteredAndSorted[virtualRow.index];
-                    const posColor = getPosColor(p.position);
-                    const displayExp = hasActiveFilter ? (p.filteredExposure || 0) : (p.exposure || 0);
-                    const displayCount = hasActiveFilter ? (p.filteredCount || 0) : (p.count || 0);
-
-                    return (
-                      <tr
-                        key={virtualRow.key}
-                        data-index={virtualRow.index}
-                        ref={virtualizer.measureElement}
-                        style={{ opacity: displayCount === 0 ? 0.5 : 1 }}
-                      >
-                        <td style={{ ...cellBaseStyle, fontWeight: 600, borderLeft: `4px solid ${posColor}` }}>{p.name}</td>
-                        <td style={cellBaseStyle}>{p.position}</td>
-                        <td style={cellBaseStyle}>{p.team}</td>
-                        <td style={cellBaseStyle}>{parseFloat(displayExp).toFixed(1)}%</td>
-                        <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{displayCount}</td>
-                        <td style={{ ...cellBaseStyle, textAlign: 'right' }}>{p.adpDisplay}</td>
-                        <td style={{ ...cellBaseStyle, padding: '8px 10px' }}>
-                          <div style={{ width: '100%', height: '30px', minWidth: '100px' }}>
-                            <AdpSparkline history={p.history} />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {virtualizer.getVirtualItems().length > 0 && (
-                    <tr><td colSpan={7} style={{
-                      height: virtualizer.getTotalSize() - (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
-                      padding: 0, border: 'none'
-                    }} /></tr>
-                  )}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {isMobile && renderMobileSortBar()}
+      {isMobile ? renderCardList() : renderTable()}
     </div>
   );
 }

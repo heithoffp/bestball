@@ -1,8 +1,12 @@
 // src/components/RosterViewer.jsx
 import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import { analyzeRosterStacks } from '../utils/stackAnalysis';
-import { calculateSpikeWeekProjection, spikeWeekPercentile } from '../utils/spikeWeekProjection';
+import { spikeWeekPercentile } from '../utils/spikeWeekProjection';
+import { useSpikeWorker } from '../hooks/useSpikeWorker';
+import useMediaQuery from '../hooks/useMediaQuery';
+import css from './RosterViewer.module.css';
 
 // ── CLV helpers ───────────────────────────────────────────────────────────────
 
@@ -76,15 +80,11 @@ function archetypeRarityNorm(rbArchetype) {
 }
 
 /**
- * Calculates how "irrational" or rare a reach is based on whether the 
+ * Calculates how "irrational" or rare a reach is based on whether the
  * player would have survived to the drafting team's NEXT pick.
  * We use the standard logistic CDF / survival function.
  */
 function survivalProbability(reachMagnitude, scale) {
-  // If reach is 0, survival to your current pick was standard (~0.5 or lower).
-  // The larger the reach, the closer survival probability gets to 1.0.
-  // We use this as a multiplier: reaching for a player with a 99% chance 
-  // to survive to your next pick yields a massive rarity boost.
   return 1 - Math.exp(-reachMagnitude / scale);
 }
 
@@ -92,7 +92,7 @@ function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
   const {
     alphaPhase = 1.2,
     betaPhase = -0.5,
-    archetypeWeight = 1.5, // Increased default to balance against draft RSS scale
+    archetypeWeight = 1.5,
     numTeams = 12,
     reachThreshold = 0,
     aggregation = 'rss',
@@ -109,26 +109,21 @@ function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
     const adpRaw = Number(p.latestADP || p.adp || p.latestADPValue || 0) || (pick || 1000);
     const adp    = Math.max(1, adpRaw);
 
-    // Standardize deviation by phase volatility
     const denom = alphaPhase * Math.sqrt(adp) + betaPhase;
-    
-    // Use absolute deviation so both Reaches AND Steals (CLV) make the roster unique
-    const rawDeviation = Math.abs(adp - pick); 
-    // Floor the denominator at 0.5 to prevent explosive early-round scaling
-    const deviationScaled = rawDeviation / Math.max(0.5, denom);
-    
-    rawReachDevs.push(deviationScaled); // (You may want to rename this array to rawDevs)
 
-    // Uniqueness Multiplier based on absolute deviation
-    const uniquenessMultiplier = rawDeviation >= reachThreshold 
-        ? survivalProbability(rawDeviation, denom * 2) 
-        : 1.0; 
+    const rawDeviation = Math.abs(adp - pick);
+    const deviationScaled = rawDeviation / Math.max(0.5, denom);
+
+    rawReachDevs.push(deviationScaled);
+
+    const uniquenessMultiplier = rawDeviation >= reachThreshold
+        ? survivalProbability(rawDeviation, denom * 2)
+        : 1.0;
 
     const adjustedDev = deviationScaled * uniquenessMultiplier;
     adjustedReachDevs.push(adjustedDev);
   });
 
-  // Aggregation
   let aggregatedAdjusted;
   if (aggregation === 'sum') {
     aggregatedAdjusted = adjustedReachDevs.reduce((s, x) => s + x, 0);
@@ -141,7 +136,6 @@ function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
     aggregatedAdjusted = Math.sqrt(sumsq);
   }
 
-  // Normalization
   const nPlayers = Math.max(1, rosterPlayers.length);
   let normalizedAdjusted = aggregatedAdjusted;
   if (normalizeBy === 'sqrtN') {
@@ -249,6 +243,21 @@ const RB_OPTIONS = ['all', 'RB_ZERO', 'RB_HERO', 'RB_HYPER_FRAGILE', 'RB_BALANCE
 const QB_OPTIONS = ['all', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['all', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 
+// All chip groups for mobile
+const CHIP_GROUPS = [
+  { pos: 'RB', options: RB_OPTIONS.filter(o => o !== 'all') },
+  { pos: 'QB', options: QB_OPTIONS.filter(o => o !== 'all') },
+  { pos: 'TE', options: TE_OPTIONS.filter(o => o !== 'all') },
+];
+
+const SORT_OPTIONS = [
+  { value: 'grade', label: 'Grade' },
+  { value: 'draftDate', label: 'Draft Date' },
+  { value: 'avgCLV', label: 'Avg CLV' },
+  { value: 'spikeRaw', label: 'Spike Pts' },
+  { value: 'rarityPercentile', label: 'Uniq Lift' },
+];
+
 // ── Percentile rank ───────────────────────────────────────────────────────────
 
 function percentileRank(value, arr) {
@@ -299,13 +308,13 @@ function percentileRankArray(value, arr) {
 }
 
 function HighlightedName({ name, query }) {
-  if (!query) return <span style={styles.playerName}>{name}</span>;
+  if (!query) return <span className={css.playerName}>{name}</span>;
   const idx = name.toLowerCase().indexOf(query.toLowerCase());
-  if (idx === -1) return <span style={styles.playerName}>{name}</span>;
+  if (idx === -1) return <span className={css.playerName}>{name}</span>;
   return (
-    <span style={styles.playerName}>
+    <span className={css.playerName}>
       {name.slice(0, idx)}
-      <mark style={styles.searchHighlight}>{name.slice(idx, idx + query.length)}</mark>
+      <mark className={css.searchHighlight}>{name.slice(idx, idx + query.length)}</mark>
       {name.slice(idx + query.length)}
     </span>
   );
@@ -314,7 +323,9 @@ function HighlightedName({ name, query }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RosterViewer({ rosterData = [] }) {
+  const { isMobile } = useMediaQuery();
   const [expandedEntry, setExpandedEntry]   = useState(null);
+  const [filtersOpen, setFiltersOpen]       = useState(false);
   const [sortKey, setSortKey]               = useState('avgCLV');
   const [sortDir, setSortDir]               = useState('desc');
   const alpha = 0.5; // Balanced CLV curve
@@ -335,6 +346,7 @@ export default function RosterViewer({ rosterData = [] }) {
   const teamSearchRef = useRef(null);
   const blurTimeout = useRef(null);
   const teamBlurTimeout = useRef(null);
+  const scrollRef = useRef(null);
 
   // Unique player names for autocomplete
   const allPlayerNames = useMemo(() => {
@@ -435,7 +447,7 @@ export default function RosterViewer({ rosterData = [] }) {
   // Rarity model tunables
   const [alphaPhase]       = useState(1.2);
   const [betaPhase]        = useState(-0.5);
-  const [archetypeBoostMax] = useState(0.5); // 0 = ignore archetype, 1 = can double score
+  const [archetypeBoostMax] = useState(0.5);
 
   // Group + classify each entry
   const rosters = useMemo(() => {
@@ -462,7 +474,6 @@ export default function RosterViewer({ rosterData = [] }) {
 
       const path = classifyRosterPath(players);
 
-      // Derive draft date from earliest pick timestamp
       const timestamps = players
         .map(p => p.pickedAt ? new Date(p.pickedAt) : null)
         .filter(d => d && !isNaN(d));
@@ -488,9 +499,9 @@ export default function RosterViewer({ rosterData = [] }) {
       const rarity = calculateCompositeRarity(r.players, r.path.rb, {
         alphaPhase,
         betaPhase,
-        archetypeWeight: 0.3,        // If RSS scales high, you may need to bump this to 0.5 - 1.5 to make archetype matter
-        aggregation: 'rss',          
-        reachThreshold: 2,           
+        archetypeWeight: 0.3,
+        aggregation: 'rss',
+        reachThreshold: 2,
         normalizeBy: 'sqrtN',
       });
 
@@ -517,7 +528,6 @@ export default function RosterViewer({ rosterData = [] }) {
         rarity:           Number(t.rarity.toFixed(4)),
         rarityPercentile: Math.round(rarityPercentiles[t.entry_id]),
         uniqLiftNorm:     t.uniqLiftNorm ?? 0.5,
-        // Expose archetype boost factor for tooltip
         archBoost:        Number((1 + archetypeBoostMax * archetypeRarityNorm(t.rbArchetype)).toFixed(3)),
       };
     });
@@ -533,32 +543,32 @@ export default function RosterViewer({ rosterData = [] }) {
     return byId;
   }, [rosters]);
 
-  // Spike week projections for all rosters
+  // Spike week projections — computed in a Web Worker for non-blocking UI
+  const { spikeData: rawSpikeData, isComplete: spikeComplete } = useSpikeWorker(rosters);
+
   const rosterSpikeData = useMemo(() => {
-    const byId = {};
-    const allScores = [];
-    rosters.forEach(r => {
-      const result = calculateSpikeWeekProjection(r.players);
-      byId[r.entry_id] = result;
-      allScores.push(result.spikeScore);
-    });
-    // Compute percentiles
-    const withPercentiles = {};
-    rosters.forEach(r => {
-      const result = byId[r.entry_id];
-      withPercentiles[r.entry_id] = {
-        ...result,
-        percentile: spikeWeekPercentile(result.spikeScore, allScores),
+    if (!spikeComplete) {
+      const result = {};
+      for (const [id, data] of Object.entries(rawSpikeData)) {
+        result[id] = { ...data, percentile: null };
+      }
+      return result;
+    }
+    const allScores = Object.values(rawSpikeData).map(d => d.spikeScore);
+    const result = {};
+    for (const [id, data] of Object.entries(rawSpikeData)) {
+      result[id] = {
+        ...data,
+        percentile: spikeWeekPercentile(data.spikeScore, allScores),
       };
-    });
-    return withPercentiles;
-  }, [rosters]);
+    }
+    return result;
+  }, [rawSpikeData, spikeComplete]);
 
   // Composite roster grades
   const rosterGrades = useMemo(() => {
     if (!rosters || rosters.length === 0) return {};
 
-    // Collect raw values for percentile ranking
     const projTotals = [];
     const clvValues = [];
     const rarityValues = [];
@@ -667,7 +677,7 @@ export default function RosterViewer({ rosterData = [] }) {
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-}, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, rosterGrades, rosterSpikeData, selectedPlayers, selectedTeams, rosterSearchMatches]);
+  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, rosterGrades, rosterSpikeData, selectedPlayers, selectedTeams, rosterSearchMatches]);
 
   const allTournaments = useMemo(() => {
     const titles = new Set();
@@ -686,7 +696,6 @@ export default function RosterViewer({ rosterData = [] }) {
     return list;
   }, [rosters, clvFilter, tournamentFilter, selectedPlayers, selectedTeams, rosterSearchMatches]);
 
-  // Each category's counts are based on the base list filtered by the OTHER two archetype filters
   const rbCounts = useMemo(() => {
     let list = baseFiltered;
     if (qbFilter !== 'all') list = list.filter(r => r.path.qb === qbFilter);
@@ -708,6 +717,14 @@ export default function RosterViewer({ rosterData = [] }) {
     return list.reduce((acc, r) => { acc[r.path.te] = (acc[r.path.te] || 0) + 1; return acc; }, {});
   }, [baseFiltered, rbFilter, qbFilter]);
 
+  // Virtualizer for mobile card list
+  const virtualizer = useVirtualizer({
+    count: displayed.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => isMobile ? 140 : 55,
+    overscan: 10,
+  });
+
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir(key === 'avgCLV' ? 'desc' : 'asc'); }
@@ -718,54 +735,393 @@ export default function RosterViewer({ rosterData = [] }) {
     return <span style={{ marginLeft: 5 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
   }
 
+  // Chip filter toggle for mobile
+  const toggleChip = (optionKey) => {
+    if (RB_OPTIONS.includes(optionKey)) {
+      setRbFilter(prev => prev === optionKey ? 'all' : optionKey);
+    } else if (QB_OPTIONS.includes(optionKey)) {
+      setQbFilter(prev => prev === optionKey ? 'all' : optionKey);
+    } else if (TE_OPTIONS.includes(optionKey)) {
+      setTeFilter(prev => prev === optionKey ? 'all' : optionKey);
+    }
+  };
+
+  const isChipActive = (optionKey) => {
+    return rbFilter === optionKey || qbFilter === optionKey || teFilter === optionKey;
+  };
+
   if (!rosterData.length) {
     return (
-      <div style={styles.empty}>
+      <div className={css.empty}>
         <span style={{ fontSize: 50 }}>📋</span>
         <p>No roster data loaded. Go to the Exposures tab and use the Upload button to import your Underdog Exposure CSV.</p>
       </div>
     );
   }
 
-  return (
-    <div style={styles.root}>
-      {/* ── Header ── */}
-      <div style={styles.header}>
-        <div>
-          <h2 style={styles.title}>ROSTER VIEWER</h2>
-          <p style={styles.subtitle}>{displayed.length} / {rosters.length} entries · {rosterData.length} players</p>
-        </div>
-      </div>
+  // ── Render: Mobile Card ─────────────────────────────────────────────────────
 
-      {/* ── Control Panel ── */}
-      <div style={styles.controlPanel}>
+  const renderRosterCard = (roster, virtualRow) => {
+    const clv    = clvLabel(roster.avgCLV);
+    const isOpen = expandedEntry === roster.entry_id;
+    const scores = rosterScores[roster.entry_id] || {};
+    const grade  = rosterGrades[roster.entry_id] || {};
+    const stacks = rosterStacks[roster.entry_id] || [];
+    const spike  = rosterSpikeData[roster.entry_id];
+
+    return (
+      <div
+        key={virtualRow.key}
+        data-index={virtualRow.index}
+        ref={virtualizer.measureElement}
+        className={css.rosterCard}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          transform: `translateY(${virtualRow.start}px)`,
+        }}
+        onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
+      >
+        {/* Header: Grade + Entry + Chevron */}
+        <div className={css.rosterCardHeader}>
+          {grade.grade ? (
+            <span className={css.rosterGradeLetter} style={{ color: grade.grade.color }}>
+              {grade.grade.letter}
+            </span>
+          ) : <span className={css.rosterGradeLetter} style={{ color: '#555' }}>—</span>}
+          <div className={css.rosterCardMeta}>
+            <span className={css.rosterEntryId}>{shortEntry(roster.entry_id)}</span>
+            <span className={css.rosterDraftDate}>
+              {roster.draftDate
+                ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : '—'}
+            </span>
+          </div>
+          <span className={css.rosterChevron}>{isOpen ? '▲' : '▼'}</span>
+        </div>
+
+        {/* Body: Position snapshot + Archetype pills */}
+        <div className={css.rosterCardBody}>
+          <PositionSnapshot snap={roster.posSnap} />
+          <div className={css.rosterArchPills}>
+            <ArchetypePill archetypeKey={roster.path.rb} />
+            <ArchetypePill archetypeKey={roster.path.qb} />
+            <ArchetypePill archetypeKey={roster.path.te} />
+          </div>
+        </div>
+
+        {/* Footer: 3-col stats */}
+        <div className={css.rosterCardFooter}>
+          <div className={css.cardStat}>
+            <span className={css.cardStatLabel}>CLV</span>
+            <span className={css.cardStatValue} style={{ color: clv.color }}>{clv.text}</span>
+          </div>
+          <div className={css.cardStat}>
+            <span className={css.cardStatLabel}>Spike</span>
+            <span className={css.cardStatValue} style={{ color: spike ? uniquenessColor((spike.percentile ?? 0) / 100) : '#555' }}>
+              {spike?.spikeScore > 0 ? spike.spikeScore.toFixed(1) : '—'}
+            </span>
+          </div>
+          <div className={css.cardStat}>
+            <span className={css.cardStatLabel}>Uniq</span>
+            <span className={css.cardStatValue} style={{ color: uniquenessColor(scores.uniqLiftNorm ?? 0.5) }}>
+              {scores.rarity?.toFixed(2) ?? '—'}
+            </span>
+          </div>
+        </div>
+
+        {/* Expanded detail */}
+        {isOpen && (
+          <div className={css.rosterCardExpanded}>
+            <GradeCard grade={grade} />
+            <DraftCapitalMap players={roster.players} isMobile={true} />
+            <StackSummaryBar stacks={stacks} />
+            <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} isMobile={true} />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Render: Mobile Sort Bar ─────────────────────────────────────────────────
+
+  const renderMobileSortBar = () => (
+    <div className={css.sortBar}>
+      <select
+        className={css.sortSelect}
+        value={sortKey}
+        onChange={e => {
+          const key = e.target.value;
+          setSortKey(key);
+          setSortDir(key === 'avgCLV' ? 'desc' : 'desc');
+        }}
+      >
+        {SORT_OPTIONS.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <button
+        className={css.sortDirButton}
+        onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}
+        aria-label={`Sort ${sortDir === 'asc' ? 'ascending' : 'descending'}`}
+      >
+        {sortDir === 'asc' ? '▲' : '▼'}
+      </button>
+    </div>
+  );
+
+  // ── Render: Mobile Chip Filters ─────────────────────────────────────────────
+
+  const renderMobileChipFilters = () => (
+    <div className={css.chipStrip}>
+      {CHIP_GROUPS.map((group, gi) => (
+        <React.Fragment key={group.pos}>
+          {gi > 0 && <div className={css.chipSeparator} />}
+          {group.options.map(opt => {
+            const active = isChipActive(opt);
+            const color = archetypeColor(opt);
+            return (
+              <button
+                key={opt}
+                className={`${css.chip} ${active ? css.chipActive : ''}`}
+                style={active ? {
+                  background: `${color}25`,
+                  borderColor: color,
+                  color: color
+                } : undefined}
+                onClick={() => toggleChip(opt)}
+              >
+                {ARCHETYPE_METADATA[opt]?.name || opt}
+              </button>
+            );
+          })}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  // ── Render: Mobile Card List ────────────────────────────────────────────────
+
+  const renderCardList = () => (
+    <div
+      ref={scrollRef}
+      style={{ overflowY: 'auto', flex: 1, minHeight: 0, borderRadius: 8, border: '1px solid var(--border)' }}
+    >
+      {displayed.length === 0 ? (
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          No rosters match current filters.
+        </div>
+      ) : (
+        <div
+          className={css.cardList}
+          style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
+        >
+          {virtualizer.getVirtualItems().map(virtualRow => {
+            const roster = displayed[virtualRow.index];
+            return renderRosterCard(roster, virtualRow);
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Render: Control Panel ───────────────────────────────────────────────────
+
+  // Build active filter summary pills for collapsed state
+  const activeFilterPills = useMemo(() => {
+    const pills = [];
+    if (selectedPlayers.length > 0) pills.push(...selectedPlayers.map(n => ({ label: n, color: '#00e5a0' })));
+    if (selectedTeams.length > 0) pills.push(...selectedTeams.map(t => ({ label: t, color: '#60a5fa' })));
+    if (rbFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[rbFilter]?.name || rbFilter, color: archetypeColor(rbFilter) });
+    if (qbFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[qbFilter]?.name || qbFilter, color: archetypeColor(qbFilter) });
+    if (teFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[teFilter]?.name || teFilter, color: archetypeColor(teFilter) });
+    if (clvFilter !== 'all') pills.push({ label: clvFilter === 'positive' ? '+CLV' : '-CLV', color: '#00e5a0' });
+    if (tournamentFilter !== 'all') pills.push({ label: tournamentFilter, color: '#f59e0b' });
+    return pills;
+  }, [selectedPlayers, selectedTeams, rbFilter, qbFilter, teFilter, clvFilter, tournamentFilter]);
+
+  const renderFilterToggleHeader = () => (
+    <div
+      className={css.filterToggle}
+      onClick={() => setFiltersOpen(prev => !prev)}
+    >
+      <div className={css.filterToggleLeft}>
+        <span className={css.sectionLabel}>Filters & Search</span>
+        {!filtersOpen && activeFilterPills.length > 0 && (
+          <div className={css.filterPillRow}>
+            {activeFilterPills.map((p, i) => (
+              <span key={i} style={{ background: p.color + '18', color: p.color, border: `1px solid ${p.color}40` }} className={css.filterPillTag}>
+                {p.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <span className={css.filterToggleChevron}>{filtersOpen ? '▲' : '▼'}</span>
+    </div>
+  );
+
+  const renderFilterBody = () => {
+    if (!filtersOpen) return null;
+
+    if (isMobile) {
+      return (
+        <>
+          {/* Search */}
+          <div>
+            <span className={css.sectionLabel}>Search</span>
+            <div className={css.searchRow}>
+              {/* Player Search */}
+              <div className={css.searchWrap} style={{ width: '100%' }}>
+                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Player Search</label>
+                <div className={css.searchInputBox}>
+                  {selectedPlayers.map(name => (
+                    <span key={name} className={css.selectedChip} style={{ background: '#00e5a015', color: '#00e5a0', border: '1px solid #00e5a035' }}>
+                      {name}
+                      <button onClick={(e) => { e.stopPropagation(); removePlayer(name); }} className={css.chipRemove} style={{ color: '#00e5a066' }}>✕</button>
+                    </span>
+                  ))}
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    placeholder={selectedPlayers.length === 0 ? 'Search players…' : 'Add player…'}
+                    value={playerSearch}
+                    onChange={e => { setPlayerSearch(e.target.value); setShowDropdown(true); setHighlightIdx(0); }}
+                    onFocus={() => setShowDropdown(true)}
+                    onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
+                    onKeyDown={handleSearchKeyDown}
+                    style={{
+                      flex: 1, minWidth: 100, background: 'transparent', border: 'none', outline: 'none',
+                      color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
+                      padding: '4px 0',
+                    }}
+                  />
+                  {(selectedPlayers.length > 0 || playerSearch) && (
+                    <button onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }} className={css.clearBtn}>✕</button>
+                  )}
+                </div>
+                {showDropdown && autocompleteSuggestions.length > 0 && (
+                  <div className={css.autocompleteDropdown}>
+                    {autocompleteSuggestions.map((name, i) => (
+                      <div
+                        key={name}
+                        onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
+                        onMouseEnter={() => setHighlightIdx(i)}
+                        className={css.autocompleteItem}
+                        style={{ background: i === highlightIdx ? '#00e5a015' : 'transparent', borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
+                      >{name}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Team Search */}
+              <div className={css.searchWrap} style={{ width: '100%' }}>
+                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Team Stack</label>
+                <div className={css.searchInputBox}>
+                  {selectedTeams.map(team => (
+                    <span key={team} className={css.selectedChip} style={{ background: '#3b82f615', color: '#60a5fa', border: '1px solid #3b82f635' }}>
+                      {team}
+                      <button onClick={(e) => { e.stopPropagation(); removeTeam(team); }} className={css.chipRemove} style={{ color: '#60a5fa66' }}>✕</button>
+                    </span>
+                  ))}
+                  <input
+                    ref={teamSearchRef}
+                    type="text"
+                    placeholder={selectedTeams.length === 0 ? 'Stack team…' : 'Add team…'}
+                    value={teamSearch}
+                    onChange={e => { setTeamSearch(e.target.value); setShowTeamDropdown(true); setTeamHighlightIdx(0); }}
+                    onFocus={() => setShowTeamDropdown(true)}
+                    onBlur={() => { teamBlurTimeout.current = setTimeout(() => setShowTeamDropdown(false), 150); }}
+                    onKeyDown={handleTeamKeyDown}
+                    style={{
+                      flex: 1, minWidth: 75, background: 'transparent', border: 'none', outline: 'none',
+                      color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
+                      padding: '4px 0',
+                    }}
+                  />
+                  {(selectedTeams.length > 0 || teamSearch) && (
+                    <button onClick={() => { setSelectedTeams([]); setTeamSearch(''); }} className={css.clearBtn}>✕</button>
+                  )}
+                </div>
+                {showTeamDropdown && teamAutocompleteSuggestions.length > 0 && (
+                  <div className={css.autocompleteDropdown}>
+                    {teamAutocompleteSuggestions.map((team, i) => (
+                      <div
+                        key={team}
+                        onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
+                        onMouseEnter={() => setTeamHighlightIdx(i)}
+                        className={css.autocompleteItem}
+                        style={{ background: i === teamHighlightIdx ? '#3b82f615' : 'transparent', borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
+                      >{team}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
+                <span className={css.matchCount}>
+                  <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
+                  {' '}roster{displayed.length !== 1 ? 's' : ''} match
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Archetype Filters: Chip strip on mobile */}
+          <div className={css.sectionDivider}>
+            <span className={css.sectionLabel}>Archetype Filters</span>
+            <div style={{ marginTop: 10 }}>
+              {renderMobileChipFilters()}
+            </div>
+          </div>
+
+          {/* Additional Filters */}
+          <div className={css.sectionDivider}>
+            <span className={css.sectionLabel}>Additional Filters</span>
+            <div className={css.additionalFilters}>
+              <div style={{ width: '100%' }}>
+                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Tournament</label>
+                <select
+                  value={tournamentFilter}
+                  onChange={e => setTournamentFilter(e.target.value)}
+                  className={css.filterSelect}
+                >
+                  {allTournaments.map(t => (
+                    <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ width: '100%' }}>
+                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>CLV Filter</label>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
+                    <button key={v} className={css.filterBtn} style={clvFilter === v ? { background: '#00e5a01a', borderColor: '#00e5a0', color: '#00e5a0' } : {}} onClick={() => setClvFilter(v)}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    // Desktop/Tablet filter body
+    return (
+      <>
         {/* Section A: Search */}
         <div>
-          <span style={styles.sectionLabel}>Search</span>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, marginTop: 10, flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: '1 1 55%', minWidth: 250 }}>
-              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>Player Search</label>
-              <div style={{
-                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
-                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
-                padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
-              }}>
+          <span className={css.sectionLabel}>Search</span>
+          <div className={css.searchRow}>
+            <div className={css.searchWrap} style={{ flex: '1 1 55%', minWidth: 250 }}>
+              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Player Search</label>
+              <div className={css.searchInputBox}>
                 {selectedPlayers.map(name => (
-                  <span key={name} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
-                    background: '#00e5a015', color: '#00e5a0',
-                    border: '1px solid #00e5a035', borderRadius: 4,
-                    padding: '3px 8px', whiteSpace: 'nowrap',
-                  }}>
+                  <span key={name} className={css.selectedChip} style={{ background: '#00e5a015', color: '#00e5a0', border: '1px solid #00e5a035' }}>
                     {name}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removePlayer(name); }}
-                      style={{
-                        background: 'none', border: 'none', color: '#00e5a066',
-                        cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
-                      }}
-                    >✕</button>
+                    <button onClick={(e) => { e.stopPropagation(); removePlayer(name); }} className={css.chipRemove} style={{ color: '#00e5a066' }}>✕</button>
                   </span>
                 ))}
                 <input
@@ -784,58 +1140,30 @@ export default function RosterViewer({ rosterData = [] }) {
                   }}
                 />
                 {(selectedPlayers.length > 0 || playerSearch) && (
-                  <button
-                    onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
-                  >✕</button>
+                  <button onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }} className={css.clearBtn}>✕</button>
                 )}
               </div>
               {showDropdown && autocompleteSuggestions.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6,
-                  marginTop: 3, maxHeight: 200, overflowY: 'auto',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                }}>
+                <div className={css.autocompleteDropdown}>
                   {autocompleteSuggestions.map((name, i) => (
                     <div
                       key={name}
                       onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
                       onMouseEnter={() => setHighlightIdx(i)}
-                      style={{
-                        padding: '8px 15px', cursor: 'pointer',
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: 'var(--text-secondary)',
-                        background: i === highlightIdx ? '#00e5a015' : 'transparent',
-                        borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none',
-                      }}
+                      className={css.autocompleteItem}
+                      style={{ background: i === highlightIdx ? '#00e5a015' : 'transparent', borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
                     >{name}</div>
                   ))}
                 </div>
               )}
             </div>
-            <div style={{ position: 'relative', flex: '1 1 35%', minWidth: 180 }}>
-              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>Team Stack</label>
-              <div style={{
-                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5,
-                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
-                padding: '5px 10px', minHeight: 40, boxSizing: 'border-box',
-              }}>
+            <div className={css.searchWrap} style={{ flex: '1 1 35%', minWidth: 180 }}>
+              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Team Stack</label>
+              <div className={css.searchInputBox}>
                 {selectedTeams.map(team => (
-                  <span key={team} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
-                    background: '#3b82f615', color: '#60a5fa',
-                    border: '1px solid #3b82f635', borderRadius: 4,
-                    padding: '3px 8px', whiteSpace: 'nowrap',
-                  }}>
+                  <span key={team} className={css.selectedChip} style={{ background: '#3b82f615', color: '#60a5fa', border: '1px solid #3b82f635' }}>
                     {team}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeTeam(team); }}
-                      style={{
-                        background: 'none', border: 'none', color: '#60a5fa66',
-                        cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1,
-                      }}
-                    >✕</button>
+                    <button onClick={(e) => { e.stopPropagation(); removeTeam(team); }} className={css.chipRemove} style={{ color: '#60a5fa66' }}>✕</button>
                   </span>
                 ))}
                 <input
@@ -854,37 +1182,25 @@ export default function RosterViewer({ rosterData = [] }) {
                   }}
                 />
                 {(selectedTeams.length > 0 || teamSearch) && (
-                  <button
-                    onClick={() => { setSelectedTeams([]); setTeamSearch(''); }}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 3px' }}
-                  >✕</button>
+                  <button onClick={() => { setSelectedTeams([]); setTeamSearch(''); }} className={css.clearBtn}>✕</button>
                 )}
               </div>
               {showTeamDropdown && teamAutocompleteSuggestions.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6,
-                  marginTop: 3, maxHeight: 200, overflowY: 'auto',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                }}>
+                <div className={css.autocompleteDropdown}>
                   {teamAutocompleteSuggestions.map((team, i) => (
                     <div
                       key={team}
                       onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
                       onMouseEnter={() => setTeamHighlightIdx(i)}
-                      style={{
-                        padding: '8px 15px', cursor: 'pointer',
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: 'var(--text-secondary)',
-                        background: i === teamHighlightIdx ? '#3b82f615' : 'transparent',
-                        borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none',
-                      }}
+                      className={css.autocompleteItem}
+                      style={{ background: i === teamHighlightIdx ? '#3b82f615' : 'transparent', borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
                     >{team}</div>
                   ))}
                 </div>
               )}
             </div>
             {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text-muted)', paddingTop: 24, whiteSpace: 'nowrap' }}>
+              <span className={css.matchCount}>
                 <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
                 {' '}roster{displayed.length !== 1 ? 's' : ''} match
               </span>
@@ -893,8 +1209,8 @@ export default function RosterViewer({ rosterData = [] }) {
         </div>
 
         {/* Section B: Archetype Filters */}
-        <div style={styles.sectionDivider}>
-          <span style={styles.sectionLabel}>Archetype Filters</span>
+        <div className={css.sectionDivider}>
+          <span className={css.sectionLabel}>Archetype Filters</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
             <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
             <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
@@ -903,19 +1219,15 @@ export default function RosterViewer({ rosterData = [] }) {
         </div>
 
         {/* Section C: Additional Filters */}
-        <div style={styles.sectionDivider}>
-          <span style={styles.sectionLabel}>Additional Filters</span>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 30, marginTop: 10, flexWrap: 'wrap' }}>
+        <div className={css.sectionDivider}>
+          <span className={css.sectionLabel}>Additional Filters</span>
+          <div className={css.additionalFilters}>
             <div>
-              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>Tournament</label>
+              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Tournament</label>
               <select
                 value={tournamentFilter}
                 onChange={e => setTournamentFilter(e.target.value)}
-                style={{
-                  background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
-                  color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
-                  padding: '5px 10px', cursor: 'pointer',
-                }}
+                className={css.filterSelect}
               >
                 {allTournaments.map(t => (
                   <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
@@ -923,10 +1235,10 @@ export default function RosterViewer({ rosterData = [] }) {
               </select>
             </div>
             <div>
-              <label style={{ ...styles.sectionLabel, fontSize: 11, display: 'block', marginBottom: 5 }}>CLV Filter</label>
+              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>CLV Filter</label>
               <div style={{ display: 'flex', gap: 5 }}>
                 {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
-                  <button key={v} style={{ ...styles.filterBtn, ...(clvFilter === v ? { background: '#00e5a01a', borderColor: '#00e5a0', color: '#00e5a0' } : {}) }} onClick={() => setClvFilter(v)}>
+                  <button key={v} className={css.filterBtn} style={clvFilter === v ? { background: '#00e5a01a', borderColor: '#00e5a0', color: '#00e5a0' } : {}} onClick={() => setClvFilter(v)}>
                     {lbl}
                   </button>
                 ))}
@@ -934,155 +1246,185 @@ export default function RosterViewer({ rosterData = [] }) {
             </div>
           </div>
         </div>
-      </div>
+      </>
+    );
+  };
 
-      {/* ── Table ── */}
-      <div style={styles.tableWrap}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thead}>
-              <th style={styles.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" /></th>
-              <th style={{ ...styles.th, textAlign: 'center', color: '#fbbf24' }} onClick={() => toggleSort('grade')}>Grade <SortIcon col="grade" /></th>
-              <th style={{ ...styles.th, textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" /></th>
-              <th style={{ ...styles.th, textAlign: 'center' }}>Snapshot</th>
-              <th style={{ ...styles.th, textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" /></th>
-              <th style={{ ...styles.th, color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" /></th>
-              <th style={{ ...styles.th, color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" /></th>
-              <th style={{ ...styles.th, color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" /></th>
-              <th
-                style={{ ...styles.th, textAlign: 'center', color: '#7dffcc' }}
-                onClick={() => toggleSort('rarityPercentile')}
-              >
-                Uniq Lift <SortIcon col="rarityPercentile" />
-              </th>
-              <th style={{ ...styles.th, textAlign: 'center', color: '#f59e0b' }} onClick={() => toggleSort('spikeRaw')}>Spike Pts <SortIcon col="spikeRaw" /></th>
-              <th style={{ ...styles.th, textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" /></th>
-              <th style={{ ...styles.th, textAlign: 'center', cursor: 'default' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayed.map((roster) => {
-              const clv    = clvLabel(roster.avgCLV);
-              const isOpen = expandedEntry === roster.entry_id;
-              const scores = rosterScores[roster.entry_id] || {};
-              const grade  = rosterGrades[roster.entry_id] || {};
-              const stacks = rosterStacks[roster.entry_id] || [];
-              // Tooltip: show archetype boost contribution
-              const archNorm  = archetypeRarityNorm(roster.path.rb);
-              const boostPct  = Math.round(archetypeBoostMax * archNorm * 100);
-              const tooltipTxt = `Draft rarity × ${scores.archBoost ?? '—'}× arch boost (+${boostPct}% from ${roster.path.rb})`;
-              const gradeTooltip = grade.grade ? `Proj: ${grade.projScore} | CLV: ${grade.clvScore} | Rarity: ${grade.rarityScore} | Spike: ${grade.spikeScore} → ${grade.composite}` : '';
-              return (
-                <React.Fragment key={roster.entry_id}>
-                  <tr
-                    style={{ ...styles.row, ...(isOpen ? styles.rowOpen : {}) }}
-                    onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
-                  >
-                    <td style={styles.td}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <span style={styles.entryId}>{shortEntry(roster.entry_id)}</span>
-                        {selectedPlayers.length > 0 && rosterSearchMatches[roster.entry_id]?.map(name => (
-                          <span key={name} style={{
-                            fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-                            background: '#00e5a010', color: '#00e5a0',
-                            border: '1px solid #00e5a030', borderRadius: 3,
-                            padding: '2px 6px', whiteSpace: 'nowrap',
-                          }}>✦ {name}</span>
-                        ))}
-                        {selectedTeams.length > 0 && roster.players
-                          .filter(p => selectedTeams.includes(p.team) && !selectedPlayers.includes(p.name))
-                          .map(p => (
-                          <span key={`team-${p.name}`} style={{
-                            fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-                            background: '#3b82f610', color: '#60a5fa',
-                            border: '1px solid #3b82f630', borderRadius: 3,
-                            padding: '2px 6px', whiteSpace: 'nowrap',
-                          }}>✦ {p.name} ({p.team})</span>
-                        ))}
-                        {roster.tournamentTitle && (
-                          <span style={{
-                            fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-                            color: '#666', whiteSpace: 'nowrap',
-                          }}>{roster.tournamentTitle}</span>
-                        )}
-                      </div>
-                    </td>
+  const renderControlPanel = () => (
+    <div className={css.controlPanel}>
+      {renderFilterToggleHeader()}
+      {renderFilterBody()}
+    </div>
+  );
 
-                    {/* Grade */}
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      {grade.grade ? (
-                        <span title={gradeTooltip} style={{
-                          fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700,
-                          color: grade.grade.color, cursor: 'help',
-                        }}>
-                          {grade.grade.letter}
-                        </span>
-                      ) : <span style={{ color: '#555' }}>—</span>}
-                    </td>
+  // ── Render: Desktop Table ───────────────────────────────────────────────────
 
-                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: '#bbb' }}>
-                      {roster.draftDate
-                        ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                        : '—'}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
-                    <td style={{ ...styles.td, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#60a5fa' }}>
-                      {roster.projectedPoints > 0 ? roster.projectedPoints.toFixed(1) : '—'}
-                    </td>
-                    <td style={styles.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
-                    <td style={styles.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
-                    <td style={styles.td}><ArchetypePill archetypeKey={roster.path.te} /></td>
+  const renderTable = () => (
+    <div className={css.tableWrap} ref={scrollRef}>
+      <table className={css.table}>
+        <thead>
+          <tr className={css.thead}>
+            <th className={css.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" /></th>
+            <th className={css.th} style={{ textAlign: 'center', color: '#fbbf24' }} onClick={() => toggleSort('grade')}>Grade <SortIcon col="grade" /></th>
+            <th className={css.th} style={{ textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" /></th>
+            <th className={css.th} style={{ textAlign: 'center' }}>Snapshot</th>
+            <th className={`${css.th} ${css.colProjPts}`} style={{ textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" /></th>
+            <th className={css.th} style={{ color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" /></th>
+            <th className={css.th} style={{ color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" /></th>
+            <th className={css.th} style={{ color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" /></th>
+            <th
+              className={`${css.th} ${css.colUniq}`}
+              style={{ textAlign: 'center', color: '#7dffcc' }}
+              onClick={() => toggleSort('rarityPercentile')}
+            >
+              Uniq Lift <SortIcon col="rarityPercentile" />
+            </th>
+            <th className={`${css.th} ${css.colSpike}`} style={{ textAlign: 'center', color: '#f59e0b' }} onClick={() => toggleSort('spikeRaw')}>Spike Pts <SortIcon col="spikeRaw" /></th>
+            <th className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" /></th>
+            <th className={css.th} style={{ textAlign: 'center', cursor: 'default' }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {displayed.map((roster) => {
+            const clv    = clvLabel(roster.avgCLV);
+            const isOpen = expandedEntry === roster.entry_id;
+            const scores = rosterScores[roster.entry_id] || {};
+            const grade  = rosterGrades[roster.entry_id] || {};
+            const stacks = rosterStacks[roster.entry_id] || [];
+            const archNorm  = archetypeRarityNorm(roster.path.rb);
+            const boostPct  = Math.round(archetypeBoostMax * archNorm * 100);
+            const tooltipTxt = `Draft rarity × ${scores.archBoost ?? '—'}× arch boost (+${boostPct}% from ${roster.path.rb})`;
+            const gradeTooltip = grade.grade ? `Proj: ${grade.projScore} | CLV: ${grade.clvScore} | Rarity: ${grade.rarityScore} | Spike: ${grade.spikeScore} → ${grade.composite}` : '';
+            return (
+              <React.Fragment key={roster.entry_id}>
+                <tr
+                  className={`${css.row} ${isOpen ? css.rowOpen : ''}`}
+                  onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
+                >
+                  <td className={css.td}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <span className={css.entryId}>{shortEntry(roster.entry_id)}</span>
+                      {selectedPlayers.length > 0 && rosterSearchMatches[roster.entry_id]?.map(name => (
+                        <span key={name} style={{
+                          fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                          background: '#00e5a010', color: '#00e5a0',
+                          border: '1px solid #00e5a030', borderRadius: 3,
+                          padding: '2px 6px', whiteSpace: 'nowrap',
+                        }}>✦ {name}</span>
+                      ))}
+                      {selectedTeams.length > 0 && roster.players
+                        .filter(p => selectedTeams.includes(p.team) && !selectedPlayers.includes(p.name))
+                        .map(p => (
+                        <span key={`team-${p.name}`} style={{
+                          fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                          background: '#3b82f610', color: '#60a5fa',
+                          border: '1px solid #3b82f630', borderRadius: 3,
+                          padding: '2px 6px', whiteSpace: 'nowrap',
+                        }}>✦ {p.name} ({p.team})</span>
+                      ))}
+                      {roster.tournamentTitle && (
+                        <span style={{
+                          fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                          color: '#666', whiteSpace: 'nowrap',
+                        }}>{roster.tournamentTitle}</span>
+                      )}
+                    </div>
+                  </td>
 
-                    {/* Composite Uniq Lift — rank-normalized color, archetype boost shown on hover */}
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <span
-                        title={tooltipTxt}
-                        style={{
-                          ...styles.uniqBadge,
-                          color: uniquenessColor(scores.uniqLiftNorm ?? 0.5),
-                          borderColor: uniquenessColor(scores.uniqLiftNorm ?? 0.5) + '55',
-                        }}
-                      >
-                        {scores.rarity?.toFixed(2) ?? '—'}
+                  {/* Grade */}
+                  <td className={css.td} style={{ textAlign: 'center' }}>
+                    {grade.grade ? (
+                      <span title={gradeTooltip} style={{
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700,
+                        color: grade.grade.color, cursor: 'help',
+                      }}>
+                        {grade.grade.letter}
                       </span>
-                    </td>
+                    ) : <span style={{ color: '#555' }}>—</span>}
+                  </td>
 
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      {(() => {
-                        const spike = rosterSpikeData[roster.entry_id];
-                        const raw = spike?.spikeScore ?? 0;
-                        const pct = spike?.percentile ?? 0;
-                        const spikeColor = uniquenessColor(pct / 100);
-                        return raw > 0 ? (
-                          <span style={{
-                            fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700,
-                            color: spikeColor,
-                          }}>
-                            {raw.toFixed(1)}
-                          </span>
-                        ) : <span style={{ color: '#555' }}>—</span>;
-                      })()}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <span style={{ ...styles.clvBadge, color: clv.color, borderColor: clv.color + '44' }}>{clv.text}</span>
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <span style={styles.chevron}>{isOpen ? '▲' : '▼'}</span>
+                  <td className={css.td} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: '#bbb' }}>
+                    {roster.draftDate
+                      ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : '—'}
+                  </td>
+                  <td className={css.td} style={{ textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
+                  <td className={`${css.td} ${css.colProjPts}`} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#60a5fa' }}>
+                    {roster.projectedPoints > 0 ? roster.projectedPoints.toFixed(1) : '—'}
+                  </td>
+                  <td className={css.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
+                  <td className={css.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
+                  <td className={css.td}><ArchetypePill archetypeKey={roster.path.te} /></td>
+
+                  {/* Composite Uniq Lift */}
+                  <td className={`${css.td} ${css.colUniq}`} style={{ textAlign: 'center' }}>
+                    <span
+                      title={tooltipTxt}
+                      className={css.uniqBadge}
+                      style={{
+                        color: uniquenessColor(scores.uniqLiftNorm ?? 0.5),
+                        borderColor: uniquenessColor(scores.uniqLiftNorm ?? 0.5) + '55',
+                      }}
+                    >
+                      {scores.rarity?.toFixed(2) ?? '—'}
+                    </span>
+                  </td>
+
+                  <td className={`${css.td} ${css.colSpike}`} style={{ textAlign: 'center' }}>
+                    {(() => {
+                      const spike = rosterSpikeData[roster.entry_id];
+                      if (!spike) return <span style={{ color: '#555', fontSize: 12 }}>...</span>;
+                      const raw = spike.spikeScore ?? 0;
+                      const pct = spike.percentile ?? 0;
+                      const spikeColor = uniquenessColor(pct / 100);
+                      return raw > 0 ? (
+                        <span style={{
+                          fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700,
+                          color: spikeColor,
+                        }}>
+                          {raw.toFixed(1)}
+                        </span>
+                      ) : <span style={{ color: '#555' }}>—</span>;
+                    })()}
+                  </td>
+                  <td className={css.td} style={{ textAlign: 'center' }}>
+                    <span className={css.clvBadge} style={{ color: clv.color, borderColor: clv.color + '44' }}>{clv.text}</span>
+                  </td>
+                  <td className={css.td} style={{ textAlign: 'center' }}>
+                    <span className={css.chevron}>{isOpen ? '▲' : '▼'}</span>
+                  </td>
+                </tr>
+                {isOpen && (
+                  <tr>
+                    <td colSpan={12} style={{ padding: 0 }}>
+                      <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} isMobile={false} />
                     </td>
                   </tr>
-                  {isOpen && (
-                    <tr>
-                      <td colSpan={12} style={{ padding: 0 }}>
-                        <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} />
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  return (
+    <div className={css.root}>
+      {/* Header */}
+      <div className={css.header}>
+        <div>
+          <h2 className={css.title}>ROSTER VIEWER</h2>
+          <p className={css.subtitle}>{displayed.length} / {rosters.length} entries · {rosterData.length} players</p>
+        </div>
       </div>
+
+      {/* Control Panel — collapsible */}
+      {renderControlPanel()}
+
+      {/* Mobile sort + card list */}
+      {isMobile && renderMobileSortBar()}
+      {isMobile ? renderCardList() : renderTable()}
     </div>
   );
 }
@@ -1094,9 +1436,9 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
   const total = archetypeOptions.reduce((sum, opt) => sum + (counts[opt] || 0), 0);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ ...styles.filterGroupLabel, minWidth: 32 }}>{label}</span>
+    <div className={css.filterGroupRow}>
+      <div className={css.filterGroupInner}>
+        <span className={css.filterGroupLabel}>{label}</span>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {options.map(opt => {
             const isActive = value === opt;
@@ -1107,8 +1449,8 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
               <button
                 key={opt}
                 title={ARCHETYPE_METADATA[opt]?.desc}
+                className={css.filterBtn}
                 style={{
-                  ...styles.filterBtn,
                   ...(opt === 'all'
                     ? (isActive ? { background: color + '1a', borderColor: color, color } : {})
                     : {
@@ -1126,7 +1468,7 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
         </div>
       </div>
       {total > 0 && (
-        <div style={{ display: 'flex', marginLeft: 44, height: 8, borderRadius: 4, overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
+        <div className={css.filterBar}>
           {archetypeOptions.map(opt => {
             const count = counts[opt] || 0;
             if (count === 0) return null;
@@ -1156,9 +1498,8 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
 
 // ── Draft Capital Map ────────────────────────────────────────────────────────
 
-function DraftCapitalMap({ players }) {
+function DraftCapitalMap({ players, isMobile = false }) {
   const maxRound = 18;
-  // Group picks by round
   const byRound = {};
   players.forEach(p => {
     const r = parseInt(p.round) || 0;
@@ -1168,7 +1509,6 @@ function DraftCapitalMap({ players }) {
     }
   });
 
-  // Position summary
   const posByRound = {};
   players.forEach(p => {
     const pos = p.position || 'N/A';
@@ -1182,13 +1522,23 @@ function DraftCapitalMap({ players }) {
     .filter(pos => posByRound[pos])
     .map(pos => `${pos}s: R${posByRound[pos].sort((a, b) => a - b).join(',R')}`);
 
+  if (isMobile) {
+    return (
+      <div className={css.capitalMapWrap}>
+        <div className={css.capitalMapSummary}>
+          {summaryParts.join(' | ')}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: '13px 18px 8px', borderBottom: '1px solid #0f0f0f' }}>
-      <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end' }}>
+    <div className={css.capitalMapWrap}>
+      <div className={css.capitalMapGrid}>
         {Array.from({ length: maxRound }, (_, i) => i + 1).map(round => {
           const picks = byRound[round] || [];
           return (
-            <div key={round} style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', gap: 1, minWidth: 33 }}>
+            <div key={round} className={css.capitalMapCell}>
               {picks.map((p, j) => (
                 <div key={j} title={`${p.name} (${p.position} R${round})`} style={{
                   width: 30, height: 22, borderRadius: 3,
@@ -1201,18 +1551,13 @@ function DraftCapitalMap({ players }) {
                   {p.position}
                 </div>
               ))}
-              {picks.length === 0 && (
-                <div style={{ width: 30, height: 22, borderRadius: 3, background: '#111', border: '1px solid #1a1a1a' }} />
-              )}
-              <span style={{ fontSize: 9, color: '#555', fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>R{round}</span>
+              {picks.length === 0 && <div className={css.capitalMapEmpty} />}
+              <span className={css.capitalMapRoundLabel}>R{round}</span>
             </div>
           );
         })}
       </div>
-      <div style={{
-        fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#888',
-        marginTop: 8, letterSpacing: 0.3,
-      }}>
+      <div className={css.capitalMapSummary}>
         {summaryParts.join(' | ')}
       </div>
     </div>
@@ -1224,17 +1569,12 @@ function DraftCapitalMap({ players }) {
 function StackSummaryBar({ stacks }) {
   if (!stacks || stacks.length === 0) return null;
   return (
-    <div style={{
-      padding: '10px 18px', borderBottom: '1px solid #0f0f0f',
-      display: 'flex', gap: 15, flexWrap: 'wrap', alignItems: 'center',
-    }}>
-      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#666', letterSpacing: 1.5, textTransform: 'uppercase' }}>STACKS</span>
+    <div className={css.stackBar}>
+      <span className={css.stackLabel}>STACKS</span>
       {stacks.map((s, i) => (
-        <span key={i} style={{
-          fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+        <span key={i} className={css.stackPill} style={{
           background: s.color + '15', color: s.color,
-          border: `1px solid ${s.color}33`, borderRadius: 4,
-          padding: '4px 10px',
+          border: `1px solid ${s.color}33`,
         }}>
           <span style={{ fontWeight: 700 }}>{s.team}:</span>{' '}
           {s.members.map(m => m.name.split(' ').pop()).join(' + ')}{' '}
@@ -1256,20 +1596,14 @@ function GradeCard({ grade }) {
     { label: 'SPIKE', score: grade.spikeScore, color: '#f59e0b' },
   ];
   return (
-    <div style={{
-      padding: '10px 18px', borderBottom: '1px solid #0f0f0f',
-      display: 'flex', gap: 20, alignItems: 'center',
-    }}>
-      <div style={{
-        fontFamily: "'JetBrains Mono', monospace", fontSize: 28, fontWeight: 700,
-        color: grade.grade.color, minWidth: 50, textAlign: 'center',
-      }}>
+    <div className={css.gradeCard}>
+      <div className={css.gradeLetter} style={{ color: grade.grade.color }}>
         {grade.grade.letter}
       </div>
-      <div style={{ display: 'flex', gap: 15, flex: 1 }}>
+      <div className={css.gradeBarGroup}>
         {bars.map(b => (
-          <div key={b.label} style={{ flex: 1, minWidth: 75 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+          <div key={b.label} className={css.gradeBarItem}>
+            <div className={css.gradeBarLabel}>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#888', letterSpacing: 1 }}>{b.label}</span>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: b.color, fontWeight: 700 }}>
                 {b.score}
@@ -1280,18 +1614,15 @@ function GradeCard({ grade }) {
                 )}
               </span>
             </div>
-            <div style={{ height: 5, background: '#1a1a1a', borderRadius: 2 }}>
-              <div style={{
-                height: 5, borderRadius: 2, background: b.color,
-                width: `${b.score}%`, transition: 'width 0.3s',
+            <div className={css.gradeBarTrack}>
+              <div className={css.gradeBarFill} style={{
+                width: `${b.score}%`, background: b.color,
               }} />
             </div>
           </div>
         ))}
       </div>
-      <div style={{
-        fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: '#666',
-      }}>
+      <div className={css.gradeComposite}>
         {grade.composite}/100
       </div>
     </div>
@@ -1300,11 +1631,10 @@ function GradeCard({ grade }) {
 
 // ── Expanded player detail ────────────────────────────────────────────────────
 
-function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData = null }) {
+function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData = null, isMobile = false }) {
   const [pSort, setPSort] = useState('pick');
   const [pDir,  setPDir]  = useState('asc');
 
-  // Build a set of player names that are in stacks for dot indicators
   const stackPlayerTeams = useMemo(() => {
     const map = {};
     stacks.forEach(s => {
@@ -1313,7 +1643,6 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
     return map;
   }, [stacks]);
 
-  // Build set of spike lineup starter names
   const spikeLineupNames = useMemo(() => {
     if (!spikeData?.lineup?.length) return new Set();
     return new Set(spikeData.lineup.map(p => p.name));
@@ -1333,26 +1662,86 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
     if (pSort === key) setPDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setPSort(key); setPDir(key === 'clv' ? 'desc' : 'asc'); }
   }
-  function PI({ col }) {
+  const piIcon = (col) => {
     if (pSort !== col) return <span style={{ opacity: 0.2, marginLeft: 4 }}>↕</span>;
     return <span style={{ marginLeft: 4 }}>{pDir === 'desc' ? '↓' : '↑'}</span>;
+  };
+
+  if (isMobile) {
+    const PLAYER_SORT_OPTIONS = [
+      { value: 'pick', label: 'Draft Pick' },
+      { value: 'name', label: 'Name' },
+      { value: 'adp', label: 'Current ADP' },
+      { value: 'projectedPoints', label: 'Proj Pts' },
+      { value: 'clv', label: 'CLV%' },
+    ];
+
+    return (
+      <div className={css.detail}>
+        {/* Player cards */}
+        {sorted.map((p, i) => {
+          const clvPct = calcCLV(p.pick, p.latestADP, alpha);
+          const clv = clvLabel(clvPct);
+          const stackColor = stackPlayerTeams[p.name];
+          const isSpikeStar = spikeLineupNames.has(p.name);
+          return (
+            <div key={`${p.name}-${i}`} className={css.playerDetailCard} style={isSpikeStar ? { borderLeft: '3px solid #f59e0b', background: '#f59e0b08' } : {}}>
+              <div className={css.playerDetailRow1}>
+                <span className={css.playerDetailName}>
+                  {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
+                  {p.name}
+                </span>
+                <span className={css.posPill} style={{ background: posColor(p.position) + '22', color: posColor(p.position), borderColor: posColor(p.position) + '55' }}>
+                  {p.position}
+                </span>
+                {isSpikeStar && (
+                  <span title="Week 17 Spike Lineup starter" style={{
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700,
+                    background: '#f59e0b22', color: '#f59e0b', border: '1px solid #f59e0b44',
+                    borderRadius: 3, padding: '1px 5px', letterSpacing: 0.5,
+                  }}>W17</span>
+                )}
+              </div>
+              <div className={css.playerDetailRow2}>
+                <div className={css.cardStat}>
+                  <span className={css.cardStatLabel}>Pick</span>
+                  <span className={css.cardStatValue}>{p.pick || '—'}</span>
+                </div>
+                <div className={css.cardStat}>
+                  <span className={css.cardStatLabel}>ADP</span>
+                  <span className={css.cardStatValue}>{p.latestADPDisplay || '—'}</span>
+                </div>
+                <div className={css.cardStat}>
+                  <span className={css.cardStatLabel}>Proj</span>
+                  <span className={css.cardStatValue}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</span>
+                </div>
+                <div className={css.cardStat}>
+                  <span className={css.cardStatLabel}>CLV</span>
+                  <span className={css.cardStatValue} style={{ color: clv.color }}>{clv.text}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
-    <div style={styles.detail}>
+    <div className={css.detail}>
       <GradeCard grade={grade} />
-      <DraftCapitalMap players={players} />
+      <DraftCapitalMap players={players} isMobile={false} />
       <StackSummaryBar stacks={stacks} />
-      <table style={{ ...styles.table }}>
+      <table className={css.table}>
         <thead>
-          <tr style={{ ...styles.thead, background: '#080808' }}>
-            <th style={styles.dth} onClick={() => tp('name')}>Player <PI col="name" /></th>
-            <th style={{ ...styles.dth, textAlign: 'center' }}>Pos</th>
-            <th style={{ ...styles.dth, textAlign: 'center' }}>Team</th>
-            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('pick')}>Draft Pick <PI col="pick" /></th>
-            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('projectedPoints')}>Proj Pts <PI col="projectedPoints" /></th>
-            <th style={{ ...styles.dth, textAlign: 'center' }} onClick={() => tp('adp')}>Cur ADP <PI col="adp" /></th>
-            <th style={{ ...styles.dth, textAlign: 'center', color: '#00e5a055' }} onClick={() => tp('clv')}>CLV% <PI col="clv" /></th>
+          <tr className={css.thead} style={{ background: '#080808' }}>
+            <th className={css.dth} onClick={() => tp('name')}>Player {piIcon('name')}</th>
+            <th className={css.dth} style={{ textAlign: 'center' }}>Pos</th>
+            <th className={css.dth} style={{ textAlign: 'center' }}>Team</th>
+            <th className={css.dth} style={{ textAlign: 'center' }} onClick={() => tp('pick')}>Draft Pick {piIcon('pick')}</th>
+            <th className={css.dth} style={{ textAlign: 'center' }} onClick={() => tp('projectedPoints')}>Proj Pts {piIcon('projectedPoints')}</th>
+            <th className={css.dth} style={{ textAlign: 'center' }} onClick={() => tp('adp')}>Cur ADP {piIcon('adp')}</th>
+            <th className={css.dth} style={{ textAlign: 'center', color: '#00e5a055' }} onClick={() => tp('clv')}>CLV% {piIcon('clv')}</th>
           </tr>
         </thead>
         <tbody>
@@ -1362,12 +1751,9 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
             const stackColor = stackPlayerTeams[p.name];
             const isSpikeStar = spikeLineupNames.has(p.name);
             return (
-              <tr key={`${p.name}-${i}`} style={{
-                ...styles.drow,
-                ...(isSpikeStar ? { borderLeft: '3px solid #f59e0b', background: '#f59e0b08' } : {}),
-              }}>
-                <td style={styles.dtd}>
-                  <span style={styles.playerName}>
+              <tr key={`${p.name}-${i}`} className={css.drow} style={isSpikeStar ? { borderLeft: '3px solid #f59e0b', background: '#f59e0b08' } : {}}>
+                <td className={css.dtd}>
+                  <span className={css.playerName}>
                     {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
                     {p.name}
                     {isSpikeStar && (
@@ -1380,25 +1766,24 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
                     )}
                   </span>
                 </td>
-                <td style={{ ...styles.dtd, textAlign: 'center' }}>
-                  <span style={{ ...styles.posPill, background: posColor(p.position) + '22', color: posColor(p.position), borderColor: posColor(p.position) + '55' }}>
+                <td className={css.dtd} style={{ textAlign: 'center' }}>
+                  <span className={css.posPill} style={{ background: posColor(p.position) + '22', color: posColor(p.position), borderColor: posColor(p.position) + '55' }}>
                     {p.position}
                   </span>
                 </td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#e0e0e0', fontFamily: "'JetBrains Mono', monospace", fontSize: 14 }}>{p.team}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', color: '#ececec', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
-                <td style={{ ...styles.dtd, textAlign: 'center' }}>
+                <td className={css.dtd} style={{ textAlign: 'center', color: '#e0e0e0', fontFamily: "'JetBrains Mono', monospace", fontSize: 14 }}>{p.team}</td>
+                <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
+                <td className={css.dtd} style={{ textAlign: 'center', color: '#ececec', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
+                <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
+                <td className={css.dtd} style={{ textAlign: 'center' }}>
                   {clvPct !== null ? (
-                    <div style={styles.clvBar}>
-                      <div style={{
-                        ...styles.clvFill,
+                    <div className={css.clvBar}>
+                      <div className={css.clvFill} style={{
                         width: `${Math.min(Math.abs(clvPct), 100)}%`,
                         background: clv.color,
                         marginLeft: clvPct >= 0 ? '50%' : `${50 - Math.min(Math.abs(clvPct), 50)}%`,
                       }} />
-                      <span style={{ ...styles.clvText, color: clv.color }}>{clv.text}</span>
+                      <span className={css.clvText} style={{ color: clv.color }}>{clv.text}</span>
                     </div>
                   ) : (
                     <span style={{ color: '#e2e2e2', fontSize: 14 }}>N/A</span>
@@ -1412,90 +1797,3 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
     </div>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = {
-  searchHighlight: {
-    background: '#00e5a025', color: '#00e5a0',
-    borderRadius: 2, padding: '0 1px', fontWeight: 700,
-  },
-  root: { fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', padding: '0 0 40px', overflowY: 'auto', flex: 1, minHeight: 0 },
-  header: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 20, paddingBottom: 18, borderBottom: '1px solid var(--border)',
-  },
-  title: { fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, letterSpacing: 3, color: 'var(--text-primary)', margin: 0 },
-  subtitle: { fontSize: 14, color: 'var(--text-primary)', margin: '5px 0 0', fontFamily: "'JetBrains Mono', monospace" },
-
-  controlPanel: {
-    background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
-    padding: 20, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 18,
-  },
-  sectionLabel: {
-    fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
-    letterSpacing: '0.05em', color: 'var(--text-secondary)',
-    fontFamily: "'JetBrains Mono', monospace",
-  },
-  sectionDivider: { borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 },
-
-  filterGroupLabel: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: 1.5,
-    textTransform: 'uppercase', color: 'var(--text-primary)', minWidth: 28,
-  },
-  filterBtn: {
-    background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)',
-    borderRadius: 6, padding: '5px 11px', fontSize: 13,
-    fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer',
-    letterSpacing: 0.3, transition: 'all 0.12s', whiteSpace: 'nowrap',
-  },
-  filterBtnActive: {},
-
-  tableWrap: { overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 16 },
-  thead: { background: 'rgba(0,0,0,0.2)' },
-  th: {
-    padding: '14px 18px', textAlign: 'left',
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
-    letterSpacing: 1.5, color: 'var(--text-secondary)', textTransform: 'uppercase',
-    cursor: 'pointer', userSelect: 'none',
-    borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
-  },
-  row: { borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.1s' },
-  rowOpen: { background: 'var(--bg-dark)', borderBottom: '1px solid #00e5a07a' },
-  td: { padding: '14px 18px', verticalAlign: 'middle' },
-  entryId: { fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: 'var(--text-secondary)', letterSpacing: 0.5 },
-  clvBadge: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700,
-    border: '1px solid', borderRadius: 4, padding: '3px 9px',
-  },
-  chevron: { color: 'var(--text-secondary)', fontSize: 13, fontFamily: "'JetBrains Mono', monospace" },
-
-  detail: { background: 'var(--bg-dark)', borderTop: '1px solid #00e5a01a' },
-  dth: {
-    padding: '11px 18px', textAlign: 'left',
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
-    letterSpacing: 1.5, color: 'var(--text-primary)', textTransform: 'uppercase',
-    cursor: 'pointer', userSelect: 'none',
-    borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
-  },
-  drow: { borderBottom: '1px solid var(--border)' },
-  dtd: { padding: '10px 18px', verticalAlign: 'middle' },
-  playerName: { fontWeight: 500, color: 'var(--text-secondary)', fontSize: 16 },
-  posPill: { fontSize: 13, fontFamily: "'JetBrains Mono', monospace", border: '1px solid', borderRadius: 3, padding: '2px 6px', letterSpacing: 0.5 },
-  clvBar: { position: 'relative', width: '100%', height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  clvFill: { position: 'absolute', height: 4, top: '50%', transform: 'translateY(-50%)', borderRadius: 2, opacity: 0.5, maxWidth: '50%' },
-  clvText: { position: 'relative', fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700, zIndex: 1, background: 'var(--bg-dark)', padding: '0 5px' },
-
-  empty: { textAlign: 'center', padding: '75px 25px', color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" },
-
-  uniqBadge: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 14,
-    fontWeight: 700,
-    border: '1px solid',
-    borderRadius: 4,
-    padding: '3px 9px',
-    cursor: 'help',
-  },
-};

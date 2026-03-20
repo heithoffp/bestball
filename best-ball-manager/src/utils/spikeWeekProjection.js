@@ -137,36 +137,45 @@ export function calculateSpikeWeekProjection(players, schedule) {
   wrs.sort((a, b) => b._adjustedBase - a._adjustedBase);
   tes.sort((a, b) => b._adjustedBase - a._adjustedBase);
 
+  // Top-K pruning: correlation bonuses (max +0.20) can't overcome large base gaps
+  const topQbs = qbs.slice(0, 2);
+  const topRbs = rbs.slice(0, 4);
+  const topWrs = wrs.slice(0, 5);
+  const topTes = tes.slice(0, 2);
+
+  // Pre-build flex pool: all RB/WR/TE sorted by base descending
+  const flexPool = withBase
+    .filter(p => p.position === 'RB' || p.position === 'WR' || p.position === 'TE')
+    .sort((a, b) => b._adjustedBase - a._adjustedBase);
+
   let bestResult = { spikeScore: -Infinity, lineup: [], baseScore: 0, correlationBonus: 0 };
 
-  // Enumerate all valid lineups
-  // C(qb,1) x C(rb,2) x C(wr,3) x C(te,1) x flex from remainder
-  for (let qi = 0; qi < qbs.length; qi++) {
-    const qb = qbs[qi];
+  // Enumerate pruned lineups
+  for (let qi = 0; qi < topQbs.length; qi++) {
+    const qb = topQbs[qi];
 
-    for (let ri = 0; ri < rbs.length - 1; ri++) {
-      for (let rj = ri + 1; rj < rbs.length; rj++) {
-        const rb1 = rbs[ri], rb2 = rbs[rj];
+    for (let ri = 0; ri < topRbs.length - 1; ri++) {
+      for (let rj = ri + 1; rj < topRbs.length; rj++) {
+        const rb1 = topRbs[ri], rb2 = topRbs[rj];
 
-        for (let wi = 0; wi < wrs.length - 2; wi++) {
-          for (let wj = wi + 1; wj < wrs.length - 1; wj++) {
-            for (let wk = wj + 1; wk < wrs.length; wk++) {
-              const wr1 = wrs[wi], wr2 = wrs[wj], wr3 = wrs[wk];
+        for (let wi = 0; wi < topWrs.length - 2; wi++) {
+          for (let wj = wi + 1; wj < topWrs.length - 1; wj++) {
+            for (let wk = wj + 1; wk < topWrs.length; wk++) {
+              const wr1 = topWrs[wi], wr2 = topWrs[wj], wr3 = topWrs[wk];
 
-              for (let ti = 0; ti < tes.length; ti++) {
-                const te = tes[ti];
+              for (let ti = 0; ti < topTes.length; ti++) {
+                const te = topTes[ti];
 
                 const starters = [qb, rb1, rb2, wr1, wr2, wr3, te];
-                const starterSet = new Set(starters.map(p => p.name));
+                const starterNames = new Set([qb.name, rb1.name, rb2.name, wr1.name, wr2.name, wr3.name, te.name]);
 
-                // FLEX candidates: remaining RB/WR/TE not in starters
-                const flexCandidates = withBase.filter(
-                  p => !starterSet.has(p.name) && (p.position === 'RB' || p.position === 'WR' || p.position === 'TE')
-                );
+                // Find best flex candidates from pre-sorted pool (check top 3 unused)
+                let flexChecked = 0;
+                for (let fi = 0; fi < flexPool.length && flexChecked < 3; fi++) {
+                  const flex = flexPool[fi];
+                  if (starterNames.has(flex.name)) continue;
+                  flexChecked++;
 
-                if (flexCandidates.length === 0) continue;
-
-                for (const flex of flexCandidates) {
                   const lineup = [...starters, flex];
                   const result = scoreLineup(lineup);
                   if (result.spikeScore > bestResult.spikeScore) {
