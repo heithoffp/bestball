@@ -46,9 +46,9 @@ export async function cloudGetFile(id, userId) {
 export async function cloudHasUserData(userId) {
   const { data, error } = await supabase.storage
     .from(BUCKET)
-    .list(userId, { limit: 1, search: '.csv' });
+    .list(userId, { limit: 10 });
   if (error) throw error;
-  return data.length > 0;
+  return data.some(f => f.name.endsWith('.csv'));
 }
 
 export async function cloudDeleteFile(id, userId) {
