@@ -569,7 +569,7 @@
 /* === Mobile Roster Cards === */
 .rosterCard {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 12px 14px;
+  padding: 10px 12px;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
   transition: background 0.15s;
@@ -587,7 +587,7 @@
 
 .rosterGradeLetter {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -626,7 +626,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .rosterArchPills {
@@ -638,8 +638,8 @@
 .rosterCardFooter {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 5px;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -661,20 +661,20 @@
 .cardStatValue {
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .rosterCardExpanded {
-  margin-top: 10px;
+  margin-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 10px;
+  padding-top: 6px;
 }
 
 /* === Mobile Player Detail Cards === */
 .playerDetailCard {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 10px 14px;
+  padding: 7px 12px;
 }
 
 .playerDetailRow1 {
@@ -687,7 +687,7 @@
   flex: 1;
   font-weight: 500;
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -696,8 +696,8 @@
 .playerDetailRow2 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 4px;
+  margin-top: 3px;
 }
 
 /* === Mobile Sort Bar === */
@@ -808,6 +808,13 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
+.playerListScroll {
+  max-height: 55vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 /* ============ RESPONSIVE ============ */
 
 /* --- Mobile (max-width: 599px) --- */
@@ -873,17 +880,28 @@
   .gradeBarGroup {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .stackBar {
+    padding: 6px 14px;
     gap: 10px;
+  }
+
+  .capitalMapWrap {
+    padding: 8px 14px 6px;
   }
 
   .gradeCard {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 6px;
+    padding: 8px 14px;
   }
 
   .gradeLetter {
     text-align: left;
+    font-size: 22px;
   }
 
   .matchCount {

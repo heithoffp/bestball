@@ -217,17 +217,6 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
     return sortDir === 'asc' ? '▲' : '▼';
   };
 
-  const resetFilters = () => {
-    setSearchInput('');
-    setSearch('');
-    setSortField('exposure');
-    setSortDir('desc');
-    setShowUndrafted(false);
-    setRbFilter('Any');
-    setQbFilter('Any');
-    setTeFilter('Any');
-  };
-
   const tableContainerRef = useRef(null);
 
   const virtualizer = useVirtualizer({
@@ -270,24 +259,15 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
             onChange={e => setSearchInput(e.target.value)}
             className={`path-input ${styles.searchInput}`}
           />
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
-            <label className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={showUndrafted}
-                onChange={e => setShowUndrafted(e.target.checked)}
-                style={{ cursor: 'pointer' }}
-              />
-              Show 0%
-            </label>
-            <button
-              className="load-button"
-              onClick={resetFilters}
-              style={{ width: 'auto', padding: '0.5rem 1rem' }}
-            >
-              Reset
-            </button>
-          </div>
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={showUndrafted}
+              onChange={e => setShowUndrafted(e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Show 0%
+          </label>
         </div>
       );
     }
@@ -314,13 +294,6 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
             onChange={e => setSearchInput(e.target.value)}
             className={`path-input ${styles.searchInput}`}
           />
-          <button
-            className="load-button"
-            onClick={resetFilters}
-            style={{ width: 'auto', padding: '0.5rem 1rem' }}
-          >
-            Reset
-          </button>
           {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} />}
         </div>
       </div>

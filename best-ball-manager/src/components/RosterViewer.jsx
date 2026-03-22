@@ -834,11 +834,13 @@ export default function RosterViewer({ rosterData = [] }) {
 
         {/* Expanded detail */}
         {isOpen && (
-          <div className={css.rosterCardExpanded}>
+          <div className={css.rosterCardExpanded} onClick={e => e.stopPropagation()}>
             <GradeCard grade={grade} />
             <DraftCapitalMap players={roster.players} isMobile={true} />
             <StackSummaryBar stacks={stacks} />
-            <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} isMobile={true} />
+            <div className={css.playerListScroll}>
+              <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} isMobile={true} />
+            </div>
           </div>
         )}
       </div>
@@ -1411,14 +1413,6 @@ export default function RosterViewer({ rosterData = [] }) {
 
   return (
     <div className={css.root}>
-      {/* Header */}
-      <div className={css.header}>
-        <div>
-          <h2 className={css.title}>ROSTER VIEWER</h2>
-          <p className={css.subtitle}>{displayed.length} / {rosters.length} entries · {rosterData.length} players</p>
-        </div>
-      </div>
-
       {/* Control Panel — collapsible */}
       {renderControlPanel()}
 

@@ -1,0 +1,1129 @@
+/* === DraftFlowAnalysis CSS Module === */
+
+/* --- Animations & Scrollbar (moved from injected <style>) --- */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.scrollArea::-webkit-scrollbar { width: 6px; }
+.scrollArea::-webkit-scrollbar-track { background: #1e293b; }
+.scrollArea::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+/* === ROOT === */
+.root {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  font-family: sans-serif;
+  color: #e5e7eb;
+  background: #0f172a;
+  padding: 12px 16px;
+}
+
+/* === LEFT COLUMN === */
+.leftColumn {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* === RIGHT COLUMN === */
+.rightColumn {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1e293b;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  overflow: hidden;
+}
+
+/* === DRAFT CONTROLS === */
+.controlsRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.controlCard {
+  flex: 1;
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.controlLabel {
+  font-size: 13px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.slotSelect {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  font-size: 20px;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.pickDisplay {
+  flex: 1;
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  text-align: center;
+}
+
+.pickNumber {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin-top: 4px;
+}
+
+/* === DRAFT BOARD PANEL === */
+.boardPanel {
+  background: #1e293b;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.boardHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid #334155;
+}
+
+.boardTitle {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 12px 0;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 8px;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 8px;
+  background: #334155;
+  color: #cbd5e1;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.actionButton:hover {
+  background: #475569;
+}
+
+.actionButton:active {
+  background: #475569;
+}
+
+.rosterList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px;
+}
+
+.rosterItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  padding-bottom: 8px;
+}
+
+.rosterItemBorder {
+  border-bottom: 1px solid #334155;
+}
+
+.rosterPos {
+  font-weight: 800;
+  width: 32px;
+  font-size: 14px;
+}
+
+.rosterRound {
+  color: #64748b;
+  font-size: 14px;
+  width: 22px;
+}
+
+.rosterName {
+  font-weight: 600;
+  color: #e2e8f0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyState {
+  color: #475569;
+  font-size: 16px;
+  font-style: italic;
+  text-align: center;
+  padding: 30px;
+}
+
+/* === PLAYER LIST HEADER === */
+.playerListHeader {
+  padding: 10px 16px;
+  border-bottom: 1px solid #334155;
+  background: #1e293b;
+  flex-shrink: 0;
+}
+
+.headerTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.headerTitle {
+  font-size: 20px;
+  margin: 0;
+  font-weight: 800;
+  color: #fff;
+}
+
+.headerMeta {
+  font-size: 14px;
+  color: #64748b;
+  text-align: right;
+}
+
+.headerMetaSub {
+  color: #475569;
+}
+
+.searchWrapper {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 32px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: #3b82f6;
+}
+
+.searchClear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+/* === COLUMN HEADERS (desktop only) === */
+.columnHeaders {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 27px;
+  border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+  background: #1e293b;
+}
+
+.colHeader {
+  font-size: 12px;
+  color: #f1f5f9;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: help;
+}
+
+.colPlayer { width: 350px; min-width: 0; flex-shrink: 0; }
+.colTeam { width: 200px; text-align: center; flex-shrink: 0; }
+.colAdp { width: 55px; text-align: center; flex-shrink: 0; }
+.colAvg { width: 90px; text-align: center; flex-shrink: 0; }
+.colDivider {
+  width: 1px;
+  align-self: stretch;
+  background: #334155;
+  flex-shrink: 0;
+}
+
+.statsHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.statHeaderCell {
+  text-align: center;
+  padding: 0 10px;
+}
+
+.statHeaderCellBorder {
+  border-left: 1px solid rgba(30, 41, 59, 0.53);
+}
+
+.colPath { min-width: 70px; }
+.colLift { min-width: 70px; }
+.colCorrelation { min-width: 110px; }
+.colGlobalExp { min-width: 120px; }
+.colCorrSpacer { width: 70px; flex-shrink: 0; }
+
+/* === PLAYER LIST (scrollable area) === */
+.playerList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.playerListEmpty {
+  text-align: center;
+  padding: 60px;
+  color: #64748b;
+}
+
+.playerListEmptySub {
+  font-size: 15px;
+  color: #475569;
+}
+
+/* === ADP DIVIDER === */
+.adpDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+  padding: 0 4px;
+}
+
+.adpDividerLabel {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.adpDividerLineLeft {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, #3b82f6, rgba(59, 130, 246, 0.27));
+}
+
+.adpDividerLineRight {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.27), #3b82f6);
+}
+
+.adpDividerPick {
+  font-size: 11px;
+  font-weight: 800;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.09);
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(59, 130, 246, 0.27);
+  white-space: nowrap;
+}
+
+/* === DESKTOP PLAYER CARD === */
+.playerCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #0f172a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid #1e293b;
+  margin-bottom: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.playerCard:hover {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.playerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 350px;
+  min-width: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.posBadge {
+  font-size: 12px;
+  font-weight: 900;
+  color: #0f172a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 30px;
+  text-align: center;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.playerName {
+  font-weight: 700;
+  font-size: 15px;
+  color: #f1f5f9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stackBadge {
+  font-size: 11px;
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.stackBadgeElite {
+  padding: 2px 6px;
+  border-width: 1.5px;
+  border-style: solid;
+}
+
+.fallingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  color: #f97316;
+  font-size: 11px;
+  background: rgba(249, 115, 22, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.teamCol {
+  width: 200px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #f1f5f9;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.adpCol {
+  width: 55px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+.avgCol {
+  width: 90px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+.statsDivider {
+  width: 1px;
+  align-self: stretch;
+  background: #334155;
+  margin: 2px 0;
+  flex-shrink: 0;
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.statCell {
+  text-align: center;
+  padding: 0 10px;
+}
+
+.statCellBorder {
+  border-left: 1px solid rgba(30, 41, 59, 0.53);
+}
+
+.statValue {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.statSub {
+  font-size: 11px;
+  color: #475569;
+}
+
+.statValueRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+}
+
+/* === CORRELATION POPUP (desktop hover) === */
+.corrTrigger {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.corrTriggerBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #1e293b;
+  border-radius: 4px;
+  cursor: default;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
+  border: none;
+}
+
+.corrPopup {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 0;
+  z-index: 50;
+  min-width: 220px;
+  max-width: 300px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.corrTrigger:hover .corrPopup {
+  display: block;
+}
+
+.corrPopupTitle {
+  padding: 0 12px 6px;
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.corrPopupRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+}
+
+.corrPopupPos {
+  font-size: 10px;
+  font-weight: 900;
+  color: #0f172a;
+  padding: 1px 4px;
+  border-radius: 3px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.corrPopupName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.corrPopupBar {
+  width: 40px;
+  height: 5px;
+  background: #1e293b;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.corrPopupBarFill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.corrPopupPct {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  min-width: 28px;
+  text-align: right;
+}
+
+/* === RB STRATEGY REMINDER === */
+.reminderBar {
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+}
+
+.reminderDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.reminderTitle {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reminderToggle {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.reminderContent {
+  padding: 12px 14px;
+  border-radius: 0 0 10px 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.reminderSectionLabel {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 700;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.reminderSectionText {
+  font-size: 14px;
+  color: #e2e8f0;
+  line-height: 1.4;
+}
+
+.reminderConstraint {
+  padding: 8px;
+  background: #0f172a;
+  border-radius: 6px;
+  border-left: 3px solid #ef4444;
+}
+
+.reminderConstraintLabel {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 700;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.reminderConstraintText {
+  font-size: 14px;
+  color: #fca5a5;
+  line-height: 1.4;
+}
+
+/* === STRATEGY CARD === */
+.strategyCard {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 4px;
+}
+
+.strategyCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.strategyCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.strategyCardLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  text-transform: uppercase;
+}
+
+.strategyLockedBadge {
+  font-size: 10px;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.strategyPathCount {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.strategyItems {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.strategyItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+}
+
+.strategyItemBar {
+  flex: 1;
+  height: 4px;
+  background: #334155;
+  border-radius: 2px;
+}
+
+.strategyItemFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.strategyItemName {
+  font-size: 9px;
+  width: 60px;
+  text-align: right;
+}
+
+/* === PORTFOLIO ROW === */
+.portfolioRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.portfolioRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.portfolioDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.portfolioName {
+  color: #cbd5e1;
+}
+
+.portfolioTarget {
+  color: #475569;
+  margin-left: 4px;
+}
+
+/* ============================================
+   MOBILE-ONLY STYLES
+   ============================================ */
+
+/* === SEGMENTED CONTROL === */
+.segmentedControl {
+  display: none;
+}
+
+.segmentBtn {
+  flex: 1;
+  height: 44px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  background: transparent;
+  color: #94a3b8;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.segmentActive {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* === CONTEXT BAR === */
+.contextBar {
+  display: none;
+}
+
+/* === CONTEXT BAR SLOT SELECTOR === */
+.contextBarSlot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.contextBarSelect {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* === MOBILE PLAYER CARD === */
+.mobilePlayerCard {
+  background: #0f172a;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+  margin-bottom: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+
+.mobilePlayerCard:active {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.mobileCardLine1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobilePlayerName {
+  font-weight: 700;
+  font-size: 15px;
+  color: #f1f5f9;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mobileCardLine2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.mobileCardLine3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mobileStatLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 1px;
+}
+
+.mobileStatValue {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mobileBreakdownToggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileBreakdownToggle:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mobileBreakdown {
+  margin-top: 8px;
+  padding: 8px;
+  background: #1e293b;
+  border-radius: 6px;
+}
+
+.mobileBreakdownTitle {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+/* === TOAST === */
+.toast {
+  position: fixed;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 8px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  z-index: 90;
+  animation: toastSlideIn 0.2s ease-out;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  font-size: 15px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.toastName {
+  font-weight: 700;
+}
+
+/* === MOBILE BOARD VIEW === */
+.boardViewMobile {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
+}
+
+.playersViewMobile {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: #1e293b;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  overflow: hidden;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* --- Mobile (max-width: 599px) --- */
+@media (max-width: 599px) {
+  .root {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .leftColumn,
+  .rightColumn {
+    display: none;
+  }
+
+  .segmentedControl {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: #1e293b;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    flex-shrink: 0;
+  }
+
+  .contextBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: #1e293b;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    font-size: 13px;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
+  .headerTitle {
+    font-size: 16px;
+  }
+
+  .boardHeader {
+    padding: 12px;
+  }
+
+  .boardTitle {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .rosterList {
+    padding: 8px 12px;
+  }
+
+  .playerListHeader {
+    padding: 8px 12px;
+  }
+
+  .columnHeaders {
+    display: none;
+  }
+
+  .playerList {
+    padding: 6px 8px;
+  }
+
+  .controlsRow {
+    margin-bottom: 4px;
+  }
+
+  .controlCard,
+  .pickDisplay {
+    padding: 10px;
+  }
+
+  .slotSelect {
+    font-size: 18px;
+  }
+
+  .pickNumber {
+    font-size: 20px;
+  }
+
+  .reminderContent {
+    max-height: 180px;
+  }
+}
+
+/* --- Tablet (600-899px) --- */
+@media (min-width: 600px) and (max-width: 899px) {
+  .leftColumn {
+    width: 260px;
+  }
+
+  .colTeam {
+    display: none;
+  }
+
+  .teamCol {
+    display: none;
+  }
+
+  .colPlayer {
+    width: 250px;
+  }
+
+  .playerIdentity {
+    width: 250px;
+  }
+
+  .root {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+}
