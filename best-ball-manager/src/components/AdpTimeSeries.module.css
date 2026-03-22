@@ -1,0 +1,327 @@
+/* === AdpTimeSeries CSS Module === */
+
+/* Root layout */
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 20px;
+}
+
+/* --- Controls bar --- */
+.controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  width: 250px;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  user-select: none;
+  margin-left: 10px;
+}
+
+.playerCount {
+  margin-left: auto;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+/* --- Main two-pane layout --- */
+.mainLayout {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  height: 625px;
+}
+
+/* --- Table pane (left) --- */
+.tablePane {
+  flex: 0 0 30%;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 30px 1fr 50px 50px 75px 50px;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.tableBody {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.playerRow {
+  display: grid;
+  grid-template-columns: 30px 1fr 50px 50px 75px 50px;
+  padding: 8px 15px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.playerRowSelected {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.playerName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.playerNameText {
+  font-weight: 500;
+}
+
+.playerMeta {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.monoCell {
+  text-align: right;
+  font-family: monospace;
+}
+
+.valueCell {
+  text-align: right;
+  font-family: monospace;
+  line-height: 1.1;
+}
+
+.valueSub {
+  font-size: 13px;
+  color: #888;
+}
+
+.valuePlaceholder {
+  color: #444;
+}
+
+.trendCell {
+  text-align: right;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* --- Chart pane (right) --- */
+.chartPane {
+  flex: 1;
+  min-height: 0;
+  padding: 1rem;
+}
+
+.chartEmpty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+/* --- Tooltip --- */
+.tooltip {
+  padding: 10px 15px;
+  min-width: 225px;
+  border: 1px solid #444;
+  background-color: rgba(20, 20, 20, 0.95);
+}
+
+.tooltipDate {
+  font-size: 16px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 5px;
+}
+
+.tooltipEntry {
+  margin-bottom: 8px;
+}
+
+.tooltipEntryHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+}
+
+.tooltipEntryName {
+  font-weight: 600;
+}
+
+.tooltipStats {
+  font-size: 13px;
+  color: #aaa;
+  margin-left: 10px;
+}
+
+/* --- Sort icon --- */
+.sortIcon {
+  opacity: 0.3;
+  font-size: 13px;
+}
+
+.sortHeader {
+  cursor: pointer;
+  text-align: right;
+}
+
+/* --- Time scale toggle --- */
+.timeScaleGroup {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.timeScaleBtn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 0.4rem 0.75rem;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.timeScaleBtn:last-child {
+  border-right: none;
+}
+
+.timeScaleBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.timeScaleActive {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* --- Hide helpers --- */
+.hideOnMobile {}
+
+/* ===================== */
+/* Mobile overrides      */
+/* ===================== */
+@media (max-width: 599px) {
+  .root {
+    height: auto;
+    gap: 12px;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+
+  .buttonGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .checkboxLabel {
+    font-size: 14px;
+    margin-left: 0;
+  }
+
+  .playerCount {
+    margin-left: 0;
+    font-size: 13px;
+  }
+
+  .mainLayout {
+    flex-direction: column;
+    height: auto;
+    gap: 12px;
+  }
+
+  .chartPane {
+    order: -1;
+  }
+
+  .tablePane {
+    flex: 0 0 auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .tableBody {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .tableHeader {
+    grid-template-columns: 30px 1fr 50px;
+  }
+
+  .playerRow {
+    grid-template-columns: 30px 1fr 50px;
+  }
+
+  .hideOnMobile {
+    display: none;
+  }
+
+  .tooltip {
+    min-width: 180px;
+    font-size: 13px;
+  }
+}
+
+/* ===================== */
+/* Tablet overrides      */
+/* ===================== */
+@media (min-width: 600px) and (max-width: 899px) {
+  .mainLayout {
+    height: 500px;
+  }
+
+  .tableHeader {
+    grid-template-columns: 30px 1fr 50px 50px 50px;
+  }
+
+  .playerRow {
+    grid-template-columns: 30px 1fr 50px 50px 50px;
+  }
+
+  .hideOnTablet {
+    display: none;
+  }
+
+  .chartPane {
+    padding: 0.75rem;
+  }
+}

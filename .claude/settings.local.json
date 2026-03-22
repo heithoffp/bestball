@@ -12,7 +12,8 @@
       "Bash(grep -v \"^$\")",
       "WebFetch(domain:g.espncdn.com)",
       "Bash(wc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "WebFetch(domain:localhost)"
     ]
   }
 }
