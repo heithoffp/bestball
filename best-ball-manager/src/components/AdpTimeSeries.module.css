@@ -235,6 +235,8 @@
   .root {
     height: auto;
     gap: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .controls {
@@ -269,6 +271,7 @@
 
   .chartPane {
     order: -1;
+    pointer-events: none;
   }
 
   .tablePane {
