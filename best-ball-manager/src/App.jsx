@@ -7,9 +7,10 @@ import { saveFile, getFile, hasUserData, syncSaveFile, syncGetFile, syncHasUserD
 import { useAuth } from './contexts/AuthContext';
 import AuthButton from './components/AuthButton';
 import useMediaQuery from './hooks/useMediaQuery';
-import { BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle } from 'lucide-react';
 
 const tabs = [
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'exposures', label: 'Exposures', icon: BarChart3 },
   { key: 'rosters', label: 'Rosters', icon: Users },
   { key: 'timeseries', label: 'ADP Tracker', icon: TrendingUp },
@@ -25,6 +26,7 @@ const DraftFlowAnalysis = lazy(() => import('./components/DraftFlowAnalysis'));
 const RosterViewer = lazy(() => import('./components/RosterViewer'));
 const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
 const HelpGuide = lazy(() => import('./components/HelpGuide'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
 // DISABLED for performance — keep source files intact
 // const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
@@ -55,7 +57,7 @@ export default function App() {
   const [masterPlayers, setMasterPlayers] = useState([]);
   const [adpSnapshots, setAdpSnapshots] = useState([]);
   const [status, setStatus] = useState({ type: '', msg: '' });
-  const [activeTab, setActiveTab] = useState('exposures');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [rankingsSource, setRankingsSource] = useState([]);
   const { isMobile } = useMediaQuery();
   const { user, loading: authLoading } = useAuth();
@@ -177,7 +179,7 @@ export default function App() {
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
+        <h1>{isMobile ? 'BB MANAGER' : 'BEST BALL MANAGER'}</h1>
         <AuthButton />
       </div>
 
@@ -209,6 +211,7 @@ export default function App() {
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
+            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onRosterUpload={handleRosterUpload} />}
             {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onRosterUpload={handleRosterUpload} />}
             {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
             {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}

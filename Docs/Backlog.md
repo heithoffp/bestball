@@ -11,7 +11,7 @@ For detailed feature behavior, see `Feature_Specs/`.
 
 | Item | Status | Spec | Notes |
 |------|--------|------|-------|
-| Dashboard landing page | To build | — | Portfolio snapshot with headline metrics and shape visualizations. Primary entry point per design principles. |
+| Dashboard landing page | Done | `Feature_Specs/Dashboard.md` | Portfolio snapshot with headline metrics, top/least exposures, archetype distribution, draft capital shape, and drill-down cards. |
 | CSV export on analysis tabs | To build | — | Download current view as CSV from exposure table and roster viewer |
 
 ## Vision Alignment Revisions
@@ -34,13 +34,14 @@ Gaps identified through user journey analysis. Not prioritized — sequence TBD 
 | Item | Status | Notes |
 |------|--------|-------|
 | CSV format validation with user feedback | To build | Non-Underdog CSVs silently produce empty results. Need column validation + actionable error messages. |
-| First-run / empty state onboarding | To build | New users see empty table with no guidance. Need welcome state with upload instructions. |
+| First-run / empty state onboarding | Partial | Dashboard has empty state with upload prompt. Other tabs still need empty states. |
 | Upload confirmation dialog with undo | To build | Upload silently replaces all data. Need diff summary + one-level undo via backup key. |
 | Draft Assistant quick-setup mode | To build | No way to catch up to a live draft in progress. Need bulk pick import or rapid-entry UI. |
 | ADP freshness indicator | To build | No "last updated" date shown anywhere. Users can't assess data staleness. |
 | Drag-and-drop file upload | To build | Currently file-picker button only. |
 | Re-enable Combo Analysis | To build | Disabled for performance. Needs optimization. See `Feature_Specs/Combo_Analysis.md`. |
 | Re-enable Roster Construction | To build | Disabled for performance. Needs optimization. See `Feature_Specs/Roster_Construction.md`. |
+| Replace Help tab with per-tab Help widget | To build | Remove standalone Help tab. Add a Help icon/widget within each tab that highlights key features and important elements contextually. |
 
 ## Future Features
 
