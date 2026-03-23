@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { GripVertical, Download, Save, Search } from 'lucide-react';
+import { GripVertical, Download, Save, Search, X } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -49,7 +49,7 @@ function getTierColor(tierNum) {
 }
 
 /* ── Tier Divider (shared logic, renders differently for table vs cards) ── */
-function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelChange, isMobile }) {
+function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelChange, onDelete, isMobile }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
@@ -66,6 +66,11 @@ function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelCha
     }
   };
 
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (onDelete) onDelete(playerId);
+  };
+
   if (isMobile) {
     return (
       <div className={s.tierDividerMobile} style={{ background: tierColor.border }}>
@@ -80,9 +85,14 @@ function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelCha
             className={s.tierLabelInputMobile}
           />
         ) : (
-          <span onClick={handleLabelClick} title="Tap to edit tier label" className={s.tierLabelMobile}>
-            {tierLabelText}
-          </span>
+          <>
+            <span onClick={handleLabelClick} title="Tap to edit tier label" className={s.tierLabelMobile}>
+              {tierLabelText}
+            </span>
+            <button onClick={handleDelete} className={s.tierDeleteBtn} title="Remove tier break">
+              <X size={14} />
+            </button>
+          </>
         )}
       </div>
     );
@@ -102,9 +112,14 @@ function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelCha
             className={s.tierLabelInput}
           />
         ) : (
-          <span onClick={handleLabelClick} title="Click to edit tier label" className={s.tierLabel}>
-            {tierLabelText}
-          </span>
+          <>
+            <span onClick={handleLabelClick} title="Click to edit tier label" className={s.tierLabel}>
+              {tierLabelText}
+            </span>
+            <button onClick={handleDelete} className={s.tierDeleteBtn} title="Remove tier break">
+              <X size={14} />
+            </button>
+          </>
         )}
       </td>
     </tr>
@@ -143,6 +158,7 @@ const SortableRow = React.memo(function SortableRow({
           tierLabelText={tierLabelText}
           playerId={player.id}
           onTierLabelChange={onTierLabelChange}
+          onDelete={onTierToggle}
           isMobile={false}
         />
       )}
@@ -221,6 +237,7 @@ const SortableCard = React.memo(function SortableCard({
           tierLabelText={tierLabelText}
           playerId={player.id}
           onTierLabelChange={onTierLabelChange}
+          onDelete={onTierToggle}
           isMobile={true}
         />
       )}
@@ -447,18 +464,27 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   }, [rankedPlayers]);
 
   /* --- effective tier label resolution --- */
-  const effectiveTierLabels = useMemo(() => {
-    const labels = new Map();
+  // Build a tierNum → label map so positional views can look up by tier number
+  const tierNumLabels = useMemo(() => {
+    const map = new Map();
     rankedPlayers.forEach((p, idx) => {
       const tierNum = tierMap.get(p.id) || 1;
+      if (map.has(tierNum)) return; // first player in each tier defines the label
       if (idx === 0) {
-        labels.set(p.id, tierLabels['__tier1__'] || getTierLabel(tierNum));
+        map.set(tierNum, tierLabels['__tier1__'] || getTierLabel(tierNum));
       } else if (overallTierSet.has(p.id)) {
-        labels.set(p.id, tierLabels[p.id] || getTierLabel(tierNum));
+        map.set(tierNum, tierLabels[p.id] || getTierLabel(tierNum));
       }
     });
-    return labels;
+    return map;
   }, [rankedPlayers, tierMap, overallTierSet, tierLabels]);
+
+  /* --- sorted list of all tier numbers (for showing empty tiers in positional views) --- */
+  const allTierNums = useMemo(() => {
+    const nums = [...tierNumLabels.keys()];
+    nums.sort((a, b) => a - b);
+    return nums;
+  }, [tierNumLabels]);
 
   /* --- dnd-kit handlers --- */
   const handleDragStart = useCallback((event) => {
@@ -592,20 +618,63 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
           </tr>
         </thead>
         <tbody>
-          {displayedPlayers.map((player, idx) => (
-            <SortableRow
-              key={player.id}
-              player={player}
-              displayRank={idx + 1}
-              posRank={posRankMap.get(player.id) || ''}
-              tier={tierMap.get(player.id) || 1}
-              canDrag={canDrag}
-              onTierToggle={handleTierToggle}
-              hasTierAbove={idx === 0 || tierMap.get(player.id) !== tierMap.get(displayedPlayers[idx - 1].id)}
-              tierLabelText={effectiveTierLabels.get(player.id) || getTierLabel(tierMap.get(player.id) || 1)}
-              onTierLabelChange={handleTierLabelChange}
-            />
-          ))}
+          {(() => {
+            const rows = [];
+            let lastRenderedTier = 0;
+            displayedPlayers.forEach((player, idx) => {
+              const playerTier = tierMap.get(player.id) || 1;
+              const prevTier = idx > 0 ? (tierMap.get(displayedPlayers[idx - 1].id) || 1) : 0;
+
+              // Insert empty tier dividers for any skipped tiers
+              const startTier = idx === 0 ? 1 : prevTier + 1;
+              for (let t = startTier; t < playerTier; t++) {
+                if (t <= lastRenderedTier) continue;
+                const tc = getTierColor(t);
+                const label = tierNumLabels.get(t) || getTierLabel(t);
+                rows.push(
+                  <tr key={`empty-tier-${t}`}>
+                    <td colSpan={10} className={s.tierDivider} style={{ background: tc.border }}>
+                      <span className={s.tierLabel}>{label}</span>
+                    </td>
+                  </tr>
+                );
+                lastRenderedTier = t;
+              }
+
+              rows.push(
+                <SortableRow
+                  key={player.id}
+                  player={player}
+                  displayRank={idx + 1}
+                  posRank={posRankMap.get(player.id) || ''}
+                  tier={playerTier}
+                  canDrag={canDrag}
+                  onTierToggle={handleTierToggle}
+                  hasTierAbove={idx === 0 || playerTier !== prevTier}
+                  tierLabelText={tierNumLabels.get(playerTier) || getTierLabel(playerTier)}
+                  onTierLabelChange={handleTierLabelChange}
+                />
+              );
+              lastRenderedTier = playerTier;
+            });
+
+            // Trailing empty tiers after the last player
+            allTierNums.forEach(t => {
+              if (t > lastRenderedTier) {
+                const tc = getTierColor(t);
+                const label = tierNumLabels.get(t) || getTierLabel(t);
+                rows.push(
+                  <tr key={`empty-tier-${t}`}>
+                    <td colSpan={10} className={s.tierDivider} style={{ background: tc.border }}>
+                      <span className={s.tierLabel}>{label}</span>
+                    </td>
+                  </tr>
+                );
+              }
+            });
+
+            return rows;
+          })()}
         </tbody>
       </table>
     </div>
@@ -614,22 +683,61 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   /* --- render mobile cards --- */
   const renderMobileCards = () => (
     <div ref={scrollContainerRef} className={s.cardList}>
-      {displayedPlayers.map((player, idx) => (
-        <SortableCard
-          key={player.id}
-          player={player}
-          displayRank={idx + 1}
-          posRank={posRankMap.get(player.id) || ''}
-          tier={tierMap.get(player.id) || 1}
-          canDrag={canDrag}
-          onTierToggle={handleTierToggle}
-          hasTierAbove={idx === 0 || tierMap.get(player.id) !== tierMap.get(displayedPlayers[idx - 1].id)}
-          tierLabelText={effectiveTierLabels.get(player.id) || getTierLabel(tierMap.get(player.id) || 1)}
-          onTierLabelChange={handleTierLabelChange}
-          isExpanded={expandedCardId === player.id}
-          onTap={() => setExpandedCardId(expandedCardId === player.id ? null : player.id)}
-        />
-      ))}
+      {(() => {
+        const items = [];
+        let lastRenderedTier = 0;
+        displayedPlayers.forEach((player, idx) => {
+          const playerTier = tierMap.get(player.id) || 1;
+          const prevTier = idx > 0 ? (tierMap.get(displayedPlayers[idx - 1].id) || 1) : 0;
+
+          // Insert empty tier dividers for skipped tiers
+          const startTier = idx === 0 ? 1 : prevTier + 1;
+          for (let t = startTier; t < playerTier; t++) {
+            if (t <= lastRenderedTier) continue;
+            const tc = getTierColor(t);
+            const label = tierNumLabels.get(t) || getTierLabel(t);
+            items.push(
+              <div key={`empty-tier-${t}`} className={s.tierDividerMobile} style={{ background: tc.border }}>
+                <span className={s.tierLabelMobile}>{label}</span>
+              </div>
+            );
+            lastRenderedTier = t;
+          }
+
+          items.push(
+            <SortableCard
+              key={player.id}
+              player={player}
+              displayRank={idx + 1}
+              posRank={posRankMap.get(player.id) || ''}
+              tier={playerTier}
+              canDrag={canDrag}
+              onTierToggle={handleTierToggle}
+              hasTierAbove={idx === 0 || playerTier !== prevTier}
+              tierLabelText={tierNumLabels.get(playerTier) || getTierLabel(playerTier)}
+              onTierLabelChange={handleTierLabelChange}
+              isExpanded={expandedCardId === player.id}
+              onTap={() => setExpandedCardId(expandedCardId === player.id ? null : player.id)}
+            />
+          );
+          lastRenderedTier = playerTier;
+        });
+
+        // Trailing empty tiers
+        allTierNums.forEach(t => {
+          if (t > lastRenderedTier) {
+            const tc = getTierColor(t);
+            const label = tierNumLabels.get(t) || getTierLabel(t);
+            items.push(
+              <div key={`empty-tier-${t}`} className={s.tierDividerMobile} style={{ background: tc.border }}>
+                <span className={s.tierLabelMobile}>{label}</span>
+              </div>
+            );
+          }
+        });
+
+        return items;
+      })()}
     </div>
   );
 
@@ -652,22 +760,26 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
               className={s.searchInput}
             />
           </div>
-          {/* Save / Export / Upload — desktop only */}
+          {/* Save — always visible */}
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className={s.saveBtn}
+            style={{
+              background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : 'var(--gradient-primary)',
+              cursor: saveStatus === 'saving' ? 'wait' : 'pointer',
+              opacity: saveStatus === 'saving' ? 0.7 : 1,
+            }}
+          >
+            <Save size={14} />
+            {isMobile
+              ? (saveStatus === 'saving' ? '...' : saveStatus === 'saved' ? '!' : saveStatus === 'error' ? '!' : '')
+              : (saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save')
+            }
+          </button>
+          {/* Export / Upload — desktop only */}
           {!isMobile && (
             <>
-              <button
-                onClick={handleSave}
-                disabled={saveStatus === 'saving'}
-                className={s.saveBtn}
-                style={{
-                  background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : 'var(--gradient-primary)',
-                  cursor: saveStatus === 'saving' ? 'wait' : 'pointer',
-                  opacity: saveStatus === 'saving' ? 0.7 : 1,
-                }}
-              >
-                <Save size={14} />
-                {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save'}
-              </button>
               <button onClick={handleExport} className={s.exportBtn}>
                 <Download size={14} /> Export
               </button>

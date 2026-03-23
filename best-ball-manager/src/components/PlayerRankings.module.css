@@ -220,6 +220,30 @@
   outline: none;
 }
 
+/* --- Tier Delete Button --- */
+.tierDeleteBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tierDeleteBtn:hover {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.6);
+}
+
 /* --- Tier Toggle Zone --- */
 .tierToggleZone {
   padding: 0;
