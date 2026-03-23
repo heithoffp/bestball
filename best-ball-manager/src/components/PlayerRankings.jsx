@@ -1,7 +1,12 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { GripVertical, Download, Save, Search } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { exportRankingsCSV, saveRankingsToAssets } from '../utils/rankingsExport';
 import FileUploadButton from './FileUploadButton';
+import useMediaQuery from '../hooks/useMediaQuery';
+import s from './PlayerRankings.module.css';
 
 const POS_COLORS = {
   QB: '#bf44ef',
@@ -43,19 +48,8 @@ function getTierColor(tierNum) {
   return TIER_COLORS[getTierLabel(tierNum)] || TIER_COLORS['F'];
 }
 
-/* ── Memoised row ────────────────────────────────────────────── */
-const RankingRow = React.memo(function RankingRow({
-  player, displayRank, posRank, tier, isDragSource, isDropTarget,
-  onDragStart, onDragOver, onDrop, onDragEnd,
-  onTierToggle, hasTierAbove, canDrag,
-  tierLabelText, onTierLabelChange,
-}) {
-  const pos = player.slotName || 'N/A';
-  const color = POS_COLORS[pos] || '#9ca3af';
-  const badgeClass = `badge badge-${pos.toLowerCase()}`;
-  const tierLabel = getTierLabel(tier);
-  const tierColor = getTierColor(tier);
-
+/* ── Tier Divider (shared logic, renders differently for table vs cards) ── */
+function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelChange, isMobile }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
@@ -68,137 +62,240 @@ const RankingRow = React.memo(function RankingRow({
   const handleLabelSave = () => {
     setIsEditing(false);
     if (onTierLabelChange && editValue.trim() !== tierLabelText) {
-      onTierLabelChange(player.id, editValue.trim());
+      onTierLabelChange(playerId, editValue.trim());
     }
+  };
+
+  if (isMobile) {
+    return (
+      <div className={s.tierDividerMobile} style={{ background: tierColor.border }}>
+        {isEditing ? (
+          <input
+            autoFocus
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleLabelSave}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(); if (e.key === 'Escape') setIsEditing(false); }}
+            onClick={(e) => e.stopPropagation()}
+            className={s.tierLabelInputMobile}
+          />
+        ) : (
+          <span onClick={handleLabelClick} title="Tap to edit tier label" className={s.tierLabelMobile}>
+            {tierLabelText}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <tr>
+      <td colSpan={10} className={s.tierDivider} style={{ background: tierColor.border }}>
+        {isEditing ? (
+          <input
+            autoFocus
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleLabelSave}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(); if (e.key === 'Escape') setIsEditing(false); }}
+            onClick={(e) => e.stopPropagation()}
+            className={s.tierLabelInput}
+          />
+        ) : (
+          <span onClick={handleLabelClick} title="Click to edit tier label" className={s.tierLabel}>
+            {tierLabelText}
+          </span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/* ── Desktop Sortable Row ────────────────────────────────────── */
+const SortableRow = React.memo(function SortableRow({
+  player, displayRank, posRank, tier, canDrag,
+  onTierToggle, hasTierAbove, tierLabelText, onTierLabelChange,
+}) {
+  const pos = player.slotName || 'N/A';
+  const color = POS_COLORS[pos] || '#9ca3af';
+  const badgeClass = `badge badge-${pos.toLowerCase()}`;
+  const tierLabel = getTierLabel(tier);
+  const tierColor = getTierColor(tier);
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: player.id,
+    disabled: !canDrag,
+  });
+
+  const rowStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    background: tier % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+    cursor: canDrag ? 'grab' : 'default',
   };
 
   return (
     <>
-      {/* Tier break divider */}
       {hasTierAbove && (
-        <tr>
-          <td colSpan={10} style={{
-            padding: 0, height: 36, border: 'none',
-            background: tierColor.border,
-            position: 'relative',
-          }}>
-            {isEditing ? (
-              <input
-                autoFocus
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleLabelSave}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(); if (e.key === 'Escape') setIsEditing(false); }}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: '100%', height: '100%',
-                  position: 'absolute', top: 0, left: 0,
-                  background: 'rgba(0,0,0,0.4)', color: '#fff',
-                  border: 'none', borderRadius: 0,
-                  padding: '0 8px', boxSizing: 'border-box',
-                  fontSize: 16, fontWeight: 700, textAlign: 'center',
-                  fontFamily: 'inherit', outline: 'none',
-                }}
-              />
-            ) : (
-              <span
-                onClick={handleLabelClick}
-                title="Click to edit tier label"
-                style={{
-                  position: 'absolute', top: '50%', left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: 16, fontWeight: 700, color: '#fff',
-                  textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                  cursor: 'pointer', userSelect: 'none',
-                  background: 'rgba(0,0,0,0.25)', borderRadius: 4,
-                  padding: '2px 12px',
-                }}
-              >
-                {tierLabelText}
-              </span>
-            )}
-          </td>
-        </tr>
+        <TierDividerContent
+          tierColor={tierColor}
+          tierLabelText={tierLabelText}
+          playerId={player.id}
+          onTierLabelChange={onTierLabelChange}
+          isMobile={false}
+        />
       )}
 
-      {/* Tier toggle zone — clickable area between rows */}
-      <tr
-        className="tier-toggle-zone"
-        onClick={() => onTierToggle(player.id)}
-        title="Click to toggle tier break"
-      >
-        <td colSpan={10} style={{
-          padding: 0, height: 6, border: 'none', cursor: 'pointer',
-        }} />
+      {/* Tier toggle zone */}
+      <tr onClick={() => onTierToggle(player.id)} title="Click to toggle tier break">
+        <td colSpan={10} className={s.tierToggleZone} />
       </tr>
 
       {/* Player row */}
-      <tr
-        draggable={canDrag}
-        onDragStart={(e) => onDragStart(e, player)}
-        onDragOver={(e) => onDragOver(e, player)}
-        onDrop={(e) => onDrop(e, player)}
-        onDragEnd={onDragEnd}
-        style={{
-          opacity: isDragSource ? 0.4 : 1,
-          borderTop: isDropTarget ? '3px solid var(--accent-blue)' : undefined,
-          background: tier % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-          cursor: canDrag ? 'grab' : 'default',
-        }}
-      >
-        <td style={{ padding: '8px 5px', color: 'var(--text-muted)' }}>
+      <tr ref={setNodeRef} style={rowStyle} className={s.playerRow}>
+        <td className={s.gripCell} {...listeners} {...attributes}>
           {canDrag && <GripVertical size={16} />}
         </td>
-        <td style={{ padding: '8px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 16 }}>
-          {displayRank}
-        </td>
-        <td style={{ padding: '8px 5px', textAlign: 'center', color: POS_COLORS[pos] || 'var(--text-muted)', fontSize: 15 }}>
-          {posRank}
-        </td>
-        <td style={{ padding: '8px 5px', textAlign: 'center' }}>
-          <span style={{
-            fontSize: 14, fontWeight: 700, color: tierColor.text,
-            background: tierColor.bg, borderRadius: 4, padding: '2px 6px',
+        <td className={s.rankCell}>{displayRank}</td>
+        <td className={s.posRankCell} style={{ color: POS_COLORS[pos] || 'var(--text-muted)' }}>{posRank}</td>
+        <td className={s.tierBadgeCell}>
+          <span className={s.tierBadge} style={{
+            color: tierColor.text, background: tierColor.bg,
             border: `1px solid ${tierColor.border}40`,
           }}>{tierLabel}</span>
         </td>
-        <td style={{
-          padding: '8px 6px', fontWeight: 500,
-          borderLeft: `3px solid ${color}`, paddingLeft: 8,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          fontSize: 16,
-        }}>
+        <td className={s.nameCell} style={{ borderLeft: `3px solid ${color}` }}>
           {player.name}
         </td>
-        <td style={{ padding: '8px 5px' }}>
-          <span className={badgeClass}>{pos}</span>
-        </td>
-        <td style={{ padding: '8px 5px', color: 'var(--text-secondary)', fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {player.teamName || '-'}
-        </td>
-        <td style={{ padding: '8px 5px', color: 'var(--text-secondary)', fontSize: 16 }}>
-          {player.latestAdp ?? player.originalAdp ?? '-'}
-        </td>
-        <td style={{ padding: '8px 5px', fontSize: 16 }}>
+        <td className={s.posCell}><span className={badgeClass}>{pos}</span></td>
+        <td className={s.teamCell}>{player.teamName || '-'}</td>
+        <td className={s.adpCell}>{player.latestAdp ?? player.originalAdp ?? '-'}</td>
+        <td className={s.diffCell}>
           {(() => {
             const adpStr = player.latestAdp ?? player.originalAdp;
             const adpNum = parseFloat(adpStr);
             if (!adpStr || adpStr === '-' || isNaN(adpNum)) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
             const diff = +(adpNum - displayRank).toFixed(1);
-            const color = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : 'var(--text-secondary)';
-            return <span style={{ color, fontWeight: 600 }}>{diff > 0 ? '+' : ''}{diff}</span>;
+            const clr = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : 'var(--text-secondary)';
+            return <span style={{ color: clr, fontWeight: 600 }}>{diff > 0 ? '+' : ''}{diff}</span>;
           })()}
         </td>
-        <td style={{ padding: '8px 5px', color: 'var(--text-secondary)', fontSize: 16 }}>
-          {player.projectedPoints || '-'}
-        </td>
+        <td className={s.projCell}>{player.projectedPoints || '-'}</td>
       </tr>
+    </>
+  );
+});
+
+/* ── Mobile Sortable Card ────────────────────────────────────── */
+const SortableCard = React.memo(function SortableCard({
+  player, displayRank, posRank, tier, canDrag,
+  onTierToggle, hasTierAbove, tierLabelText, onTierLabelChange,
+  isExpanded, onTap,
+}) {
+  const pos = player.slotName || 'N/A';
+  const color = POS_COLORS[pos] || '#9ca3af';
+  const tierLabel = getTierLabel(tier);
+  const tierColor = getTierColor(tier);
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: player.id,
+    disabled: !canDrag,
+  });
+
+  const cardStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const adpStr = player.latestAdp ?? player.originalAdp ?? '-';
+  const adpNum = parseFloat(adpStr);
+  const diff = (!adpStr || adpStr === '-' || isNaN(adpNum)) ? null : +(adpNum - displayRank).toFixed(1);
+
+  return (
+    <>
+      {hasTierAbove && (
+        <TierDividerContent
+          tierColor={tierColor}
+          tierLabelText={tierLabelText}
+          playerId={player.id}
+          onTierLabelChange={onTierLabelChange}
+          isMobile={true}
+        />
+      )}
+
+      {/* Tier toggle zone */}
+      <div className={s.tierToggleZoneMobile} onClick={() => onTierToggle(player.id)} />
+
+      {/* Player card */}
+      <div ref={setNodeRef} style={cardStyle} className={s.playerCard} onClick={onTap}>
+        {/* Drag handle */}
+        <div className={s.cardDragHandle} {...listeners} {...attributes} onClick={(e) => e.stopPropagation()}>
+          {canDrag && <GripVertical size={16} />}
+        </div>
+
+        {/* Rank */}
+        <div className={s.cardRank}>{displayRank}</div>
+
+        {/* Body */}
+        <div className={s.cardBody}>
+          <div className={s.cardRow1}>
+            <span className={s.cardName} style={{ borderLeft: `3px solid ${color}`, paddingLeft: 6 }}>
+              {player.name}
+            </span>
+            <span className={s.cardTierBadge} style={{
+              color: tierColor.text, background: tierColor.bg,
+              border: `1px solid ${tierColor.border}40`,
+            }}>{tierLabel}</span>
+          </div>
+
+          {/* Expanded detail */}
+          {isExpanded && (
+            <div className={s.cardExpanded}>
+              <div className={s.cardDetailGrid}>
+                <div className={s.cardDetailItem}>
+                  <span className={s.cardDetailLabel}>Pos Rank</span>
+                  <span className={s.cardDetailValue} style={{ color: POS_COLORS[pos] || 'var(--text-primary)' }}>{posRank}</span>
+                </div>
+                <div className={s.cardDetailItem}>
+                  <span className={s.cardDetailLabel}>Team</span>
+                  <span className={s.cardDetailValue}>{player.teamName || '-'}</span>
+                </div>
+                <div className={s.cardDetailItem}>
+                  <span className={s.cardDetailLabel}>Diff</span>
+                  <span className={s.cardDetailValue} style={{
+                    color: diff === null ? 'var(--text-muted)' : diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : 'var(--text-secondary)',
+                  }}>
+                    {diff === null ? '-' : `${diff > 0 ? '+' : ''}${diff}`}
+                  </span>
+                </div>
+                <div className={s.cardDetailItem}>
+                  <span className={s.cardDetailLabel}>Projected</span>
+                  <span className={s.cardDetailValue}>{player.projectedPoints || '-'}</span>
+                </div>
+                <div className={s.cardDetailItem}>
+                  <span className={s.cardDetailLabel}>Position</span>
+                  <span className={s.cardDetailValue}>
+                    <span className={`badge badge-${pos.toLowerCase()}`}>{pos}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ADP */}
+        <div className={s.cardAdp}>{adpStr}</div>
+      </div>
     </>
   );
 });
 
 /* ── Main component ──────────────────────────────────────────── */
 export default function PlayerRankings({ initialPlayers, masterPlayers, onRankingsUpload }) {
+  const { isMobile } = useMediaQuery();
+
   /* --- state --- */
   const [rankedPlayers, setRankedPlayers] = useState([]);
   const [tierBreaks, setTierBreaks] = useState({
@@ -207,11 +304,15 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   const [tierLabels, setTierLabels] = useState({});
   const [viewMode, setViewMode] = useState('overall');
   const [searchTerm, setSearchTerm] = useState('');
-  const [dropTargetId, setDropTargetId] = useState(null);
+  const [expandedCardId, setExpandedCardId] = useState(null);
+  const [activeId, setActiveId] = useState(null);
 
-  const dragPlayerRef = useRef(null);
   const scrollContainerRef = useRef(null);
-  const autoScrollRef = useRef(null);
+
+  /* --- dnd-kit sensors --- */
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } });
+  const sensors = useSensors(pointerSensor, touchSensor);
 
   /* --- ADP lookup from masterPlayers --- */
   const adpLookup = useMemo(() => {
@@ -276,7 +377,6 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
         const tierLabel = p._csvTier || '';
 
         if (idx === 0 && tierLabel) {
-          // Store first tier label
           restoredLabels['__tier1__'] = tierLabel;
         }
 
@@ -320,7 +420,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
     return list;
   }, [rankedPlayers, viewMode, searchTerm, isSearching]);
 
-  /* --- tier computation (always based on overall ranking order) --- */
+  /* --- tier computation --- */
   const overallTierSet = tierBreaks.overall;
   const fullTierMap = useMemo(() => {
     const map = new Map();
@@ -334,7 +434,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
 
   const tierMap = fullTierMap;
 
-  /* --- position rank computation (based on overall ranking order) --- */
+  /* --- position rank computation --- */
   const posRankMap = useMemo(() => {
     const map = new Map();
     const counters = {};
@@ -360,81 +460,46 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
     return labels;
   }, [rankedPlayers, tierMap, overallTierSet, tierLabels]);
 
-  /* --- drag & drop handlers --- */
-  const handleDragStart = useCallback((e, player) => {
-    dragPlayerRef.current = player;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', player.id);
+  /* --- dnd-kit handlers --- */
+  const handleDragStart = useCallback((event) => {
+    setActiveId(event.active.id);
   }, []);
 
-  const handleDragOver = useCallback((e, player) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDropTargetId(player.id);
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    setActiveId(null);
 
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const y = e.clientY;
-    if (y - rect.top < 50) {
-      container.scrollTop -= 6;
-    } else if (rect.bottom - y < 50) {
-      container.scrollTop += 6;
-    }
-  }, []);
+    if (!over || active.id === over.id) return;
 
-  const handleDrop = useCallback((e, targetPlayer) => {
-    e.preventDefault();
-    const dragPlayer = dragPlayerRef.current;
-    if (!dragPlayer || dragPlayer.id === targetPlayer.id) {
-      setDropTargetId(null);
-      return;
-    }
-
-    // Transfer tier breaks so they stay at the boundary, not follow the player
+    // Transfer tier breaks so they stay at the boundary
     setTierBreaks(prev => {
       const set = new Set(prev.overall);
-      const hadBreak = set.has(dragPlayer.id);
+      const hadBreak = set.has(active.id);
       if (!hadBreak) return prev;
 
-      // Find the player that will fill the dragged player's old slot
-      const fromIdx = rankedPlayers.findIndex(p => p.id === dragPlayer.id);
+      const fromIdx = rankedPlayers.findIndex(p => p.id === active.id);
       const successor = rankedPlayers[fromIdx + 1];
 
-      // Remove break from dragged player (they join the destination tier)
-      set.delete(dragPlayer.id);
-
-      // Transfer break to successor so the boundary stays in place
-      if (successor && successor.id !== targetPlayer.id) {
+      set.delete(active.id);
+      if (successor && successor.id !== over.id) {
         set.add(successor.id);
       }
 
       return { ...prev, overall: set };
     });
 
+    // Reorder players
     setRankedPlayers(prev => {
       const newList = [...prev];
-      const fromIdx = newList.findIndex(p => p.id === dragPlayer.id);
+      const fromIdx = newList.findIndex(p => p.id === active.id);
       if (fromIdx === -1) return prev;
       newList.splice(fromIdx, 1);
-      const toIdx = newList.findIndex(p => p.id === targetPlayer.id);
+      const toIdx = newList.findIndex(p => p.id === over.id);
       if (toIdx === -1) return prev;
-      newList.splice(toIdx, 0, dragPlayer);
+      newList.splice(toIdx, 0, prev[fromIdx]);
       return newList;
     });
-
-    setDropTargetId(null);
-    dragPlayerRef.current = null;
   }, [rankedPlayers]);
-
-  const handleDragEnd = useCallback(() => {
-    setDropTargetId(null);
-    dragPlayerRef.current = null;
-    if (autoScrollRef.current) {
-      clearInterval(autoScrollRef.current);
-      autoScrollRef.current = null;
-    }
-  }, []);
 
   /* --- tier toggle --- */
   const handleTierToggle = useCallback((playerId) => {
@@ -453,7 +518,6 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
 
   /* --- tier label change --- */
   const handleTierLabelChange = useCallback((playerId, newLabel) => {
-    // First player's label is stored under __tier1__
     const key = rankedPlayers.length > 0 && rankedPlayers[0].id === playerId
       ? '__tier1__' : playerId;
     setTierLabels(prev => ({ ...prev, [key]: newLabel }));
@@ -479,80 +543,142 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
     }
   }, [rankedPlayers, fullTierMap, tierLabels]);
 
+  /* --- drag overlay player lookup --- */
+  const activePlayer = activeId ? rankedPlayers.find(p => p.id === activeId) : null;
+
   /* --- empty state --- */
   if (!initialPlayers || initialPlayers.length === 0) {
     return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Player Rankings</h2>
+      <div className={s.emptyState}>
+        <div className={s.emptyHeader}>
+          <h2 className={s.headerTitle}>Player Rankings</h2>
           {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
         </div>
-        <p style={{ color: 'var(--text-secondary)' }}>
+        <p className={s.emptyText}>
           No rankings data loaded. Use the Upload button to import a Rankings CSV.
         </p>
       </div>
     );
   }
 
+  /* --- render desktop table --- */
+  const renderDesktopTable = () => (
+    <div ref={scrollContainerRef} className={s.tableWrap}>
+      <table className={s.table}>
+        <colgroup>
+          <col className={s.colGrip} />
+          <col className={s.colRank} />
+          <col className={s.colPosRank} />
+          <col className={s.colTier} />
+          <col className={s.colName} />
+          <col className={s.colPos} />
+          <col className={s.colTeam} />
+          <col className={s.colAdp} />
+          <col className={s.colDiff} />
+          <col className={s.colProj} />
+        </colgroup>
+        <thead>
+          <tr className={s.stickyHead}>
+            <th className={s.headerCell} />
+            <th className={s.headerCell}>#</th>
+            <th className={s.headerCell}>Pos#</th>
+            <th className={s.headerCell}>Tier</th>
+            <th className={s.headerCellName}>Player</th>
+            <th className={s.headerCell}>Pos</th>
+            <th className={s.headerCell}>Team</th>
+            <th className={s.headerCell}>ADP</th>
+            <th className={s.headerCell}>Diff</th>
+            <th className={s.headerCell}>Proj</th>
+          </tr>
+        </thead>
+        <tbody>
+          {displayedPlayers.map((player, idx) => (
+            <SortableRow
+              key={player.id}
+              player={player}
+              displayRank={idx + 1}
+              posRank={posRankMap.get(player.id) || ''}
+              tier={tierMap.get(player.id) || 1}
+              canDrag={canDrag}
+              onTierToggle={handleTierToggle}
+              hasTierAbove={idx === 0 || tierMap.get(player.id) !== tierMap.get(displayedPlayers[idx - 1].id)}
+              tierLabelText={effectiveTierLabels.get(player.id) || getTierLabel(tierMap.get(player.id) || 1)}
+              onTierLabelChange={handleTierLabelChange}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  /* --- render mobile cards --- */
+  const renderMobileCards = () => (
+    <div ref={scrollContainerRef} className={s.cardList}>
+      {displayedPlayers.map((player, idx) => (
+        <SortableCard
+          key={player.id}
+          player={player}
+          displayRank={idx + 1}
+          posRank={posRankMap.get(player.id) || ''}
+          tier={tierMap.get(player.id) || 1}
+          canDrag={canDrag}
+          onTierToggle={handleTierToggle}
+          hasTierAbove={idx === 0 || tierMap.get(player.id) !== tierMap.get(displayedPlayers[idx - 1].id)}
+          tierLabelText={effectiveTierLabels.get(player.id) || getTierLabel(tierMap.get(player.id) || 1)}
+          onTierLabelChange={handleTierLabelChange}
+          isExpanded={expandedCardId === player.id}
+          onTap={() => setExpandedCardId(expandedCardId === player.id ? null : player.id)}
+        />
+      ))}
+    </div>
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div className={s.root}>
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Player Rankings</h2>
+      <div className={s.headerRow}>
+        <div className={s.headerLeft}>
+          <h2 className={s.headerTitle}>Player Rankings</h2>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'flex-end' }}>
+        <div className={s.headerRight}>
           {/* Search */}
-          <div style={{ position: 'relative', maxWidth: 240 }}>
-            <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <div className={s.searchWrap}>
+            <Search size={14} className={s.searchIcon} />
             <input
               type="text"
               placeholder="Search player or team..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              style={{
-                background: 'var(--bg-hover)', border: '1px solid var(--border)',
-                color: 'var(--text-primary)', padding: '6px 10px 6px 28px',
-                borderRadius: 6, fontSize: 13, width: '100%',
-                fontFamily: 'inherit',
-              }}
+              className={s.searchInput}
             />
           </div>
-          {/* Save */}
-          <button
-            onClick={handleSave}
-            disabled={saveStatus === 'saving'}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : 'var(--gradient-primary)',
-              color: 'white',
-              border: 'none', padding: '6px 14px', borderRadius: 6,
-              cursor: saveStatus === 'saving' ? 'wait' : 'pointer',
-              fontWeight: 600, fontSize: 13,
-              opacity: saveStatus === 'saving' ? 0.7 : 1,
-            }}
-          >
-            <Save size={14} />
-            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save'}
-          </button>
-          {/* Export */}
-          <button
-            onClick={handleExport}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'var(--bg-hover)', color: 'var(--text-primary)',
-              border: '1px solid var(--border)', padding: '6px 14px', borderRadius: 6,
-              cursor: 'pointer', fontWeight: 600, fontSize: 13,
-            }}
-          >
-            <Download size={14} /> Export
-          </button>
-          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
+          {/* Save / Export / Upload — desktop only */}
+          {!isMobile && (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saveStatus === 'saving'}
+                className={s.saveBtn}
+                style={{
+                  background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : 'var(--gradient-primary)',
+                  cursor: saveStatus === 'saving' ? 'wait' : 'pointer',
+                  opacity: saveStatus === 'saving' ? 0.7 : 1,
+                }}
+              >
+                <Save size={14} />
+                {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save'}
+              </button>
+              <button onClick={handleExport} className={s.exportBtn}>
+                <Download size={14} /> Export
+              </button>
+              {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
+            </>
+          )}
         </div>
       </div>
 
       {/* Position toggle */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div className={s.viewToggle}>
         {VIEWS.map(v => {
           const isActive = viewMode === v;
           const posColor = v === 'overall' ? null : POS_COLORS[v];
@@ -560,88 +686,64 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
             <button
               key={v}
               onClick={() => { setViewMode(v); setSearchTerm(''); }}
+              className={s.viewChip}
               style={{
                 background: isActive
                   ? (posColor ? `${posColor}20` : 'var(--bg-hover)')
                   : 'transparent',
                 border: `1px solid ${posColor ? posColor + '60' : 'var(--border)'}`,
                 color: posColor || 'var(--text-primary)',
-                padding: '5px 14px', borderRadius: 6, cursor: 'pointer',
-                fontWeight: isActive ? 700 : 400, fontSize: 13,
+                fontWeight: isActive ? 700 : 400,
               }}
             >
               {v === 'overall' ? 'Overall' : v}
             </button>
           );
         })}
-        <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)', alignSelf: 'center' }}>
+        <span className={s.playerCount}>
           {displayedPlayers.length} players
         </span>
       </div>
 
       {/* Search notice */}
       {isSearching && (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+        <div className={s.searchNotice}>
           Drag disabled while searching. Clear search to reorder.
         </div>
       )}
 
-      {/* Table */}
-      <div
-        ref={scrollContainerRef}
-        style={{ flex: 1, minHeight: 0, overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}
+      {/* DnD context wraps both table and card rendering */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 16, tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '3%' }} />
-            <col style={{ width: '4%' }} />
-            <col style={{ width: '5%' }} />
-            <col style={{ width: '5%' }} />
-            <col style={{ width: '21%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '15%' }} />
-            <col style={{ width: '7%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '7%' }} />
-          </colgroup>
-          <thead>
-            <tr style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 2 }}>
-              <th style={{ padding: '10px 5px' }} />
-              <th style={{ padding: '10px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>#</th>
-              <th style={{ padding: '10px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Pos#</th>
-              <th style={{ padding: '10px 5px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Tier</th>
-              <th style={{ padding: '10px 6px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Player</th>
-              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Pos</th>
-              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Team</th>
-              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>ADP</th>
-              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Diff</th>
-              <th style={{ padding: '10px 5px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 15 }}>Proj</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayedPlayers.map((player, idx) => (
-              <RankingRow
-                key={player.id}
-                player={player}
-                displayRank={idx + 1}
-                posRank={posRankMap.get(player.id) || ''}
-                tier={tierMap.get(player.id) || 1}
-                isDragSource={dragPlayerRef.current?.id === player.id}
-                isDropTarget={dropTargetId === player.id}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                onDragEnd={handleDragEnd}
-                onTierToggle={handleTierToggle}
-                hasTierAbove={idx === 0 || tierMap.get(player.id) !== tierMap.get(displayedPlayers[idx - 1].id)}
-                canDrag={canDrag}
-                tierLabelText={effectiveTierLabels.get(player.id) || getTierLabel(tierMap.get(player.id) || 1)}
-                onTierLabelChange={handleTierLabelChange}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <SortableContext
+          items={displayedPlayers.map(p => p.id)}
+          strategy={verticalListSortingStrategy}
+          disabled={!canDrag}
+        >
+          {isMobile ? renderMobileCards() : renderDesktopTable()}
+        </SortableContext>
+
+        {/* Drag overlay — rendered outside the list for smooth visuals */}
+        <DragOverlay>
+          {activePlayer ? (
+            <div className={s.dragOverlay}>
+              <span className={s.dragOverlayRank}>
+                {displayedPlayers.findIndex(p => p.id === activePlayer.id) + 1}
+              </span>
+              <span className={s.dragOverlayName} style={{ borderLeft: `3px solid ${POS_COLORS[activePlayer.slotName] || '#9ca3af'}`, paddingLeft: 8 }}>
+                {activePlayer.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+                {activePlayer.latestAdp ?? activePlayer.originalAdp ?? '-'}
+              </span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }
