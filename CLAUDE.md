@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The goal is a deployable website that serves as the one-stop shop for managing a best-ball portfolio. Users should be able to gain actionable insights through a simple, intuitive interface that surfaces the most useful data without requiring them to dig. Every feature and design decision should prioritize clarity and usability — get the right information in front of the user with minimal friction.
 
+The full product vision, design principles, scope, and exclusions are defined in **`Docs/Vision_and_Scope.md`**. This is the authoritative source for product direction — consult it before proposing new features or making design decisions. Key principles: the app is a "mirror, not advisor" (describe state, don't prescribe actions), all features must be zero-config (no user-set targets), and the dashboard is the primary entry point with tabs as drill-downs.
+
+## Documentation Structure
+
+- **`Docs/Vision_and_Scope.md`** — Product direction, design principles, exclusions (the "why" and "what")
+- **`Docs/Feature_Specs/`** — Detailed behavior specs per implemented feature (the "how")
+- **`Docs/Backlog.md`** — Prioritized work items and status tracking (the "what's next")
+
+When modifying a feature, update the corresponding Feature Spec. When adding or completing work items, update the Backlog. Vision_and_Scope should only change when product direction shifts.
+
 ## Project Overview
 
 Best Ball Manager is a React 19 + Vite 7 single-page app for analyzing fantasy football best-ball draft portfolios. It ingests roster CSVs and ADP (Average Draft Position) snapshots, then provides analytics across six tab views: exposure tables, ADP time series, draft flow, combo analysis, roster construction archetypes, and individual roster viewing.
