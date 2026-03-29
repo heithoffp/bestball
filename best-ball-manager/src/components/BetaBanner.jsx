@@ -9,12 +9,10 @@ export default function BetaBanner() {
     isBetaActive,
     isBetaExpired,
     betaDaysRemaining,
-    redirectToCheckout,
+    openPlanPicker,
     subscription,
   } = useSubscription();
   const [dismissed, setDismissed] = useState(false);
-
-  const priceId = import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
 
   // Don't render for guests, non-beta users, paid subscribers, or if dismissed
   const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing';
@@ -27,10 +25,10 @@ export default function BetaBanner() {
         <Clock size={16} />
         <span>
           Your beta access expires in <strong>{betaDaysRemaining} day{betaDaysRemaining !== 1 ? 's' : ''}</strong>.
-          Subscribe to keep Pro features.
+          Start a free trial to keep Pro features.
         </span>
-        <button className={styles.action} onClick={() => redirectToCheckout(priceId)}>
-          Subscribe Now
+        <button className={styles.action} onClick={() => openPlanPicker()}>
+          Start Free Trial
         </button>
         <button className={styles.dismiss} onClick={() => setDismissed(true)} aria-label="Dismiss">
           <X size={14} />
@@ -45,9 +43,9 @@ export default function BetaBanner() {
       <div className={`${styles.banner} ${styles.warning}`}>
         <AlertTriangle size={16} />
         <span>
-          Your beta access has ended. Use code <strong>BETA25</strong> for 25% off your subscription.
+          Your beta access has ended. Start a 7-day free trial, or use code <strong>BETA25</strong> for 25% off.
         </span>
-        <button className={styles.action} onClick={() => redirectToCheckout(priceId)}>
+        <button className={styles.action} onClick={() => openPlanPicker('BETA25')}>
           Subscribe Now
         </button>
         <button className={styles.dismiss} onClick={() => setDismissed(true)} aria-label="Dismiss">

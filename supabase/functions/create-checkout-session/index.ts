@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { priceId, successUrl, cancelUrl } = await req.json();
+  const { priceId, successUrl, cancelUrl, trialDays, promoCode } = await req.json();
 
   if (!priceId) {
     return new Response(JSON.stringify({ error: "priceId is required" }), {
@@ -89,6 +89,31 @@ Deno.serve(async (req) => {
     "metadata[user_id]": user.id,
     "subscription_data[metadata][user_id]": user.id,
   };
+
+  if (trialDays && Number.isInteger(trialDays) && trialDays > 0) {
+    params["subscription_data[trial_period_days]"] = String(trialDays);
+  }
+
+  // Promo code handling: resolve code to Stripe promotion_code ID, or allow manual entry
+  if (promoCode && typeof promoCode === "string") {
+    const promoLookup = await fetch(
+      `https://api.stripe.com/v1/promotion_codes?code=${encodeURIComponent(promoCode)}&active=true&limit=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+        },
+      }
+    );
+    const promoData = await promoLookup.json();
+    if (promoData.data?.length > 0) {
+      params["discounts[0][promotion_code]"] = promoData.data[0].id;
+    } else {
+      // Code not found — still allow manual entry on Stripe's page
+      params["allow_promotion_codes"] = "true";
+    }
+  } else {
+    params["allow_promotion_codes"] = "true";
+  }
 
   if (stripeCustomerId) {
     params["customer"] = stripeCustomerId;

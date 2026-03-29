@@ -29,6 +29,13 @@
   margin: 0;
 }
 
+.trialHint {
+  font-size: 0.82rem;
+  color: var(--accent-blue);
+  margin: -0.25rem 0 0;
+  font-weight: 500;
+}
+
 .upgradeBtn {
   display: inline-flex;
   align-items: center;

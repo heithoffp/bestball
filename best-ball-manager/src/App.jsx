@@ -13,6 +13,7 @@ import LockedFeature from './components/LockedFeature';
 import AuthModal from './components/AuthModal';
 import AccountSettings from './components/AccountSettings';
 import BetaBanner from './components/BetaBanner';
+import PlanPicker from './components/PlanPicker';
 import useMediaQuery from './hooks/useMediaQuery';
 import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings } from 'lucide-react';
 
@@ -305,6 +306,7 @@ export default function App() {
       </div>
       <AuthModal isOpen={showAuthModal} onClose={() => { setShowAuthModal(false); setAuthModalMessage(''); }} message={authModalMessage} />
       <AccountSettings isOpen={showAccountSettings} onClose={() => setShowAccountSettings(false)} />
+      <PlanPicker />
       <Analytics />
       <SpeedInsights />
     </div>

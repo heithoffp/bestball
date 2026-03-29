@@ -3,8 +3,6 @@ import { X, CreditCard, ArrowUpCircle, AlertTriangle } from 'lucide-react';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import styles from './AccountSettings.module.css';
 
-const STRIPE_PRO_PRICE_ID = import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
-
 function formatDate(dateStr) {
   if (!dateStr) return null;
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -29,7 +27,7 @@ const STATUS_COLORS = {
 };
 
 export default function AccountSettings({ isOpen, onClose }) {
-  const { tier, status, subscription, isProUser, redirectToCheckout, redirectToPortal } = useSubscription();
+  const { tier, status, subscription, isProUser, openPlanPicker, redirectToPortal } = useSubscription();
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -38,6 +36,9 @@ export default function AccountSettings({ isOpen, onClose }) {
   const tierColor = tier === 'pro' ? 'var(--accent-blue)' : 'var(--text-muted)';
   const renewalDate = formatDate(subscription?.current_period_end);
   const cancelAtPeriodEnd = subscription?.cancel_at_period_end;
+  const trialDaysRemaining = status === 'trialing' && subscription?.current_period_end
+    ? Math.max(0, Math.ceil((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60 * 24)))
+    : null;
 
   async function handleManageBilling() {
     setLoading(true);
@@ -45,11 +46,9 @@ export default function AccountSettings({ isOpen, onClose }) {
     setLoading(false);
   }
 
-  async function handleUpgrade() {
-    if (!STRIPE_PRO_PRICE_ID) return;
-    setLoading(true);
-    await redirectToCheckout(STRIPE_PRO_PRICE_ID);
-    setLoading(false);
+  function handleUpgrade() {
+    openPlanPicker();
+    onClose();
   }
 
   return (
@@ -73,7 +72,9 @@ export default function AccountSettings({ isOpen, onClose }) {
             <div className={styles.row}>
               <span className={styles.label}>Status</span>
               <span style={{ color: STATUS_COLORS[status] || 'var(--text-primary)', fontWeight: 500 }}>
-                {STATUS_LABELS[status] || status}
+                {status === 'trialing' && trialDaysRemaining != null
+                  ? `Trial — ${trialDaysRemaining} day${trialDaysRemaining !== 1 ? 's' : ''} remaining`
+                  : STATUS_LABELS[status] || status}
               </span>
             </div>
           )}
@@ -100,7 +101,7 @@ export default function AccountSettings({ isOpen, onClose }) {
               {loading ? 'Opening...' : 'Manage Billing'}
             </button>
           ) : (
-            <button className={styles.primaryBtn} onClick={handleUpgrade} disabled={loading || !STRIPE_PRO_PRICE_ID}>
+            <button className={styles.primaryBtn} onClick={handleUpgrade}>
               <ArrowUpCircle size={16} />
               {loading ? 'Redirecting...' : 'Upgrade to Pro'}
             </button>

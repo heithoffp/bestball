@@ -20,7 +20,7 @@
 **Status:** Not Started
 **Description:** Payment processing (Stripe or similar) with subscription tier gating and self-service subscription management. Determines which features are available to free vs paid users.
 **Depends on:** FEAT-021 — pricing and tier decisions should be made before implementing payment integration.
-**Tasks:** TASK-013, TASK-014, TASK-015, TASK-016, TASK-025
+**Tasks:** TASK-013, TASK-014, TASK-015, TASK-016, TASK-025, TASK-026
 
 ### FEAT-003: Deployment & Infrastructure Polish
 **Status:** In Progress

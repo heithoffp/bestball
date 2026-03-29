@@ -33,6 +33,20 @@ export function SubscriptionProvider({ children }) {
 
   const isProUser = tier === 'pro';
 
+  // Plan picker modal state
+  const [planPickerOpen, setPlanPickerOpen] = useState(false);
+  const [planPickerPromoCode, setPlanPickerPromoCode] = useState('');
+
+  const openPlanPicker = useCallback((promoCode) => {
+    setPlanPickerPromoCode(promoCode || '');
+    setPlanPickerOpen(true);
+  }, []);
+
+  const closePlanPicker = useCallback(() => {
+    setPlanPickerOpen(false);
+    setPlanPickerPromoCode('');
+  }, []);
+
   // Fetch subscription and profile on user change
   useEffect(() => {
     if (!user || !supabase) {
@@ -108,7 +122,7 @@ export function SubscriptionProvider({ children }) {
     };
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const redirectToCheckout = useCallback(async (priceId) => {
+  const redirectToCheckout = useCallback(async (priceId, { trialDays, promoCode } = {}) => {
     if (!user || !supabase || !SUPABASE_FUNCTIONS_URL) {
       console.error('Cannot create checkout session: missing auth or Supabase config');
       return;
@@ -129,6 +143,8 @@ export function SubscriptionProvider({ children }) {
       },
       body: JSON.stringify({
         priceId,
+        trialDays,
+        promoCode: promoCode || undefined,
         successUrl: `${window.location.origin}?checkout=success`,
         cancelUrl: `${window.location.origin}?checkout=canceled`,
       }),
@@ -189,6 +205,10 @@ export function SubscriptionProvider({ children }) {
       betaExpiresAt,
       redirectToCheckout,
       redirectToPortal,
+      planPickerOpen,
+      planPickerPromoCode,
+      openPlanPicker,
+      closePlanPicker,
     }}>
       {children}
     </SubscriptionContext.Provider>

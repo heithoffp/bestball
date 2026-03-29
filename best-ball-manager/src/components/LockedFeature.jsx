@@ -6,13 +6,11 @@ import styles from './LockedFeature.module.css';
 
 export default function LockedFeature({ featureName, onSignUp }) {
   const { user } = useAuth();
-  const { redirectToCheckout } = useSubscription();
-
-  const priceId = import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
+  const { openPlanPicker } = useSubscription();
 
   function handleUpgrade() {
     if (user) {
-      redirectToCheckout(priceId);
+      openPlanPicker();
     } else if (onSignUp) {
       onSignUp();
     }
@@ -25,8 +23,9 @@ export default function LockedFeature({ featureName, onSignUp }) {
       <p className={styles.description}>
         Upgrade to Pro for full access to {featureName} and all advanced analytics.
       </p>
+      <p className={styles.trialHint}>Start with a 7-day free trial — no charge until day 8.</p>
       <button className={styles.upgradeBtn} onClick={handleUpgrade}>
-        {user ? 'Upgrade to Pro' : 'Sign Up to Unlock'}
+        {user ? 'Start Free Trial' : 'Sign Up to Unlock'}
       </button>
     </div>
   );

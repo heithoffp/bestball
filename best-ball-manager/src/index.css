@@ -483,6 +483,9 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border); }
   opacity: 0.8;
 }
 
+/* ---- Animations ---- */
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ---- Responsive Utilities ---- */
 .touch-target { min-height: 44px; min-width: 44px; }
 

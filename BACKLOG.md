@@ -1,7 +1,7 @@
 # Backlog
 
 ## Now
-- **TASK-016** — Build subscription management UI
+- **TASK-025** — Add plan selection UI with monthly/yearly toggle and promo code support
 
 ## Active Tasks
 
@@ -9,17 +9,18 @@
 |----|-------|--------|----------|------|----------|
 | TASK-010 | Add feature-level usage analytics | Todo | P2 | [Plan](docs/plans/TASK-010.md) — Draft | No |
 | TASK-011 | Set up CI/CD pipeline with GitHub Actions | Todo | P2 | [Plan](docs/plans/TASK-011.md) — Draft | No |
-| TASK-016 | Build subscription management UI | In Progress | P2 | [Plan](docs/plans/TASK-016.md) | No |
 | TASK-019 | Configure SMTP and fix email confirmation flow | Todo | P2 | [Plan](docs/plans/TASK-019.md) | No |
-| TASK-020 | Design first-week free trial promotion | Todo | P2 | [Plan](docs/plans/TASK-020.md) — Draft | No |
 | TASK-021 | Set up creator promo code program | Todo | P2 | [Plan](docs/plans/TASK-021.md) — Draft | No |
-| TASK-025 | Add plan selection UI with monthly/yearly toggle and promo code support | Todo | P2 | [Plan](docs/plans/TASK-025.md) — Draft | No |
+| TASK-025 | Add plan selection UI with monthly/yearly toggle and promo code support | In Progress | P2 | [Plan](docs/plans/TASK-025.md) | No |
+| TASK-026 | Configure Stripe promo codes and coupons | Todo | P2 | [Plan](docs/plans/TASK-026.md) — Draft | No |
 | TASK-007 | User profile and account settings page | Todo | P3 | [Plan](docs/plans/TASK-007.md) — Draft | No |
 
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-020 | Design first-week free trial promotion | Done | P2 | [Plan](docs/archive/plans/TASK-020.md) | Yes | 2026-03-29 |
+| TASK-016 | Build subscription management UI | Done | P2 | [Plan](docs/archive/plans/TASK-016.md) | Yes | 2026-03-29 |
 | TASK-024 | Implement beta program flag and promotion flow | Done | P2 | [Plan](docs/archive/plans/TASK-024.md) | Yes | 2026-03-29 |
 | TASK-009 | Add error monitoring with Sentry | Done | P2 | [Plan](docs/archive/plans/TASK-009.md) | Yes | 2026-03-29 |
 | TASK-022 | Clear IndexedDB on sign-out to prevent data leakage | Done | P2 | [Plan](docs/archive/plans/TASK-022.md) | Yes | 2026-03-29 |

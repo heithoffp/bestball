@@ -1,3 +1,4 @@
+<!-- Completed: 2026-03-29 | Commit: 02f0a87 -->
 # TASK-016: Build subscription management UI
 
 **Status:** Approved
