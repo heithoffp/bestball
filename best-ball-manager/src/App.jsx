@@ -5,9 +5,16 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
 import { saveFile, getFile, hasUserData, syncSaveFile, syncGetFile, syncHasUserData } from './utils/storage';
 import { useAuth } from './contexts/AuthContext';
+import { supabase } from './utils/supabaseClient';
+import { useSubscription } from './contexts/SubscriptionContext';
+import { canAccessFeature } from './utils/featureAccess';
 import AuthButton from './components/AuthButton';
+import LockedFeature from './components/LockedFeature';
+import AuthModal from './components/AuthModal';
+import AccountSettings from './components/AccountSettings';
+import BetaBanner from './components/BetaBanner';
 import useMediaQuery from './hooks/useMediaQuery';
-import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings } from 'lucide-react';
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -61,6 +68,15 @@ export default function App() {
   const [rankingsSource, setRankingsSource] = useState([]);
   const { isMobile } = useMediaQuery();
   const { user, loading: authLoading } = useAuth();
+  const { tier, loading: subLoading } = useSubscription();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMessage, setAuthModalMessage] = useState('');
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [isUsingDemoData, setIsUsingDemoData] = useState(false);
+  const openAuthModal = useCallback((message) => {
+    setAuthModalMessage(message || '');
+    setShowAuthModal(true);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -121,6 +137,7 @@ export default function App() {
     });
 
     applyResult(result);
+    setIsUsingDemoData(true);
   }
 
   async function loadFromStorage() {
@@ -144,6 +161,7 @@ export default function App() {
     });
 
     applyResult(result);
+    setIsUsingDemoData(false);
   }
 
   function applyResult(result) {
@@ -176,11 +194,30 @@ export default function App() {
     }
   }, [user?.id]);
 
+  // Auth guard for upload buttons — blocks file picker and shows auth modal for guests
+  const uploadAuthGuard = useCallback(() => {
+    if (user) return true;
+    openAuthModal('Sign in or create an account to upload and save your data.');
+    return false;
+  }, [user, openAuthModal]);
+
   return (
     <div className="app-container">
       <div className="app-header">
         <h1>{isMobile ? 'BB MANAGER' : 'BEST BALL MANAGER'}</h1>
-        <AuthButton />
+        <div className="auth-button-group">
+          {user && supabase && (
+            <button
+              className="toolbar-btn"
+              onClick={() => setShowAccountSettings(true)}
+              aria-label="Account settings"
+              style={{ display: 'flex', alignItems: 'center', padding: '0.4rem' }}
+            >
+              <Settings size={18} />
+            </button>
+          )}
+          <AuthButton />
+        </div>
       </div>
 
       {status.msg && (
@@ -189,33 +226,71 @@ export default function App() {
         </div>
       )}
 
+      <BetaBanner />
       <div className="card">
         <div className="tab-bar">
-          {tabs.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              className={`tab-button${activeTab === key ? ' active' : ''}`}
-              onClick={() => setActiveTab(key)}
-            >
-              {isMobile ? (
-                <>
-                  <Icon className="tab-icon" size={20} />
-                  <span>{label}</span>
-                </>
-              ) : (
-                label
-              )}
-            </button>
-          ))}
+          {tabs.map(({ key, label, icon: Icon }) => {
+            const locked = !subLoading && !canAccessFeature(tier, key);
+            return (
+              <button
+                key={key}
+                className={`tab-button${activeTab === key ? ' active' : ''}${locked ? ' locked' : ''}`}
+                onClick={() => setActiveTab(key)}
+              >
+                {isMobile ? (
+                  <>
+                    <Icon className="tab-icon" size={20} />
+                    <span>{label}</span>
+                    {locked && <Lock size={12} style={{ marginLeft: 2, opacity: 0.5 }} />}
+                  </>
+                ) : (
+                  <>
+                    {label}
+                    {locked && <Lock size={12} style={{ marginLeft: 4, opacity: 0.5 }} />}
+                  </>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {isUsingDemoData && rosterData.length > 0 && (
+          <div className="demo-banner">
+            <Info size={16} />
+            <span>You're viewing sample data.</span>
+            <label className="demo-banner-upload" onClick={(e) => { if (!uploadAuthGuard()) e.preventDefault(); }}>
+              Upload your rosters
+              <input type="file" accept=".csv" style={{ display: 'none' }} onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => handleRosterUpload(ev.target.result, file.name);
+                reader.readAsText(file);
+                e.target.value = '';
+              }} />
+            </label>
+          </div>
+        )}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
-            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onRosterUpload={handleRosterUpload} />}
-            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onRosterUpload={handleRosterUpload} />}
-            {activeTab === 'draftflow' && <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />}
-            {activeTab === 'rosters' && <RosterViewer rosterData={rosterData} />}
-            {activeTab === 'rankings' && <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} onRankingsUpload={handleRankingsUpload} />}
+            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onRosterUpload={handleRosterUpload} uploadAuthGuard={uploadAuthGuard} />}
+            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onRosterUpload={handleRosterUpload} uploadAuthGuard={uploadAuthGuard} />}
+            {activeTab === 'draftflow' && (
+              canAccessFeature(tier, 'draftflow') || subLoading
+                ? <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />
+                : <LockedFeature featureName="Draft Assistant" onSignUp={() => setShowAuthModal(true)} />
+            )}
+            {activeTab === 'rosters' && (
+              canAccessFeature(tier, 'rosters') || subLoading
+                ? <RosterViewer rosterData={rosterData} />
+                : <LockedFeature featureName="Roster Viewer" onSignUp={() => setShowAuthModal(true)} />
+            )}
+            {activeTab === 'rankings' && (
+              canAccessFeature(tier, 'rankings') || subLoading
+                ? <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} onRankingsUpload={handleRankingsUpload} uploadAuthGuard={uploadAuthGuard} />
+                : <LockedFeature featureName="Player Rankings" onSignUp={() => setShowAuthModal(true)} />
+            )}
             {activeTab === 'timeseries' && (
               <AdpTimeSeries
                 adpSnapshots={adpSnapshots}
@@ -228,6 +303,8 @@ export default function App() {
           </Suspense>
         </div>
       </div>
+      <AuthModal isOpen={showAuthModal} onClose={() => { setShowAuthModal(false); setAuthModalMessage(''); }} message={authModalMessage} />
+      <AccountSettings isOpen={showAccountSettings} onClose={() => setShowAccountSettings(false)} />
       <Analytics />
       <SpeedInsights />
     </div>

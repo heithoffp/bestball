@@ -68,6 +68,24 @@
   margin-bottom: 14px;
 }
 
+/* ── Archetype Blocks ── */
+.archetypeBlock {
+  margin-bottom: 16px;
+}
+
+.archetypeBlock:last-child {
+  margin-bottom: 0;
+}
+
+.archetypeLabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
 /* Stacked bar */
 .stackedBar {
   display: flex;
@@ -175,19 +193,44 @@
   flex-shrink: 0;
 }
 
-/* ── Least Exposure by Round ── */
-.blindSpotGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px 20px;
+/* ── Exposure by Round ── */
+.exposureByRoundGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.blindSpotRow {
+.exposureByRoundHeader {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.exposureByRoundLabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.exposureByRoundRow {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.exposureByRoundPlayer {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.8rem;
-  padding: 4px 0;
+  min-width: 0;
 }
 
 .blindSpotRound {
@@ -211,6 +254,30 @@
   font-size: 0.7rem;
   color: var(--text-secondary);
   flex-shrink: 0;
+}
+
+/* ── Capital Legend ── */
+.capitalLegend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.capitalLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.capitalLegendSwatch {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--text-secondary);
 }
 
 /* ── Drill-Down Cards ── */
@@ -306,8 +373,9 @@
   .exposureGrid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .blindSpotGrid {
-    grid-template-columns: 1fr;
+  .exposureByRoundPlayer {
+    flex-wrap: wrap;
+    gap: 4px;
   }
   .exposureRow {
     flex-wrap: wrap;

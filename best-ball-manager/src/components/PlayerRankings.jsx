@@ -310,7 +310,7 @@ const SortableCard = React.memo(function SortableCard({
 });
 
 /* ── Main component ──────────────────────────────────────────── */
-export default function PlayerRankings({ initialPlayers, masterPlayers, onRankingsUpload }) {
+export default function PlayerRankings({ initialPlayers, masterPlayers, onRankingsUpload, uploadAuthGuard }) {
   const { isMobile } = useMediaQuery();
 
   /* --- state --- */
@@ -578,7 +578,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
       <div className={s.emptyState}>
         <div className={s.emptyHeader}>
           <h2 className={s.headerTitle}>Player Rankings</h2>
-          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
+          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} onBeforeUpload={uploadAuthGuard} />}
         </div>
         <p className={s.emptyText}>
           No rankings data loaded. Use the Upload button to import a Rankings CSV.
@@ -783,7 +783,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
               <button onClick={handleExport} className={s.exportBtn}>
                 <Download size={14} /> Export
               </button>
-              {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} />}
+              {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} onBeforeUpload={uploadAuthGuard} />}
             </>
           )}
         </div>

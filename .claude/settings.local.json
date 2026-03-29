@@ -13,7 +13,21 @@
       "WebFetch(domain:g.espncdn.com)",
       "Bash(wc:*)",
       "Bash(npm install:*)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(\"/c/Program Files/D2/d2.exe\" --layout elk \"C:/Software/Personal/BestBall/docs/systems-model/core.d2\" \"C:/Software/Personal/BestBall/docs/systems-model/core.svg\" 2>&1)",
+      "Bash(\"/c/Program Files/D2/d2.exe\" --layout elk \"C:/Software/Personal/BestBall/docs/systems-model/feedback.d2\" \"C:/Software/Personal/BestBall/docs/systems-model/feedback.svg\" 2>&1)",
+      "Skill(hus-skills:hus-backlog)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r VITE_ C:SoftwarePersonalBestBallbest-ball-manager --include=*.md --include=*.js --include=*.json)",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''vercel.json'',''utf8''\\)\\); console.log\\(''valid JSON''\\)\")",
+      "Bash(git:*)",
+      "Skill(hus-backlog)",
+      "Bash(bash \"C:/Users/patrickh/.claude/plugins/cache/hus-skills/hus-governance/2.2.0/skills/hus-backlog/scripts/validate-backlog.sh\" \"C:/Software/Personal/BestBall/BACKLOG.md\")",
+      "Skill(hus-adr)",
+      "Skill(hus-governance:hus-backlog)",
+      "Bash(grep:*)",
+      "Bash(bash C:/Users/patrickh/.claude/plugins/cache/hus-skills/hus-governance/2.2.0/skills/hus-backlog/scripts/validate-backlog.sh C:/Software/Personal/BestBall/BACKLOG.md)",
+      "Bash(find /c/Software/Personal/BestBall -type f \\\\\\(-name *.md -o -name *TASK* -o -name *task* \\\\\\))"
     ]
   }
 }
