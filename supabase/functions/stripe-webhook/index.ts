@@ -93,6 +93,43 @@ Deno.serve(async (req) => {
       break;
     }
 
+    case "customer.subscription.created": {
+      const subscription = event.data.object;
+      const userId = subscription.metadata?.user_id;
+
+      if (!userId) {
+        // No user_id — can't map to a Supabase user, skip
+        break;
+      }
+
+      const { error } = await supabaseAdmin
+        .from("subscriptions")
+        .upsert(
+          {
+            user_id: userId,
+            stripe_customer_id: subscription.customer,
+            stripe_subscription_id: subscription.id,
+            status: subscription.status,
+            price_id: subscription.items?.data?.[0]?.price?.id ?? null,
+            current_period_start: subscription.current_period_start
+              ? new Date(subscription.current_period_start * 1000).toISOString()
+              : null,
+            current_period_end: subscription.current_period_end
+              ? new Date(subscription.current_period_end * 1000).toISOString()
+              : null,
+            cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "stripe_subscription_id" }
+        );
+
+      if (error) {
+        console.error("Error upserting subscription on created:", error);
+        return new Response("Database error", { status: 500 });
+      }
+      break;
+    }
+
     case "customer.subscription.updated": {
       const subscription = event.data.object;
       const { error } = await supabaseAdmin
