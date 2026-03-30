@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
             status: "active",
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "stripe_subscription_id" }
+          { onConflict: "stripe_subscription_id", ignoreDuplicates: true }
         );
 
       if (error) {
