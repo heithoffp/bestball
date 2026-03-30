@@ -23,7 +23,7 @@ export default function AuthButton() {
           />
         )}
         {!isProUser && (
-          <button className="toolbar-btn toolbar-btn--upgrade" onClick={openPlanPicker}>
+          <button className="toolbar-btn toolbar-btn--upgrade" onClick={() => openPlanPicker()}>
             Start Free Trial
           </button>
         )}
