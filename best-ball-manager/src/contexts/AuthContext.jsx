@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [recoveryMode, setRecoveryMode] = useState(false);
 
   const emailVerified = user?.email_confirmed_at != null;
 
@@ -23,8 +24,9 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (event === 'RECOVERY') setRecoveryMode(true);
     });
 
     return () => subscription.unsubscribe();
@@ -68,6 +70,15 @@ export function AuthProvider({ children }) {
     return { error };
   }
 
+  async function updatePassword(newPassword) {
+    if (!supabase) return { error: { message: 'Auth is not available.' } };
+    setAuthError(null);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (!error) setRecoveryMode(false);
+    else setAuthError(error.message);
+    return { error };
+  }
+
   async function signOut() {
     await clearAllData();
     if (!supabase) return;
@@ -78,7 +89,8 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, loading, emailVerified, authError, clearError,
       signInWithGoogle, signOut,
-      signUpWithEmail, signInWithEmail, resetPassword,
+      signUpWithEmail, signInWithEmail, resetPassword, updatePassword,
+      recoveryMode,
     }}>
       {children}
     </AuthContext.Provider>

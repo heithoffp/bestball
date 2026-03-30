@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../utils/analytics';
 
 export default function AuthModal({ isOpen, onClose, message }) {
-  const { signInWithGoogle, signUpWithEmail, signInWithEmail, resetPassword, authError, clearError } = useAuth();
+  const { signInWithGoogle, signUpWithEmail, signInWithEmail, resetPassword, updatePassword, recoveryMode, authError, clearError } = useAuth();
 
   const [tab, setTab] = useState('signin');
   const [forgotPassword, setForgotPassword] = useState(false);
@@ -67,20 +67,76 @@ export default function AuthModal({ isOpen, onClose, message }) {
     }
   }
 
+  async function handleUpdatePassword(e) {
+    e.preventDefault();
+    if (password !== confirmPassword) return;
+    setLoading(true);
+    const { error } = await updatePassword(password);
+    setLoading(false);
+    if (!error) {
+      setSuccessMessage('Password updated — you\'re signed in.');
+    }
+  }
+
   const passwordMismatch = confirmPassword && password !== confirmPassword;
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close-btn" onClick={onClose} aria-label="Close">
-          <X size={18} />
-        </button>
+        {!recoveryMode && (
+          <button className="modal-close-btn" onClick={onClose} aria-label="Close">
+            <X size={18} />
+          </button>
+        )}
 
-        {message && !successMessage && (
+        {recoveryMode && !successMessage && (
+          <form className="modal-form" onSubmit={handleUpdatePassword}>
+            <p className="modal-hint" style={{ textAlign: 'center', marginBottom: 8 }}>Set a new password for your account.</p>
+            <div className="modal-field">
+              <Lock size={15} className="modal-field-icon" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="New password"
+                value={password}
+                onChange={handleInputChange(setPassword)}
+                required
+                autoComplete="new-password"
+              />
+              <button type="button" className="modal-pw-toggle" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            <div className="modal-field">
+              <Lock size={15} className="modal-field-icon" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={handleInputChange(setConfirmPassword)}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+            {passwordMismatch && <p className="modal-error">Passwords do not match.</p>}
+            {authError && !passwordMismatch && <p className="modal-error">{authError}</p>}
+            <button type="submit" className="toolbar-btn modal-submit-btn" disabled={loading || !!passwordMismatch}>
+              {loading ? 'Updating…' : 'Set New Password'}
+            </button>
+          </form>
+        )}
+
+        {recoveryMode && successMessage && (
+          <div className="modal-success">
+            <p>{successMessage}</p>
+            <button className="toolbar-btn modal-submit-btn" onClick={onClose}>Done</button>
+          </div>
+        )}
+
+        {!recoveryMode && message && !successMessage && (
           <p className="modal-hint" style={{ textAlign: 'center', marginBottom: 8 }}>{message}</p>
         )}
 
-        {!forgotPassword && !successMessage && (
+        {!recoveryMode && !forgotPassword && !successMessage && (
           <div className="modal-tabs">
             <button
               className={`modal-tab${tab === 'signin' ? ' active' : ''}`}
@@ -97,7 +153,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
           </div>
         )}
 
-        {tab === 'signin' && !forgotPassword && !successMessage && (
+        {!recoveryMode && tab === 'signin' && !forgotPassword && !successMessage && (
           <form className="modal-form" onSubmit={handleSignIn}>
             <div className="modal-field">
               <Mail size={15} className="modal-field-icon" />
@@ -142,7 +198,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
           </form>
         )}
 
-        {tab === 'signin' && forgotPassword && !successMessage && (
+        {!recoveryMode && tab === 'signin' && forgotPassword && !successMessage && (
           <form className="modal-form" onSubmit={handleResetPassword}>
             <button
               type="button"
@@ -170,7 +226,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
           </form>
         )}
 
-        {tab === 'signup' && !successMessage && (
+        {!recoveryMode && tab === 'signup' && !successMessage && (
           <form className="modal-form" onSubmit={handleSignUp}>
             <div className="modal-field">
               <Mail size={15} className="modal-field-icon" />
@@ -224,7 +280,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
           </form>
         )}
 
-        {successMessage && (
+        {!recoveryMode && successMessage && (
           <div className="modal-success">
             <p>{successMessage}</p>
             <button className="toolbar-btn modal-submit-btn" onClick={onClose}>Done</button>

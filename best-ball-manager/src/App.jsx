@@ -69,7 +69,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [rankingsSource, setRankingsSource] = useState([]);
   const { isMobile } = useMediaQuery();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, recoveryMode } = useAuth();
   const { tier, loading: subLoading } = useSubscription();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMessage, setAuthModalMessage] = useState('');
@@ -85,6 +85,10 @@ export default function App() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, authLoading]);
+
+  useEffect(() => {
+    if (recoveryMode) setShowAuthModal(true);
+  }, [recoveryMode]);
 
   // One-time migration: push local IndexedDB data to cloud on first sign-in
   useEffect(() => {

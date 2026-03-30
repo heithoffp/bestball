@@ -2,11 +2,14 @@
 
 ## Now
 
+- TASK-032: Build password reset completion flow
+
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
 | TASK-019 | Configure SMTP and fix email confirmation flow | Todo | P2 | [Plan](docs/plans/TASK-019.md) | No |
+| TASK-032 | Build password reset completion flow | In Progress | P2 | [Plan](docs/plans/TASK-032.md) | No |
 
 ## Completed Tasks
 
