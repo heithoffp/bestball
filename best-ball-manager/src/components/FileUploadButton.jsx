@@ -9,9 +9,14 @@ function readFileAsText(file) {
   });
 }
 
-export default function FileUploadButton({ label, onUpload }) {
+export default function FileUploadButton({ label, onUpload, onBeforeUpload }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+
+  const handleClick = useCallback(() => {
+    if (onBeforeUpload && onBeforeUpload() === false) return;
+    inputRef.current?.click();
+  }, [onBeforeUpload]);
 
   const handleFile = useCallback(async (e) => {
     const file = e.target.files?.[0];
@@ -37,7 +42,7 @@ export default function FileUploadButton({ label, onUpload }) {
       />
       <button
         className="toolbar-btn"
-        onClick={() => inputRef.current?.click()}
+        onClick={handleClick}
         disabled={uploading}
       >
         {uploading ? 'Loading...' : label}

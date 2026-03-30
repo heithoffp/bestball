@@ -1,0 +1,174 @@
+# Best Ball Portfolio Manager — Feedback Loops
+# d2-render-layout: elk
+
+# --- FL1: Draft-Analyze-Draft (Reinforcing, Active) ---
+# The core value loop: draft -> upload -> analyze -> better next draft
+
+FL1: FL1 Draft-Analyze-Draft\n(Reinforcing, Active) {
+  style.fill: "#F0F8FF"
+  style.stroke: "#4A90D9"
+  style.font-size: 16
+
+  R1: Drafter {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+  }
+  E1: Underdog {
+    style.fill: "#E67E22"
+    style.font-color: "#FFFFFF"
+  }
+  P1: Data Pipeline {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+  }
+  P3: Analytics Engine {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+  }
+  A3: Analytics UI {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+  }
+
+  R1 -> E1: Drafts
+  E1 -> P1: Exports CSV
+  P1 -> P3: Enriched data
+  P3 -> A3: Renders insights
+  A3 -> R1: Informs next draft
+}
+
+# --- FL2: ADP-Value Discovery (Reinforcing, Active) ---
+# More snapshots -> richer timeline -> better market context
+
+FL2: FL2 ADP-Value Discovery\n(Reinforcing, Active) {
+  style.fill: "#FFF8F0"
+  style.stroke: "#E67E22"
+  style.font-size: 16
+
+  R2: Developer {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+  }
+  P2: ADP Scraper {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+  }
+  A2: ADP Snapshots {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+  }
+  P3b: Analytics Engine {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+  }
+  A3b: CLV & Trends {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+  }
+
+  R2 -> P2: Runs scraper
+  P2 -> A2: Produces snapshots
+  A2 -> P3b: Joins with rosters
+  P3b -> A3b: Surfaces value signals
+}
+
+# --- FL3: Governance-Development (Balancing, Active) ---
+# Constrains pace to prevent scope drift and maintain quality
+
+FL3: FL3 Governance-Development\n(Balancing, Active) {
+  style.fill: "#F8F0FF"
+  style.stroke: "#7B68EE"
+  style.font-size: 16
+
+  R2b: Developer {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+  }
+  R3: Claude Code {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+  }
+  P10: Governance {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+  }
+  A6: Gov Artifacts {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+  }
+
+  R2b -> R3: Directs work
+  R3 -> P10: Follows process
+  P10 -> A6: Updates artifacts
+  A6 -> R3: Constrains scope
+}
+
+# --- FL4: Adoption-Revenue-Investment (Reinforcing, Aspirational) ---
+
+FL4: FL4 Adoption-Revenue\n(Reinforcing, Aspirational) {
+  style.fill: "#F5F5F5"
+  style.stroke: "#999999"
+  style.stroke-dash: 5
+  style.font-size: 16
+
+  R1b: Subscribers {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+  P8: Payments {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+  R2c: Dev Investment {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+  A3c: New Features {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+
+  R1b -> P8: Subscribe {style.stroke-dash: 5}
+  P8 -> R2c: Revenue funds dev {style.stroke-dash: 5}
+  R2c -> A3c: Builds features {style.stroke-dash: 5}
+  A3c -> R1b: Attracts users {style.stroke-dash: 5}
+}
+
+# --- FL5: Portfolio Context Sync (Reinforcing, Aspirational) ---
+
+FL5: FL5 Portfolio Context Sync\n(Reinforcing, Aspirational) {
+  style.fill: "#F5F5F5"
+  style.stroke: "#999999"
+  style.stroke-dash: 5
+  style.font-size: 16
+
+  R1c: Drafter {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+  P9: Chrome Extension {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+  P4: Scoring Engine {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+  P3c: Portfolio Context {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+
+  R1c -> P9: Drafts with overlay {style.stroke-dash: 5}
+  P9 -> P4: Scores candidates {style.stroke-dash: 5}
+  P4 -> P3c: Uses portfolio data {style.stroke-dash: 5}
+  P3c -> R1c: Better picks feed back {style.stroke-dash: 5}
+}

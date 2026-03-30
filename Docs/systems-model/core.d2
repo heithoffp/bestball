@@ -1,0 +1,155 @@
+# Best Ball Portfolio Manager — Core System Model
+# d2-render-layout: elk
+
+# --- Roles (Blue) ---
+R1: Best-Ball Drafter {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+R2: Developer {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+R3: Claude Code {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+
+# --- Processes/Tools (Purple) ---
+P1: CSV Data Pipeline {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P2: ADP Snapshot Collection {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P3: Portfolio Analytics Engine {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P4: Draft Scoring Engine {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P5: Archetype Classification {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P6: Auth & Cloud Sync {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+P7: Build & Deploy Pipeline {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P8: Subscription Flow {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+P9: Chrome Extension {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+P10: Governance Process {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+# --- Artifacts (Green) ---
+A1: Roster CSVs {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+A2: ADP Snapshots {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+A3: Analytics UI {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+A4: Local Storage {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+A5: Project Docs {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+A6: Governance Artifacts {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+A7: Landing Page {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+
+# --- External Systems (Orange) ---
+E1: Underdog Fantasy {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+E2: Supabase {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+E3: Vercel {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+E4: Stripe {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+E5: Sleeper / DraftKings {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+
+# --- Current Interactions (solid) ---
+R1 -> A1: Uploads roster CSV {style.stroke: "#333"}
+A1 -> P1: Parsed by pipeline {style.stroke: "#333"}
+P1 -> P3: Feeds enriched data {style.stroke: "#333"}
+A2 -> P1: ADP snapshots joined {style.stroke: "#333"}
+P3 -> A3: Renders analytics {style.stroke: "#333"}
+A3 -> R1: Views insights {style.stroke: "#333"}
+P3 -> P5: Classifies archetypes {style.stroke: "#333"}
+P3 -> P4: Scores candidates {style.stroke: "#333"}
+R1 -> P4: Initiates draft {style.stroke: "#333"}
+R2 -> P2: Runs ADP scraper {style.stroke: "#333"}
+P2 -> A2: Produces snapshots {style.stroke: "#333"}
+R1 -> A4: Persists locally {style.stroke: "#333"}
+A4 -> P1: Loads saved data {style.stroke: "#333"}
+R2 -> P7: Triggers deploy {style.stroke: "#333"}
+P7 -> E3: Deploys to Vercel {style.stroke: "#333"}
+E3 -> R1: Serves application {style.stroke: "#333"}
+R1 -> P6: Signs up / logs in {style.stroke-dash: 5}
+P6 -> E2: Auth + storage {style.stroke-dash: 5}
+E2 -> A4: Cloud sync {style.stroke-dash: 5}
+R1 -> E1: Drafts on platform {style.stroke: "#333"}
+E1 -> A1: Exports CSV {style.stroke: "#333"}
+R2 -> R3: Directs development {style.stroke: "#333"}
+R3 -> A3: Writes code {style.stroke: "#333"}
+R3 -> A5: Updates docs {style.stroke: "#333"}
+R3 -> P10: Follows governance {style.stroke: "#333"}
+P10 -> A6: Maintains artifacts {style.stroke: "#333"}
+A6 -> R3: Guides priorities {style.stroke: "#333"}
+A5 -> R3: Informs decisions {style.stroke: "#333"}
+
+# --- Aspirational Interactions (dashed) ---
+P8 -> E4: Processes payments {style.stroke-dash: 5}
+R1 -> P8: Subscribes {style.stroke-dash: 5}
+P9 -> E1: Overlays draft page {style.stroke-dash: 5}
+P9 -> P4: Uses scoring engine {style.stroke-dash: 5}
+E5 -> A1: Exports CSV {style.stroke-dash: 5}
+R1 -> A7: Discovers product {style.stroke-dash: 5}
+A7 -> P6: Drives signup {style.stroke-dash: 5}

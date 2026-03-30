@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
+import AuthModal from './AuthModal';
 
 export default function AuthButton() {
-  const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
+  const [modalOpen, setModalOpen] = useState(false);
 
   if (!supabase) return null;
   if (loading) return null;
@@ -26,8 +28,11 @@ export default function AuthButton() {
   }
 
   return (
-    <button className="toolbar-btn" onClick={signInWithGoogle}>
-      Sign in with Google
-    </button>
+    <>
+      <button className="toolbar-btn" onClick={() => setModalOpen(true)}>
+        Sign In
+      </button>
+      <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+    </>
   );
 }

@@ -37,7 +37,7 @@ const SORT_OPTIONS = [
   { value: 'adpTrend', label: 'Trend' },
 ];
 
-export default function ExposureTable({ masterPlayers = [], rosterData = [], onRosterUpload }) {
+export default function ExposureTable({ masterPlayers = [], rosterData = [], onRosterUpload, uploadAuthGuard }) {
   const { isMobile } = useMediaQuery();
 
   const [searchInput, setSearchInput] = useState('');
@@ -250,7 +250,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
         <div className={styles.toolbar}>
           <div className={styles.toolbarRow1}>
             <h2 style={{ margin: 0 }}>Exposures</h2>
-            {onRosterUpload && <FileUploadButton label="Upload CSV" onUpload={onRosterUpload} />}
+            {onRosterUpload && <FileUploadButton label="Upload CSV" onUpload={onRosterUpload} onBeforeUpload={uploadAuthGuard} />}
           </div>
           <input
             aria-label="Search players"
@@ -294,7 +294,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
             onChange={e => setSearchInput(e.target.value)}
             className={`path-input ${styles.searchInput}`}
           />
-          {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} />}
+          {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} onBeforeUpload={uploadAuthGuard} />}
         </div>
       </div>
     );
