@@ -19,6 +19,7 @@
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-029 | Add persistent upgrade CTA in toolbar for free users | Done | P2 | [Plan](docs/archive/plans/TASK-029.md) | Yes | 2026-03-30 |
 | TASK-026 | Configure Stripe promo codes and coupons | Done | P2 | [Plan](docs/archive/plans/TASK-026.md) | Yes | 2026-03-30 |
 | TASK-021 | Set up creator promo code program | Done | P2 | [Plan](docs/archive/plans/TASK-021.md) | Yes | 2026-03-30 |
 | TASK-010 | Add feature-level usage analytics | Done | P2 | [Plan](docs/archive/plans/TASK-010.md) | Yes | 2026-03-30 |

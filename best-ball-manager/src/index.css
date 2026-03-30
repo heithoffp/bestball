@@ -184,6 +184,28 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border); }
   cursor: default;
 }
 
+.toolbar-btn--upgrade {
+  background: linear-gradient(135deg, #F0CC5B, #D4A843);
+  box-shadow: 0 2px 8px rgba(232, 191, 74, 0.35);
+}
+
+.toolbar-btn--upgrade:hover {
+  box-shadow: 0 4px 12px rgba(232, 191, 74, 0.5);
+}
+
+.toolbar-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.toolbar-btn--ghost:hover {
+  background: var(--bg-hover);
+  box-shadow: none;
+  color: var(--text-primary);
+}
+
 /* ---- Help Guide ---- */
 .help-guide {
   display: flex;

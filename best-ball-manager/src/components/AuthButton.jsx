@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { supabase } from '../utils/supabaseClient';
 import AuthModal from './AuthModal';
 
 export default function AuthButton() {
   const { user, loading, signOut } = useAuth();
+  const { isProUser, openPlanPicker } = useSubscription();
   const [modalOpen, setModalOpen] = useState(false);
 
   if (!supabase) return null;
@@ -20,7 +22,12 @@ export default function AuthButton() {
             className="auth-avatar"
           />
         )}
-        <button className="toolbar-btn" onClick={signOut}>
+        {!isProUser && (
+          <button className="toolbar-btn toolbar-btn--upgrade" onClick={openPlanPicker}>
+            Start Free Trial
+          </button>
+        )}
+        <button className="toolbar-btn toolbar-btn--ghost" onClick={signOut}>
           Sign out
         </button>
       </div>
