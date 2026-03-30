@@ -27,37 +27,15 @@ const getAdpDeltaColor = (delta) => {
 
 // --- EXTENDED CONFIGURATION: QB & TE ARCHETYPES (from V2) ---
 const QB_META = {
-  QB_ELITE: { name: 'Elite QB', target: 15, color: '#a855f7', rounds: [1, 4] },
-  QB_CORE:  { name: 'Core QB', target: 25, color: '#d8b4fe', rounds: [5, 8] },
-  QB_LATE:  { name: 'Late Round QB', target: 60, color: '#e9d5ff', rounds: [9, 18] }
+  QB_ELITE: { name: 'Elite QB', color: '#a855f7', rounds: [1, 4] },
+  QB_CORE:  { name: 'Core QB', color: '#d8b4fe', rounds: [5, 8] },
+  QB_LATE:  { name: 'Late Round QB', color: '#e9d5ff', rounds: [9, 18] }
 };
 
 const TE_META = {
-  TE_ELITE: { name: 'Elite TE', target: 20, color: '#3b82f6', rounds: [1, 4] },
-  TE_ANCHOR: { name: 'Anchor TE', target: 30, color: '#60a5fa', rounds: [5, 8] },
-  TE_LATE:  { name: 'Late Round TE', target: 50, color: '#bfdbfe', rounds: [9, 18] }
-};
-
-// RB Archetype Reminder Blurbs
-const RB_BLURBS = {
-  RB_ZERO: {
-    title: 'Zero RB Protocol',
-    protocol: 'Absolute moratorium on RBs until Round 7+; your draft must be dominated by WR volume and elite "onesie" positions.',
-    execution: 'Draft 5-6 WRs and at least one Elite QB or TE before clicking your first RB. Target 6-7 total RBs.',
-    constraint: 'If you take a "Value RB" in Round 5 or 6, you have compromised the structural advantage of the build.'
-  },
-  RB_HYPER_FRAGILE: {
-    title: 'Hyper Fragile Protocol',
-    protocol: 'Draft 3 Elite RBs in the first 5 rounds, then enforce a hard stop. You are betting on health and a total RB monopoly.',
-    execution: 'Draft exactly 4 RBs. Use the saved roster spots to hammer 10 WRs and elite battery partners (QB/TE).',
-    constraint: 'Drafting a 5th RB is a fatal error. If your top 3 fail, the roster is dead; if they hit, a 5th RB adds 0 ceiling.'
-  },
-  RB_HERO: {
-    title: 'Hero RB Protocol',
-    protocol: 'Anchor with exactly one "Legendary" RB in Rounds 1-2. No RB2 until the double-digit rounds.',
-    execution: 'Spend Rounds 3-9 building a "Super-Room" of WRs. Aim for 5-6 total RBs, focusing on high-contingency upside.',
-    constraint: 'Strictly avoid the RB "Dead Zone" (Rounds 3-6). Reaching for a mid-tier RB2 turns this into a failing "Balanced" build.'
-  }
+  TE_ELITE: { name: 'Elite TE', color: '#3b82f6', rounds: [1, 4] },
+  TE_ANCHOR: { name: 'Anchor TE', color: '#60a5fa', rounds: [5, 8] },
+  TE_LATE:  { name: 'Late Round TE', color: '#bfdbfe', rounds: [9, 18] }
 };
 
 // --- SHARED CONSTANTS ---
@@ -135,29 +113,6 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
   return true;
 }
 
-// --- LOCAL CLASSIFIER FOR QB/TE (from V2) ---
-const classifyStructure = (roster) => {
-  let rbPath = 'RB_BALANCED';
-  try {
-    rbPath = classifyRosterPath(roster).rb;
-  } catch { /* fallback */ }
-
-  const countPos = (pos, start, end) => roster.filter(p => {
-    const r = typeof p.round === 'string' ? parseInt(p.round.replace(/\D/g,'')) : p.round;
-    return p.position === pos && r >= start && r <= end;
-  }).length;
-
-  let qbPath = 'QB_LATE';
-  if (countPos('QB', 1, 4) > 0) qbPath = 'QB_ELITE';
-  else if (countPos('QB', 5, 9) > 0) qbPath = 'QB_CORE';
-
-  let tePath = 'TE_LATE';
-  if (countPos('TE', 1, 4) > 0) tePath = 'TE_ELITE';
-  else if (countPos('TE', 5, 9) > 0) tePath = 'TE_ANCHOR';
-
-  return { rb: rbPath, qb: qbPath, te: tePath };
-};
-
 export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}) {
   useEffect(() => { trackEvent('draft_session_started'); }, []);
 
@@ -165,7 +120,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const [draftSlot, setDraftSlot] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [rbReminderOpen, setRbReminderOpen] = useState(false);
   const playerListRef = useRef(null);
   const adpDividerRef = useRef(null);
 
@@ -303,100 +257,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       strategyPools
     };
   }, [currentPicks, currentRound, allRosters]);
-
-  // --- 6. PORTFOLIO HEALTH (HIERARCHICAL from PROTOCOL_TREE) ---
-  const _portfolioHealth = useMemo(() => {
-    const totalEntries = allRosters.length;
-    if (totalEntries === 0) return { rb: [], qb: [], te: [], activePath: null };
-
-    const counts = { rb: {}, qb: {}, te: {} };
-
-    Object.keys(PROTOCOL_TREE).forEach(k => counts.rb[k] = 0);
-    Object.keys(QB_META).forEach(k => counts.qb[k] = 0);
-    Object.keys(TE_META).forEach(k => counts.te[k] = 0);
-
-    allRosters.forEach(roster => {
-      const struct = classifyStructure(roster);
-      if (counts.rb[struct.rb] !== undefined) counts.rb[struct.rb]++;
-      if (counts.qb[struct.qb] !== undefined) counts.qb[struct.qb]++;
-      if (counts.te[struct.te] !== undefined) counts.te[struct.te]++;
-    });
-
-    const calcMetric = (key, name, target, count, color) => ({
-      key, name, target, color,
-      actual: (count / totalEntries) * 100
-    });
-
-    // Determine active path for target calculation
-    const rbLocked = strategyStatus.rb.locked;
-    const qbLocked = strategyStatus.qb.locked;
-    const _teLocked = strategyStatus.te.locked;
-
-    // RB Level - Always use top-level PROTOCOL_TREE targets
-    const rbMetrics = Object.keys(PROTOCOL_TREE).map(k =>
-      calcMetric(k, ARCHETYPE_METADATA[k]?.name, PROTOCOL_TREE[k].target, counts.rb[k], PROTOCOL_TREE[k].color)
-    );
-
-    // QB Level - Use conditional targets if RB is locked
-    let qbMetrics;
-    let activePath = null;
-
-    if (rbLocked && PROTOCOL_TREE[rbLocked.key]?.children) {
-      activePath = rbLocked.key;
-      const children = PROTOCOL_TREE[rbLocked.key].children;
-      qbMetrics = Object.keys(QB_META).map(qbKey => {
-        const target = children[qbKey]?.target ?? QB_META[qbKey].target;
-        return calcMetric(qbKey, QB_META[qbKey].name, target, counts.qb[qbKey], QB_META[qbKey].color);
-      });
-    } else {
-      qbMetrics = Object.keys(QB_META).map(k =>
-        calcMetric(k, QB_META[k].name, QB_META[k].target, counts.qb[k], QB_META[k].color)
-      );
-    }
-
-    // TE Level - Use conditional targets if both RB and QB are locked
-    let teMetrics;
-    if (rbLocked && qbLocked && PROTOCOL_TREE[rbLocked.key]?.children?.[qbLocked.key]?.children) {
-      const teChildren = PROTOCOL_TREE[rbLocked.key].children[qbLocked.key].children;
-      teMetrics = Object.keys(TE_META).map(teKey => {
-        const target = teChildren[teKey] ?? TE_META[teKey].target;
-        return calcMetric(teKey, TE_META[teKey].name, target, counts.te[teKey], TE_META[teKey].color);
-      });
-    } else if (rbLocked && PROTOCOL_TREE[rbLocked.key]?.children) {
-      // RB locked but QB not - average TE targets across QB paths
-      const teAggregates = { TE_ELITE: [], TE_ANCHOR: [], TE_LATE: [] };
-      const qbChildren = PROTOCOL_TREE[rbLocked.key].children;
-
-      Object.keys(qbChildren).forEach(qbKey => {
-        const teChildren = qbChildren[qbKey]?.children || {};
-        Object.keys(teChildren).forEach(teKey => {
-          if (teAggregates[teKey]) {
-            teAggregates[teKey].push(teChildren[teKey]);
-          }
-        });
-      });
-
-      teMetrics = Object.keys(TE_META).map(teKey => {
-        const values = teAggregates[teKey];
-        const avgTarget = values.length > 0
-          ? values.reduce((sum, val) => sum + val, 0) / values.length
-          : TE_META[teKey].target;
-        return calcMetric(teKey, TE_META[teKey].name, avgTarget, counts.te[teKey], TE_META[teKey].color);
-      });
-    } else {
-      // Neither RB nor QB locked - show default TE targets
-      teMetrics = Object.keys(TE_META).map(k =>
-        calcMetric(k, TE_META[k].name, TE_META[k].target, counts.te[k], TE_META[k].color)
-      );
-    }
-
-    return {
-      rb: rbMetrics,
-      qb: qbMetrics,
-      te: teMetrics,
-      activePath
-    };
-  }, [allRosters, strategyStatus]);
 
   // --- 7. MY AVG PICK MAP ---
   const myAvgPickMap = useMemo(() => {
@@ -577,7 +437,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       }
 
       const correlationScore = comparisons > 0 ? (sumProb / comparisons) * 100 : 0;
-      const liftScore = globalPercent > 0 ? (correlationScore / globalPercent) : 0;
       // 5. Kills Strategy Check (Multi-dimensional)
       let killsStrategy = false;
       const nextPicks = [...currentPicks, { ...candidate, round: currentRound, position: candidate.position }];
@@ -611,7 +470,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
         portfolioExposure: pathPercent,
         strategyExposure: stratPercent,
         globalExposure: globalPercent,
-        liftScore,
         correlationScore,
         correlationBreakdown,
         killsStrategy,
@@ -697,8 +555,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           }
         });
         const correlationScore = comparisons > 0 ? (sumProb / comparisons) * 100 : 0;
-        const liftScore = globalPercent > 0 ? (correlationScore / globalPercent) : 0;
-
+  
         let killsStrategy = false;
         const nextPicks = [...currentPicks, { ...mp, round: currentRound, position: mp.position }];
         if (strategyStatus.rb.locked && mp.position === 'RB') {
@@ -727,7 +584,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           portfolioExposure: pathPercent,
           strategyExposure: stratPercent,
           globalExposure: globalPercent,
-          liftScore,
           correlationScore,
           correlationBreakdown,
           killsStrategy,
@@ -780,25 +636,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
                </span>
              </div>
           ))}
-        </div>
-      </div>
-    );
-  };
-
-  const PortfolioRow = ({ item }) => {
-    const diff = item.actual - item.target;
-    const isHigh = diff > 5;
-    const isLow = diff < -5;
-
-    return (
-      <div className={styles.portfolioRow}>
-        <div className={styles.portfolioRowLeft}>
-           <div className={styles.portfolioDot} style={{ background: item.color }} />
-           <span className={styles.portfolioName}>{item.name}</span>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-           <span style={{ fontWeight: 700, color: isHigh ? '#ef4444' : isLow ? '#3b82f6' : '#94a3b8' }}>{item.actual.toFixed(1)}%</span>
-           <span className={styles.portfolioTarget}>/ {item.target}%</span>
         </div>
       </div>
     );
@@ -976,13 +813,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
       </div>
       <div className={styles.colDivider} />
       <div className={styles.statsHeaderRow}>
-        <div className={`${styles.statHeaderCell} ${styles.colPath}`}>
-          <span className={styles.colHeader} title="Path Exposure — percentage of rosters matching your current draft path that include this player. Count shown in parentheses.">Path</span>
-        </div>
-        <div className={`${styles.statHeaderCell} ${styles.statHeaderCellBorder} ${styles.colLift}`}>
-          <span className={styles.colHeader} title="Lift Score — path exposure divided by global exposure. Values above 1.0 mean this player appears more often in rosters matching your strategy than in the general pool.">Lift</span>
-        </div>
-        <div className={`${styles.statHeaderCell} ${styles.statHeaderCellBorder} ${styles.colCorrelation}`}>
+        <div className={`${styles.statHeaderCell} ${styles.colCorrelation}`}>
           <span className={styles.colHeader} title="Correlation Score — how often this player co-occurs with your current picks across all rosters. High = commonly paired together, low = unique/diversifying pick.">Correlation</span>
         </div>
         <div className={`${styles.statHeaderCell} ${styles.statHeaderCellBorder} ${styles.colGlobalExp}`}>
@@ -1038,64 +869,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     </div>
   );
 
-  const renderRbReminder = () => {
-    if (!strategyStatus.rb.locked || strategyStatus.rb.locked.key === 'RB_BALANCED' || !RB_BLURBS[strategyStatus.rb.locked.key]) {
-      return null;
-    }
-
-    const lockedColor = strategyStatus.rb.locked.meta.color;
-    const blurb = RB_BLURBS[strategyStatus.rb.locked.key];
-
-    return (
-      <div style={{ flexShrink: 0 }}>
-        <div
-          onClick={() => setRbReminderOpen(!rbReminderOpen)}
-          className={styles.reminderBar}
-          style={{
-            background: `linear-gradient(135deg, ${lockedColor}15, ${lockedColor}08)`,
-            borderTop: `1px solid ${lockedColor}44`,
-            borderRadius: rbReminderOpen ? '0' : '0 0 10px 10px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className={styles.reminderDot} style={{ background: lockedColor, boxShadow: `0 0 8px ${lockedColor}` }} />
-            <span className={styles.reminderTitle} style={{ color: lockedColor }}>
-              {blurb.title}
-            </span>
-          </div>
-          <span className={styles.reminderToggle}>
-            {rbReminderOpen ? 'Hide' : 'Show'}
-          </span>
-        </div>
-
-        {rbReminderOpen && (
-          <div
-            className={`${styles.reminderContent} ${styles.scrollArea}`}
-            style={{
-              background: `${lockedColor}08`,
-              borderTop: `1px solid ${lockedColor}22`,
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div>
-                <div className={styles.reminderSectionLabel}>Protocol</div>
-                <div className={styles.reminderSectionText}>{blurb.protocol}</div>
-              </div>
-              <div>
-                <div className={styles.reminderSectionLabel}>Execution</div>
-                <div className={styles.reminderSectionText}>{blurb.execution}</div>
-              </div>
-              <div className={styles.reminderConstraint}>
-                <div className={styles.reminderConstraintLabel}>Key Constraint</div>
-                <div className={styles.reminderConstraintText}>{blurb.constraint}</div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const renderToast = () => (
     <div className={styles.toast}>
       <div className={styles.posBadge} style={{ background: getPosColor(draftToast.position) }}>
@@ -1110,7 +883,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     <div className={styles.boardViewMobile}>
       {renderDraftControls()}
       {renderDraftBoard()}
-      {renderRbReminder()}
     </div>
   );
 
@@ -1118,7 +890,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     <div className={styles.playersViewMobile}>
       {renderPlayerListHeader()}
       {renderPlayerList()}
-      {renderRbReminder()}
     </div>
   );
 
@@ -1140,7 +911,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
             {renderPlayerListHeader()}
             {renderColumnHeaders()}
             {renderPlayerList()}
-            {renderRbReminder()}
           </div>
         </>
       )}
@@ -1155,8 +925,6 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
     const color = getPosColor(player.position);
     const stackInfo = analyzeStack(player, currentPicks);
 
-    const pathExp = player.portfolioExposure || 0;
-    const liftScore = player.liftScore || 0;
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
     const _killsStrategy = player.killsStrategy;
@@ -1171,17 +939,17 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
 
     let corrColor = '#64748b';
     if (currentPicks.length > 0) {
-      if (corr > 25) corrColor = '#ef4444';
-      else if (corr > 15) corrColor = '#f59e0b';
-      else if (corr > 5) corrColor = '#fbbf24';
-      else corrColor = '#10b981';
+      if (corr > 25) corrColor = '#1d4ed8';
+      else if (corr > 15) corrColor = '#3b82f6';
+      else if (corr > 5) corrColor = '#60a5fa';
+      else corrColor = '#94a3b8';
     }
 
     const getBarColor = (pct) => {
-      if (pct > 25) return '#ef4444';
-      if (pct > 15) return '#f59e0b';
-      if (pct > 5) return '#fbbf24';
-      return '#10b981';
+      if (pct > 25) return '#1d4ed8';
+      if (pct > 15) return '#3b82f6';
+      if (pct > 5) return '#60a5fa';
+      return '#94a3b8';
     };
     const sorted = breakdown.length > 0 ? [...breakdown].sort((a, b) => a.round - b.round) : [];
     const lastName = (name) => {
@@ -1214,8 +982,8 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
               </span>
             )}
             {isFallingKnife && (
-              <span className={styles.fallingBadge}>
-                <TrendingUp size={11} /> Falling
+              <span className={styles.adpRisingBadge}>
+                <TrendingUp size={11} /> ADP Rising
               </span>
             )}
             {sorted.length > 0 && (
@@ -1248,18 +1016,6 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
 
           {/* Line 3: Stats grid */}
           <div className={styles.mobileCardLine3}>
-            <div>
-              <div className={styles.mobileStatLabel}>Path</div>
-              <div className={styles.mobileStatValue} style={{ color: pathExp > 25 ? '#10b981' : pathExp > 10 ? '#f59e0b' : '#94a3b8' }}>
-                {Math.round(pathExp)}%
-              </div>
-            </div>
-            <div>
-              <div className={styles.mobileStatLabel}>Lift</div>
-              <div className={styles.mobileStatValue} style={{ color: '#e2e8f0' }}>
-                {liftScore.toFixed(2)}
-              </div>
-            </div>
             <div>
               <div className={styles.mobileStatLabel}>Corr</div>
               <div className={styles.mobileStatValue} style={{ color: corrColor }}>
@@ -1337,8 +1093,8 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
               </span>
             )}
             {isFallingKnife && (
-              <div className={styles.fallingBadge}>
-                <TrendingUp size={11} /> Falling
+              <div className={styles.adpRisingBadge}>
+                <TrendingUp size={11} /> ADP Rising
               </div>
             )}
           </div>
@@ -1372,22 +1128,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
 
           {/* Stats row */}
           <div className={styles.statsRow}>
-            <div className={`${styles.statCell} ${styles.colPath}`}>
-              <div className={styles.statValueRow}>
-                <span className={styles.statValue} style={{ color: pathExp > 25 ? '#10b981' : pathExp > 10 ? '#f59e0b' : '#94a3b8' }}>
-                  {Math.round(pathExp)}%
-                </span>
-                <span className={styles.statSub}>({player.matchCount || 0})</span>
-              </div>
-            </div>
-
-            <div className={`${styles.statCell} ${styles.statCellBorder} ${styles.colLift}`}>
-              <span className={styles.statValue} style={{ color: '#e2e8f0' }}>
-                {liftScore.toFixed(2)}
-              </span>
-            </div>
-
-            <div className={`${styles.statCell} ${styles.statCellBorder} ${styles.colCorrelation}`}>
+            <div className={`${styles.statCell} ${styles.colCorrelation}`}>
               <div className={styles.statValueRow}>
                 <span className={styles.statValue} style={{ color: corrColor }}>
                   {currentPicks.length > 0 ? Math.round(corr) + '%' : '—'}

@@ -39,7 +39,6 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 // DISABLED for performance — keep source files intact
 // const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
-// const JaccardAnalysis = lazy(() => import('./components/JaccardAnalysis'));
 
 // Bundled assets (developer-controlled) — all use glob so missing files don't break the build
 const rosterModules = import.meta.glob('./assets/rosters.csv', { as: 'raw', eager: true });

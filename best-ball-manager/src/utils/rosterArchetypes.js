@@ -5,37 +5,33 @@
 export const PROTOCOL_TREE = {
   // --- LEVEL 1: RB (Capital Spend) ---
   RB_HERO: {
-    target: 45, // Primary strategy: reliable ceiling + WR firepower
     color: '#4bf1db',
     children: {
-      QB_CORE: { target: 60, children: { TE_ANCHOR: 50, TE_ELITE: 30, TE_LATE: 20 } },
-      QB_ELITE: { target: 20, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
-      QB_LATE: { target: 20, children: { TE_ELITE: 50, TE_ANCHOR: 50, TE_LATE: 0 } }
+      QB_CORE: { children: { TE_ANCHOR: 50, TE_ELITE: 30, TE_LATE: 20 } },
+      QB_ELITE: { children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
+      QB_LATE: { children: { TE_ELITE: 50, TE_ANCHOR: 50, TE_LATE: 0 } }
     }
   },
   RB_ZERO: {
-    target: 40, // High-variance play: elite WR/QB/TE stacks
     color: '#8b5cf6',
     children: {
-      QB_ELITE: { target: 70, children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } }, // Zero RB NEEDS elite onesies
-      QB_CORE: { target: 30, children: { TE_ELITE: 70, TE_ANCHOR: 30, TE_LATE: 0 } },
-      QB_LATE: { target: 0, children: { TE_ELITE: 100, TE_ANCHOR: 0, TE_LATE: 0 } } // Disallow Zero RB + Late QB
+      QB_ELITE: { children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } },
+      QB_CORE: { children: { TE_ELITE: 70, TE_ANCHOR: 30, TE_LATE: 0 } },
+      QB_LATE: { children: { TE_ELITE: 100, TE_ANCHOR: 0, TE_LATE: 0 } }
     }
   },
   RB_HYPER_FRAGILE: {
-    target: 15, // The Contrarian Hammer
     color: '#f97316',
     children: {
-      QB_LATE: { target: 60, children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
-      QB_CORE: { target: 20, children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
-      QB_ELITE: { target: 20, children: { TE_LATE: 100, TE_ANCHOR: 0, TE_ELITE: 0} }
+      QB_LATE: { children: { TE_LATE: 80, TE_ANCHOR: 20, TE_ELITE: 0 } },
+      QB_CORE: { children: { TE_LATE: 90, TE_ANCHOR: 10, TE_ELITE: 0 } },
+      QB_ELITE: { children: { TE_LATE: 100, TE_ANCHOR: 0, TE_ELITE: 0} }
     }
   },
   RB_BALANCED: {
-    target: 0, // "Balanced" strategies are discouraged for top 0.1% hunting
     color: '#ef4444',
     children: {
-      QB_CORE: { target: 100, children: { TE_LATE: 100 } }
+      QB_CORE: { children: { TE_LATE: 100 } }
     }
   }
 };

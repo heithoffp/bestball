@@ -3,8 +3,6 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import { analyzeRosterStacks } from '../utils/stackAnalysis';
-import { spikeWeekPercentile } from '../utils/spikeWeekProjection';
-import { useSpikeWorker } from '../hooks/useSpikeWorker';
 import useMediaQuery from '../hooks/useMediaQuery';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
@@ -259,10 +257,8 @@ const CHIP_GROUPS = [
 ];
 
 const SORT_OPTIONS = [
-  { value: 'grade', label: 'Grade' },
   { value: 'draftDate', label: 'Draft Date' },
   { value: 'avgCLV', label: 'Avg CLV' },
-  { value: 'spikeRaw', label: 'Spike Pts' },
   { value: 'rarityPercentile', label: 'Uniq Lift' },
 ];
 
@@ -292,27 +288,6 @@ function normalize(list, key, outKey) {
         ? 0.5
         : (r[key] - min) / (max - min),
   }));
-}
-
-// ── Composite Grade helpers ──────────────────────────────────────────────────
-
-function computeLetterGrade(score) {
-  if (score >= 95) return { letter: 'A+', color: '#00f700' };
-  if (score >= 88) return { letter: 'A',  color: '#00e060' };
-  if (score >= 82) return { letter: 'A-', color: '#4dd88a' };
-  if (score >= 75) return { letter: 'B+', color: '#7dcc80' };
-  if (score >= 68) return { letter: 'B',  color: '#bcfc45' };
-  if (score >= 60) return { letter: 'B-', color: '#d4e040' };
-  if (score >= 50) return { letter: 'C+', color: '#fcff55' };
-  if (score >= 40) return { letter: 'C',  color: '#ff9f43' };
-  if (score >= 25) return { letter: 'D',  color: '#ff6b6b' };
-  return { letter: 'F', color: '#ff4d6d' };
-}
-
-function percentileRankArray(value, arr) {
-  if (!arr || arr.length === 0) return 0;
-  const count = arr.filter(v => v <= value).length;
-  return (count / arr.length) * 100;
 }
 
 function HighlightedName({ name, query }) {
@@ -551,75 +526,6 @@ export default function RosterViewer({ rosterData = [] }) {
     return byId;
   }, [rosters]);
 
-  // Spike week projections — computed in a Web Worker for non-blocking UI
-  const { spikeData: rawSpikeData, isComplete: spikeComplete } = useSpikeWorker(rosters);
-
-  const rosterSpikeData = useMemo(() => {
-    if (!spikeComplete) {
-      const result = {};
-      for (const [id, data] of Object.entries(rawSpikeData)) {
-        result[id] = { ...data, percentile: null };
-      }
-      return result;
-    }
-    const allScores = Object.values(rawSpikeData).map(d => d.spikeScore);
-    const result = {};
-    for (const [id, data] of Object.entries(rawSpikeData)) {
-      result[id] = {
-        ...data,
-        percentile: spikeWeekPercentile(data.spikeScore, allScores),
-      };
-    }
-    return result;
-  }, [rawSpikeData, spikeComplete]);
-
-  // Composite roster grades
-  const rosterGrades = useMemo(() => {
-    if (!rosters || rosters.length === 0) return {};
-
-    const projTotals = [];
-    const clvValues = [];
-    const rarityValues = [];
-
-    const rawData = rosters.map(r => {
-      const projTotal = r.players.reduce((sum, p) => sum + (p.projectedPoints || 0), 0);
-      projTotals.push(projTotal);
-
-      const avgCLV = r.avgCLV ?? 0;
-      clvValues.push(avgCLV);
-
-      const rarityPct = rosterScores[r.entry_id]?.rarityPercentile ?? 50;
-      rarityValues.push(rarityPct);
-
-      const spikeData = rosterSpikeData[r.entry_id];
-      const spikePercentile = spikeData?.percentile ?? 0;
-      const spikeRaw = spikeData?.spikeScore ?? 0;
-
-      return { entry_id: r.entry_id, projTotal, avgCLV, rarityPct, spikePercentile, spikeRaw };
-    });
-
-    const byId = {};
-    rawData.forEach(d => {
-      const projScore = percentileRankArray(d.projTotal, projTotals);
-      const clvScore = percentileRankArray(d.avgCLV, clvValues);
-      const rarityScore = d.rarityPct;
-      const spikeScore = d.spikePercentile;
-
-      const composite = 0.30 * projScore + 0.25 * clvScore + 0.20 * rarityScore + 0.25 * spikeScore;
-      const grade = computeLetterGrade(composite);
-
-      byId[d.entry_id] = {
-        composite: Math.round(composite),
-        grade,
-        projScore: Math.round(projScore),
-        clvScore: Math.round(clvScore),
-        rarityScore: Math.round(rarityScore),
-        spikeScore: Math.round(spikeScore),
-        spikeRaw: d.spikeRaw,
-      };
-    });
-    return byId;
-  }, [rosters, rosterScores, rosterSpikeData]);
 
   const rosterSearchMatches = useMemo(() => {
     if (selectedPlayers.length === 0) return {};
@@ -671,21 +577,11 @@ export default function RosterViewer({ rosterData = [] }) {
         const bid = rosterScores[b.entry_id]?.rarityPercentile ?? -Infinity;
         return sortDir === 'asc' ? aid - bid : bid - aid;
       }
-      if (sortKey === 'grade') {
-        const aid = rosterGrades[a.entry_id]?.composite ?? -Infinity;
-        const bid = rosterGrades[b.entry_id]?.composite ?? -Infinity;
-        return sortDir === 'asc' ? aid - bid : bid - aid;
-      }
-      if (sortKey === 'spikeRaw') {
-        const aid = rosterSpikeData[a.entry_id]?.spikeScore ?? -Infinity;
-        const bid = rosterSpikeData[b.entry_id]?.spikeScore ?? -Infinity;
-        return sortDir === 'asc' ? aid - bid : bid - aid;
-      }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, rosterGrades, rosterSpikeData, selectedPlayers, selectedTeams, rosterSearchMatches]);
+  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, selectedPlayers, selectedTeams, rosterSearchMatches]);
 
   const allTournaments = useMemo(() => {
     const titles = new Set();
@@ -783,9 +679,7 @@ export default function RosterViewer({ rosterData = [] }) {
     const clv    = clvLabel(roster.avgCLV);
     const isOpen = expandedEntry === roster.entry_id;
     const scores = rosterScores[roster.entry_id] || {};
-    const grade  = rosterGrades[roster.entry_id] || {};
     const stacks = rosterStacks[roster.entry_id] || [];
-    const spike  = rosterSpikeData[roster.entry_id];
 
     return (
       <div
@@ -802,13 +696,8 @@ export default function RosterViewer({ rosterData = [] }) {
         }}
         onClick={() => { if (!isOpen) trackEvent('roster_viewed'); setExpandedEntry(isOpen ? null : roster.entry_id); }}
       >
-        {/* Header: Grade + Entry + Chevron */}
+        {/* Header: Entry + Chevron */}
         <div className={css.rosterCardHeader}>
-          {grade.grade ? (
-            <span className={css.rosterGradeLetter} style={{ color: grade.grade.color }}>
-              {grade.grade.letter}
-            </span>
-          ) : <span className={css.rosterGradeLetter} style={{ color: '#555' }}>—</span>}
           <div className={css.rosterCardMeta}>
             <span className={css.rosterEntryId}>{shortEntry(roster.entry_id)}</span>
             <span className={css.rosterDraftDate}>
@@ -830,17 +719,11 @@ export default function RosterViewer({ rosterData = [] }) {
           </div>
         </div>
 
-        {/* Footer: 3-col stats */}
+        {/* Footer: stats */}
         <div className={css.rosterCardFooter}>
           <div className={css.cardStat}>
             <span className={css.cardStatLabel}>CLV</span>
             <span className={css.cardStatValue} style={{ color: clv.color }}>{clv.text}</span>
-          </div>
-          <div className={css.cardStat}>
-            <span className={css.cardStatLabel}>Spike</span>
-            <span className={css.cardStatValue} style={{ color: spike ? uniquenessColor((spike.percentile ?? 0) / 100) : '#555' }}>
-              {spike?.spikeScore > 0 ? spike.spikeScore.toFixed(1) : '—'}
-            </span>
           </div>
           <div className={css.cardStat}>
             <span className={css.cardStatLabel}>Uniq</span>
@@ -853,11 +736,10 @@ export default function RosterViewer({ rosterData = [] }) {
         {/* Expanded detail */}
         {isOpen && (
           <div className={css.rosterCardExpanded} onClick={e => e.stopPropagation()}>
-            <GradeCard grade={grade} />
             <DraftCapitalMap players={roster.players} isMobile={true} />
             <StackSummaryBar stacks={stacks} />
             <div className={css.playerListScroll}>
-              <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} isMobile={true} />
+              <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} isMobile={true} />
             </div>
           </div>
         )}
@@ -1272,7 +1154,6 @@ export default function RosterViewer({ rosterData = [] }) {
         <thead>
           <tr className={css.thead}>
             <th className={css.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" sortKey={sortKey} sortDir={sortDir} /></th>
-            <th className={css.th} style={{ textAlign: 'center', color: '#fbbf24' }} onClick={() => toggleSort('grade')}>Grade <SortIcon col="grade" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center' }}>Snapshot</th>
             <th className={`${css.th} ${css.colProjPts}`} style={{ textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" sortKey={sortKey} sortDir={sortDir} /></th>
@@ -1286,7 +1167,6 @@ export default function RosterViewer({ rosterData = [] }) {
             >
               Uniq Lift <SortIcon col="rarityPercentile" sortKey={sortKey} sortDir={sortDir} />
             </th>
-            <th className={`${css.th} ${css.colSpike}`} style={{ textAlign: 'center', color: '#f59e0b' }} onClick={() => toggleSort('spikeRaw')}>Spike Pts <SortIcon col="spikeRaw" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center', cursor: 'default' }}></th>
           </tr>
@@ -1296,12 +1176,10 @@ export default function RosterViewer({ rosterData = [] }) {
             const clv    = clvLabel(roster.avgCLV);
             const isOpen = expandedEntry === roster.entry_id;
             const scores = rosterScores[roster.entry_id] || {};
-            const grade  = rosterGrades[roster.entry_id] || {};
             const stacks = rosterStacks[roster.entry_id] || [];
             const archNorm  = archetypeRarityNorm(roster.path.rb);
             const boostPct  = Math.round(archetypeBoostMax * archNorm * 100);
             const tooltipTxt = `Draft rarity × ${scores.archBoost ?? '—'}× arch boost (+${boostPct}% from ${roster.path.rb})`;
-            const gradeTooltip = grade.grade ? `Proj: ${grade.projScore} | CLV: ${grade.clvScore} | Rarity: ${grade.rarityScore} | Spike: ${grade.spikeScore} → ${grade.composite}` : '';
             return (
               <React.Fragment key={roster.entry_id}>
                 <tr
@@ -1338,18 +1216,6 @@ export default function RosterViewer({ rosterData = [] }) {
                     </div>
                   </td>
 
-                  {/* Grade */}
-                  <td className={css.td} style={{ textAlign: 'center' }}>
-                    {grade.grade ? (
-                      <span title={gradeTooltip} style={{
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700,
-                        color: grade.grade.color, cursor: 'help',
-                      }}>
-                        {grade.grade.letter}
-                      </span>
-                    ) : <span style={{ color: '#555' }}>—</span>}
-                  </td>
-
                   <td className={css.td} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: '#bbb' }}>
                     {roster.draftDate
                       ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -1377,23 +1243,6 @@ export default function RosterViewer({ rosterData = [] }) {
                     </span>
                   </td>
 
-                  <td className={`${css.td} ${css.colSpike}`} style={{ textAlign: 'center' }}>
-                    {(() => {
-                      const spike = rosterSpikeData[roster.entry_id];
-                      if (!spike) return <span style={{ color: '#555', fontSize: 12 }}>...</span>;
-                      const raw = spike.spikeScore ?? 0;
-                      const pct = spike.percentile ?? 0;
-                      const spikeColor = uniquenessColor(pct / 100);
-                      return raw > 0 ? (
-                        <span style={{
-                          fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700,
-                          color: spikeColor,
-                        }}>
-                          {raw.toFixed(1)}
-                        </span>
-                      ) : <span style={{ color: '#555' }}>—</span>;
-                    })()}
-                  </td>
                   <td className={css.td} style={{ textAlign: 'center' }}>
                     <span className={css.clvBadge} style={{ color: clv.color, borderColor: clv.color + '44' }}>{clv.text}</span>
                   </td>
@@ -1403,8 +1252,8 @@ export default function RosterViewer({ rosterData = [] }) {
                 </tr>
                 {isOpen && (
                   <tr>
-                    <td colSpan={12} style={{ padding: 0 }}>
-                      <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} grade={grade} spikeData={rosterSpikeData[roster.entry_id]} isMobile={false} />
+                    <td colSpan={10} style={{ padding: 0 }}>
+                      <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} isMobile={false} />
                     </td>
                   </tr>
                 )}
@@ -1584,53 +1433,9 @@ function StackSummaryBar({ stacks }) {
   );
 }
 
-// ── Grade detail card ────────────────────────────────────────────────────────
-
-function GradeCard({ grade }) {
-  if (!grade || !grade.grade) return null;
-  const bars = [
-    { label: 'PROJ', score: grade.projScore, color: '#3b82f6' },
-    { label: 'CLV',  score: grade.clvScore,  color: '#00e5a0' },
-    { label: 'RARE', score: grade.rarityScore, color: '#c084fc' },
-    { label: 'SPIKE', score: grade.spikeScore, color: '#f59e0b' },
-  ];
-  return (
-    <div className={css.gradeCard}>
-      <div className={css.gradeLetter} style={{ color: grade.grade.color }}>
-        {grade.grade.letter}
-      </div>
-      <div className={css.gradeBarGroup}>
-        {bars.map(b => (
-          <div key={b.label} className={css.gradeBarItem}>
-            <div className={css.gradeBarLabel}>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#888', letterSpacing: 1 }}>{b.label}</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: b.color, fontWeight: 700 }}>
-                {b.score}
-                {b.label === 'SPIKE' && grade.spikeRaw > 0 && (
-                  <span style={{ color: '#888', fontWeight: 400, marginLeft: 4, fontSize: 10 }}>
-                    {grade.spikeRaw.toFixed(1)} pts
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className={css.gradeBarTrack}>
-              <div className={css.gradeBarFill} style={{
-                width: `${b.score}%`, background: b.color,
-              }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className={css.gradeComposite}>
-        {grade.composite}/100
-      </div>
-    </div>
-  );
-}
-
 // ── Expanded player detail ────────────────────────────────────────────────────
 
-function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData = null, isMobile = false }) {
+function PlayerDetail({ players, alpha = 0.5, stacks = [], isMobile = false }) {
   const [pSort, setPSort] = useState('pick');
   const [pDir,  setPDir]  = useState('asc');
 
@@ -1641,11 +1446,6 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
     });
     return map;
   }, [stacks]);
-
-  const spikeLineupNames = useMemo(() => {
-    if (!spikeData?.lineup?.length) return new Set();
-    return new Set(spikeData.lineup.map(p => p.name));
-  }, [spikeData]);
 
   const sorted = useMemo(() => [...players].sort((a, b) => {
     let av, bv;
@@ -1682,9 +1482,8 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
           const clvPct = calcCLV(p.pick, p.latestADP, alpha);
           const clv = clvLabel(clvPct);
           const stackColor = stackPlayerTeams[p.name];
-          const isSpikeStar = spikeLineupNames.has(p.name);
           return (
-            <div key={`${p.name}-${i}`} className={css.playerDetailCard} style={isSpikeStar ? { borderLeft: '3px solid #f59e0b', background: '#f59e0b08' } : {}}>
+            <div key={`${p.name}-${i}`} className={css.playerDetailCard}>
               <div className={css.playerDetailRow1}>
                 <span className={css.playerDetailName}>
                   {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
@@ -1693,13 +1492,6 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
                 <span className={css.posPill} style={{ background: posColor(p.position) + '22', color: posColor(p.position), borderColor: posColor(p.position) + '55' }}>
                   {p.position}
                 </span>
-                {isSpikeStar && (
-                  <span title="Week 17 Spike Lineup starter" style={{
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700,
-                    background: '#f59e0b22', color: '#f59e0b', border: '1px solid #f59e0b44',
-                    borderRadius: 3, padding: '1px 5px', letterSpacing: 0.5,
-                  }}>W17</span>
-                )}
               </div>
               <div className={css.playerDetailRow2}>
                 <div className={css.cardStat}>
@@ -1728,7 +1520,6 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
 
   return (
     <div className={css.detail}>
-      <GradeCard grade={grade} />
       <DraftCapitalMap players={players} isMobile={false} />
       <StackSummaryBar stacks={stacks} />
       <table className={css.table}>
@@ -1748,21 +1539,12 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], grade = {}, spikeData
             const clvPct = calcCLV(p.pick, p.latestADP, alpha);
             const clv = clvLabel(clvPct);
             const stackColor = stackPlayerTeams[p.name];
-            const isSpikeStar = spikeLineupNames.has(p.name);
             return (
-              <tr key={`${p.name}-${i}`} className={css.drow} style={isSpikeStar ? { borderLeft: '3px solid #f59e0b', background: '#f59e0b08' } : {}}>
+              <tr key={`${p.name}-${i}`} className={css.drow}>
                 <td className={css.dtd}>
                   <span className={css.playerName}>
                     {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
                     {p.name}
-                    {isSpikeStar && (
-                      <span title="Week 17 Spike Lineup starter" style={{
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700,
-                        background: '#f59e0b22', color: '#f59e0b', border: '1px solid #f59e0b44',
-                        borderRadius: 3, padding: '1px 5px', marginLeft: 7, verticalAlign: 'middle',
-                        letterSpacing: 0.5,
-                      }}>W17</span>
-                    )}
                   </span>
                 </td>
                 <td className={css.dtd} style={{ textAlign: 'center' }}>

@@ -41,8 +41,9 @@
 **ADRs:**
 
 ### FEAT-004: Vision Alignment Fixes
-**Status:** Not Started
-**Description:** Neutralize opinionated color scales (correlation in Draft Assistant, Uniqueness Lift in Roster Viewer), remove RB_BALANCED auto-gray-out at Round 3, remove RB Protocol Blurbs from Draft Assistant, delete JaccardAnalysis orphan files, and rename "Falling" badge to neutral "ADP Rising" label. Each fix addresses a violation of the Mirror, Not Advisor design principle.
+**Status:** In Progress
+**Description:** Neutralize opinionated color scales (correlation in Draft Assistant, Uniqueness Lift in Roster Viewer), remove RB Protocol Blurbs from Draft Assistant, remove Grading System and Spike Points from Roster Viewer, remove archetype target weightings, remove JaccardAnalysis tab, rename "Falling" badge to neutral "ADP Rising" label, replace Uniqueness Lift with First 6 Pick Uniqueness (Monte Carlo-based), and rename LIFT parameter to plain-English label. Each fix addresses a violation of the Mirror, Not Advisor design principle.
+**Tasks:** TASK-033, TASK-034, TASK-035, TASK-036, TASK-037, TASK-038, TASK-039, TASK-040
 
 ### FEAT-005: Re-enable Combo Analysis
 **Status:** Not Started

@@ -314,8 +314,6 @@
   border-left: 1px solid rgba(30, 41, 59, 0.53);
 }
 
-.colPath { min-width: 70px; }
-.colLift { min-width: 70px; }
 .colCorrelation { min-width: 110px; }
 .colGlobalExp { min-width: 120px; }
 .colCorrSpacer { width: 70px; flex-shrink: 0; }
@@ -450,7 +448,7 @@
   border-style: solid;
 }
 
-.fallingBadge {
+.adpRisingBadge {
   display: inline-flex;
   align-items: center;
   gap: 2px;

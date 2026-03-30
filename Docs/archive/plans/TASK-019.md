@@ -1,3 +1,4 @@
+<!-- Completed: 2026-03-30 | Commit: 6beb23e -->
 # TASK-019: Configure SMTP and branded email templates
 
 **Status:** Approved

@@ -2,19 +2,25 @@
 
 ## Now
 
-- TASK-032: Build password reset completion flow
-
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
-| TASK-019 | Configure SMTP and fix email confirmation flow | Todo | P2 | [Plan](docs/plans/TASK-019.md) | No |
-| TASK-032 | Build password reset completion flow | In Progress | P2 | [Plan](docs/plans/TASK-032.md) | No |
+| TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric | Todo | P2 | [Plan](docs/plans/TASK-039.md) — Draft | No |
 
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-040 | Rename LIFT parameter in Draft Assistant to descriptive label | Done | P2 | [Plan](docs/archive/plans/TASK-040.md) | Yes | 2026-03-30 |
+| TASK-038 | Remove Grading System and Spike Points from Roster Viewer | Done | P2 | [Plan](docs/archive/plans/TASK-038.md) | Yes | 2026-03-30 |
+| TASK-037 | Remove JaccardAnalysis tab | Done | P2 | [Plan](docs/archive/plans/TASK-037.md) | Yes | 2026-03-30 |
+| TASK-036 | Remove archetype target weightings from rosterArchetypes.js | Done | P2 | [Plan](docs/archive/plans/TASK-036.md) | Yes | 2026-03-30 |
+| TASK-035 | Rename "Falling" badge to "ADP Rising" | Done | P2 | [Plan](docs/archive/plans/TASK-035.md) | Yes | 2026-03-30 |
+| TASK-034 | Remove RB Protocol Blurbs from Draft Assistant | Done | P2 | [Plan](docs/archive/plans/TASK-034.md) | Yes | 2026-03-30 |
+| TASK-033 | Neutralize correlation color scale in Draft Assistant | Done | P2 | [Plan](docs/archive/plans/TASK-033.md) | Yes | 2026-03-30 |
+| TASK-032 | Build password reset completion flow | Done | P2 | [Plan](docs/archive/plans/TASK-032.md) | Yes | 2026-03-30 |
+| TASK-019 | Configure SMTP and fix email confirmation flow | Done | P2 | [Plan](docs/archive/plans/TASK-019.md) | Yes | 2026-03-30 |
 | TASK-031 | Remove redundant Sign Out button from AuthButton | Done | P3 | [Plan](docs/archive/plans/TASK-031.md) | Yes | 2026-03-30 |
 | TASK-027 | Clean up lint warnings across codebase | Done | P3 | [Plan](docs/archive/plans/TASK-027.md) | Yes | 2026-03-30 |
 | TASK-030 | Deploy delete-account Edge Function to Supabase | Done | P2 | [Plan](docs/archive/plans/TASK-030.md) | Yes | 2026-03-30 |
