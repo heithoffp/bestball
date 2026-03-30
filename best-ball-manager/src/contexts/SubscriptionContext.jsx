@@ -13,6 +13,7 @@ export function SubscriptionProvider({ children }) {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [trialUsed, setTrialUsed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Beta access derived state
@@ -53,6 +54,7 @@ export function SubscriptionProvider({ children }) {
     if (!user || !supabase) {
       setSubscription(null);
       setProfile(null);
+      setTrialUsed(false);
       setLoading(false);
       return;
     }
@@ -62,7 +64,7 @@ export function SubscriptionProvider({ children }) {
     async function fetchUserData() {
       setLoading(true);
 
-      const [subResult, profileResult] = await Promise.all([
+      const [subResult, profileResult, anySubResult] = await Promise.all([
         supabase
           .from('subscriptions')
           .select('*')
@@ -74,6 +76,12 @@ export function SubscriptionProvider({ children }) {
           .from('profiles')
           .select('beta_expires_at')
           .eq('id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1)
           .maybeSingle(),
       ]);
 
@@ -91,6 +99,8 @@ export function SubscriptionProvider({ children }) {
         } else {
           setProfile(profileResult.data);
         }
+
+        setTrialUsed(anySubResult.data !== null);
 
         setLoading(false);
       }
@@ -201,6 +211,7 @@ export function SubscriptionProvider({ children }) {
       isProUser,
       subscription,
       loading,
+      trialUsed,
       isBetaActive,
       isBetaExpired,
       betaDaysRemaining,

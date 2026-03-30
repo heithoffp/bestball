@@ -1,3 +1,4 @@
+<!-- Completed: 2026-03-30 | Commit: 3c6aa89 -->
 # TASK-026: Configure Stripe promo codes and coupons
 
 **Status:** Approved

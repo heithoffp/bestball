@@ -90,7 +90,9 @@ Deno.serve(async (req) => {
     "subscription_data[metadata][user_id]": user.id,
   };
 
-  if (trialDays && Number.isInteger(trialDays) && trialDays > 0) {
+  // Only allow trial if no prior subscription exists for this user
+  const trialEligible = !existingSub;
+  if (trialDays && trialEligible && Number.isInteger(trialDays) && trialDays > 0) {
     params["subscription_data[trial_period_days]"] = String(trialDays);
   }
 

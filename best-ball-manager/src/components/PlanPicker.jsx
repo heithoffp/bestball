@@ -22,6 +22,7 @@ export default function PlanPicker() {
     planPickerPromoCode,
     closePlanPicker,
     redirectToCheckout,
+    trialUsed,
   } = useSubscription();
 
   if (!planPickerOpen) return null;
@@ -31,11 +32,12 @@ export default function PlanPicker() {
       initialPromoCode={planPickerPromoCode}
       closePlanPicker={closePlanPicker}
       redirectToCheckout={redirectToCheckout}
+      trialUsed={trialUsed}
     />
   );
 }
 
-function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout }) {
+function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout, trialUsed }) {
   const [interval, setInterval] = useState('seasonal');
   const [promoCode, setPromoCode] = useState(initialPromoCode);
   const [promoState, setPromoState] = useState(
@@ -124,7 +126,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
     if (!plan.priceId) return;
     setLoading(true);
     await redirectToCheckout(plan.priceId, {
-      trialDays: 7,
+      trialDays: trialUsed ? undefined : 7,
       promoCode: promoState === 'valid' ? promoCode.trim() : undefined,
     });
     setLoading(false);
@@ -141,8 +143,10 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
         <p style={{ color: 'var(--text-muted)', margin: '0 0 0.25rem', fontSize: '0.875rem' }}>
           Full access to all Pro analytics features.
         </p>
-        <p style={{ color: 'var(--accent-blue)', margin: '0 0 1.5rem', fontSize: '0.82rem', fontWeight: 500 }}>
-          Start with a 7-day free trial — no charge until day 8.
+        <p style={{ color: trialUsed ? 'var(--text-muted)' : 'var(--accent-blue)', margin: '0 0 1.5rem', fontSize: '0.82rem', fontWeight: 500 }}>
+          {trialUsed
+            ? 'Trial already used — subscribe to get full access.'
+            : 'Start with a 7-day free trial — no charge until day 8.'}
         </p>
 
         {/* Plan toggle cards */}
@@ -260,7 +264,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
             opacity: loading || !plan.priceId ? 0.6 : 1,
           }}
         >
-          {loading ? 'Redirecting...' : 'Start Free Trial'}
+          {loading ? 'Redirecting...' : trialUsed ? 'Subscribe' : 'Start Free Trial'}
         </button>
       </div>
     </div>

@@ -2,14 +2,16 @@
 
 ## Now
 
-- TASK-026: Configure Stripe promo codes and coupons
+| ID | Title | Status |
+|----|-------|--------|
+| TASK-028 | Enforce one free trial per account | In Progress |
 
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
 | TASK-019 | Configure SMTP and fix email confirmation flow | Todo | P2 | [Plan](docs/plans/TASK-019.md) | No |
-| TASK-026 | Configure Stripe promo codes and coupons | In Progress | P2 | [Plan](docs/plans/TASK-026.md) | No |
+| TASK-028 | Enforce one free trial per account | In Progress | P2 | [Plan](docs/plans/TASK-028.md) | No |
 | TASK-007 | User profile and account settings page | Todo | P3 | [Plan](docs/plans/TASK-007.md) — Draft | No |
 | TASK-027 | Clean up lint warnings across codebase | Todo | P3 | [Plan](docs/plans/TASK-027.md) — Draft | No |
 
@@ -17,6 +19,7 @@
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-026 | Configure Stripe promo codes and coupons | Done | P2 | [Plan](docs/archive/plans/TASK-026.md) | Yes | 2026-03-30 |
 | TASK-021 | Set up creator promo code program | Done | P2 | [Plan](docs/archive/plans/TASK-021.md) | Yes | 2026-03-30 |
 | TASK-010 | Add feature-level usage analytics | Done | P2 | [Plan](docs/archive/plans/TASK-010.md) | Yes | 2026-03-30 |
 | TASK-025 | Add plan selection UI with monthly/yearly toggle and promo code support | Done | P2 | [Plan](docs/archive/plans/TASK-025.md) | Yes | 2026-03-30 |
