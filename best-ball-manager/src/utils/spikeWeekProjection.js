@@ -48,7 +48,7 @@ function normalizePositionPair(pos1, pos2) {
 function getCorrelationFactor(player1, player2) {
   const pos1 = player1.position;
   const pos2 = player2.position;
-  if (!POS_ORDER.hasOwnProperty(pos1) || !POS_ORDER.hasOwnProperty(pos2)) return 0;
+  if (!Object.hasOwn(POS_ORDER, pos1) || !Object.hasOwn(POS_ORDER, pos2)) return 0;
 
   const team1 = player1.team;
   const team2 = player2.team;
@@ -103,7 +103,7 @@ function scoreLineup(lineup) {
  * @param {object} [schedule] - optional schedule override (unused for now)
  * @returns {{ spikeScore: number, lineup: object[], baseScore: number, correlationBonus: number }}
  */
-export function calculateSpikeWeekProjection(players, schedule) {
+export function calculateSpikeWeekProjection(players, _schedule) {
   // Filter to eligible positions
   const eligible = players.filter(p => {
     const pos = p.position;

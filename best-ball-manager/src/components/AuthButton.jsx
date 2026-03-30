@@ -5,7 +5,7 @@ import { supabase } from '../utils/supabaseClient';
 import AuthModal from './AuthModal';
 
 export default function AuthButton() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const { isProUser, openPlanPicker } = useSubscription();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -27,9 +27,6 @@ export default function AuthButton() {
             Start Free Trial
           </button>
         )}
-        <button className="toolbar-btn toolbar-btn--ghost" onClick={signOut}>
-          Sign out
-        </button>
       </div>
     );
   }

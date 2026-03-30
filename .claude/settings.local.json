@@ -29,7 +29,13 @@
       "Bash(bash C:/Users/patrickh/.claude/plugins/cache/hus-skills/hus-governance/2.2.0/skills/hus-backlog/scripts/validate-backlog.sh C:/Software/Personal/BestBall/BACKLOG.md)",
       "Bash(find /c/Software/Personal/BestBall -type f \\\\\\(-name *.md -o -name *TASK* -o -name *task* \\\\\\))",
       "Bash(npx supabase:*)",
-      "Bash(curl -s -X POST https://cwjorshxkbbxjvhqxdlh.supabase.co/functions/v1/validate-promo-code -H \"Content-Type: application/json\" -d '{\"\"\"\"code\"\"\"\": \"\"\"\"BETA25\"\"\"\"}')"
+      "Bash(curl -s -X POST https://cwjorshxkbbxjvhqxdlh.supabase.co/functions/v1/validate-promo-code -H \"Content-Type: application/json\" -d '{\"\"\"\"code\"\"\"\": \"\"\"\"BETA25\"\"\"\"}')",
+      "Bash(nslookup:*)",
+      "Bash(supabase db:*)",
+      "Bash(supabase functions:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Bash(done)"
     ]
   }
 }

@@ -42,6 +42,18 @@ async function verifyStripeSignature(
   return expectedSignature === v1Signature;
 }
 
+// In the 2026-03-25 Stripe API, current_period_start/end moved to items.data[0].
+// Fall back to trial_start/trial_end for trialing subscriptions.
+function getPeriodDates(subscription: any) {
+  const item = subscription.items?.data?.[0];
+  const start = item?.current_period_start ?? subscription.trial_start ?? null;
+  const end = item?.current_period_end ?? subscription.trial_end ?? null;
+  return {
+    current_period_start: start ? new Date(start * 1000).toISOString() : null,
+    current_period_end: end ? new Date(end * 1000).toISOString() : null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -102,6 +114,7 @@ Deno.serve(async (req) => {
         break;
       }
 
+      const { current_period_start, current_period_end } = getPeriodDates(subscription);
       const { error } = await supabaseAdmin
         .from("subscriptions")
         .upsert(
@@ -111,12 +124,8 @@ Deno.serve(async (req) => {
             stripe_subscription_id: subscription.id,
             status: subscription.status,
             price_id: subscription.items?.data?.[0]?.price?.id ?? null,
-            current_period_start: subscription.current_period_start
-              ? new Date(subscription.current_period_start * 1000).toISOString()
-              : null,
-            current_period_end: subscription.current_period_end
-              ? new Date(subscription.current_period_end * 1000).toISOString()
-              : null,
+            current_period_start,
+            current_period_end,
             cancel_at_period_end: subscription.cancel_at_period_end ?? false,
             updated_at: new Date().toISOString(),
           },
@@ -132,17 +141,14 @@ Deno.serve(async (req) => {
 
     case "customer.subscription.updated": {
       const subscription = event.data.object;
+      const { current_period_start, current_period_end } = getPeriodDates(subscription);
       const { error } = await supabaseAdmin
         .from("subscriptions")
         .update({
           status: subscription.status,
           price_id: subscription.items?.data?.[0]?.price?.id ?? null,
-          current_period_start: subscription.current_period_start
-            ? new Date(subscription.current_period_start * 1000).toISOString()
-            : null,
-          current_period_end: subscription.current_period_end
-            ? new Date(subscription.current_period_end * 1000).toISOString()
-            : null,
+          current_period_start,
+          current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end ?? false,
           updated_at: new Date().toISOString(),
         })

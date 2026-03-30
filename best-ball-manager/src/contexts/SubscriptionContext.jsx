@@ -52,10 +52,12 @@ export function SubscriptionProvider({ children }) {
   // Fetch subscription and profile on user change
   useEffect(() => {
     if (!user || !supabase) {
+      /* eslint-disable react-hooks/set-state-in-effect */
       setSubscription(null);
       setProfile(null);
       setTrialUsed(false);
       setLoading(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
 
@@ -131,7 +133,7 @@ export function SubscriptionProvider({ children }) {
       cancelled = true;
       channel.unsubscribe();
     };
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const redirectToCheckout = useCallback(async (priceId, { trialDays, promoCode } = {}) => {
     if (!user || !supabase || !SUPABASE_FUNCTIONS_URL) {
@@ -228,6 +230,7 @@ export function SubscriptionProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSubscription() {
   const ctx = useContext(SubscriptionContext);
   if (ctx === null) throw new Error('useSubscription must be used within SubscriptionProvider');

@@ -123,7 +123,6 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
 
   // ── Draft Capital by Round (user vs market) ──
   const draftCapitalShape = useMemo(() => {
-    const totalRosters = metrics.totalRosters;
     const roundCounts = {};
     rosterData.forEach(p => {
       const r = p.round ? Number(p.round) : Math.ceil(Number(p.pick) / 12);

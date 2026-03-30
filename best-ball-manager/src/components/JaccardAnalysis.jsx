@@ -5,6 +5,17 @@ import {
 } from 'recharts';
 import { computePortfolioJaccard, computePlayerImpact, groupByRoster } from '../utils/jaccardAnalysis';
 
+function SortHeader({ label, field, sortKey, sortAsc, handleSort, style = {} }) {
+  return (
+    <th
+      onClick={() => handleSort(field)}
+      style={{ padding: '10px 12px', textAlign: 'left', cursor: 'pointer', userSelect: 'none', ...style }}
+    >
+      {label} {sortKey === field ? (sortAsc ? '▲' : '▼') : ''}
+    </th>
+  );
+}
+
 export default function JaccardAnalysis({ rosterData = [] }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [sortKey, setSortKey] = useState('deltaJaccard');
@@ -15,6 +26,22 @@ export default function JaccardAnalysis({ rosterData = [] }) {
   const categoryData = useMemo(() => computePortfolioJaccard(rosterData), [rosterData]);
 
   const playerImpact = useMemo(() => computePlayerImpact(rosterData), [rosterData]);
+
+  const handleSort = (key) => {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const sortedImpact = useMemo(() => {
+    const arr = [...playerImpact];
+    arr.sort((a, b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (typeof va === 'string') va = parseFloat(va) || 0;
+      if (typeof vb === 'string') vb = parseFloat(vb) || 0;
+      return sortAsc ? va - vb : vb - va;
+    });
+    return arr;
+  }, [playerImpact, sortKey, sortAsc]);
 
   if (rosterCount < 2) {
     return (
@@ -42,31 +69,6 @@ export default function JaccardAnalysis({ rosterData = [] }) {
 
   // Flagged players for impact tab
   const flagged = playerImpact.filter(p => parseFloat(p.exposure) > 30 && p.deltaJaccard > 0);
-
-  const handleSort = (key) => {
-    if (sortKey === key) setSortAsc(!sortAsc);
-    else { setSortKey(key); setSortAsc(false); }
-  };
-
-  const sortedImpact = useMemo(() => {
-    const arr = [...playerImpact];
-    arr.sort((a, b) => {
-      let va = a[sortKey], vb = b[sortKey];
-      if (typeof va === 'string') va = parseFloat(va) || 0;
-      if (typeof vb === 'string') vb = parseFloat(vb) || 0;
-      return sortAsc ? va - vb : vb - va;
-    });
-    return arr;
-  }, [playerImpact, sortKey, sortAsc]);
-
-  const SortHeader = ({ label, field, style = {} }) => (
-    <th
-      onClick={() => handleSort(field)}
-      style={{ padding: '10px 12px', textAlign: 'left', cursor: 'pointer', userSelect: 'none', ...style }}
-    >
-      {label} {sortKey === field ? (sortAsc ? '▲' : '▼') : ''}
-    </th>
-  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -160,13 +162,13 @@ export default function JaccardAnalysis({ rosterData = [] }) {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: 'rgba(255,255,255,0.03)', fontSize: 12, color: 'var(--text-secondary)', position: 'sticky', top: 0 }}>
                   <tr>
-                    <SortHeader label="Player" field="name" />
-                    <SortHeader label="Pos" field="position" style={{ width: 50 }} />
-                    <SortHeader label="Team" field="team" style={{ width: 60 }} />
-                    <SortHeader label="Exp %" field="exposure" style={{ width: 70, textAlign: 'right' }} />
-                    <SortHeader label="Rosters" field="rosterCount" style={{ width: 70, textAlign: 'right' }} />
-                    <SortHeader label="Δ Jaccard" field="deltaJaccard" style={{ width: 90, textAlign: 'right' }} />
-                    <SortHeader label="Δ Shared" field="deltaSharedPlayers" style={{ width: 90, textAlign: 'right' }} />
+                    <SortHeader label="Player" field="name" sortKey={sortKey} sortAsc={sortAsc} handleSort={handleSort} />
+                    <SortHeader label="Pos" field="position" sortKey={sortKey} sortAsc={sortAsc} handleSort={handleSort} style={{ width: 50 }} />
+                    <SortHeader label="Team" field="team" sortKey={sortKey} sortAsc={sortAsc} handleSort={handleSort} style={{ width: 60 }} />
+                    <SortHeader label="Exp %" field="exposure" sortKey={sortKey} sortAsc={sortAsc} handleSort={handleSort} style={{ width: 70, textAlign: 'right' }} />
+                    <SortHeader label="Rosters" field="rosterCount" sortKey={sortKey} sortAsc={sortAsc} handleSort={handleSort} style={{ width: 70, textAlign: 'right' }} />
+                    <SortHeader label="Δ Jaccard" field="deltaJaccard" sortKey={sortKey} sortAsc={sortAsc} handleSort={handleSort} style={{ width: 90, textAlign: 'right' }} />
+                    <SortHeader label="Δ Shared" field="deltaSharedPlayers" sortKey={sortKey} sortAsc={sortAsc} handleSort={handleSort} style={{ width: 90, textAlign: 'right' }} />
                   </tr>
                 </thead>
                 <tbody>

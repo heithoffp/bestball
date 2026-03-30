@@ -36,6 +36,38 @@ const calculateBoxPlot = (values) => {
   };
 };
 
+function SortIcon({ col, sortConfig }) {
+  if (sortConfig.key !== col) return <span className={styles.sortIcon}>⇅</span>;
+  return sortConfig.direction === 'asc' ? '▲' : '▼';
+}
+
+function CustomTooltip({ active, label, payload, richPlayerList }) {
+  if (!active || !label) return null;
+  return (
+    <div className={`card ${styles.tooltip}`}>
+      <div className={styles.tooltipDate}>{label}</div>
+      {payload && payload.map((entry) => {
+        const player = richPlayerList.find(p => p.id === entry.dataKey);
+        const stats = player?.pickStats;
+        const hasStats = stats && stats.count > 0;
+        return (
+          <div key={entry.dataKey} className={styles.tooltipEntry}>
+            <div className={styles.tooltipEntryHeader} style={{ color: entry.stroke }}>
+              <span className={styles.tooltipEntryName}>{player?.name || entry.dataKey}:</span>
+              <span>{entry.value?.toFixed(1)} (ADP)</span>
+            </div>
+            {hasStats && (
+              <div className={styles.tooltipStats}>
+                My Picks: Avg {stats.mean.toFixed(1)} • Med {stats.median.toFixed(1)} (Range: {stats.min}-{stats.max})
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], rosterData = [], teams = 12 }) {
   const [queryInput, setQueryInput] = useState('');
   const [query, setQuery] = useState('');
@@ -126,7 +158,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
     // C) Process RosterData to get User's Picks
     rosterData.forEach(rosterRow => {
         const normName = rosterRow.name;
-        for (const [pid, pData] of playerMap.entries()) {
+        for (const [_pid, pData] of playerMap.entries()) {
             if (pData.name === normName) {
                 if(rosterRow.pick) {
                     pData.myPicks.push(rosterRow.pick);
@@ -224,6 +256,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
   useEffect(() => {
     if (!initialSelectionDone.current && filteredAndSortedList.length > 0) {
       initialSelectionDone.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIds(filteredAndSortedList.slice(0, 5).map(p => p.id));
     }
   }, [filteredAndSortedList]);
@@ -304,41 +337,8 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
     setSelectedIds(top);
   };
 
-  const SortIcon = ({ col }) => {
-      if (sortConfig.key !== col) return <span className={styles.sortIcon}>⇅</span>;
-      return sortConfig.direction === 'asc' ? '▲' : '▼';
-  };
-
   const tickFontSize = isMobile ? 11 : 14;
   const chartHeight = isMobile ? 280 : isTablet ? 460 : 585;
-
-  const CustomTooltip = ({ active, label, payload }) => {
-    if (!active || !label) return null;
-    return (
-      <div className={`card ${styles.tooltip}`}>
-        <div className={styles.tooltipDate}>{label}</div>
-        {payload && payload.map((entry, i) => {
-            const player = richPlayerList.find(p => p.id === entry.dataKey);
-            const stats = player?.pickStats;
-            const hasStats = stats && stats.count > 0;
-
-            return (
-                <div key={entry.dataKey} className={styles.tooltipEntry}>
-                    <div className={styles.tooltipEntryHeader} style={{ color: entry.stroke }}>
-                        <span className={styles.tooltipEntryName}>{player?.name || entry.dataKey}:</span>
-                        <span>{entry.value?.toFixed(1)} (ADP)</span>
-                    </div>
-                    {hasStats && (
-                        <div className={styles.tooltipStats}>
-                            My Picks: Avg {stats.mean.toFixed(1)} • Med {stats.median.toFixed(1)} (Range: {stats.min}-{stats.max})
-                        </div>
-                    )}
-                </div>
-            );
-        })}
-      </div>
-    );
-  };
 
   return (
     <div className={styles.root}>
@@ -390,11 +390,11 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
             {/* Header */}
             <div className={styles.tableHeader}>
                 <div></div>
-                <div style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Player <SortIcon col="name"/></div>
-                <div className={`${styles.sortHeader} ${styles.hideOnMobile}`} onClick={() => handleSort('exposure')}>Exp <SortIcon col="exposure"/></div>
-                <div className={`${styles.sortHeader} ${styles.hideOnMobile}`} onClick={() => handleSort('lastAdp')}>ADP <SortIcon col="lastAdp"/></div>
-                <div className={`${styles.sortHeader} ${styles.hideOnMobile} ${styles.hideOnTablet}`} onClick={() => handleSort('value')}>Value <SortIcon col="value"/></div>
-                <div className={styles.sortHeader} onClick={() => handleSort('change')}>Trend <SortIcon col="change"/></div>
+                <div style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Player <SortIcon col="name" sortConfig={sortConfig}/></div>
+                <div className={`${styles.sortHeader} ${styles.hideOnMobile}`} onClick={() => handleSort('exposure')}>Exp <SortIcon col="exposure" sortConfig={sortConfig}/></div>
+                <div className={`${styles.sortHeader} ${styles.hideOnMobile}`} onClick={() => handleSort('lastAdp')}>ADP <SortIcon col="lastAdp" sortConfig={sortConfig}/></div>
+                <div className={`${styles.sortHeader} ${styles.hideOnMobile} ${styles.hideOnTablet}`} onClick={() => handleSort('value')}>Value <SortIcon col="value" sortConfig={sortConfig}/></div>
+                <div className={styles.sortHeader} onClick={() => handleSort('change')}>Trend <SortIcon col="change" sortConfig={sortConfig}/></div>
             </div>
 
             {/* Body */}
@@ -474,7 +474,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                         <XAxis dataKey="date" tick={{ fontSize: tickFontSize, fill: '#9ca3af' }} stroke="#4b5563" />
                         <YAxis reversed domain={chartDomain} tick={{ fontSize: tickFontSize, fill: '#9ca3af' }} stroke="#4b5563" width={isMobile ? 40 : 50} />
-                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }}/>
+                        <Tooltip content={<CustomTooltip richPlayerList={richPlayerList} />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }}/>
                         {!isMobile && <Legend wrapperStyle={{ paddingTop: 13 }} />}
 
                         {showPickRanges && selectedIds.map((id, idx) => {

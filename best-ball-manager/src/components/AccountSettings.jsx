@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, CreditCard, ArrowUpCircle, AlertTriangle } from 'lucide-react';
+import { X, CreditCard, ArrowUpCircle, AlertTriangle, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { supabase } from '../utils/supabaseClient';
 import styles from './AccountSettings.module.css';
 
 function formatDate(dateStr) {
@@ -26,11 +28,20 @@ const STATUS_COLORS = {
   canceled: 'var(--text-muted)',
 };
 
+const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
+  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
+  : null;
+
 export default function AccountSettings({ isOpen, onClose }) {
+  const { user, signOut } = useAuth();
   const { tier, status, subscription, isProUser, openPlanPicker, redirectToPortal } = useSubscription();
   const [loading, setLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   if (!isOpen) return null;
+
+  const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? null;
 
   const tierLabel = tier === 'pro' ? 'Pro' : tier === 'free' ? 'Free' : 'Guest';
   const tierColor = tier === 'pro' ? 'var(--accent-blue)' : 'var(--text-muted)';
@@ -51,6 +62,39 @@ export default function AccountSettings({ isOpen, onClose }) {
     onClose();
   }
 
+  async function handleSignOut() {
+    await signOut();
+    onClose();
+  }
+
+  async function handleDeleteAccount() {
+    setLoading(true);
+    setDeleteError(null);
+    const { data: refreshData } = await supabase.auth.refreshSession();
+    const session = refreshData?.session;
+    if (!session) {
+      setDeleteError('Session expired — please sign out and sign back in, then try again.');
+      setLoading(false);
+      return;
+    }
+    const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/delete-account`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+    });
+    const data = await response.json();
+    if (data.error) {
+      setDeleteError('Something went wrong. Please try again.');
+      setLoading(false);
+      return;
+    }
+    await signOut();
+    onClose();
+  }
+
   return (
     <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -59,6 +103,21 @@ export default function AccountSettings({ isOpen, onClose }) {
         </button>
 
         <h3 className={styles.heading}>Account</h3>
+
+        <div className={styles.section}>
+          {displayName && (
+            <div className={styles.row}>
+              <span className={styles.label}>Name</span>
+              <span className={styles.value}>{displayName}</span>
+            </div>
+          )}
+          {user?.email && (
+            <div className={styles.row}>
+              <span className={styles.label}>Email</span>
+              <span className={styles.value}>{user.email}</span>
+            </div>
+          )}
+        </div>
 
         <div className={styles.section}>
           <div className={styles.row}>
@@ -106,7 +165,36 @@ export default function AccountSettings({ isOpen, onClose }) {
               {loading ? 'Redirecting...' : 'Upgrade to Pro'}
             </button>
           )}
+          <button className={styles.secondaryBtn} onClick={handleSignOut} disabled={loading}>
+            <LogOut size={16} />
+            Sign Out
+          </button>
         </div>
+
+        {supabase && SUPABASE_FUNCTIONS_URL && (
+          <div className={styles.dangerZone}>
+            {!deleteConfirm ? (
+              <button className={styles.dangerLink} onClick={() => setDeleteConfirm(true)}>
+                Delete account
+              </button>
+            ) : (
+              <div className={styles.deleteConfirm}>
+                <p className={styles.deleteWarning}>
+                  This will permanently delete your account and all data. This cannot be undone.
+                </p>
+                {deleteError && <p className={styles.deleteError}>{deleteError}</p>}
+                <div className={styles.deleteActions}>
+                  <button className={styles.cancelBtn} onClick={() => { setDeleteConfirm(false); setDeleteError(null); }} disabled={loading}>
+                    Cancel
+                  </button>
+                  <button className={styles.destructiveBtn} onClick={handleDeleteAccount} disabled={loading}>
+                    {loading ? 'Deleting...' : 'Delete permanently'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,23 +2,21 @@
 
 ## Now
 
-| ID | Title | Status |
-|----|-------|--------|
-| TASK-028 | Enforce one free trial per account | In Progress |
-
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
 | TASK-019 | Configure SMTP and fix email confirmation flow | Todo | P2 | [Plan](docs/plans/TASK-019.md) | No |
-| TASK-028 | Enforce one free trial per account | In Progress | P2 | [Plan](docs/plans/TASK-028.md) | No |
-| TASK-007 | User profile and account settings page | Todo | P3 | [Plan](docs/plans/TASK-007.md) — Draft | No |
-| TASK-027 | Clean up lint warnings across codebase | Todo | P3 | [Plan](docs/plans/TASK-027.md) — Draft | No |
 
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-031 | Remove redundant Sign Out button from AuthButton | Done | P3 | [Plan](docs/archive/plans/TASK-031.md) | Yes | 2026-03-30 |
+| TASK-027 | Clean up lint warnings across codebase | Done | P3 | [Plan](docs/archive/plans/TASK-027.md) | Yes | 2026-03-30 |
+| TASK-030 | Deploy delete-account Edge Function to Supabase | Done | P2 | [Plan](docs/archive/plans/TASK-030.md) | Yes | 2026-03-30 |
+| TASK-007 | User profile and account settings page | Done | P3 | [Plan](docs/archive/plans/TASK-007.md) | Yes | 2026-03-30 |
+| TASK-028 | Enforce one free trial per account | Done | P2 | [Plan](docs/archive/plans/TASK-028.md) | Yes | 2026-03-30 |
 | TASK-029 | Add persistent upgrade CTA in toolbar for free users | Done | P2 | [Plan](docs/archive/plans/TASK-029.md) | Yes | 2026-03-30 |
 | TASK-026 | Configure Stripe promo codes and coupons | Done | P2 | [Plan](docs/archive/plans/TASK-026.md) | Yes | 2026-03-30 |
 | TASK-021 | Set up creator promo code program | Done | P2 | [Plan](docs/archive/plans/TASK-021.md) | Yes | 2026-03-30 |

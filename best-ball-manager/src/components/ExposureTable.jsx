@@ -210,7 +210,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
       const res = compare(a, b);
       return sortDir === 'asc' ? res : -res;
     });
-  }, [playersWithFilteredExposure, masterPlayers, search, sortField, sortDir, showUndrafted, hasActiveFilter]);
+  }, [playersWithFilteredExposure, search, sortField, sortDir, showUndrafted, hasActiveFilter]);
 
   const sortArrow = (field) => {
     if (field !== sortField) return '⇅';
@@ -219,6 +219,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
 
   const tableContainerRef = useRef(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: filteredAndSorted.length,
     getScrollElement: () => tableContainerRef.current,

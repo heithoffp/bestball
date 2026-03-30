@@ -94,7 +94,7 @@ function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
     alphaPhase = 1.2,
     betaPhase = -0.5,
     archetypeWeight = 1.5,
-    numTeams = 12,
+    numTeams: _numTeams = 12,
     reachThreshold = 0,
     aggregation = 'rss',
     topK = 3,
@@ -202,6 +202,13 @@ function ArchetypePill({ archetypeKey }) {
       {meta.name}
     </span>
   );
+}
+
+// ── Sort icon ─────────────────────────────────────────────────────────────────
+
+function SortIcon({ col, sortKey, sortDir }) {
+  if (sortKey !== col) return <span style={{ opacity: 0.25, marginLeft: 5 }}>↕</span>;
+  return <span style={{ marginLeft: 5 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
 }
 
 // ── Position snapshot ─────────────────────────────────────────────────────────
@@ -719,6 +726,7 @@ export default function RosterViewer({ rosterData = [] }) {
   }, [baseFiltered, rbFilter, qbFilter]);
 
   // Virtualizer for mobile card list
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: displayed.length,
     getScrollElement: () => scrollRef.current,
@@ -731,10 +739,6 @@ export default function RosterViewer({ rosterData = [] }) {
     else { setSortKey(key); setSortDir(key === 'avgCLV' ? 'desc' : 'asc'); }
   }
 
-  function SortIcon({ col }) {
-    if (sortKey !== col) return <span style={{ opacity: 0.25, marginLeft: 5 }}>↕</span>;
-    return <span style={{ marginLeft: 5 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
-  }
 
   // Chip filter toggle for mobile
   const toggleChip = (optionKey) => {
@@ -750,6 +754,19 @@ export default function RosterViewer({ rosterData = [] }) {
   const isChipActive = (optionKey) => {
     return rbFilter === optionKey || qbFilter === optionKey || teFilter === optionKey;
   };
+
+  // Build active filter summary pills for collapsed state (must be before early return)
+  const activeFilterPills = useMemo(() => {
+    const pills = [];
+    if (selectedPlayers.length > 0) pills.push(...selectedPlayers.map(n => ({ label: n, color: '#00e5a0' })));
+    if (selectedTeams.length > 0) pills.push(...selectedTeams.map(t => ({ label: t, color: '#60a5fa' })));
+    if (rbFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[rbFilter]?.name || rbFilter, color: archetypeColor(rbFilter) });
+    if (qbFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[qbFilter]?.name || qbFilter, color: archetypeColor(qbFilter) });
+    if (teFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[teFilter]?.name || teFilter, color: archetypeColor(teFilter) });
+    if (clvFilter !== 'all') pills.push({ label: clvFilter === 'positive' ? '+CLV' : '-CLV', color: '#00e5a0' });
+    if (tournamentFilter !== 'all') pills.push({ label: tournamentFilter, color: '#f59e0b' });
+    return pills;
+  }, [selectedPlayers, selectedTeams, rbFilter, qbFilter, teFilter, clvFilter, tournamentFilter]);
 
   if (!rosterData.length) {
     return (
@@ -931,19 +948,6 @@ export default function RosterViewer({ rosterData = [] }) {
   );
 
   // ── Render: Control Panel ───────────────────────────────────────────────────
-
-  // Build active filter summary pills for collapsed state
-  const activeFilterPills = useMemo(() => {
-    const pills = [];
-    if (selectedPlayers.length > 0) pills.push(...selectedPlayers.map(n => ({ label: n, color: '#00e5a0' })));
-    if (selectedTeams.length > 0) pills.push(...selectedTeams.map(t => ({ label: t, color: '#60a5fa' })));
-    if (rbFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[rbFilter]?.name || rbFilter, color: archetypeColor(rbFilter) });
-    if (qbFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[qbFilter]?.name || qbFilter, color: archetypeColor(qbFilter) });
-    if (teFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[teFilter]?.name || teFilter, color: archetypeColor(teFilter) });
-    if (clvFilter !== 'all') pills.push({ label: clvFilter === 'positive' ? '+CLV' : '-CLV', color: '#00e5a0' });
-    if (tournamentFilter !== 'all') pills.push({ label: tournamentFilter, color: '#f59e0b' });
-    return pills;
-  }, [selectedPlayers, selectedTeams, rbFilter, qbFilter, teFilter, clvFilter, tournamentFilter]);
 
   const renderFilterToggleHeader = () => (
     <div
@@ -1267,23 +1271,23 @@ export default function RosterViewer({ rosterData = [] }) {
       <table className={css.table}>
         <thead>
           <tr className={css.thead}>
-            <th className={css.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" /></th>
-            <th className={css.th} style={{ textAlign: 'center', color: '#fbbf24' }} onClick={() => toggleSort('grade')}>Grade <SortIcon col="grade" /></th>
-            <th className={css.th} style={{ textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" /></th>
+            <th className={css.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th className={css.th} style={{ textAlign: 'center', color: '#fbbf24' }} onClick={() => toggleSort('grade')}>Grade <SortIcon col="grade" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th className={css.th} style={{ textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center' }}>Snapshot</th>
-            <th className={`${css.th} ${css.colProjPts}`} style={{ textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" /></th>
-            <th className={css.th} style={{ color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" /></th>
-            <th className={css.th} style={{ color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" /></th>
-            <th className={css.th} style={{ color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" /></th>
+            <th className={`${css.th} ${css.colProjPts}`} style={{ textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th className={css.th} style={{ color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th className={css.th} style={{ color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th className={css.th} style={{ color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" sortKey={sortKey} sortDir={sortDir} /></th>
             <th
               className={`${css.th} ${css.colUniq}`}
               style={{ textAlign: 'center', color: '#7dffcc' }}
               onClick={() => toggleSort('rarityPercentile')}
             >
-              Uniq Lift <SortIcon col="rarityPercentile" />
+              Uniq Lift <SortIcon col="rarityPercentile" sortKey={sortKey} sortDir={sortDir} />
             </th>
-            <th className={`${css.th} ${css.colSpike}`} style={{ textAlign: 'center', color: '#f59e0b' }} onClick={() => toggleSort('spikeRaw')}>Spike Pts <SortIcon col="spikeRaw" /></th>
-            <th className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" /></th>
+            <th className={`${css.th} ${css.colSpike}`} style={{ textAlign: 'center', color: '#f59e0b' }} onClick={() => toggleSort('spikeRaw')}>Spike Pts <SortIcon col="spikeRaw" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center', cursor: 'default' }}></th>
           </tr>
         </thead>

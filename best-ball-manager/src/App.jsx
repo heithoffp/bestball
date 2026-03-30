@@ -3,7 +3,7 @@ import React, { useEffect, useState, Suspense, lazy, useCallback } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
-import { saveFile, getFile, hasUserData, syncSaveFile, syncGetFile, syncHasUserData } from './utils/storage';
+import { getFile, hasUserData, syncSaveFile, syncGetFile, syncHasUserData } from './utils/storage';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './utils/supabaseClient';
 import { useSubscription } from './contexts/SubscriptionContext';
@@ -83,6 +83,7 @@ export default function App() {
   useEffect(() => {
     if (authLoading) return;
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, authLoading]);
 
   // One-time migration: push local IndexedDB data to cloud on first sign-in
@@ -185,6 +186,7 @@ export default function App() {
       console.error('Roster upload failed', err);
       setStatus({ type: 'error', msg: String(err) });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const handleRankingsUpload = useCallback(async (text, filename) => {
@@ -196,6 +198,7 @@ export default function App() {
       console.error('Rankings upload failed', err);
       setStatus({ type: 'error', msg: String(err) });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   // Auth guard for upload buttons — blocks file picker and shows auth modal for guests

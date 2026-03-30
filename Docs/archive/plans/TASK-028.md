@@ -1,3 +1,4 @@
+<!-- Completed: 2026-03-30 | Commit: pending -->
 # TASK-028: Enforce one free trial per account
 
 **Status:** Approved

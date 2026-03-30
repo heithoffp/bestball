@@ -84,7 +84,7 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
       return p.position === pos && r >= start && r <= end;
   }).length;
 
-  const totalPos = (pos) => currentPicks.filter(p => p.position === pos).length;
+  const _totalPos = (pos) => currentPicks.filter(p => p.position === pos).length;
 
   // --- RB LOGIC ---
   if (strategyKey === 'RB_HYPER_FRAGILE') {
@@ -140,7 +140,7 @@ const classifyStructure = (roster) => {
   let rbPath = 'RB_BALANCED';
   try {
     rbPath = classifyRosterPath(roster).rb;
-  } catch (e) { /* fallback */ }
+  } catch { /* fallback */ }
 
   const countPos = (pos, start, end) => roster.filter(p => {
     const r = typeof p.round === 'string' ? parseInt(p.round.replace(/\D/g,'')) : p.round;
@@ -170,7 +170,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const adpDividerRef = useRef(null);
 
   // Mobile state
-  const { isMobile, isTablet } = useMediaQuery();
+  const { isMobile } = useMediaQuery();
   const [mobileSubView, setMobileSubView] = useState('players');
   const [expandedBreakdowns, setExpandedBreakdowns] = useState(new Set());
   const [draftToast, setDraftToast] = useState(null);
@@ -305,7 +305,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   }, [currentPicks, currentRound, allRosters]);
 
   // --- 6. PORTFOLIO HEALTH (HIERARCHICAL from PROTOCOL_TREE) ---
-  const portfolioHealth = useMemo(() => {
+  const _portfolioHealth = useMemo(() => {
     const totalEntries = allRosters.length;
     if (totalEntries === 0) return { rb: [], qb: [], te: [], activePath: null };
 
@@ -330,7 +330,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     // Determine active path for target calculation
     const rbLocked = strategyStatus.rb.locked;
     const qbLocked = strategyStatus.qb.locked;
-    const teLocked = strategyStatus.te.locked;
+    const _teLocked = strategyStatus.te.locked;
 
     // RB Level - Always use top-level PROTOCOL_TREE targets
     const rbMetrics = Object.keys(PROTOCOL_TREE).map(k =>
@@ -418,7 +418,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const parseRoundNum = (r) => {
     if (r == null) return NaN;
     if (typeof r === 'number') return r;
-    const cleaned = String(r).replace(/[^\d\-]+/g, '');
+    const cleaned = String(r).replace(/[^\d-]+/g, '');
     const n = parseInt(cleaned, 10);
     return Number.isFinite(n) ? n : NaN;
   };
@@ -474,7 +474,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
     if (masterPlayers && masterPlayers.length > 0) {
       baseList = masterPlayers.map(mp => {
-        const historicalData = historicalInfo.get(mp.name) || {};
+        const _historicalData = historicalInfo.get(mp.name) || {};
         return {
           ...mp,
           position: mp.position,
@@ -826,7 +826,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   };
 
   const slotNum = Number(draftSlot) || 1;
-  const overallPick = (currentRound - 1) * 12 + slotNum;
+  const _overallPick = (currentRound - 1) * 12 + slotNum;
   const snakePickPos = getSnakePickPosition(currentRound, slotNum, 12) || 1;
   const snakeOverallPick = (currentRound - 1) * 12 + snakePickPos;
   const { referenceStrategyName } = strategyStatus;
@@ -1151,7 +1151,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 }
 
 // --- PLAYER CARD ---
-function PlayerCard({ player, currentPicks = [], onSelect, stratName, isMobile = false, isExpanded = false, onToggleBreakdown }) {
+function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile = false, isExpanded = false, onToggleBreakdown }) {
     const color = getPosColor(player.position);
     const stackInfo = analyzeStack(player, currentPicks);
 
@@ -1159,7 +1159,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, stratName, isMobile =
     const liftScore = player.liftScore || 0;
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
-    const killsStrategy = player.killsStrategy;
+    const _killsStrategy = player.killsStrategy;
     const breakdown = player.correlationBreakdown || [];
     const myAvgPick = player.myAvgPick ?? null;
     const adpDelta = player.adpDelta ?? null;

@@ -9,6 +9,7 @@ import './index.css';
 
 initSentry();
 
+// eslint-disable-next-line react-refresh/only-export-components
 function FallbackUI() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '1rem' }}>

@@ -121,7 +121,7 @@ function computeStrategyFit(candidate, strategyStatus = {}, currentPicks = [], c
       // fallback: if candidate matches a needed position in the current plan, return 1
       return 1.0;
     }
-  } catch (e) {
+  } catch {
     // fallback path
   }
 
@@ -236,7 +236,7 @@ export function scoreCandidate(candidate, options = {}) {
     playerIndexMap = new Map(),
     totalRosters = 0,
     currentRound = 1,
-    draftSlot = 1,
+    draftSlot: _draftSlot = 1,
     referenceAdp = NaN,
     strategyStatus = {},
     checkStrategyViability = null,
@@ -270,14 +270,14 @@ export function scoreCandidate(candidate, options = {}) {
     if (typeof checkStrategyViability === 'function' && strategyStatus) {
       // If adding candidate would break any locked strategy, mark kills
       const nextPicks = [...currentPicks, { ...candidate, round: currentRound, position: candidate.position }];
-      const structural = strategyStatus.viableRB || []; // defensive
+      const _structural = strategyStatus.viableRB || []; // defensive
       // if any lockedStrategy exists and is violated, set kills
       if (strategyStatus.lockedStrategy) {
         if (!checkStrategyViability(strategyStatus.lockedStrategy.key, nextPicks, currentRound)) K_kills = 1;
       }
       // otherwise we can also test other axes if present in strategyStatus
     }
-  } catch (e) {
+  } catch {
     K_kills = 0;
   }
 

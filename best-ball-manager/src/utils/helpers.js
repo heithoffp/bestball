@@ -53,7 +53,7 @@ export function parseAdpString(rawAdp) {
  *  - adpPick (number) or null if missing
  *  - history: [{ date, adpPick, adpDisplay }, ... ] aligned to adpSnapshots (or empty)
  */
-export function processMasterList(rosters = [], adpMap = {}, teams = 12, adpSnapshots = []) {
+export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSnapshots = []) {
   // helper: normalize names for matching
   const normalize = (s = '') =>
     String(s || '')

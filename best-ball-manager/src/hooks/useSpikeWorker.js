@@ -7,8 +7,10 @@ export function useSpikeWorker(rosters) {
 
   useEffect(() => {
     if (!rosters || rosters.length === 0) {
+      /* eslint-disable react-hooks/set-state-in-effect */
       setSpikeData({});
       setIsComplete(true);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
 
