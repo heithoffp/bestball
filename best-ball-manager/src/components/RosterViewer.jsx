@@ -7,6 +7,7 @@ import { spikeWeekPercentile } from '../utils/spikeWeekProjection';
 import { useSpikeWorker } from '../hooks/useSpikeWorker';
 import useMediaQuery from '../hooks/useMediaQuery';
 import css from './RosterViewer.module.css';
+import { trackEvent } from '../utils/analytics';
 
 // ── CLV helpers ───────────────────────────────────────────────────────────────
 
@@ -782,7 +783,7 @@ export default function RosterViewer({ rosterData = [] }) {
           width: '100%',
           transform: `translateY(${virtualRow.start}px)`,
         }}
-        onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
+        onClick={() => { if (!isOpen) trackEvent('roster_viewed'); setExpandedEntry(isOpen ? null : roster.entry_id); }}
       >
         {/* Header: Grade + Entry + Chevron */}
         <div className={css.rosterCardHeader}>
@@ -1301,7 +1302,7 @@ export default function RosterViewer({ rosterData = [] }) {
               <React.Fragment key={roster.entry_id}>
                 <tr
                   className={`${css.row} ${isOpen ? css.rowOpen : ''}`}
-                  onClick={() => setExpandedEntry(isOpen ? null : roster.entry_id)}
+                  onClick={() => { if (!isOpen) trackEvent('roster_viewed'); setExpandedEntry(isOpen ? null : roster.entry_id); }}
                 >
                   <td className={css.td}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>

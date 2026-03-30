@@ -96,10 +96,9 @@ Channels ranked by ROI (reach x conversion likelihood / effort + cost):
 | Aspirational | Fantasy Footballers | YouTube/Podcast | Massive audience (1M+), expensive, best-ball is secondary |
 
 **Affiliate Deal Structure:**
-- **Offer:** Free Pro access + unique 25% off promo code + $X per paid signup using their code
-- **Per-signup payment:** Decide on a dollar amount per conversion (e.g., $3-5 per paid signup). This is the only cost — zero risk.
+- **Offer:** Free Pro access + unique 25% off promo code for their audience
 - **Tracking:** Stripe supports promo code attribution. Each creator gets a unique code (e.g., `RYAN25`, `CIELY25`).
-- **Pitch angle:** "Your audience gets 25% off, you get paid per signup, and the tool is actually good — try it yourself first."
+- **Pitch angle:** "Your audience gets 25% off for life, you get free Pro access, and the tool is actually good — try it yourself first."
 
 **Approach:**
 1. **Before launch:** Identify 5-10 mid-tier creators. DM them on Twitter/X with a pitch: free Pro access to try the tool, offer to set up an affiliate code if they like it.
@@ -191,8 +190,7 @@ Channels ranked by ROI (reach x conversion likelihood / effort + cost):
 
 ## Decisions Made
 
-1. **Per-signup affiliate payment:** $3 per paid Pro signup.
-2. **Seasonal promo price:** $67/season nominal, $50 with 25% promo code.
+1. **Seasonal promo price:** $67/season nominal, $50 with 25% promo code.
 3. **Beta implementation:** TASK-024 — Implement beta flag + promotion flow.
 4. **Twitter/X:** Skipped for now — focus on Reddit as primary organic channel. Revisit in Phase 2.
 

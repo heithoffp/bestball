@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Check, Tag, Loader2 } from 'lucide-react';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { supabase } from '../utils/supabaseClient';
+import { trackEvent } from '../utils/analytics';
 
 const MONTHLY_PRICE_ID = import.meta.env.VITE_STRIPE_PRO_MONTHLY_PRICE_ID;
 const YEARLY_PRICE_ID = import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID;
@@ -83,13 +84,16 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
       if (data.valid) {
         setPromoState('valid');
         setPromoResult(data);
+        trackEvent('promo_code_applied', { success: true });
       } else {
         setPromoState('invalid');
         setPromoError(data.error || 'Invalid code');
+        trackEvent('promo_code_applied', { success: false });
       }
     } catch {
       setPromoState('invalid');
       setPromoError('Could not validate code');
+      trackEvent('promo_code_applied', { success: false });
     }
   }
 

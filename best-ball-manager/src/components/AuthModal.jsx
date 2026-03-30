@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { trackEvent } from '../utils/analytics';
 
 export default function AuthModal({ isOpen, onClose, message }) {
   const { signInWithGoogle, signUpWithEmail, signInWithEmail, resetPassword, authError, clearError } = useAuth();
@@ -38,7 +39,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
     setLoading(true);
     const { error } = await signInWithEmail(email, password);
     setLoading(false);
-    if (!error) onClose();
+    if (!error) { trackEvent('auth_login'); onClose(); }
   }
 
   async function handleSignUp(e) {
@@ -48,6 +49,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
     const { error } = await signUpWithEmail(email, password);
     setLoading(false);
     if (!error) {
+      trackEvent('auth_signup');
       setSuccessMessage('Check your email to confirm your account.');
       setEmail('');
       setPassword('');
@@ -134,7 +136,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
               {loading ? 'Signing in…' : 'Sign In'}
             </button>
             <div className="modal-divider"><span>or</span></div>
-            <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
+            <button type="button" className="modal-google-btn" onClick={() => { trackEvent('auth_login'); signInWithGoogle(); }}>
               Continue with Google
             </button>
           </form>
@@ -216,7 +218,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
               {loading ? 'Creating account…' : 'Create Account'}
             </button>
             <div className="modal-divider"><span>or</span></div>
-            <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
+            <button type="button" className="modal-google-btn" onClick={() => { trackEvent('auth_login'); signInWithGoogle(); }}>
               Continue with Google
             </button>
           </form>

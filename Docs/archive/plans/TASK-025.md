@@ -1,3 +1,4 @@
+<!-- Completed: 2026-03-30 | Commit: a52594e -->
 # TASK-025: Add plan selection UI with monthly/yearly toggle and promo code support
 
 **Status:** Approved

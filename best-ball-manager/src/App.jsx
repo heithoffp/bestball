@@ -15,6 +15,7 @@ import AccountSettings from './components/AccountSettings';
 import BetaBanner from './components/BetaBanner';
 import PlanPicker from './components/PlanPicker';
 import useMediaQuery from './hooks/useMediaQuery';
+import { trackEvent } from './utils/analytics';
 import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings } from 'lucide-react';
 
 const tabs = [
@@ -171,6 +172,7 @@ export default function App() {
     setAdpSnapshots(result.adpSnapshots);
     setRankingsSource(result.rankingsSource);
     setStatus({ type: '', msg: '' });
+    if (result.adpSnapshots?.length > 0) trackEvent('adp_snapshot_loaded');
   }
 
   const handleRosterUpload = useCallback(async (text, filename) => {
@@ -178,6 +180,7 @@ export default function App() {
     try {
       await syncSaveFile({ id: 'roster', type: 'roster', filename, text, userId: user?.id });
       await loadFromStorage();
+      trackEvent('csv_uploaded');
     } catch (err) {
       console.error('Roster upload failed', err);
       setStatus({ type: 'error', msg: String(err) });
@@ -236,7 +239,7 @@ export default function App() {
               <button
                 key={key}
                 className={`tab-button${activeTab === key ? ' active' : ''}${locked ? ' locked' : ''}`}
-                onClick={() => setActiveTab(key)}
+                onClick={() => { setActiveTab(key); trackEvent('tab_viewed', { tab: key }); }}
               >
                 {isMobile ? (
                   <>

@@ -69,7 +69,7 @@ Each promo code needs:
 3. Promotion codes must be set to `active: true` in Stripe
 
 ### Creator Affiliate Program
-- Each creator gets: free Pro access + unique 25% off promo code + $3 per paid signup using their code
+- Each creator gets: free Pro access + unique 25% off promo code for their audience
 - Stripe tracks redemptions per promotion code for attribution
 - Target: 5-10 mid-tier best-ball creators (5K-50K followers)
 - See `docs/Channel_Strategy.md` for full creator list and outreach plan

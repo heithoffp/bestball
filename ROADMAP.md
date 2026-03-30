@@ -28,7 +28,7 @@
 **Tasks:** TASK-008, TASK-009, TASK-010, TASK-011, TASK-012, TASK-018
 
 ### FEAT-021: Commercial Strategy & Positioning
-**Status:** In Progress
+**Status:** Complete
 **Description:** Competitive analysis (pricing, features, positioning vs. Best Ball Overlay), pricing model and tier definition, channel strategy for reaching serious best-ball drafters, and launch planning. This is a research/strategy feature — outputs inform FEAT-002 (tier gating) and FEAT-014 (landing page messaging).
 **Tasks:** TASK-001, TASK-002, TASK-003, TASK-020, TASK-021, TASK-024
 

@@ -4,6 +4,7 @@ import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/
 import { analyzeStack } from '../utils/stackAnalysis';
 import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './DraftFlowAnalysis.module.css';
+import { trackEvent } from '../utils/analytics';
 
 // ADP delta: positive = I drafted later than current ADP (got value), negative = I drafted earlier (overpaid)
 const getAdpDeltaColor = (delta) => {
@@ -158,6 +159,8 @@ const classifyStructure = (roster) => {
 };
 
 export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}) {
+  useEffect(() => { trackEvent('draft_session_started'); }, []);
+
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
   const [searchInput, setSearchInput] = useState('');

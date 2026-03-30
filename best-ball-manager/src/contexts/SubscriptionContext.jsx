@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { useAuth } from './AuthContext';
+import { trackEvent } from '../utils/analytics';
 
 const SubscriptionContext = createContext(null);
 
@@ -127,6 +128,7 @@ export function SubscriptionProvider({ children }) {
       console.error('Cannot create checkout session: missing auth or Supabase config');
       return;
     }
+    trackEvent('subscription_checkout_started');
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
