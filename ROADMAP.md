@@ -72,14 +72,17 @@
 ### FEAT-009: Extension Architecture & Scaffold
 **Status:** Not Started
 **Description:** Chrome extension manifest v3, content script injection targeting Underdog draft pages, and communication bridge to web app data (via shared Supabase storage or local messaging).
+**Tasks:** TASK-042, TASK-043
 
 ### FEAT-010: Draft Overlay UI
 **Status:** Not Started
 **Description:** Real-time candidate scoring overlay during live Underdog drafts using existing draftScorer.js logic. Displays composite scores, exposure warnings, and strategy fit inline with the draft board.
+**Tasks:** TASK-046, TASK-047
 
 ### FEAT-011: Portfolio Context Sync
 **Status:** Not Started
 **Description:** Sync portfolio data between the web app and extension so the overlay has access to current exposure percentages, archetype distribution, and draft history for exposure-aware recommendations.
+**Tasks:** TASK-044, TASK-045
 
 ---
 

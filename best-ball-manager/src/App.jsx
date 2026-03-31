@@ -214,7 +214,7 @@ export default function App() {
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1>{isMobile ? 'BB MANAGER' : 'BEST BALL MANAGER'}</h1>
+        <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
         <div className="auth-button-group">
           {user && supabase && (
             <button

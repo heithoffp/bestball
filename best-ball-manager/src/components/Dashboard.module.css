@@ -127,6 +127,13 @@
   color: var(--text-primary);
 }
 
+/* ── Exposure Pair (side-by-side container) ── */
+.exposurePair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 /* ── Top Exposures ── */
 .exposureSection {
   background: rgba(0, 0, 0, 0.2);
@@ -137,7 +144,7 @@
 
 .exposureGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
 
@@ -354,9 +361,6 @@
   .drillRow {
     grid-template-columns: repeat(3, 1fr);
   }
-  .exposureGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (max-width: 599px) {
@@ -364,14 +368,14 @@
     padding: 8px 10px;
     gap: 14px;
   }
+  .exposurePair {
+    grid-template-columns: 1fr;
+  }
   .metricValue {
     font-size: 1.3rem;
   }
   .shapeGrid {
     grid-template-columns: 1fr;
-  }
-  .exposureGrid {
-    grid-template-columns: repeat(2, 1fr);
   }
   .exposureByRoundPlayer {
     flex-wrap: wrap;

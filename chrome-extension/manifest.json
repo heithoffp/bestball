@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Best Ball Manager",
+  "version": "0.1.0",
+  "description": "Portfolio-aware draft context for best-ball fantasy football",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://underdogfantasy.com/*"],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://underdogfantasy.com/*"],
+      "js": ["src/content/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Best Ball Manager"
+  },
+  "icons": {}
+}

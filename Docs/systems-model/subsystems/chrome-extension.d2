@@ -1,0 +1,118 @@
+# Chrome Extension Architecture — Top Level
+# d2-render-layout: elk
+
+# --- Roles (Blue) ---
+R1: "Drafter\n(User)" {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+R2: "Web App" {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 3
+}
+
+# --- S1: Auth & Lifecycle (Purple/Green) ---
+A1: "Manifest v3" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+P1: "Background\nService Worker" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+A2: "Popup UI\n(Auth + Status)" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+# --- S2: Platform Abstraction (Purple/Green) ---
+A4: "Platform Adapter\nInterface" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+P2: "Adapter:\nUnderdog" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P3: "Adapter:\nDraftKings" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+
+# --- S3: Data Pipeline (Purple/Green) ---
+P4: "Entry\nScraper" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P7: "Data Sync\nPipeline" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+A5: "Local Cache\n(chrome.storage)" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+# --- S4: Draft Context (Purple/Green) ---
+P5: "Draft Board\nObserver" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+A3: "Draft Overlay\n(Context Display)" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+# --- External Systems (Orange) ---
+E1: "Supabase\n(Auth + Data)" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+E2: "Underdog\nFantasy" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+E3: "DraftKings" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+  style.stroke-dash: 5
+}
+E4: "Chrome\nExtensions API" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+
+# --- Interactions ---
+
+# S1: Auth & Lifecycle
+R1 -> A2: "Opens popup" {style.stroke: "#4A90D9"}
+A2 -> P1: "Triggers auth" {style.stroke: "#7B68EE"}
+P1 -> E1: "Authenticates" {style.stroke: "#E67E22"}
+P1 -> E4: "Registers worker" {style.stroke: "#E67E22"}
+A1 -> E4: "Declares permissions" {style.stroke: "#E67E22"}
+
+# S1 -> S2: URL routing
+P1 -> A4: "Routes by URL" {style.stroke: "#7B68EE"}
+
+# S2: Platform Abstraction
+A4 -> P2: "Delegates" {style.stroke: "#7B68EE"}
+A4 -> P3: "Delegates" {style.stroke: "#7B68EE"; style.stroke-dash: 5}
+P2 -> E2: "Reads DOM" {style.stroke: "#E67E22"}
+P3 -> E3: "Reads DOM" {style.stroke: "#E67E22"; style.stroke-dash: 5}
+
+# S3: Data Pipeline
+P4 -> A4: "getEntries()" {style.stroke: "#7B68EE"}
+P4 -> P7: "Scraped entries" {style.stroke: "#7B68EE"}
+P7 -> E1: "Writes roster data" {style.stroke: "#E67E22"}
+P7 -> A5: "Caches portfolio" {style.stroke: "#2ECC71"}
+P7 -> P1: "Reports sync status" {style.stroke: "#7B68EE"}
+R2 -> E1: "Reads synced data" {style.stroke: "#4A90D9"}
+
+# S4: Draft Context
+P5 -> A4: "getDraftState()" {style.stroke: "#7B68EE"}
+P5 -> A5: "Reads portfolio context" {style.stroke: "#2ECC71"}
+P5 -> A3: "Feeds context data" {style.stroke: "#7B68EE"}
+A3 -> A4: "getInjectionTarget()" {style.stroke: "#7B68EE"}
+R1 -> A3: "Views context" {style.stroke: "#4A90D9"}

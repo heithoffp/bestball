@@ -809,7 +809,7 @@ export default function RosterViewer({ rosterData = [] }) {
   const renderCardList = () => (
     <div
       ref={scrollRef}
-      style={{ overflowY: 'auto', flex: 1, minHeight: 0, borderRadius: 8, border: '1px solid var(--border)' }}
+      style={{ overflowY: 'auto', minHeight: 400, flexShrink: 0, borderRadius: 8, border: '1px solid var(--border)' }}
     >
       {displayed.length === 0 ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>

@@ -1,0 +1,61 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: #e0e0e0;
+  background: #1a1a1a;
+  width: 280px;
+}
+
+.container {
+  padding: 16px;
+}
+
+h1 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.version {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.status-section {
+  margin-top: 16px;
+  border-top: 1px solid #333;
+  padding-top: 12px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.status-label {
+  color: #888;
+}
+
+.status-value {
+  color: #ccc;
+}
+
+.auth-section {
+  margin-top: 16px;
+  border-top: 1px solid #333;
+  padding-top: 12px;
+}
+
+#auth-status {
+  color: #888;
+  font-size: 12px;
+}

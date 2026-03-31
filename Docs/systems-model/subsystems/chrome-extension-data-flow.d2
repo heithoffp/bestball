@@ -1,0 +1,84 @@
+# Chrome Extension — Data Flow (Runtime Sequence)
+# d2-render-layout: elk
+
+# --- Entry Sync Flow ---
+user: "Drafter visits\nentries page" {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+
+detect: "Service Worker\ndetects URL" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+adapter_scrape: "Platform Adapter\ngetEntries()" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+scraper: "Entry Scraper\nextracts rosters" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+sync: "Sync Pipeline\npush to Supabase" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+supabase: "Supabase\n(bridge table)" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+
+webapp: "Web App\nloads portfolio" {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+
+cache: "chrome.storage\n(local cache)" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+user -> detect: "1. Page load"
+detect -> adapter_scrape: "2. Route to adapter"
+adapter_scrape -> scraper: "3. Raw DOM data"
+scraper -> sync: "4. Parsed entries"
+sync -> supabase: "5a. Write rows"
+sync -> cache: "5b. Cache locally"
+supabase -> webapp: "6. Web app reads"
+
+# --- Draft Context Flow ---
+draft_user: "Drafter enters\nlive draft" {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+
+draft_detect: "Service Worker\ndetects draft URL" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+adapter_draft: "Platform Adapter\ngetDraftState()" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+observer: "Draft Board Observer\nmerges draft + portfolio" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+overlay: "Overlay UI\nexposure %, ADP, co-occ" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+draft_user -> draft_detect: "1. Page load"
+draft_detect -> adapter_draft: "2. Route to adapter"
+adapter_draft -> observer: "3. Draft state"
+cache -> observer: "4. Portfolio context"
+observer -> overlay: "5. Context facts"
+overlay -> draft_user: "6. Views inline"

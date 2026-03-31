@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=320">
+  <link rel="stylesheet" href="popup.css">
+  <title>Best Ball Manager</title>
+</head>
+<body>
+  <div class="container">
+    <h1>Best Ball Manager</h1>
+    <p class="version">v0.1.0</p>
+
+    <div class="status-section">
+      <div class="status-row">
+        <span class="status-label">Status</span>
+        <span id="connection-status" class="status-value">Not connected</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Platform</span>
+        <span id="platform-status" class="status-value">--</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Last sync</span>
+        <span id="sync-status" class="status-value">Never</span>
+      </div>
+    </div>
+
+    <div class="auth-section">
+      <p id="auth-status">Sign in to sync your portfolio</p>
+    </div>
+  </div>
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

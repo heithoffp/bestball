@@ -35,7 +35,11 @@
       "Bash(supabase functions:*)",
       "Bash(for f:*)",
       "Bash(do echo:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Skill(hus-systems-model)",
+      "Bash(d2 --layout elk subsystems/chrome-extension.d2 subsystems/chrome-extension.svg)",
+      "Bash(cd:*)",
+      "Bash(node:*)"
     ]
   }
 }

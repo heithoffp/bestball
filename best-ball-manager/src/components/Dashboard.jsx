@@ -211,71 +211,74 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         </div>
       </div>
 
-      {/* Section 2: Top Exposures by Position */}
-      <div className={styles.exposureSection}>
-        <div className={styles.sectionTitle}>Top Exposures</div>
-        <div className={styles.exposureGrid}>
-          {['QB', 'RB', 'WR', 'TE'].map(pos => (
-            <div key={pos} className={styles.exposureColumn}>
-              <h4 style={{ color: POS_COLORS[pos] }}>{pos}</h4>
-              {topExposures[pos].map(p => (
-                <div key={p.name} className={styles.exposureRow}>
-                  <span className={styles.exposureName}>{p.name}</span>
-                  <div className={styles.exposureBarWrap}>
-                    <div
-                      className={styles.exposureBarFill}
-                      style={{
-                        width: `${Math.min(p.exposure, 100)}%`,
-                        background: POS_COLORS[pos],
-                        opacity: 0.7,
-                      }}
-                    />
-                  </div>
-                  <span className={styles.exposurePct}>{p.exposure.toFixed(0)}%</span>
-                </div>
-              ))}
-              {topExposures[pos].length === 0 && (
-                <div className={styles.exposureRow}>
-                  <span className={styles.exposureName} style={{ color: 'var(--text-secondary)' }}>—</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Section 3: Exposure by Round (highest + lowest) */}
-      {exposureByRound.length > 0 && (
+      {/* Sections 2 + 3: Top Exposures and Exposure by ADP Round — side by side */}
+      <div className={styles.exposurePair}>
+        {/* Section 2: Top Exposures by Position */}
         <div className={styles.exposureSection}>
-          <div className={styles.sectionTitle}>Exposure by ADP Round</div>
-          <div className={styles.exposureByRoundGrid}>
-            <div className={styles.exposureByRoundHeader}>
-              <span className={styles.blindSpotRound} />
-              <span className={styles.exposureByRoundLabel}>Highest</span>
-              <span className={styles.exposureByRoundLabel}>Lowest</span>
-            </div>
-            {exposureByRound.map(r => (
-              <div key={r.round} className={styles.exposureByRoundRow}>
-                <span className={styles.blindSpotRound}>R{r.round}</span>
-                <div className={styles.exposureByRoundPlayer}>
-                  <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }}>
-                    {r.highest.name}
-                  </span>
-                  <span className={styles.blindSpotAdp}>ADP {r.highest.adp}</span>
-                  <span className={styles.exposurePct}>{r.highest.exposure.toFixed(0)}%</span>
-                </div>
-                <div className={styles.exposureByRoundPlayer}>
-                  <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }}>
-                    {r.lowest.name}
-                  </span>
-                  <span className={styles.blindSpotAdp}>ADP {r.lowest.adp}</span>
-                  <span className={styles.exposurePct}>{r.lowest.exposure.toFixed(0)}%</span>
-                </div>
+          <div className={styles.sectionTitle}>Top Exposures</div>
+          <div className={styles.exposureGrid}>
+            {['QB', 'RB', 'WR', 'TE'].map(pos => (
+              <div key={pos} className={styles.exposureColumn}>
+                <h4 style={{ color: POS_COLORS[pos] }}>{pos}</h4>
+                {topExposures[pos].map(p => (
+                  <div key={p.name} className={styles.exposureRow}>
+                    <span className={styles.exposureName}>{p.name}</span>
+                    <div className={styles.exposureBarWrap}>
+                      <div
+                        className={styles.exposureBarFill}
+                        style={{
+                          width: `${Math.min(p.exposure, 100)}%`,
+                          background: POS_COLORS[pos],
+                          opacity: 0.7,
+                        }}
+                      />
+                    </div>
+                    <span className={styles.exposurePct}>{p.exposure.toFixed(0)}%</span>
+                  </div>
+                ))}
+                {topExposures[pos].length === 0 && (
+                  <div className={styles.exposureRow}>
+                    <span className={styles.exposureName} style={{ color: 'var(--text-secondary)' }}>—</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
-      )}
+
+        {/* Section 3: Exposure by Round (highest + lowest) */}
+        {exposureByRound.length > 0 && (
+          <div className={styles.exposureSection}>
+            <div className={styles.sectionTitle}>Exposure by ADP Round</div>
+            <div className={styles.exposureByRoundGrid}>
+              <div className={styles.exposureByRoundHeader}>
+                <span className={styles.blindSpotRound} />
+                <span className={styles.exposureByRoundLabel}>Highest</span>
+                <span className={styles.exposureByRoundLabel}>Lowest</span>
+              </div>
+              {exposureByRound.map(r => (
+                <div key={r.round} className={styles.exposureByRoundRow}>
+                  <span className={styles.blindSpotRound}>R{r.round}</span>
+                  <div className={styles.exposureByRoundPlayer}>
+                    <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }}>
+                      {r.highest.name}
+                    </span>
+                    <span className={styles.blindSpotAdp}>ADP {r.highest.adp}</span>
+                    <span className={styles.exposurePct}>{r.highest.exposure.toFixed(0)}%</span>
+                  </div>
+                  <div className={styles.exposureByRoundPlayer}>
+                    <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }}>
+                      {r.lowest.name}
+                    </span>
+                    <span className={styles.blindSpotAdp}>ADP {r.lowest.adp}</span>
+                    <span className={styles.exposurePct}>{r.lowest.exposure.toFixed(0)}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Section 4: Shape Visualizations */}
       <div className={styles.shapeGrid}>

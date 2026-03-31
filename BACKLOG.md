@@ -2,16 +2,25 @@
 
 ## Now
 
+- TASK-041: Side-by-side layout for Top Exposures and Exposure by ADP Round
+
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
+| TASK-043 | Supabase data bridge | Todo | P1 | [Plan](docs/plans/TASK-043.md) — Draft | No |
 | TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric | Todo | P2 | [Plan](docs/plans/TASK-039.md) — Draft | No |
+| TASK-044 | Underdog entries list scraper | Todo | P2 | [Plan](docs/plans/TASK-044.md) — Draft | No |
+| TASK-045 | Web app sync UX | Todo | P2 | [Plan](docs/plans/TASK-045.md) — Draft | No |
+| TASK-046 | Draft overlay scaffold | Todo | P2 | [Plan](docs/plans/TASK-046.md) — Draft | No |
+| TASK-047 | Draft overlay scoring | Todo | P2 | [Plan](docs/plans/TASK-047.md) — Draft | No |
+| TASK-041 | Side-by-side layout for Top Exposures and Exposure by ADP Round | In Progress | P3 | [Plan](docs/plans/TASK-041.md) | No |
 
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-042 | Chrome extension scaffold | Done | P1 | [Plan](docs/archive/plans/TASK-042.md) | Yes | 2026-03-31 |
 | TASK-040 | Rename LIFT parameter in Draft Assistant to descriptive label | Done | P2 | [Plan](docs/archive/plans/TASK-040.md) | Yes | 2026-03-30 |
 | TASK-038 | Remove Grading System and Spike Points from Roster Viewer | Done | P2 | [Plan](docs/archive/plans/TASK-038.md) | Yes | 2026-03-30 |
 | TASK-037 | Remove JaccardAnalysis tab | Done | P2 | [Plan](docs/archive/plans/TASK-037.md) | Yes | 2026-03-30 |
