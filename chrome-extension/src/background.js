@@ -3,6 +3,9 @@
  *
  * Detects when the user navigates to a supported draft platform and
  * routes to the correct adapter. Manages extension lifecycle events.
+ *
+ * Note: page bridge injection is handled via manifest content_scripts
+ * (world: MAIN, document_start) — no scripting API calls needed here.
  */
 
 import { getAdapterForUrl } from './adapters/registry.js';
@@ -28,12 +31,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   activeTabs.delete(tabId);
 });
 
-// Message handler for content script <-> background communication
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_STATUS') {
     const tabId = sender.tab?.id;
     sendResponse({
-      active: activeTabs.has(tabId),
+      active:   activeTabs.has(tabId),
       tabCount: activeTabs.size,
     });
   }

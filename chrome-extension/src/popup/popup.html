@@ -26,8 +26,20 @@
       </div>
     </div>
 
-    <div class="auth-section">
-      <p id="auth-status">Sign in to sync your portfolio</p>
+    <div id="auth-form" class="auth-section" hidden>
+      <p class="auth-label">Sign in to sync your portfolio</p>
+      <input id="auth-email" type="email" placeholder="Email" autocomplete="email" />
+      <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password" />
+      <button id="sign-in-btn">Sign In</button>
+      <p id="auth-error" class="auth-error" hidden></p>
+    </div>
+
+    <div id="auth-info" class="auth-section" hidden>
+      <p id="auth-user-email" class="auth-user"></p>
+      <span id="auth-tier" class="tier-badge" hidden></span>
+      <button id="sync-btn">Sync Now</button>
+      <p id="sync-result" class="sync-result" hidden></p>
+      <button id="sign-out-btn">Sign Out</button>
     </div>
   </div>
   <script src="popup.js" type="module"></script>

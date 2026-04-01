@@ -72,7 +72,7 @@
 ### FEAT-009: Extension Architecture & Scaffold
 **Status:** Not Started
 **Description:** Chrome extension manifest v3, content script injection targeting Underdog draft pages, and communication bridge to web app data (via shared Supabase storage or local messaging).
-**Tasks:** TASK-042, TASK-043
+**Tasks:** TASK-042, TASK-043, TASK-048, TASK-049
 
 ### FEAT-010: Draft Overlay UI
 **Status:** Not Started

@@ -1,50 +1,77 @@
 /**
  * Underdog Fantasy Platform Adapter
  *
- * Implements the PlatformAdapter interface for underdogfantasy.com.
- * Stub implementation — real DOM scraping logic added in TASK-044 (entries)
- * and TASK-046 (draft overlay).
+ * Implements the PlatformAdapter interface for app.underdogfantasy.com.
+ * The page bridge (fetch hook + sync logic) lives in
+ * src/injected/underdog-bridge.js and is injected at document_start via
+ * the manifest (world: MAIN), bypassing Underdog's CSP.
  *
  * @type {import('./interface.js').PlatformAdapter}
  */
+
 const underdogAdapter = {
   isMatch(url) {
     try {
-      const hostname = new URL(url).hostname;
-      return hostname === 'underdogfantasy.com' || hostname.endsWith('.underdogfantasy.com');
+      return new URL(url).hostname === 'app.underdogfantasy.com';
     } catch {
       return false;
     }
   },
 
+  /**
+   * Scrapes all completed best-ball entries for the signed-in user.
+   * Delegates to the page bridge (underdog-bridge.js) via postMessage.
+   *
+   * @returns {Promise<import('./interface.js').Entry[]>}
+   */
   async getEntries() {
-    // TASK-044: Implement entries page scraping
-    throw new Error('[BBM] getEntries() not implemented — see TASK-044');
+    if (!window.location.href.includes('app.underdogfantasy.com/completed')) {
+      throw new Error('Navigate to your Underdog completed entries page first');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error('Sync timed out — please retry')),
+        60_000
+      );
+
+      function handler(event) {
+        if (event.source !== window) return;
+        if (event.data?.type === 'BBM_SYNC_RESULT') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          resolve(event.data.entries);
+        } else if (event.data?.type === 'BBM_SYNC_ERROR') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          reject(new Error(event.data.error));
+        }
+      }
+
+      window.addEventListener('message', handler);
+      window.postMessage({ type: 'BBM_SYNC_REQUEST' }, '*');
+    });
   },
 
   getDraftState() {
-    // TASK-046: Implement live draft state reading
     throw new Error('[BBM] getDraftState() not implemented — see TASK-046');
   },
 
   getInjectionTarget() {
-    // TASK-046: Identify stable injection point on Underdog draft pages
     return null;
   },
 
   getStyles() {
-    // Underdog's visual style — will be refined when building the overlay (TASK-046)
     return {
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '13px',
-      textColor: '#e0e0e0',
-      bgColor: 'rgba(30, 30, 30, 0.85)',
+      fontFamily:  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontSize:    '13px',
+      textColor:   '#e0e0e0',
+      bgColor:     'rgba(30, 30, 30, 0.85)',
       borderColor: '#333',
     };
   },
 
   getPlayerRows() {
-    // TASK-046: Query draft board player row elements
     return [];
   },
 };

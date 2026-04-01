@@ -55,7 +55,87 @@ h1 {
   padding-top: 12px;
 }
 
-#auth-status {
+.auth-label {
   color: #888;
   font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.auth-section input {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 12px;
+}
+
+.auth-section input:focus {
+  outline: none;
+  border-color: #666;
+}
+
+.auth-section button {
+  display: block;
+  width: 100%;
+  padding: 6px 0;
+  background: #3a6bbd;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.auth-section button:hover {
+  background: #4a7bcd;
+}
+
+.auth-section button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-error {
+  color: #e05555;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.auth-user {
+  color: #ccc;
+  font-size: 12px;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.tier-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.tier-badge.pro  { background: #3a6bbd; color: #fff; }
+.tier-badge.free { background: #333; color: #888; }
+
+#sync-btn {
+  margin-bottom: 6px;
+}
+
+.sync-result {
+  font-size: 11px;
+  margin-bottom: 8px;
+  color: #aaa;
+}
+
+.sync-result.error {
+  color: #e05555;
 }

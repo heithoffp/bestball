@@ -2,11 +2,13 @@
  * Content Script
  *
  * Injected into supported draft platform pages. Identifies the correct
- * adapter and sets up a MutationObserver for DOM stability.
+ * adapter, injects the page bridge script, and handles sync messages
+ * from the popup.
  */
 
 import { getAdapterForUrl } from '../adapters/registry.js';
 import { createReconnectingObserver } from '../utils/observer.js';
+import { writeEntries } from '../utils/bridge.js';
 
 const adapter = getAdapterForUrl(window.location.href);
 
@@ -14,20 +16,28 @@ if (adapter) {
   console.log(`[BBM] Content script loaded on ${window.location.hostname}`);
 
   // Set up a reconnecting observer on the app root to detect major DOM changes.
-  // Individual features (scraper, overlay) will set up their own targeted observers.
   const appRoot = document.querySelector('#root, #app, [data-reactroot]');
-
   if (appRoot) {
     createReconnectingObserver({
       targetSelector: '#root, #app, [data-reactroot]',
-      onMutation: () => {
-        // Future: notify active features (scraper, overlay) of DOM changes
-      },
+      onMutation: () => {},
       onReconnect: () => {
         console.log('[BBM] App root reconnected after re-render');
       },
     });
   }
+
+  // Handle sync request from popup
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type !== 'SYNC_ENTRIES') return false;
+
+    adapter.getEntries()
+      .then(entries => writeEntries(entries))
+      .then(({ count }) => sendResponse({ ok: true, count }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+
+    return true; // keep channel open for async response
+  });
 } else {
   console.log('[BBM] Content script loaded but no adapter matched');
 }
