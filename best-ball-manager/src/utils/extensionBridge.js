@@ -26,3 +26,29 @@ export async function readExtensionEntries(userId) {
     syncedAt: row.synced_at,
   }));
 }
+
+/**
+ * Converts extension Entry objects into the flat roster row shape
+ * expected by processLoadedData's rosterRows parameter.
+ *
+ * @param {Array<{entryId: string, tournamentTitle: string|null, draftDate: string|null, players: Array, syncedAt: string}>} entries
+ * @returns {Array<{name, position, team, entry_id, pick, round, pickedAt, tournamentTitle}>}
+ */
+export function convertEntriesToRosterRows(entries) {
+  const rows = [];
+  for (const entry of entries) {
+    for (const player of (entry.players ?? [])) {
+      rows.push({
+        name: player.name?.trim().replace(/\s+/g, ' ') || 'Unknown',
+        position: player.position || 'N/A',
+        team: player.team || 'N/A',
+        entry_id: entry.entryId,
+        pick: Number(player.pick) || 0,
+        round: player.round ?? (player.pick > 0 ? Math.ceil(player.pick / 18) : '-'),
+        pickedAt: entry.draftDate || null,
+        tournamentTitle: entry.tournamentTitle || null,
+      });
+    }
+  }
+  return rows.filter(p => p.name !== 'Unknown');
+}

@@ -2,20 +2,26 @@ import { parseCSVText } from './csv';
 import { processMasterList, parseAdpString } from './helpers';
 
 /**
- * processLoadedData({ rosterText, adpFiles, rankingsText?, projectionsText? })
+ * processLoadedData({ rosterText, rosterRows, adpFiles, rankingsText?, projectionsText? })
  *
- * Unified processing pipeline for both bundled-asset and IndexedDB loading paths.
+ * Unified processing pipeline for roster data. Pass either rosterText (CSV string)
+ * or rosterRows (pre-mapped array from extension entries) — not both.
  *
- * @param {string} rosterText - Raw CSV text for rosters
+ * @param {string} [rosterText] - Raw CSV text for rosters
+ * @param {Array} [rosterRows] - Pre-mapped roster rows from convertEntriesToRosterRows()
  * @param {Array<{text: string, date: string, filename: string}>} adpFiles - ADP snapshot files
  * @param {string} [rankingsText] - Raw CSV text for rankings
  * @param {string} [projectionsText] - Raw CSV text for projections
  * @returns {{ rosterData, masterPlayers, adpSnapshots, rankingsSource }}
  */
-export async function processLoadedData({ rosterText, adpFiles = [], rankingsText, projectionsText }) {
-  // 1) Parse roster (may be undefined when no roster CSV exists)
-  const rosterRows = rosterText ? await parseCSVText(String(rosterText)) : [];
-  const mappedRosters = rosterRows.map(row => {
+export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, adpFiles = [], rankingsText, projectionsText }) {
+  // 1) Build roster rows — either from pre-mapped extension entries or by parsing CSV text
+  let mappedRosters;
+  if (prebuiltRows) {
+    mappedRosters = prebuiltRows;
+  } else {
+    const parsed = rosterText ? await parseCSVText(String(rosterText)) : [];
+    mappedRosters = parsed.map(row => {
     let name = row['Player Name'] || row.player_name || row.Player;
     if (!name && (row['First Name'] || row.firstName)) {
       name = `${row['First Name'] || row.firstName || ''} ${row['Last Name'] || row.lastName || ''}`;
@@ -35,7 +41,8 @@ export async function processLoadedData({ rosterText, adpFiles = [], rankingsTex
       pickedAt: row['Picked At'] || null,
       tournamentTitle: row['Tournament Title'] || null,
     };
-  }).filter(p => p.name !== 'Unknown');
+    }).filter(p => p.name !== 'Unknown');
+  }
 
   // 2) Parse ADP snapshots
   const snapshots = await Promise.all(adpFiles.map(async ({ text, date, filename }) => {

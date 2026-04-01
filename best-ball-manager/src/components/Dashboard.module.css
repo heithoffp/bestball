@@ -379,7 +379,10 @@
   }
   .exposureByRoundPlayer {
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 2px 4px;
+  }
+  .blindSpotName {
+    flex-basis: 100%;
   }
   .exposureRow {
     flex-wrap: wrap;

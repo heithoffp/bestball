@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Legend } from 'recharts';
-import { Upload, BarChart3, Users, TrendingUp, ListOrdered, Crosshair } from 'lucide-react';
+import { Chrome, BarChart3, Users, TrendingUp, ListOrdered, Crosshair } from 'lucide-react';
 import { analyzePortfolioTree, PROTOCOL_TREE, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
-import FileUploadButton from './FileUploadButton';
 import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './Dashboard.module.css';
 
@@ -21,7 +20,7 @@ const DRILL_CARDS = [
   { key: 'draftflow', label: 'Draft Assistant', icon: Crosshair },
 ];
 
-export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate, onRosterUpload, uploadAuthGuard }) {
+export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate }) {
   const { isMobile } = useMediaQuery();
 
   // ── Headline Metrics ──
@@ -186,12 +185,11 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
   if (rosterData.length === 0) {
     return (
       <div className={styles.emptyState}>
-        <Upload size={48} className={styles.emptyIcon} />
-        <div className={styles.emptyTitle}>Upload your roster CSV</div>
+        <Chrome size={48} className={styles.emptyIcon} />
+        <div className={styles.emptyTitle}>Connect the Chrome extension</div>
         <div className={styles.emptyDesc}>
-          Export your rosters from Underdog, then upload the CSV here. Your portfolio analysis will appear instantly.
+          Install the Best Ball Exposures Chrome extension, visit your Underdog completed entries, and sync your portfolio. Your analysis loads here automatically.
         </div>
-        <FileUploadButton label="Upload Rosters" onUpload={onRosterUpload} onBeforeUpload={uploadAuthGuard} />
       </div>
     );
   }

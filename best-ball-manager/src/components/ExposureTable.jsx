@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import AdpSparkline from './AdpSparkline';
 import { ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
-import FileUploadButton from './FileUploadButton';
 import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './ExposureTable.module.css';
 
@@ -37,7 +36,7 @@ const SORT_OPTIONS = [
   { value: 'adpTrend', label: 'Trend' },
 ];
 
-export default function ExposureTable({ masterPlayers = [], rosterData = [], onRosterUpload, uploadAuthGuard }) {
+export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   const { isMobile } = useMediaQuery();
 
   const [searchInput, setSearchInput] = useState('');
@@ -251,7 +250,6 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
         <div className={styles.toolbar}>
           <div className={styles.toolbarRow1}>
             <h2 style={{ margin: 0 }}>Exposures</h2>
-            {onRosterUpload && <FileUploadButton label="Upload CSV" onUpload={onRosterUpload} onBeforeUpload={uploadAuthGuard} />}
           </div>
           <input
             aria-label="Search players"
@@ -295,7 +293,6 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
             onChange={e => setSearchInput(e.target.value)}
             className={`path-input ${styles.searchInput}`}
           />
-          {onRosterUpload && <FileUploadButton label="Upload Underdog Exposure CSV" onUpload={onRosterUpload} onBeforeUpload={uploadAuthGuard} />}
         </div>
       </div>
     );
@@ -530,7 +527,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
         {filteredAndSorted.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
             {masterPlayers.length === 0
-              ? 'No data loaded. Use the Upload button above to import your Underdog Exposure CSV.'
+              ? 'No data loaded. Sync your portfolio from the Chrome extension to see exposure data.'
               : 'No players match.'}
           </div>
         ) : (
@@ -586,7 +583,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
               <tr>
                 <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                   {masterPlayers.length === 0
-                    ? 'No data loaded. Use the Upload button above to import your Underdog Exposure CSV.'
+                    ? 'No data loaded. Sync your portfolio from the Chrome extension to see exposure data.'
                     : 'No players match.'}
                 </td>
               </tr>
@@ -649,7 +646,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onR
 
       {rosterData.length === 0 && masterPlayers.length > 0 && (
         <div className={styles.infoBanner}>
-          No roster uploaded — showing all ADP players. Upload your Underdog Exposure CSV for exposure data.
+          Showing all ADP players. Sync your portfolio from the Chrome extension to see exposure data.
         </div>
       )}
 

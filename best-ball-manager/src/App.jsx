@@ -3,7 +3,7 @@ import React, { useEffect, useState, Suspense, lazy, useCallback } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
-import { getFile, hasUserData, syncSaveFile, syncGetFile, syncHasUserData } from './utils/storage';
+import { syncSaveFile, syncGetFile } from './utils/storage';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './utils/supabaseClient';
 import { useSubscription } from './contexts/SubscriptionContext';
@@ -89,32 +89,49 @@ export default function App() {
     if (recoveryMode) setShowAuthModal(true);
   }, [recoveryMode]);
 
-  // One-time migration: push local IndexedDB data to cloud on first sign-in
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      try {
-        const hasLocal = await hasUserData();
-        if (!hasLocal) return;
-        const { cloudHasUserData } = await import('./utils/cloudStorage');
-        const hasCloud = await cloudHasUserData(user.id);
-        if (hasCloud) return;
-        const rosterFile = await getFile('roster');
-        if (rosterFile) await syncSaveFile({ ...rosterFile, userId: user.id });
-        const rankingsFile = await getFile('rankings');
-        if (rankingsFile) await syncSaveFile({ ...rankingsFile, userId: user.id });
-      } catch (e) {
-        console.warn('Migration to cloud failed', e);
-      }
-    })();
-  }, [user?.id]);
+
+  async function loadFromExtension() {
+    const { readExtensionEntries, convertEntriesToRosterRows } = await import('./utils/extensionBridge');
+    const entries = await readExtensionEntries(user.id);
+    if (entries.length === 0) return false;
+    const rosterRows = convertEntriesToRosterRows(entries);
+    const adpFiles = await loadBundledAdp();
+    const projectionsRaw = Object.values(projectionsModules)[0];
+    const result = await processLoadedData({
+      rosterRows,
+      adpFiles,
+      projectionsText: projectionsRaw ? String(projectionsRaw) : undefined,
+    });
+    applyResult(result);
+    setIsUsingDemoData(false);
+    trackEvent('extension_sync_loaded', { count: entries.length });
+    return true;
+  }
 
   async function loadData() {
     setStatus({ type: 'loading', msg: 'Loading data...' });
     try {
-      if (await syncHasUserData(user?.id)) {
-        await loadFromStorage();
+      if (user?.id && supabase) {
+        // Authenticated: extension is the only roster data source
+        const loaded = await loadFromExtension();
+        if (!loaded) {
+          // No extension entries yet — load ADP data so Tracker/Rankings/Exposures still work,
+          // but keep rosterData empty so the empty-state CTA shows on Dashboard/Rosters.
+          const adpFiles = await loadBundledAdp();
+          const projectionsRaw = Object.values(projectionsModules)[0];
+          const result = await processLoadedData({
+            adpFiles,
+            projectionsText: projectionsRaw ? String(projectionsRaw) : undefined,
+          });
+          setAdpSnapshots(result.adpSnapshots);
+          setMasterPlayers(result.masterPlayers);
+          setRankingsSource(result.rankingsSource);
+          setRosterData([]);
+          setIsUsingDemoData(false);
+        }
+        setStatus({ type: '', msg: '' });
       } else {
+        // Unauthenticated: read-only demo preview
         await loadFromAssets();
       }
     } catch (err) {
@@ -130,7 +147,6 @@ export default function App() {
     const projectionsRaw = Object.values(projectionsModules)[0];
 
     if (!rosterRaw && adpFiles.length === 0) {
-      // Nothing at all to load
       setStatus({ type: '', msg: '' });
       return;
     }
@@ -146,30 +162,6 @@ export default function App() {
     setIsUsingDemoData(true);
   }
 
-  async function loadFromStorage() {
-    const rosterFile = await syncGetFile('roster', user?.id);
-    const rankingsFile = await syncGetFile('rankings', user?.id);
-
-    if (!rosterFile) {
-      await loadFromAssets();
-      return;
-    }
-
-    // ADP + projections always come from bundled assets
-    const adpFiles = await loadBundledAdp();
-    const projectionsRaw = Object.values(projectionsModules)[0];
-
-    const result = await processLoadedData({
-      rosterText: rosterFile.text,
-      adpFiles,
-      rankingsText: rankingsFile ? rankingsFile.text : undefined,
-      projectionsText: projectionsRaw ? String(projectionsRaw) : undefined,
-    });
-
-    applyResult(result);
-    setIsUsingDemoData(false);
-  }
-
   function applyResult(result) {
     setRosterData(result.rosterData);
     setMasterPlayers(result.masterPlayers);
@@ -179,35 +171,23 @@ export default function App() {
     if (result.adpSnapshots?.length > 0) trackEvent('adp_snapshot_loaded');
   }
 
-  const handleRosterUpload = useCallback(async (text, filename) => {
-    setStatus({ type: 'loading', msg: 'Processing exposure data...' });
-    try {
-      await syncSaveFile({ id: 'roster', type: 'roster', filename, text, userId: user?.id });
-      await loadFromStorage();
-      trackEvent('csv_uploaded');
-    } catch (err) {
-      console.error('Roster upload failed', err);
-      setStatus({ type: 'error', msg: String(err) });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
   const handleRankingsUpload = useCallback(async (text, filename) => {
     setStatus({ type: 'loading', msg: 'Processing rankings...' });
     try {
       await syncSaveFile({ id: 'rankings', type: 'rankings', filename, text, userId: user?.id });
-      await loadFromStorage();
+      const rankingsFile = await syncGetFile('rankings', user?.id);
+      if (rankingsFile) setRankingsSource(await import('./utils/csv').then(m => m.parseCSVText(rankingsFile.text)));
+      setStatus({ type: '', msg: '' });
     } catch (err) {
       console.error('Rankings upload failed', err);
       setStatus({ type: 'error', msg: String(err) });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Auth guard for upload buttons — blocks file picker and shows auth modal for guests
+  // Auth guard for rankings upload — blocks guests and shows auth modal
   const uploadAuthGuard = useCallback(() => {
     if (user) return true;
-    openAuthModal('Sign in or create an account to upload and save your data.');
+    openAuthModal('Sign in or create an account to upload custom rankings.');
     return false;
   }, [user, openAuthModal]);
 
@@ -267,25 +247,14 @@ export default function App() {
         {isUsingDemoData && rosterData.length > 0 && (
           <div className="demo-banner">
             <Info size={16} />
-            <span>You're viewing sample data.</span>
-            <label className="demo-banner-upload" onClick={(e) => { if (!uploadAuthGuard()) e.preventDefault(); }}>
-              Upload your rosters
-              <input type="file" accept=".csv" style={{ display: 'none' }} onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => handleRosterUpload(ev.target.result, file.name);
-                reader.readAsText(file);
-                e.target.value = '';
-              }} />
-            </label>
+            <span>You're viewing sample data. Sign in and connect the Chrome extension to load your portfolio.</span>
           </div>
         )}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
-            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onRosterUpload={handleRosterUpload} uploadAuthGuard={uploadAuthGuard} />}
-            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onRosterUpload={handleRosterUpload} uploadAuthGuard={uploadAuthGuard} />}
+            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} />}
+            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
             {activeTab === 'draftflow' && (
               canAccessFeature(tier, 'draftflow') || subLoading
                 ? <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />

@@ -668,7 +668,7 @@ export default function RosterViewer({ rosterData = [] }) {
     return (
       <div className={css.empty}>
         <span style={{ fontSize: 50 }}>📋</span>
-        <p>No roster data loaded. Go to the Exposures tab and use the Upload button to import your Underdog Exposure CSV.</p>
+        <p>No roster data loaded. Sync your portfolio from the Chrome extension to get started.</p>
       </div>
     );
   }

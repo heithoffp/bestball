@@ -2,23 +2,22 @@
 
 ## Now
 
-- TASK-041: Side-by-side layout for Top Exposures and Exposure by ADP Round
-
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
 | TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric | Todo | P2 | [Plan](docs/plans/TASK-039.md) — Draft | No |
-| TASK-045 | Web app sync UX | Todo | P2 | [Plan](docs/plans/TASK-045.md) — Draft | No |
 | TASK-046 | Draft overlay scaffold | Todo | P2 | [Plan](docs/plans/TASK-046.md) — Draft | No |
 | TASK-047 | Draft overlay scoring | Todo | P2 | [Plan](docs/plans/TASK-047.md) — Draft | No |
-| TASK-041 | Side-by-side layout for Top Exposures and Exposure by ADP Round | In Progress | P3 | [Plan](docs/plans/TASK-041.md) | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
 
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-041 | Side-by-side layout for Top Exposures and Exposure by ADP Round | Done | P3 | [Plan](docs/archive/plans/TASK-041.md) | Yes | 2026-04-01 |
+| TASK-050 | Remove CSV upload references from web app UI | Done | P2 | [Plan](docs/archive/plans/TASK-050.md) | Yes | 2026-04-01 |
+| TASK-045 | Web app sync UX | Done | P2 | [Plan](docs/archive/plans/TASK-045.md) | Yes | 2026-04-01 |
 | TASK-044 | Underdog entries list scraper | Done | P2 | [Plan](docs/archive/plans/TASK-044.md) | Yes | 2026-04-01 |
 | TASK-049 | Show subscription tier in extension popup | Done | P2 | [Plan](docs/archive/plans/TASK-049.md) | Yes | 2026-03-31 |
 | TASK-043 | Supabase data bridge | Done | P1 | [Plan](docs/archive/plans/TASK-043.md) | Yes | 2026-03-31 |

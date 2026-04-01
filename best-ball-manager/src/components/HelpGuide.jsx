@@ -4,14 +4,14 @@ const sections = [
   {
     title: 'Getting Started',
     icon: null,
-    purpose: 'Best Ball Exposures analyzes your best-ball draft portfolio by combining your roster CSV with ADP snapshots and projections.',
+    purpose: 'Best Ball Exposures analyzes your best-ball draft portfolio using data synced from the Chrome extension. Install the extension, sync your Underdog entries, and your full portfolio analysis loads automatically.',
     features: [
-      'Upload your roster CSV via the Exposures tab to load your drafted teams',
+      'Install the Chrome extension and visit your Underdog completed entries page to sync your portfolio',
       'ADP snapshots track how player draft cost changes over time and are bundled automatically',
-      'All tabs share the same underlying data, so uploading once powers the entire app',
+      'All tabs share the same underlying data — one sync powers the entire app',
     ],
     tips: [
-      'The app works best with Underdog-format roster CSVs',
+      'Re-syncing is as simple as refreshing the page after you run a new sync from the extension',
       'ADP snapshots are date-stamped files that build the historical timeline in ADP Tracker',
     ],
   },
@@ -24,7 +24,6 @@ const sections = [
       'Search and filter by player name, team, or position',
       'Strategy filters let you view exposure within specific RB/QB/TE archetypes',
       'Toggle "Show 0%" to include players you haven\'t drafted',
-      'Upload a new roster CSV directly from this tab',
     ],
     tips: [
       'High exposure to a single player means your portfolio is heavily correlated to their outcome. Diversify if that\'s unintentional',

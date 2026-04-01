@@ -1,3 +1,4 @@
+<!-- Completed: 2026-04-01 | Commit: 725a938 -->
 # TASK-041: Side-by-side layout for Top Exposures and Exposure by ADP Round
 
 **Status:** Approved
