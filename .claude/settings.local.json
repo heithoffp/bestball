@@ -40,7 +40,17 @@
       "Bash(d2 --layout elk subsystems/chrome-extension.d2 subsystems/chrome-extension.svg)",
       "Bash(cd:*)",
       "Bash(node:*)",
-      "Bash(bash \"C:/Users/patrickh/.claude/plugins/cache/hus-skills/hus-governance/2.3.0/skills/hus-backlog/scripts/validate-backlog.sh\" \"C:\\\\Software\\\\Personal\\\\BestBall\\\\BACKLOG.md\" 2>&1)"
+      "Bash(bash \"C:/Users/patrickh/.claude/plugins/cache/hus-skills/hus-governance/2.3.0/skills/hus-backlog/scripts/validate-backlog.sh\" \"C:\\\\Software\\\\Personal\\\\BestBall\\\\BACKLOG.md\" 2>&1)",
+      "Skill(hus-governance:hus-adr)",
+      "Bash(find:*)",
+      "Bash(bash:*)",
+      "Bash(npm ls:*)"
     ]
+  },
+  "enabledPlugins": {
+    "vercel@claude-plugins-official": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
+    "bencium-impact-designer@bencium-marketplace": true,
+    "design-audit@bencium-marketplace": true
   }
 }

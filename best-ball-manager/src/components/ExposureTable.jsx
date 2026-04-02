@@ -3,6 +3,9 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import AdpSparkline from './AdpSparkline';
 import { ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 import useMediaQuery from '../hooks/useMediaQuery';
+import TabLayout from './TabLayout';
+import { SearchInput } from './filters';
+import { NFL_TEAMS } from '../utils/nflTeams';
 import styles from './ExposureTable.module.css';
 
 // --- Shared Utilities ---
@@ -16,8 +19,42 @@ const COLORS = {
 
 const getPosColor = (pos) => COLORS[pos] || COLORS.default;
 
+const archetypeColor = (key) => ARCHETYPE_METADATA[key]?.color || '#6b7280';
+
+function FilterGroup({ label, options, value, onChange, posColor }) {
+  return (
+    <div className={styles.filterGroupInner}>
+      <span className={styles.filterGroupLabel} style={{ color: posColor }}>{label}</span>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        {options.map(opt => {
+          const isActive = value === opt;
+          const color = opt === 'Any' ? '#E8BF4A' : archetypeColor(opt);
+          const name = opt === 'Any' ? 'All' : (ARCHETYPE_METADATA[opt]?.name || opt);
+          return (
+            <button
+              key={opt}
+              title={ARCHETYPE_METADATA[opt]?.desc}
+              className={`filter-chip ${isActive ? 'filter-chip--active' : ''}`}
+              style={opt === 'Any'
+                ? (isActive ? { background: color + '1a', borderColor: color, color } : {})
+                : {
+                    background: isActive ? color + '30' : color + '12',
+                    borderColor: isActive ? color : color + '44',
+                    color: isActive ? color : color + 'cc',
+                  }}
+              onClick={() => onChange(opt)}
+            >
+              {name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // Archetype filter options
-const RB_OPTIONS = ['Any', 'RB_ZERO', 'RB_HYPER_FRAGILE', 'RB_HERO', 'RB_BALANCED'];
+const RB_OPTIONS = ['Any', 'RB_ZERO', 'RB_HERO', 'RB_DOUBLE_ANCHOR', 'RB_HYPER_FRAGILE', 'RB_BALANCED'];
 const QB_OPTIONS = ['Any', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['Any', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 
@@ -39,13 +76,7 @@ const SORT_OPTIONS = [
 export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   const { isMobile } = useMediaQuery();
 
-  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), 250);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
   const [sortField, setSortField] = useState(rosterData.length === 0 ? 'adp' : 'exposure');
   const [sortDir, setSortDir] = useState(rosterData.length === 0 ? 'asc' : 'desc');
   const [showUndrafted, setShowUndrafted] = useState(rosterData.length === 0);
@@ -53,13 +84,14 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   const [rbFilter, setRbFilter] = useState('Any');
   const [qbFilter, setQbFilter] = useState('Any');
   const [teFilter, setTeFilter] = useState('Any');
+  const [tournamentFilter, setTournamentFilter] = useState('all');
 
   const [expandedId, setExpandedId] = useState(null);
 
   // Reset expandedId when filters/sort/search change
   useEffect(() => {
     setExpandedId(null);
-  }, [search, sortField, sortDir, rbFilter, qbFilter, teFilter, showUndrafted]);
+  }, [search, sortField, sortDir, rbFilter, qbFilter, teFilter, tournamentFilter, showUndrafted]);
 
   const onSort = (field) => {
     if (field === sortField) {
@@ -90,8 +122,10 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
       const rbMatch = rbFilter === 'Any' || path.rb === rbFilter;
       const qbMatch = qbFilter === 'Any' || path.qb === qbFilter;
       const teMatch = teFilter === 'Any' || path.te === teFilter;
+      const rosterTournament = roster[0]?.tournamentTitle || null;
+      const tournamentMatch = tournamentFilter === 'all' || rosterTournament === tournamentFilter;
 
-      if (rbMatch && qbMatch && teMatch) {
+      if (rbMatch && qbMatch && teMatch && tournamentMatch) {
         filtered.push({ id, roster, path });
       }
     });
@@ -119,7 +153,14 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
       totalFilteredEntries: filtered.length,
       playerExposures: exposures
     };
-  }, [rosterData, rbFilter, qbFilter, teFilter]);
+  }, [rosterData, rbFilter, qbFilter, teFilter, tournamentFilter]);
+
+  const allTournaments = useMemo(() => {
+    const titles = new Set();
+    rosterData.forEach(p => { if (p.tournamentTitle) titles.add(p.tournamentTitle); });
+    return ['all', ...[...titles].sort()];
+  }, [rosterData]);
+
 
   const playersWithFilteredExposure = useMemo(() => {
     const now = new Date();
@@ -160,7 +201,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
     });
   }, [masterPlayers, playerExposures]);
 
-  const hasActiveFilter = rbFilter !== 'Any' || qbFilter !== 'Any' || teFilter !== 'Any';
+  const hasActiveFilter = rbFilter !== 'Any' || qbFilter !== 'Any' || teFilter !== 'Any' || tournamentFilter !== 'all';
 
   const filteredAndSorted = useMemo(() => {
     const q = normalizedQuery(search);
@@ -175,7 +216,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
 
     if (q) {
       list = list.filter(p => {
-        const hay = `${p.name || ''} ${p.team || ''} ${p.position || ''}`.toLowerCase();
+        const hay = `${p.name || ''} ${p.team || ''} ${NFL_TEAMS[p.team] || ''} ${p.position || ''}`.toLowerCase();
         return hay.includes(q);
       });
     }
@@ -244,79 +285,62 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
 
   // --- Render helpers ---
 
-  const renderToolbar = () => {
-    if (isMobile) {
-      return (
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarRow1}>
-            <h2 style={{ margin: 0 }}>Exposures</h2>
-          </div>
-          <input
-            aria-label="Search players"
-            placeholder="Search name, team, pos..."
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            className={`path-input ${styles.searchInput}`}
-          />
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={showUndrafted}
-              onChange={e => setShowUndrafted(e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Show 0%
-          </label>
+  const renderDesktopFilters = () => (
+    <div className={styles.controlPanel}>
+      {/* Row 1: Search + Tournament + Show 0% toggle chip + Result count */}
+      <div className={styles.filterRow1}>
+        <div style={{ flex: '0 1 375px', minWidth: 180 }}>
+          <span className="filter-select-label">Player / Team Search</span>
+          <SearchInput value={search} onChange={setSearch} placeholder="Search name, team, pos..." />
         </div>
-      );
-    }
-
-    return (
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarLeft}>
-          <h2 style={{ margin: 0 }}>Exposures</h2>
-        </div>
-        <div className={styles.toolbarRight}>
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={showUndrafted}
-              onChange={e => setShowUndrafted(e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Show 0% Exposure
-          </label>
-          <input
-            aria-label="Search players"
-            placeholder="Search name, team, pos..."
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            className={`path-input ${styles.searchInput}`}
-          />
-        </div>
+        <select
+          value={tournamentFilter}
+          onChange={e => setTournamentFilter(e.target.value)}
+          className="filter-select"
+        >
+          {allTournaments.map(t => (
+            <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
+          ))}
+        </select>
+        <button
+          className={`filter-chip ${showUndrafted ? 'filter-chip--active' : ''}`}
+          style={showUndrafted ? { background: 'var(--accent-muted)', borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
+          onClick={() => setShowUndrafted(prev => !prev)}
+        >
+          Show 0% Exposures
+        </button>
+        {hasActiveFilter && (
+          <span className="filter-count" style={{ marginLeft: 0 }}>
+            <strong style={{ color: 'var(--positive)' }}>{totalFilteredEntries}</strong>
+            {' '}roster{totalFilteredEntries !== 1 ? 's' : ''} match
+          </span>
+        )}
       </div>
-    );
-  };
+      {/* Row 2: Archetype chips */}
+      <div className={styles.filterRow2}>
+        <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} posColor={getPosColor('RB')} />
+        <div className={styles.filterSep} />
+        <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} posColor={getPosColor('QB')} />
+        <div className={styles.filterSep} />
+        <FilterGroup label="TE" options={TE_OPTIONS} value={teFilter} onChange={setTeFilter} posColor={getPosColor('TE')} />
+      </div>
+    </div>
+  );
 
   const renderFilters = () => {
     if (isMobile) {
       return (
-        <div className={styles.chipStrip}>
+        <div className="filter-chip-group filter-chip-group--scroll">
           {CHIP_GROUPS.map((group, gi) => (
             <React.Fragment key={group.pos}>
-              {gi > 0 && <div className={styles.chipSeparator} />}
+              {gi > 0 && <div className="filter-chip-group__separator" />}
               {group.options.map(opt => {
                 const active = isChipActive(opt);
-                const color = getPosColor(group.pos);
+                const posClass = `filter-chip--pos-${group.pos.toLowerCase()}`;
                 return (
                   <button
                     key={opt}
-                    className={`${styles.chip} ${active ? styles.chipActive : ''}`}
-                    style={active ? {
-                      background: `${color}25`,
-                      borderColor: color,
-                      color: color
-                    } : undefined}
+                    className={`filter-chip ${active ? `filter-chip--active ${posClass}` : ''}`}
                     onClick={() => toggleChip(opt)}
                   >
                     {ARCHETYPE_METADATA[opt]?.name || opt}
@@ -328,108 +352,13 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
         </div>
       );
     }
-
-    return (
-      <div className={styles.filterPanel}>
-        <div className={styles.filterLabel}>
-          <span>Filter by Strategy:</span>
-        </div>
-
-        <div className={styles.filterColumn}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('RB'), textTransform: 'uppercase' }}>
-            RB Strategy
-          </label>
-          <select
-            value={rbFilter}
-            onChange={e => setRbFilter(e.target.value)}
-            className={styles.filterSelect}
-          >
-            {RB_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>
-                {opt === 'Any' ? 'Any' : ARCHETYPE_METADATA[opt]?.name || opt}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.filterColumn}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('QB'), textTransform: 'uppercase' }}>
-            QB Strategy
-          </label>
-          <select
-            value={qbFilter}
-            onChange={e => setQbFilter(e.target.value)}
-            className={styles.filterSelect}
-          >
-            {QB_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>
-                {opt === 'Any' ? 'Any' : ARCHETYPE_METADATA[opt]?.name || opt}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.filterColumn}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: getPosColor('TE'), textTransform: 'uppercase' }}>
-            TE Strategy
-          </label>
-          <select
-            value={teFilter}
-            onChange={e => setTeFilter(e.target.value)}
-            className={styles.filterSelect}
-          >
-            {TE_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>
-                {opt === 'Any' ? 'Any' : ARCHETYPE_METADATA[opt]?.name || opt}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {hasActiveFilter && (
-          <div className={styles.filterResults}>
-            <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-              Showing {totalFilteredEntries} rosters matching:
-            </span>
-            <div className={styles.filterBadgeRow}>
-              {rbFilter !== 'Any' && (
-                <span className={styles.filterBadge} style={{
-                  background: `${getPosColor('RB')}20`,
-                  border: `1px solid ${getPosColor('RB')}40`,
-                  color: getPosColor('RB')
-                }}>
-                  {ARCHETYPE_METADATA[rbFilter]?.name}
-                </span>
-              )}
-              {qbFilter !== 'Any' && (
-                <span className={styles.filterBadge} style={{
-                  background: `${getPosColor('QB')}20`,
-                  border: `1px solid ${getPosColor('QB')}40`,
-                  color: getPosColor('QB')
-                }}>
-                  {ARCHETYPE_METADATA[qbFilter]?.name}
-                </span>
-              )}
-              {teFilter !== 'Any' && (
-                <span className={styles.filterBadge} style={{
-                  background: `${getPosColor('TE')}20`,
-                  border: `1px solid ${getPosColor('TE')}40`,
-                  color: getPosColor('TE')
-                }}>
-                  {ARCHETYPE_METADATA[teFilter]?.name}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return renderDesktopFilters();
   };
 
   const renderMobileSortBar = () => (
     <div className={styles.sortBar}>
       <select
-        className={styles.sortSelect}
+        className="filter-select"
         value={sortField}
         onChange={e => {
           const field = e.target.value;
@@ -633,25 +562,61 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
     </div>
   );
 
-  return (
-    <div className={styles.root}>
-      {renderToolbar()}
-      {renderFilters()}
+  const toolbarControls = isMobile ? (
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search name, team, pos..."
+      />
+      <label className="filter-checkbox">
+        <input
+          type="checkbox"
+          checked={showUndrafted}
+          onChange={e => setShowUndrafted(e.target.checked)}
+        />
+        Show 0%
+      </label>
+    </>
+  ) : null;
 
-      {hasActiveFilter && isMobile && (
+  const showMobileSummary = hasActiveFilter && isMobile;
+  const showInfoBanner = rosterData.length === 0 && masterPlayers.length > 0;
+  const bannerContent = (showMobileSummary || showInfoBanner) ? (
+    <>
+      {showMobileSummary && (
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 6 }}>
           {totalFilteredEntries} rosters matching filters
         </div>
       )}
-
-      {rosterData.length === 0 && masterPlayers.length > 0 && (
+      {showInfoBanner && (
         <div className={styles.infoBanner}>
           Showing all ADP players. Sync your portfolio from the Chrome extension to see exposure data.
         </div>
       )}
+    </>
+  ) : null;
 
-      {isMobile && renderMobileSortBar()}
-      {isMobile ? renderCardList() : renderTable()}
-    </div>
+  return (
+    <TabLayout
+      toolbar={toolbarControls}
+      banner={bannerContent}
+      flush
+    >
+      {isMobile ? (
+        <>
+          <div style={{ padding: '0 10px 8px', flexShrink: 0 }}>
+            {renderFilters()}
+          </div>
+          {renderMobileSortBar()}
+          {renderCardList()}
+        </>
+      ) : (
+        <>
+          {renderDesktopFilters()}
+          {renderTable()}
+        </>
+      )}
+    </TabLayout>
   );
 }

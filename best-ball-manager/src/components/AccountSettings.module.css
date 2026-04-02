@@ -45,7 +45,7 @@
   padding: 0.75rem;
   border-radius: 8px;
   background: rgba(232, 191, 74, 0.1);
-  color: var(--accent-yellow);
+  color: var(--accent);
   font-size: 0.85rem;
   line-height: 1.4;
   margin-bottom: 1.25rem;
@@ -74,9 +74,9 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  background: var(--accent-blue);
+  background: var(--accent);
   color: #060E1F;
-  transition: opacity 0.15s;
+  transition: opacity var(--duration-fast);
 }
 
 .primaryBtn:hover {
@@ -97,12 +97,12 @@
   padding: 0.65rem 1.25rem;
   font-size: 0.9rem;
   font-weight: 500;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   cursor: pointer;
   background: transparent;
   color: var(--text-secondary);
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--duration-fast), border-color var(--duration-fast);
 }
 
 .secondaryBtn:hover {
@@ -118,7 +118,7 @@
 .dangerZone {
   margin-top: 1.25rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-subtle);
   text-align: center;
 }
 
@@ -131,11 +131,11 @@
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
-  transition: color 0.15s;
+  transition: color var(--duration-fast);
 }
 
 .dangerLink:hover {
-  color: var(--accent-red);
+  color: var(--negative);
 }
 
 .deleteConfirm {
@@ -151,7 +151,7 @@
 
 .deleteError {
   font-size: 0.82rem;
-  color: var(--accent-red);
+  color: var(--negative);
   margin-bottom: 0.75rem;
 }
 
@@ -165,12 +165,12 @@
   padding: 0.55rem 1rem;
   font-size: 0.85rem;
   font-weight: 500;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   cursor: pointer;
   background: transparent;
   color: var(--text-secondary);
-  transition: color 0.15s;
+  transition: color var(--duration-fast);
 }
 
 .cancelBtn:hover {
@@ -190,9 +190,9 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  background: var(--accent-red);
+  background: var(--negative);
   color: #fff;
-  transition: opacity 0.15s;
+  transition: opacity var(--duration-fast);
 }
 
 .destructiveBtn:hover {

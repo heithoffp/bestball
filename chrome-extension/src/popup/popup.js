@@ -20,6 +20,7 @@ const emailInput = document.getElementById('auth-email');
 const passwordInput = document.getElementById('auth-password');
 const syncBtn = document.getElementById('sync-btn');
 const syncResult = document.getElementById('sync-result');
+const overlayToggle = document.getElementById('overlay-toggle');
 
 function renderAuthInfo(session) {
   authForm.hidden = true;
@@ -141,6 +142,26 @@ syncBtn.addEventListener('click', async () => {
   } finally {
     syncResult.hidden = false;
     syncBtn.disabled = false;
+  }
+});
+
+// Overlay toggle — read stored state and wire up change handler
+chrome.storage.local.get(['overlayEnabled'], (result) => {
+  overlayToggle.checked = result.overlayEnabled !== false; // default true
+});
+
+overlayToggle.addEventListener('change', async () => {
+  const enabled = overlayToggle.checked;
+  await chrome.storage.local.set({ overlayEnabled: enabled });
+
+  // Notify the active tab's content script
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_OVERLAY', enabled });
+    }
+  } catch {
+    // Tab may not have content script loaded — ignore
   }
 });
 

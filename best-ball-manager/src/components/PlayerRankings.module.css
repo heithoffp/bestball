@@ -6,6 +6,12 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* --- Header Toolbar --- */
@@ -33,34 +39,9 @@
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   flex: 1;
   justify-content: flex-end;
-}
-
-/* --- Search --- */
-.searchWrap {
-  position: relative;
-  max-width: 240px;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-}
-
-.searchInput {
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  padding: 6px 10px 6px 28px;
-  border-radius: 6px;
-  font-size: 13px;
-  width: 100%;
-  font-family: inherit;
 }
 
 /* --- Buttons --- */
@@ -71,7 +52,7 @@
   color: white;
   border: none;
   padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
@@ -81,38 +62,22 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg-hover);
+  background: var(--surface-2);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
 }
 
-/* --- View Toggle (position chips) --- */
-.viewToggle {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.viewChip {
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 5px 14px;
-  background: transparent;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.playerCount {
-  margin-left: 8px;
-  font-size: 12px;
+/* --- Search Empty State --- */
+.searchEmpty {
+  padding: var(--space-xl) var(--space-md);
+  text-align: center;
   color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 
 /* --- Search Notice --- */
@@ -128,7 +93,7 @@
   min-height: 0;
   overflow-y: auto;
   border-radius: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
 }
 
 .table {
@@ -154,7 +119,7 @@
 .stickyHead {
   position: sticky;
   top: 0;
-  background: var(--bg-card);
+  background: var(--surface-1);
   z-index: 2;
 }
 
@@ -236,7 +201,7 @@
   align-items: center;
   justify-content: center;
   line-height: 0;
-  transition: color 0.15s, background 0.15s;
+  transition: color var(--duration-fast), background var(--duration-fast);
 }
 
 .tierDeleteBtn:hover {
@@ -244,12 +209,54 @@
   background: rgba(239, 68, 68, 0.6);
 }
 
-/* --- Tier Toggle Zone --- */
-.tierToggleZone {
-  padding: 0;
-  height: 6px;
-  border: none;
+/* --- Desktop Tier Insert Zone --- */
+.tierInsertZone {
+  height: 14px;
   cursor: pointer;
+}
+
+.tierInsertCell {
+  padding: 0;
+  height: 14px;
+  position: relative;
+}
+
+.tierInsertIndicator {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+  pointer-events: none;
+}
+
+.tierInsertZone:hover .tierInsertIndicator {
+  opacity: 1;
+}
+
+.tierInsertIndicatorLine {
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.tierInsertIndicatorBtn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* --- Player Row --- */
@@ -262,7 +269,7 @@
 }
 
 .playerRow[data-drop-target="true"] {
-  border-top: 3px solid var(--accent-blue);
+  border-top: 3px solid var(--accent);
 }
 
 /* --- Row Cells --- */
@@ -336,18 +343,22 @@
   font-size: 16px;
 }
 
-/* --- Drag Overlay Row --- */
-.dragOverlay {
+/* --- Drag Overlay (portal-based, fixed positioning) --- */
+.dragOverlayPortal {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--accent-blue);
-  border-radius: 6px;
+  background: var(--surface-1);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
   font-size: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   opacity: 0.95;
+  white-space: nowrap;
 }
 
 .dragOverlayRank {
@@ -363,7 +374,7 @@
 
 /* --- Empty State --- */
 .emptyState {
-  padding: 24px;
+  padding: var(--space-lg);
   text-align: center;
 }
 
@@ -372,7 +383,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-md);
 }
 
 .emptyText {
@@ -388,22 +399,22 @@
   min-height: 0;
   overflow-y: auto;
   border-radius: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
 }
 
 .playerCard {
   padding: 6px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
+  transition: background var(--duration-fast);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .playerCard:active {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
 }
 
 .cardDragHandle {
@@ -465,7 +476,7 @@
 .cardExpanded {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .cardDetailGrid {
@@ -533,11 +544,39 @@
   outline: none;
 }
 
-/* --- Mobile Tier Toggle Zone --- */
-.tierToggleZoneMobile {
-  min-height: 14px;
+/* --- Mobile Tier Insert Zone --- */
+.tierInsertZoneMobile {
+  height: 18px;
+  position: relative;
+  display: flex;
+  align-items: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.tierInsertMobileLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+  opacity: 0.8;
+}
+
+.tierInsertMobileBtn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ============ RESPONSIVE ============ */
@@ -553,30 +592,11 @@
   .headerRight {
     flex-wrap: wrap;
     justify-content: flex-start;
-    gap: 8px;
-  }
-
-  .searchWrap {
-    max-width: none;
-    width: 100%;
-    order: -1;
-  }
-
-  .viewChip {
-    padding: 4px 10px;
-    font-size: 12px;
-  }
-
-  .playerCount {
-    margin-left: 4px;
+    gap: var(--space-sm);
   }
 
   .tierDivider {
     height: 44px;
-  }
-
-  .tierToggleZone {
-    height: 24px;
   }
 }
 

@@ -1,3 +1,5 @@
+/* === Midnight Gold — Chrome Extension Popup === */
+
 * {
   margin: 0;
   padding: 0;
@@ -5,10 +7,10 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 13px;
-  color: #e0e0e0;
-  background: #1a1a1a;
+  color: #E8E8E8;
+  background: #060E1F;
   width: 280px;
 }
 
@@ -17,20 +19,25 @@ body {
 }
 
 h1 {
+  font-family: 'JetBrains Mono', monospace;
   font-size: 15px;
-  font-weight: 600;
-  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(135deg, #F0CC5B 0%, #D4A843 50%, #E8BF4A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .version {
   font-size: 11px;
-  color: #888;
+  color: #5a6a80;
   margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
+/* ── Status Section ── */
 .status-section {
   margin-top: 16px;
-  border-top: 1px solid #333;
+  border-top: 1px solid #1a2d50;
   padding-top: 12px;
 }
 
@@ -42,21 +49,25 @@ h1 {
 }
 
 .status-label {
-  color: #888;
+  color: #8A9BB5;
+  font-size: 12px;
 }
 
 .status-value {
-  color: #ccc;
+  color: #E8E8E8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
 }
 
+/* ── Auth Section ── */
 .auth-section {
   margin-top: 16px;
-  border-top: 1px solid #333;
+  border-top: 1px solid #1a2d50;
   padding-top: 12px;
 }
 
 .auth-label {
-  color: #888;
+  color: #8A9BB5;
   font-size: 12px;
   margin-bottom: 8px;
 }
@@ -64,78 +75,169 @@ h1 {
 .auth-section input {
   display: block;
   width: 100%;
-  padding: 6px 8px;
+  padding: 8px 10px;
   margin-bottom: 6px;
-  background: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #e0e0e0;
+  background: #142440;
+  border: 1px solid #1a2d50;
+  border-radius: 6px;
+  color: #E8E8E8;
   font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  transition: border-color 0.15s;
 }
 
 .auth-section input:focus {
   outline: none;
-  border-color: #666;
+  border-color: #E8BF4A;
+  box-shadow: 0 0 0 2px rgba(232, 191, 74, 0.15);
+}
+
+.auth-section input::placeholder {
+  color: #5a6a80;
 }
 
 .auth-section button {
   display: block;
   width: 100%;
-  padding: 6px 0;
-  background: #3a6bbd;
+  padding: 8px 0;
+  background: linear-gradient(135deg, #F0CC5B, #D4A843);
   border: none;
-  border-radius: 4px;
-  color: #fff;
+  border-radius: 6px;
+  color: #060E1F;
   font-size: 12px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
   cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 2px 6px rgba(232, 191, 74, 0.3);
 }
 
 .auth-section button:hover {
-  background: #4a7bcd;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(232, 191, 74, 0.4);
 }
 
 .auth-section button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .auth-error {
-  color: #e05555;
+  color: #E74C3C;
   font-size: 11px;
   margin-top: 6px;
 }
 
 .auth-user {
-  color: #ccc;
+  color: #E8E8E8;
   font-size: 12px;
   margin-bottom: 4px;
   word-break: break-all;
 }
 
+/* ── Tier Badge ── */
 .tier-badge {
   display: inline-block;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 10px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.tier-badge.pro  { background: #3a6bbd; color: #fff; }
-.tier-badge.free { background: #333; color: #888; }
+.tier-badge.pro {
+  background: linear-gradient(135deg, #F0CC5B, #D4A843);
+  color: #060E1F;
+}
 
+.tier-badge.free {
+  background: #142440;
+  color: #8A9BB5;
+}
+
+/* ── Sync ── */
 #sync-btn {
   margin-bottom: 6px;
+}
+
+#sign-out-btn {
+  background: transparent;
+  border: 1px solid #1a2d50;
+  color: #8A9BB5;
+  box-shadow: none;
+}
+
+#sign-out-btn:hover {
+  background: #142440;
+  border-color: #243a5c;
+  color: #E8E8E8;
+  box-shadow: none;
+  transform: none;
 }
 
 .sync-result {
   font-size: 11px;
   margin-bottom: 8px;
-  color: #aaa;
+  color: #8A9BB5;
 }
 
 .sync-result.error {
-  color: #e05555;
+  color: #E74C3C;
+}
+
+/* ── Overlay Toggle Section ── */
+.overlay-section {
+  margin-top: 16px;
+  border-top: 1px solid #1a2d50;
+  padding-top: 12px;
+}
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #142440;
+  border: 1px solid #1a2d50;
+  border-radius: 10px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 2px;
+  bottom: 2px;
+  background: #5a6a80;
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #F0CC5B, #D4A843);
+  border-color: #D4A843;
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(16px);
+  background: #060E1F;
 }

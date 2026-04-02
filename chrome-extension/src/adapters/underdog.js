@@ -53,12 +53,22 @@ const underdogAdapter = {
     });
   },
 
-  getDraftState() {
-    throw new Error('[BBM] getDraftState() not implemented — see TASK-046');
+  /**
+   * Returns true if the current page is a live draft page.
+   */
+  isDraftPage() {
+    return /^\/draft\/[a-f0-9-]+/i.test(window.location.pathname);
   },
 
+  getDraftState() {
+    throw new Error('[BBM] getDraftState() not implemented');
+  },
+
+  /**
+   * Returns the virtualized grid container for overlay injection.
+   */
   getInjectionTarget() {
-    return null;
+    return document.querySelector('[role="grid"]');
   },
 
   getStyles() {
@@ -71,8 +81,11 @@ const underdogAdapter = {
     };
   },
 
+  /**
+   * Returns all currently rendered player rows in the virtualized draft board.
+   */
   getPlayerRows() {
-    return [];
+    return [...document.querySelectorAll('[data-testid="player-cell-wrapper"]')];
   },
 };
 

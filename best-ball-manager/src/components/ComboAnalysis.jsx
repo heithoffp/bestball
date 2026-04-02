@@ -1,30 +1,94 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
+import TabLayout from './TabLayout';
 
-// --- Shared Utilities ---
-const COLORS = {
+// Position palette — shared across all views
+const POS_COLORS = {
   QB: '#bf44ef',
   RB: '#10b981',
   WR: '#f59e0b',
   TE: '#3b82f6',
-  default: '#6b7280'
+  default: '#6b7280',
 };
 
-const getPosColor = (pos) => COLORS[pos] || COLORS.default;
+// Distinct palette for stack combo segments — index-based, not position-based.
+const COMBO_PALETTE = [
+  '#10B981', // green
+  '#EC4899', // pink
+  '#14B8A6', // teal
+  '#F97316', // orange
+  '#8B5CF6', // violet
+  '#06B6D4', // cyan
+  '#F43F5E', // rose
+  '#A3E635', // lime
+  '#60A5FA', // sky blue
+  '#FB923C', // amber-orange
+];
 
-// --- MAIN COMPONENT ---
+function comboColor(index) {
+  return COMBO_PALETTE[index % COMBO_PALETTE.length];
+}
+
+function PlayerBadge({ name, position }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      background: 'var(--surface-2)', padding: '3px 10px',
+      borderRadius: 4, border: '1px solid var(--border-subtle)', fontSize: 14,
+    }}>
+      <span style={{ color: POS_COLORS[position] || POS_COLORS.default, fontWeight: 800, fontSize: 12 }}>
+        {position}
+      </span>
+      <span style={{ fontWeight: 500 }}>{name}</span>
+    </span>
+  );
+}
+
+// Lightweight hover tooltip for stack diversity bar segments
+function SegmentTooltip({ children, label, style }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div
+      style={{ position: 'relative', display: 'flex', height: '100%', ...style }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {children}
+      {visible && (
+        <div style={{
+          position: 'absolute',
+          bottom: 'calc(100% + 6px)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--surface-3)',
+          border: '1px solid var(--border-default)',
+          borderRadius: 8,
+          padding: '6px 12px',
+          fontSize: 12,
+          color: 'var(--text-primary)',
+          whiteSpace: 'nowrap',
+          zIndex: 100,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          pointerEvents: 'none',
+          fontFamily: 'var(--font-body)',
+        }}>
+          {label}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ComboAnalysis({ rosterData = [] }) {
-  const [activeTab, setActiveTab] = useState('starts'); // Default to starts view
-  const [onlyWithR3, setOnlyWithR3] = useState(false);
+  const [activeTab, setActiveTab] = useState('stacks');
+  const [expandedQBs, setExpandedQBs] = useState(new Set());
   const [minCount, setMinCount] = useState(1);
-  const [topN, setTopN] = useState(30);
-  const [qbFilter, setQbFilter] = useState('');
-  const [startSearch, setStartSearch] = useState('');
-  const [hoveredQB, setHoveredQB] = useState(null);
-  const [hoveredCell, setHoveredCell] = useState(null);
-  const [selectedQB, setSelectedQB] = useState(null);
-  const [expandedCombo, setExpandedCombo] = useState(new Set());
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const blurTimeout = useRef(null);
 
-  const teams = useMemo(() => {
+  // Group flat player rows into per-roster arrays
+  const rosters = useMemo(() => {
     const map = new Map();
     rosterData.forEach(p => {
       const id = p.entry_id || 'unknown';
@@ -34,514 +98,492 @@ export default function ComboAnalysis({ rosterData = [] }) {
     return Array.from(map.values());
   }, [rosterData]);
 
-  const totalTeams = teams.length;
+  const totalRosters = rosters.length;
 
-  // EXISTING DATA PROCESSING (Preserved)
-  const processedData = useMemo(() => {
-    if (activeTab === 'stacks') {
-      const qbGroups = new Map();
-      teams.forEach(roster => {
-        const qbs = roster.filter(p => p.position === 'QB');
-        qbs.forEach(qb => {
-          if (!qbGroups.has(qb.name)) {
-            qbGroups.set(qb.name, { qb, totalDrafts: 0, nakedCount: 0, combos: new Map() });
-          }
-          const group = qbGroups.get(qb.name);
-          group.totalDrafts += 1;
-          const teammates = roster.filter(p =>
-            p.team === qb.team && p.name !== qb.name && ['WR', 'TE', 'RB'].includes(p.position)
-          ).sort((a, b) => a.name.localeCompare(b.name));
+  // ─── View 1: Stack Profiles ────────────────────────────────────────────────
+  const stackProfilesData = useMemo(() => {
+    if (activeTab !== 'stacks') return null;
 
-          if (teammates.length === 0) {
-            group.nakedCount += 1;
-          } else {
-            const comboKey = teammates.map(t => t.name).join(' | ');
-            if (!group.combos.has(comboKey)) {
-              group.combos.set(comboKey, { teammates, count: 0 });
-            }
-            group.combos.get(comboKey).count += 1;
-          }
-        });
+    const qbGroups = new Map();
+
+    rosters.forEach(roster => {
+      const qbs = roster.filter(p => p.position === 'QB');
+      qbs.forEach(qb => {
+        if (!qbGroups.has(qb.name)) {
+          qbGroups.set(qb.name, { qb, totalDrafts: 0, combos: new Map() });
+        }
+        const group = qbGroups.get(qb.name);
+        group.totalDrafts += 1;
+
+        const teammates = roster
+          .filter(p =>
+            p.team === qb.team &&
+            p.name !== qb.name &&
+            ['WR', 'TE', 'RB'].includes(p.position)
+          )
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        const key = teammates.length === 0
+          ? 'NAKED'
+          : teammates.map(t => t.name).join(' | ');
+
+        if (!group.combos.has(key)) {
+          group.combos.set(key, { players: teammates, count: 0 });
+        }
+        group.combos.get(key).count += 1;
       });
-      let result = Array.from(qbGroups.values()).map(group => ({
-        ...group,
-        nakedPercent: (group.nakedCount / group.totalDrafts) * 100,
-        sortedCombos: Array.from(group.combos.values()).sort((a, b) => b.count - a.count)
+    });
+
+    return Array.from(qbGroups.values())
+      .map(g => ({
+        ...g,
+        // Non-naked sorted by count desc, naked always last
+        sortedCombos: [
+          ...Array.from(g.combos.values()).filter(c => c.players.length > 0).sort((a, b) => b.count - a.count),
+          ...Array.from(g.combos.values()).filter(c => c.players.length === 0),
+        ],
+      }))
+      .sort((a, b) => b.totalDrafts - a.totalDrafts);
+  }, [rosters, activeTab]);
+
+  // Player names present in any stack (for autocomplete)
+  const allStackPlayerNames = useMemo(() => {
+    if (!stackProfilesData) return [];
+    const names = new Set();
+    stackProfilesData.forEach(g => {
+      g.sortedCombos.forEach(c => {
+        c.players.forEach(p => names.add(p.name));
+      });
+    });
+    return [...names].sort();
+  }, [stackProfilesData]);
+
+  // Autocomplete suggestions — substring match while typing, exact match on select
+  const playerSuggestions = useMemo(() => {
+    if (!playerSearch.trim() || selectedPlayer) return [];
+    const q = playerSearch.trim().toLowerCase();
+    return allStackPlayerNames.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+  }, [playerSearch, selectedPlayer, allStackPlayerNames]);
+
+  // ─── View 2: QB Pairs ─────────────────────────────────────────────────────
+  const qbPairsData = useMemo(() => {
+    if (activeTab !== 'qbpairs') return null;
+
+    const pairMap = new Map();
+
+    rosters.forEach(roster => {
+      const qbs = roster.filter(p => p.position === 'QB');
+      if (qbs.length < 2) return;
+
+      for (let i = 0; i < qbs.length; i++) {
+        for (let j = i + 1; j < qbs.length; j++) {
+          const sorted = [qbs[i].name, qbs[j].name].sort();
+          const key = sorted.join('||');
+          if (!pairMap.has(key)) {
+            const [name1] = sorted;
+            const p1 = qbs[i].name === name1 ? qbs[i] : qbs[j];
+            const p2 = qbs[i].name === name1 ? qbs[j] : qbs[i];
+            pairMap.set(key, { qb1: p1, qb2: p2, count: 0 });
+          }
+          pairMap.get(key).count += 1;
+        }
+      }
+    });
+
+    return Array.from(pairMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20)
+      .map((p, i) => ({
+        ...p,
+        rank: i + 1,
+        pct: ((p.count / totalRosters) * 100).toFixed(1),
       }));
-      result.sort((a, b) => b.totalDrafts - a.totalDrafts);
-      if (qbFilter) {
-        result = result.filter(g => g.qb.name.toLowerCase().includes(qbFilter.toLowerCase()));
-      }
-      return result;
-    }
+  }, [rosters, activeTab, totalRosters]);
 
-    if (activeTab === 'qbqb') {
-      const pairCounts = new Map();
-      const individualCounts = new Map();
-      const adpLookup = new Map(); // Store ADP for sorting later
-
-      teams.forEach(roster => {
-        // Sort QBs by ADP (ascending) so pairs are always stored in a consistent order
-        const qbs = roster
-          .filter(p => p.position === 'QB')
-          .sort((a, b) => (a.latestADP || 999) - (b.latestADP || 999));
-
-        qbs.forEach(qb => {
-          individualCounts.set(qb.name, (individualCounts.get(qb.name) || 0) + 1);
-
-          // Store the ADP if we haven't yet
-          if (!adpLookup.has(qb.name)) {
-            adpLookup.set(qb.name, qb.latestADP || 999);
-          }
-        });
-
-        if (qbs.length >= 2) {
-          for (let i = 0; i < qbs.length; i++) {
-            for (let j = i + 1; j < qbs.length; j++) {
-              // Because qbs is already sorted by ADP, names[0] is higher ADP than names[1]
-              const names = [qbs[i].name, qbs[j].name].sort();
-              const key = names.join('||');
-              pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
-            }
-          }
-        }
-      });
-
-      const sortedQBs = Array.from(individualCounts.entries())
-        .sort((a, b) => {
-          const adpA = adpLookup.get(a[0]);
-          const adpB = adpLookup.get(b[0]);
-          // Sort by ADP ascending (1, 2, 3...)
-          return adpA - adpB;
-        })
-        .slice(0, 30)
-        .map(entry => entry[0]);
-
-      return { sortedQBs, pairCounts, individualCounts, adpLookup };
-    }
-
-    if (activeTab === 'starts') {
-      const startsMap = new Map();
-      teams.forEach(roster => {
-        const r1 = roster.find(p => parseInt(p.round) === 1);
-        const r2 = roster.find(p => parseInt(p.round) === 2);
-        const r3 = roster.find(p => parseInt(p.round) === 3);
-        if (r1 && r2) {
-          const players2 = [r1, r2].sort((a, b) => parseInt(a.pick) - parseInt(b.pick));
-          const key2 = players2.map(p => p.name).join(' | ');
-          if (!startsMap.has(key2)) {
-            startsMap.set(key2, {
-              key: key2,
-              players2,
-              count: 0,
-              r3Map: new Map(),
-              r3Total: 0
-            });
-          }
-          const entry = startsMap.get(key2);
-          entry.count += 1;
-          if (r3) {
-            const name = r3.name;
-            const existing = entry.r3Map.get(name);
-            if (!existing) entry.r3Map.set(name, { player: r3, count: 1 });
-            else existing.count += 1;
-            entry.r3Total += 1;
-          }
-        }
-      });
-      let arr = Array.from(startsMap.values()).sort((a, b) => b.count - a.count);
-      if (onlyWithR3) {
-        arr = arr.filter(e => e.r3Total > 0);
-      }
-      return arr;
-    }
-
-    return [];
-  }, [teams, activeTab, onlyWithR3, qbFilter]);
-
-  const getBlendedColor = (adp1, adp2, intensity) => {
-    const t1 = getTierInfo(adp1);
-    const t2 = getTierInfo(adp2);
-
-    // Average the RGB values to find the "intersection" color
-    const r = Math.floor((t1.r + t2.r) / 2);
-    const g = Math.floor((t1.g + t2.g) / 2);
-    const b = Math.floor((t1.b + t2.b) / 2);
-
-    // Return rgba with the intensity (count) controlling the opacity
-    return `rgba(${r}, ${g}, ${b}, ${0.15 + intensity * 0.8})`;
+  const toggleQB = (name) => {
+    setExpandedQBs(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
   };
 
-  // Update getTierInfo to return numeric RGB for math
-  const getTierInfo = (adp) => {
-    if (adp <= 48) return { label: 'T1', color: '#ef4444', r: 239, g: 68, b: 68 };
-    if (adp <= 96) return { label: 'T2', color: '#f59e0b', r: 245, g: 158, b: 11 };
-    if (adp <= 144) return { label: 'T3', color: '#10b981', r: 16, g: 185, b: 129 };
-    return { label: 'T4', color: '#64748b', r: 100, g: 116, b: 139 };
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+    setExpandedQBs(new Set());
+    setPlayerSearch('');
+    setSelectedPlayer('');
   };
 
-  const Badge = ({ p }) => (
-    <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 8,
-      background: 'rgba(255,255,255,0.04)', padding: '3px 10px',
-      borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', fontSize: 15
-    }}>
-      <span style={{ color: getPosColor(p.position), fontWeight: 800, fontSize: 13 }}>{p.position}</span>
-      <span style={{ fontWeight: 500 }}>{p.name}</span>
+  const handleSelectPlayer = (name) => {
+    clearTimeout(blurTimeout.current);
+    setSelectedPlayer(name);
+    setPlayerSearch(name);
+    setShowDropdown(false);
+    setExpandedQBs(new Set());
+  };
+
+  const handleClearPlayer = () => {
+    setSelectedPlayer('');
+    setPlayerSearch('');
+    setExpandedQBs(new Set());
+  };
+
+  if (totalRosters === 0) {
+    return (
+      <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+        No roster data available. Sync your portfolio to view combo analysis.
+      </div>
+    );
+  }
+
+  const toolbarControls = (
+    <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      <div className="filter-btn-group">
+        {[
+          { key: 'stacks', label: 'Stack Profiles' },
+          { key: 'qbpairs', label: 'QB Pairs' },
+        ].map(t => (
+          <button
+            key={t.key}
+            className={`filter-btn-group__item ${activeTab === t.key ? 'filter-btn-group__item--active' : ''}`}
+            onClick={() => handleTabClick(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <label className="filter-select-label" style={{ marginBottom: 0 }}>Min stacks</label>
+        <input
+          type="number"
+          value={minCount}
+          min={1}
+          onChange={e => setMinCount(Math.max(1, Number(e.target.value) || 1))}
+          className="filter-select"
+          style={{ width: 52 }}
+        />
+      </div>
     </div>
   );
 
-  const toggleExpand = (key) => {
-    const next = new Set(expandedCombo);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    setExpandedCombo(next);
-  };
-
-  const onTabClick = (t) => {
-    setActiveTab(t);
-    setQbFilter('');
-    setStartSearch('');
-  };
-
-  // --- RENDER ---
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <TabLayout toolbar={toolbarControls}>
 
-      {/* Controls */}
-      <div className="card" style={{ display: 'flex', gap: 25, alignItems: 'center', flexWrap: 'wrap', padding: '15px 25px' }}>
-        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 8 }}>
-          {['starts', 'stacks', 'qbqb'].map(t => (
-            <button
-              key={t}
-              className={`tab-button ${activeTab === t ? 'active' : ''}`}
-              onClick={() => onTabClick(t)}
-            >
-              {t === 'starts' ? 'Early Starts (Grid)' :
-                t === 'stacks' ? 'QB Stack Groups' : 'QB Rooms'}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === 'stacks' && (
-          <input className="path-input" placeholder="Filter QB..." value={qbFilter} onChange={e => setQbFilter(e.target.value)} style={{ width: 140 }} />
-        )}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 15 }}>
-          {activeTab === 'starts' && (
-            <>
-              <input
-                className="path-input"
-                placeholder="Quick search players..."
-                value={startSearch}
-                onChange={e => setStartSearch(e.target.value)}
-                style={{ width: 200 }}
-              />
+      {/* ── Stack Profiles ─────────────────────────────────────────────────── */}
+      {activeTab === 'stacks' && (
+        <>
+          {/* Player filter with autocomplete */}
+          <div style={{ position: 'relative', marginBottom: 8, maxWidth: 320 }}>
+            <input
+              type="text"
+              placeholder="Filter by player…"
+              value={playerSearch}
+              onChange={e => {
+                setPlayerSearch(e.target.value);
+                setSelectedPlayer('');
+                setShowDropdown(true);
+                setExpandedQBs(new Set());
+              }}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
+              style={{
+                width: '100%',
+                background: 'var(--surface-2)',
+                border: `1px solid ${selectedPlayer ? 'var(--accent)' : 'var(--border-subtle)'}`,
+                borderRadius: 6,
+                padding: '6px 12px',
+                color: 'var(--text-primary)',
+                fontSize: 13,
+                fontFamily: 'var(--font-body)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            {playerSearch && (
               <button
-                onClick={() => setStartSearch('')}
-                title="Clear"
-                style={{ padding: '8px 13px', borderRadius: 6, cursor: 'pointer' }}
-              >
-                Clear
-              </button>
-              <label style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Top N:</label>
-              <input type="number" value={topN} onChange={e => setTopN(Math.max(1, Number(e.target.value) || 1))} style={{ width: 70 }} />
-              <label style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Only with R3:</label>
-              <input type="checkbox" checked={onlyWithR3} onChange={e => setOnlyWithR3(e.target.checked)} />
-            </>
-          )}
-
-          <span style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Min Count:</span>
-          <input type="number" value={minCount} onChange={e => setMinCount(Number(e.target.value))} style={{ width: 50 }} />
-        </div>
-      </div>
-
-      {/* Results Area */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-
-        {/* STACKS TABLE */}
-        {activeTab === 'stacks' && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'rgba(255,255,255,0.03)', fontSize: 15, color: 'var(--text-secondary)' }}>
-                <tr>
-                  <th style={{ padding: '15px 25px', textAlign: 'left', width: '220px' }}>QB / NAKED %</th>
-                  <th style={{ padding: '15px 25px', textAlign: 'left' }}>STACK COMBINATIONS</th>
-                  <th style={{ padding: '15px 25px', textAlign: 'center', width: '80px' }}>COUNT</th>
-                  <th style={{ padding: '15px 25px', textAlign: 'center', width: '100px' }}>EXP %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {processedData.map((group) => (
-                  <tr key={group.qb.name} style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
-                    <td style={{ padding: '20px 25px', verticalAlign: 'top', borderRight: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <Badge p={group.qb} />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-muted)' }}>{group.qb.team}</span>
-                          <div style={{ fontSize: 14, color: group.nakedPercent > 25 ? '#ef4444' : '#10b981', fontWeight: 700 }}>
-                            {group.nakedPercent.toFixed(1)}% NAKED
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                          {group.totalDrafts} Total Drafts
-                        </div>
-                      </div>
-                    </td>
-                    <td colSpan={3} style={{ padding: 0 }}>
-                      {group.sortedCombos.filter(c => c.count >= minCount).map((combo, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: '15px 25px', borderBottom: idx === group.sortedCombos.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
-                          <div style={{ flex: 1, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {combo.teammates.map((t, i) => <Badge key={i} p={t} />)}
-                          </div>
-                          <div style={{ width: 80, textAlign: 'center', fontWeight: 600 }}>{combo.count}</div>
-                          <div style={{ width: 100, textAlign: 'center', fontFamily: 'monospace', fontSize: 16, color: 'var(--text-secondary)' }}>
-                            {((combo.count / totalTeams) * 100).toFixed(1)}%
-                          </div>
-                        </div>
-                      ))}
-                      {group.sortedCombos.filter(c => c.count >= minCount).length === 0 && (
-                        <div style={{ padding: '15px 25px', fontSize: 15, color: 'var(--text-muted)', fontStyle: 'italic' }}>No stacks meeting min count</div>
-                      )}
-                    </td>
-                  </tr>
+                onMouseDown={e => { e.preventDefault(); handleClearPlayer(); }}
+                style={{
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--text-muted)', fontSize: 14, lineHeight: 1, padding: 2,
+                }}
+              >✕</button>
+            )}
+            {showDropdown && playerSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                background: 'var(--surface-3)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 8,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                zIndex: 200,
+                overflow: 'hidden',
+              }}>
+                {playerSuggestions.map(name => (
+                  <div
+                    key={name}
+                    onMouseDown={e => { e.preventDefault(); handleSelectPlayer(name); }}
+                    style={{
+                      padding: '8px 14px',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      color: 'var(--text-primary)',
+                      borderBottom: '1px solid var(--border-subtle)',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {name}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'qbqb' && (
-          <div style={{ padding: '50px 25px', overflowX: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-
-            {/* Back Button Logic */}
-            {selectedQB && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
-                <button
-                  onClick={() => setSelectedQB(null)}
-                  style={{
-                    padding: '10px 20px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6',
-                    borderRadius: 6, color: '#3b82f6', cursor: 'pointer', fontSize: 15, fontWeight: 600
-                  }}>
-                  ← Back to Full Grid
-                </button>
-                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Showing Pairs for: {selectedQB}
-                </span>
               </div>
             )}
+          </div>
 
-            <table style={{ borderCollapse: 'separate', borderSpacing: '4px', width: 'auto', margin: '0 auto', tableLayout: 'fixed' }}>
-              <thead>
+          <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: 'var(--surface-2)', fontSize: 12, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
                 <tr>
-                  <th style={{ background: 'transparent' }}></th>
-                  {processedData.sortedQBs.map(name => {
-                    const adp = processedData.adpLookup.get(name) || 999;
-                    const tier = getTierInfo(adp);
-                    const isSelected = selectedQB === name;
-
-                    return (
-                      <th
-                        key={name}
-                        onClick={() => setSelectedQB(isSelected ? null : name)}
-                        onMouseEnter={() => setHoveredQB(name)}
-                        onMouseLeave={() => setHoveredQB(null)}
-                        style={{ position: 'relative', height: '125px', verticalAlign: 'bottom', padding: '0', cursor: 'pointer' }}
-                      >
-                        <div style={{
-                          position: 'absolute', bottom: '0', left: '50%', transform: 'translateX(-50%)',
-                          width: '80%', height: '4px', background: tier.color, borderRadius: '2px 2px 0 0'
-                        }} />
-                        <div style={{
-                          transform: 'rotate(-45deg) translate(10px, -5px)',
-                          transformOrigin: 'bottom left',
-                          whiteSpace: 'nowrap',
-                          width: '30px',
-                          fontSize: '14px',
-                          fontWeight: '800',
-                          color: isSelected || hoveredQB === name ? '#3b82f6' : 'var(--text-secondary)',
-                          transition: 'all 0.2s'
-                        }}>
-                          {name.split(' ').pop()}
-                        </div>
-                      </th>
-                    );
-                  })}
+                  <th style={{ padding: '12px 20px', textAlign: 'left', width: 180 }}>QB</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'left' }}>STACK DIVERSITY</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'center', width: 80 }}>DRAFTS</th>
                 </tr>
               </thead>
               <tbody>
-                {processedData.sortedQBs.filter(qb => !selectedQB || qb === selectedQB).map((rowName) => {
-                  const rowAdp = processedData.adpLookup.get(rowName) || 999;
-                  const rowTier = getTierInfo(rowAdp);
-                  const isRowSelected = selectedQB === rowName;
+                {(stackProfilesData ?? [])
+                  .filter(g => {
+                    if (g.qb.team === 'N/A') return false;
+                    // Show QB if it has at least one qualifying stack segment
+                    const qualifying = g.sortedCombos.filter(c => c.count >= minCount && c.players.length > 0);
+                    if (qualifying.length === 0) return false;
+                    // If player filter active, QB must have a qualifying stack with that player
+                    if (selectedPlayer) return qualifying.some(c => c.players.some(p => p.name === selectedPlayer));
+                    return true;
+                  })
+                  .map(group => {
+                    const isExpanded = expandedQBs.has(group.qb.name);
 
-                  return (
-                    <tr key={rowName}>
-                      <td
-                        onClick={() => setSelectedQB(isRowSelected ? null : rowName)}
-                        onMouseEnter={() => setHoveredQB(rowName)}
-                        onMouseLeave={() => setHoveredQB(null)}
-                        style={{
-                          padding: '5px 15px', fontSize: '14px', fontWeight: '700', textAlign: 'right',
-                          borderRight: `3px solid ${rowTier.color}`,
-                          background: 'rgba(255,255,255,0.03)',
-                          whiteSpace: 'nowrap',
-                          cursor: 'pointer',
-                          color: isRowSelected || hoveredQB === rowName ? '#3b82f6' : 'var(--text-primary)'
-                        }}>
-                        {rowName} <span style={{ opacity: 0.4, fontSize: '11px' }}>{rowAdp}</span>
-                      </td>
-
-                      {processedData.sortedQBs.map((colName) => {
-                        const colAdp = processedData.adpLookup.get(colName) || 999;
-                        const isDiagonal = rowName === colName;
-                        const names = [rowName, colName].sort();
-                        const key = names.join('||');
-                        const count = isDiagonal ? processedData.individualCounts.get(rowName) : (processedData.pairCounts.get(key) || 0);
-                        const maxVal = isDiagonal ? totalTeams : (Math.max(...Array.from(processedData.pairCounts.values())) || 1);
-                        const intensity = count / maxVal;
-
-                        // Using Blended Color Logic
-                        const cellBg = count > 0
-                          ? getBlendedColor(rowAdp, colAdp, intensity)
-                          : isDiagonal ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.1)';
-
-                        return (
-                          <td
-                            key={colName}
-                            onMouseEnter={() => setHoveredCell(`${rowName}||${colName}`)}
-                            onMouseLeave={() => setHoveredCell(null)}
-                            style={{
-                              width: '48px', height: '48px', textAlign: 'center', fontSize: '15px', fontWeight: '800',
-                              borderRadius: '3px',
-                              background: cellBg,
-                              color: count > 0 ? '#fff' : 'transparent',
-                              // Highlighting logic
-                              border: (hoveredQB === rowName || hoveredQB === colName || hoveredCell === `${rowName}||${colName}`) && count > 0
-                                ? '1px solid #fff'
-                                : 'none',
-                              boxShadow: count > 0 ? 'inset 0 0 10px rgba(0,0,0,0.1)' : 'none',
-                              transition: 'all 0.1s',
-                              cursor: count > 0 ? 'pointer' : 'default'
-                            }}>
-                            {count > 0 ? count : ''}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* STARTS GRID (ORIGINAL) */}
-        {activeTab === 'starts' && (
-          <div style={{ maxHeight: '65vh', overflowY: 'auto', padding: 20 }}>
-            {(() => {
-              const search = startSearch.trim().toLowerCase();
-              const tokens = search ? search.split(/\s+/).filter(Boolean) : [];
-              const matchesSearch = (entry) => {
-                if (!tokens.length) return true;
-                const hay = [
-                  entry.players2.map(p => p.name).join(' | '),
-                  ...Array.from(entry.r3Map.keys()).join(' | ')
-                ].join(' | ').toLowerCase();
-                return tokens.every(t => hay.includes(t));
-              };
-
-              const filtered = processedData
-                .filter(c => c.count >= minCount)
-                .filter(matchesSearch);
-
-              const maxCount = Math.max(...filtered.map(f => f.count), 1);
-              const top = filtered.slice(0, topN);
-
-              if (top.length === 0) {
-                return <div style={{ padding: 25, color: 'var(--text-muted)' }}>No early combos match the filters.</div>;
-              }
-
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 15 }}>
-                  {top.map(entry => {
-                    const pct = ((entry.count / totalTeams) * 100).toFixed(1);
-                    const barPct = Math.max(6, (entry.count / maxCount) * 100);
-                    const isExpanded = expandedCombo.has(entry.key);
+                    // Bar segments: filter by minCount, exclude naked, reorder if player active
+                    const barCombos = (() => {
+                      const qualified = group.sortedCombos
+                        .map((combo, idx) => ({ combo, idx }))
+                        .filter(({ combo }) => combo.count >= minCount && combo.players.length > 0);
+                      if (!selectedPlayer) return qualified;
+                      const matching = qualified.filter(({ combo }) => combo.players.some(p => p.name === selectedPlayer));
+                      const rest = qualified.filter(({ combo }) => !combo.players.some(p => p.name === selectedPlayer));
+                      return [...matching, ...rest];
+                    })();
 
                     return (
-                      <div key={entry.key} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 8, padding: 15 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                              {entry.players2.map((p, i) => <Badge key={i} p={p} />)}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                              <div style={{ fontSize: 16, fontWeight: 800 }}>{entry.count} teams</div>
-                              <div style={{ fontSize: 15, color: 'var(--text-secondary)' }}>{pct}%</div>
-                            </div>
-                            <div style={{ height: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 6, marginTop: 10 }}>
-                              <div style={{ height: '100%', width: `${barPct}%`, background: 'linear-gradient(90deg,#3b82f6,#60a5fa)', borderRadius: 6 }} />
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                            <button
-                              onClick={() => toggleExpand(entry.key)}
-                              style={{
-                                padding: '8px 13px', borderRadius: 6, cursor: 'pointer', fontWeight: 700,
-                                background: isExpanded ? 'rgba(59,130,246,0.18)' : 'transparent',
-                                border: `1px solid ${isExpanded ? '#3b82f6' : 'rgba(255,255,255,0.06)'}`,
-                                color: isExpanded ? '#3b82f6' : 'var(--text-primary)',
-                              }}>
-                              {isExpanded ? 'Collapse' : 'Expand'}
-                            </button>
-                            {entry.r3Total > 0 ? (
-                              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{entry.r3Total} R3 picks</div>
-                            ) : (
-                              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>No R3</div>
-                            )}
-                          </div>
-                        </div>
+                      <React.Fragment key={group.qb.name}>
+                        <tr
+                          onClick={() => toggleQB(group.qb.name)}
+                          style={{
+                            borderTop: '1px solid var(--border-subtle)',
+                            cursor: 'pointer',
+                            background: isExpanded ? 'var(--surface-2)' : 'transparent',
+                          }}
+                        >
+                          {/* QB name + team */}
+                          <td style={{ padding: '14px 20px', verticalAlign: 'middle' }}>
+                            <div style={{ fontWeight: 700, fontSize: 15 }}>{group.qb.name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{group.qb.team}</div>
+                          </td>
 
-                        {isExpanded && (
-                          <div style={{ marginTop: 15, borderTop: '1px dashed rgba(255,255,255,0.03)', paddingTop: 15 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                              <div style={{ fontSize: 16, fontWeight: 700 }}>Round 3 breakdown</div>
-                              <div style={{ fontSize: 15, color: 'var(--text-secondary)' }}>{entry.r3Map.size} unique</div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                              {Array.from(entry.r3Map.values()).sort((a, b) => b.count - a.count).map((r3Entry, i) => {
-                                const name = r3Entry.player.name;
-                                const c = r3Entry.count;
-                                const pctOfPair = ((c / entry.count) * 100).toFixed(1);
-                                const playerObj = r3Entry.player;
+                          {/* Diversity bar + legend */}
+                          <td style={{ padding: '12px 20px', verticalAlign: 'middle' }}>
+                            <div style={{ height: 18, display: 'flex', width: '100%', gap: 1 }}>
+                              {barCombos.map(({ combo, idx }, barPos) => {
+                                const w = (combo.count / group.totalDrafts) * 100;
+                                const isMatch = selectedPlayer && combo.players.some(p => p.name === selectedPlayer);
+                                const segColor = comboColor(idx);
+                                const segOpacity = 0.85;
+                                const label = `${combo.players.map(p => p.name).join(' + ')}: ${combo.count} roster${combo.count !== 1 ? 's' : ''}`;
+                                const isFirst = barPos === 0;
+                                const isLast = barPos === barCombos.length - 1;
+                                const radius = `${isFirst ? 3 : 0}px ${isLast ? 3 : 0}px ${isLast ? 3 : 0}px ${isFirst ? 3 : 0}px`;
                                 return (
-                                  <div key={name + i} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 130, background: 'rgba(255,255,255,0.01)', padding: 10, borderRadius: 8, border: '1px solid rgba(255,255,255,0.03)' }}>
-                                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1 }}>
-                                        <span style={{ fontSize: 15, fontWeight: 700 }}>{name}</span>
-                                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{playerObj.team || ''}</span>
-                                      </div>
-                                      <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontWeight: 800 }}>{c}</div>
-                                        <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{pctOfPair}%</div>
-                                      </div>
-                                    </div>
-                                  </div>
+                                  <SegmentTooltip key={idx} label={label} style={{ width: `${w}%`, minWidth: 2 }}>
+                                    <div style={{
+                                      width: '100%', height: '100%',
+                                      background: segColor,
+                                      opacity: segOpacity,
+                                      transition: 'box-shadow 0.15s',
+                                      cursor: 'default',
+                                      borderRadius: radius,
+                                      boxShadow: isMatch ? 'inset 0 0 0 2px #E8BF4A' : 'none',
+                                    }} />
+                                  </SegmentTooltip>
                                 );
                               })}
                             </div>
-                          </div>
+                            {/* Legend for top bar combos */}
+                            <div style={{ display: 'flex', gap: 12, marginTop: 5, flexWrap: 'wrap' }}>
+                              {barCombos.slice(0, 4).map(({ combo, idx }) => {
+                                const isMatch = selectedPlayer && combo.players.some(p => p.name === selectedPlayer);
+                                const label = combo.players.map(p => p.name.split(' ').pop()).join('+');
+                                return (
+                                  <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)' }}>
+                                    <span style={{
+                                      width: 8, height: 8, borderRadius: 2,
+                                      background: comboColor(idx), opacity: 0.85,
+                                      display: 'inline-block', flexShrink: 0,
+                                      boxShadow: isMatch ? 'inset 0 0 0 2px #E8BF4A' : 'none',
+                                    }} />
+                                    {label}
+                                  </span>
+                                );
+                              })}
+                              {barCombos.length > 4 && (
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                  +{barCombos.length - 4} more
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 700, fontSize: 15 }}>
+                            {group.totalDrafts}
+                          </td>
+                        </tr>
+
+                        {/* Expanded combo detail */}
+                        {isExpanded && (
+                          <tr style={{ background: 'var(--surface-0)' }}>
+                            <td colSpan={3} style={{ padding: '4px 20px 16px 20px' }}>
+                              <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {group.sortedCombos
+                                  .map((combo, i) => ({ combo, i }))
+                                  .filter(({ combo }) => {
+                                    if (combo.count < minCount) return false;
+                                    if (combo.players.length === 0) return false;
+                                    if (selectedPlayer) return combo.players.some(p => p.name === selectedPlayer);
+                                    return true;
+                                  })
+                                  .map(({ combo, i }) => {
+                                    const pct = ((combo.count / group.totalDrafts) * 100).toFixed(1);
+                                    const color = comboColor(i);
+                                    return (
+                                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <div style={{
+                                          width: 3, alignSelf: 'stretch', borderRadius: 2,
+                                          background: color, opacity: 0.85, flexShrink: 0,
+                                        }} />
+                                        <div style={{ flex: 1, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                          {combo.players.map((p, j) => <PlayerBadge key={j} name={p.name} position={p.position} />)}
+                                        </div>
+                                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                          <span style={{ fontWeight: 700, fontSize: 14 }}>{combo.count}</span>
+                                          <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 6 }}>{pct}%</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </td>
+                          </tr>
                         )}
-                      </div>
+                      </React.Fragment>
                     );
                   })}
-                </div>
-              );
-            })()}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
-    </div>
+        </>
+      )}
+
+      {/* ── QB Pairs — Frequency Leaderboard ───────────────────────────────── */}
+      {activeTab === 'qbpairs' && (
+        <div className="card" style={{ padding: '16px 24px', overflow: 'auto' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+            Most frequent QB pairings on the same roster.
+          </div>
+          {(qbPairsData?.filter(p => p.count >= minCount) ?? []).length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', padding: '20px 0' }}>
+              No QB pairs found. Rosters with only one QB will not appear here.
+            </div>
+          ) : (() => {
+            const filtered = qbPairsData.filter(p => p.count >= minCount);
+            const maxCount = filtered[0]?.count || 1;
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {filtered.map(pair => {
+                  const isTop = pair.rank === 1;
+                  const fillPct = (pair.count / maxCount) * 100;
+                  return (
+                    <div
+                      key={`${pair.qb1.name}||${pair.qb2.name}`}
+                      style={{
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: 6,
+                        border: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.25)' : 'var(--border-subtle)'}`,
+                        background: 'var(--surface-1)',
+                      }}
+                    >
+                      {/* Frequency fill bar */}
+                      <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, bottom: 0,
+                        width: `${fillPct}%`,
+                        background: isTop
+                          ? 'rgba(232, 191, 74, 0.07)'
+                          : 'rgba(139, 148, 176, 0.05)',
+                        borderRight: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.2)' : 'rgba(139, 148, 176, 0.1)'}`,
+                        pointerEvents: 'none',
+                      }} />
+
+                      {/* Row content */}
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 14, padding: '11px 18px' }}>
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: isTop ? 'var(--accent)' : 'var(--text-muted)',
+                          minWidth: 28,
+                          textAlign: 'right',
+                          letterSpacing: '0.02em',
+                        }}>
+                          #{pair.rank}
+                        </span>
+
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <PlayerBadge name={pair.qb1.name} position="QB" />
+                          <span style={{
+                            color: 'var(--text-muted)',
+                            fontSize: 14,
+                            fontWeight: 300,
+                            fontFamily: 'var(--font-mono)',
+                            lineHeight: 1,
+                          }}>+</span>
+                          <PlayerBadge name={pair.qb2.name} position="QB" />
+                        </div>
+
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            fontSize: 15,
+                            color: isTop ? 'var(--accent)' : 'var(--text-primary)',
+                          }}>
+                            {pair.count}
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 7 }}>
+                            {pair.pct}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+    </TabLayout>
   );
 }

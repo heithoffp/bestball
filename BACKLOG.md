@@ -2,19 +2,62 @@
 
 ## Now
 
+| TASK-057 | Redesign Combo Analysis tab — Stack Profiles, Team Stacks, QB Pairs |
+| TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list |
+
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
-| TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric | Todo | P2 | [Plan](docs/plans/TASK-039.md) — Draft | No |
-| TASK-046 | Draft overlay scaffold | Todo | P2 | [Plan](docs/plans/TASK-046.md) — Draft | No |
-| TASK-047 | Draft overlay scoring | Todo | P2 | [Plan](docs/plans/TASK-047.md) — Draft | No |
+| TASK-057 | Redesign Combo Analysis tab — Stack Profiles, Team Stacks, QB Pairs | In Progress | P2 | [Plan](docs/plans/TASK-057.md) | No |
+| TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list | In Progress | P2 | [Plan](docs/plans/TASK-093.md) | No |
+| TASK-061 | Migrate AdpTimeSeries, DraftFlowAnalysis, PlayerRankings to shared filter system | Todo | P2 | [Plan](docs/plans/TASK-061.md) — Draft | No |
+| TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric | Todo | P3 | [Plan](docs/plans/TASK-039.md) — Draft | No |
+| TASK-087 | PlayerRankings: Add "Reset to ADP order" button | Todo | P3 | [Plan](docs/plans/TASK-087.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
+| TASK-052 | Portfolio-wide pick quality summary — value/reach histogram by ADP round | Todo | P3 | [Plan](docs/plans/TASK-052.md) — Draft | No |
+| TASK-053 | Inter-roster similarity score — portfolio diversity metric | Todo | P3 | [Plan](docs/plans/TASK-053.md) — Draft | No |
+| TASK-069 | Migrate hardcoded font-size values to typography tokens | Todo | P3 | [Plan](docs/plans/TASK-069.md) — Draft | No |
+| TASK-075 | Migrate ComboAnalysis inline styles to CSS module | Todo | P3 | [Plan](docs/plans/TASK-075.md) — Draft | No |
+| TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-095 | Fix RB_DOUBLE_ANCHOR color clash and missing filter options | Done | P3 | [Plan](docs/archive/plans/TASK-095.md) | Yes | 2026-04-02 |
+| TASK-094 | Add RB_DOUBLE_ANCHOR archetype to roster classification | Done | P3 | [Plan](docs/archive/plans/TASK-094.md) | Yes | 2026-04-02 |
+| TASK-092 | Fix PlayerRankings tab performance — drag render, adpLookup dep, measureElement, handleDragEnd | Done | P2 | [Plan](docs/archive/plans/TASK-092.md) | Yes | 2026-04-02 |
+| TASK-086 | PlayerRankings: Improve tier break affordance — replace hidden click zone with visible insert button | Done | P3 | [Plan](docs/archive/plans/TASK-086.md) | Yes | 2026-04-02 |
+| TASK-084 | PlayerRankings: Virtualize the list with react-window (or similar) | Done | P2 | [Plan](docs/archive/plans/TASK-084.md) | Yes | 2026-04-02 |
+| TASK-090 | Exposure Table: Compact 2-row filter bar matching Roster Viewer pattern | Done | P3 | [Plan](docs/archive/plans/TASK-090.md) | Yes | 2026-04-02 |
+| TASK-091 | Align archetype distribution colors — Dashboard and Rosters tab | Done | P3 | [Plan](docs/archive/plans/TASK-091.md) | Yes | 2026-04-02 |
+| TASK-085 | PlayerRankings: Add empty search results state | Done | P3 | [Plan](docs/archive/plans/TASK-085.md) | Yes | 2026-04-02 |
+| TASK-088 | PlayerRankings: Fix mobile Save button feedback — '!' is ambiguous for saved vs error states | Done | P4 | [Plan](docs/archive/plans/TASK-088.md) | Yes | 2026-04-02 |
+| TASK-089 | PlayerRankings: Remove dead per-position tier break state (QB/RB/WR/TE) | Done | P4 | [Plan](docs/archive/plans/TASK-089.md) | Yes | 2026-04-02 |
+| TASK-081 | Roster Viewer: Compact 2-row filter bar — remove collapsible and distribution bars on desktop | Done | P4 | [Plan](docs/archive/plans/TASK-081.md) | Yes | 2026-04-02 |
+| TASK-083 | Roster Viewer: Support full team name search in combined filter | Done | P3 | [Plan](docs/archive/plans/TASK-083.md) | Yes | 2026-04-02 |
+| TASK-082 | Roster Viewer: Align archetype filter colors and position colors to UI/UX Guide Midnight Gold palette | Done | P3 | [Plan](docs/archive/plans/TASK-082.md) | Yes | 2026-04-02 |
+| TASK-080 | Roster Viewer: Merge Player & Team search into a single combined filter | Done | P3 | [Plan](docs/archive/plans/TASK-080.md) | Yes | 2026-04-02 |
+| TASK-046 | Draft overlay scaffold | Done | P2 | [Plan](docs/archive/plans/TASK-046.md) | Yes | 2026-04-02 |
+| TASK-066 | Eliminate backward-compat color aliases — migrate to design system tokens | Done | P2 | [Plan](docs/archive/plans/TASK-066.md) | Yes | 2026-04-01 |
+| TASK-071 | Migrate hardcoded spacing values to spacing tokens | Done | P3 | [Plan](docs/archive/plans/TASK-071.md) | Yes | 2026-04-01 |
+| TASK-072 | Migrate hardcoded border-radius values to radius tokens | Done | P3 | [Plan](docs/archive/plans/TASK-072.md) | Yes | 2026-04-01 |
+| TASK-077 | Add consistent dark-themed scrollbar styling across all scrollable areas | Done | P4 | [Plan](docs/archive/plans/TASK-077.md) | Yes | 2026-04-01 |
+| TASK-078 | Standardize transition timing to use motion tokens | Done | P4 | [Plan](docs/archive/plans/TASK-078.md) | Yes | 2026-04-01 |
+| TASK-073 | Add fadeSlideIn entry animation to all tab components | Done | P3 | [Plan](docs/archive/plans/TASK-073.md) | Yes | 2026-04-01 |
+| TASK-074 | Standardize chart tooltip styling across all Recharts components | Done | P3 | [Plan](docs/archive/plans/TASK-074.md) | Yes | 2026-04-01 |
+| TASK-062 | Fix position badge colors — migrate from broken backward-compat aliases to canonical position tokens | Done | P2 | [Plan](docs/archive/plans/TASK-062.md) | Yes | 2026-04-01 |
+| TASK-063 | Fix surface layer violations — cards should use surface-1 not surface-2 | Done | P2 | [Plan](docs/archive/plans/TASK-063.md) | Yes | 2026-04-01 |
+| TASK-064 | Fix tab bar active state — use gradient accent instead of solid color | Done | P2 | [Plan](docs/archive/plans/TASK-064.md) | Yes | 2026-04-01 |
+| TASK-065 | Fix mobile tab bar grid — 8 tabs with repeat(7, 1fr) clips the last tab | Done | P2 | [Plan](docs/archive/plans/TASK-065.md) | Yes | 2026-04-01 |
+| TASK-068 | Replace hardcoded hex colors with design system tokens | Done | P2 | [Plan](docs/archive/plans/TASK-068.md) | Yes | 2026-04-01 |
+| TASK-070 | Add font-family: var(--font-mono) to tab button labels | Done | P3 | [Plan](docs/archive/plans/TASK-070.md) | Yes | 2026-04-01 |
+| TASK-076 | Add global focus-visible ring with accent-glow | Done | P4 | [Plan](docs/archive/plans/TASK-076.md) | Yes | 2026-04-01 |
+| TASK-056 | Scrub Draft Scoring exception — Vision_and_Scope, TASK-051-audit, draftScorer.js | Done | P2 | [Plan](docs/archive/plans/TASK-056.md) | Yes | 2026-04-01 |
+| TASK-054 | Dashboard — enhance Exposure by ADP Round to surface blind spots | Done | P3 | [Plan](docs/archive/plans/TASK-054.md) | Yes | 2026-04-01 |
+| TASK-055 | Roster-level strategy scorecard — sortable table across all rosters | Done | P2 | [Plan](docs/archive/plans/TASK-055.md) | Yes | 2026-04-01 |
+| TASK-051 | User needs audit — map portfolio questions to app + extension features, identify gaps | Done | P2 | [Plan](docs/archive/plans/TASK-051.md) | Yes | 2026-04-01 |
 | TASK-041 | Side-by-side layout for Top Exposures and Exposure by ADP Round | Done | P3 | [Plan](docs/archive/plans/TASK-041.md) | Yes | 2026-04-01 |
 | TASK-050 | Remove CSV upload references from web app UI | Done | P2 | [Plan](docs/archive/plans/TASK-050.md) | Yes | 2026-04-01 |
 | TASK-045 | Web app sync UX | Done | P2 | [Plan](docs/archive/plans/TASK-045.md) | Yes | 2026-04-01 |
@@ -60,3 +103,10 @@
 | TASK-008 | Create vercel.json with production configuration | Done | P1 | [Plan](docs/archive/plans/TASK-008.md) | Yes | 2026-03-27 |
 | TASK-004 | Add email/password auth alongside Google OAuth | Done | P1 | [Plan](docs/archive/plans/TASK-004.md) | Yes | 2026-03-27 |
 | TASK-005 | Build auth modal with signup/login tabs | Done | P1 | [Plan](docs/archive/plans/TASK-005.md) | Yes | 2026-03-27 |
+
+## Cancelled Tasks
+
+| ID | Title | Status | Priority | Plan | Reason |
+|----|-------|--------|----------|------|--------|
+| TASK-047 | Draft overlay scoring | Cancelled | P2 | [Plan](docs/plans/TASK-047.md) | Removed per ADR-002 — Mirror-Not-Advisor is now unconditional; no scoring in overlay |
+| TASK-067 | Update app header branding — 'BEST BALL EXPOSURES' → 'BEST BALL PORTFOLIO MANAGER' | Cancelled | P2 | [Plan](docs/plans/TASK-067.md) | Domain is bestballexposures.com — header branding is correct as-is |

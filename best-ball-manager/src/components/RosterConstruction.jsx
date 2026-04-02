@@ -3,10 +3,10 @@ import { analyzePortfolioTree, PROTOCOL_TREE, ARCHETYPE_METADATA } from '../util
 
 // Position colors optimized for dark theme visibility
 const POS_COLORS = { 
-  QB: 'var(--accent-red)', 
-  RB: 'var(--accent-green)', 
-  WR: 'var(--accent-blue)', 
-  TE: 'var(--accent-yellow)', 
+  QB: 'var(--pos-qb)',
+  RB: 'var(--pos-rb)',
+  WR: 'var(--pos-wr)',
+  TE: 'var(--pos-te)', 
   default: 'var(--text-muted)' 
 };
 
@@ -68,8 +68,8 @@ export default function RosterConstruction({ rosterData = [] }) {
         .protocol-container { padding: 1.25rem 0; }
 
         .player-search-panel {
-          background: var(--bg-card);
-          border: 1px solid var(--border);
+          background: var(--surface-1);
+          border: 1px solid var(--border-subtle);
           border-radius: 12px;
           padding: 1.9rem;
           margin-bottom: 2.5rem;
@@ -77,8 +77,8 @@ export default function RosterConstruction({ rosterData = [] }) {
 
         .search-input {
           width: 100%;
-          background: var(--bg-dark);
-          border: 1px solid var(--border);
+          background: var(--surface-0);
+          border: 1px solid var(--border-subtle);
           border-radius: 8px;
           padding: 15px 20px;
           color: var(--text-primary);
@@ -88,7 +88,7 @@ export default function RosterConstruction({ rosterData = [] }) {
         }
         .search-input:focus {
           outline: none;
-          border-color: var(--accent-blue);
+          border-color: var(--accent);
         }
         .search-input::placeholder {
           color: var(--text-muted);
@@ -102,14 +102,14 @@ export default function RosterConstruction({ rosterData = [] }) {
           justify-content: space-between;
           align-items: center;
           padding: 15px;
-          background: var(--bg-dark);
+          background: var(--surface-0);
           border-radius: 6px;
           margin-bottom: 10px;
           cursor: pointer;
           transition: all 0.2s;
         }
         .search-result-item:hover {
-          background: var(--bg-hover);
+          background: var(--surface-2);
           transform: translateX(4px);
         }
         .search-path {
@@ -130,7 +130,7 @@ export default function RosterConstruction({ rosterData = [] }) {
           font-family: 'JetBrains Mono', monospace;
           font-size: 1.4rem;
           font-weight: 700;
-          color: var(--accent-blue);
+          color: var(--accent);
         }
         .search-teams {
           font-size: 0.95rem;
@@ -147,7 +147,7 @@ export default function RosterConstruction({ rosterData = [] }) {
           align-items: center;
           gap: 13px;
         }
-        .section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+        .section-label::after { content: ""; flex: 1; height: 1px; background: var(--border-subtle); }
         
         .tree-grid {
           display: grid;
@@ -157,8 +157,8 @@ export default function RosterConstruction({ rosterData = [] }) {
         }
 
         .tree-card {
-          background: var(--bg-card);
-          border: 1px solid var(--border);
+          background: var(--surface-1);
+          border: 1px solid var(--border-subtle);
           border-radius: 12px;
           padding: 1.9rem;
           cursor: pointer;
@@ -166,12 +166,12 @@ export default function RosterConstruction({ rosterData = [] }) {
           position: relative;
         }
         .tree-card:hover { 
-          background: var(--bg-hover); 
+          background: var(--surface-2); 
           border-color: var(--text-muted); 
           transform: translateY(-2px); 
         }
         .tree-card.active { 
-          border-color: var(--accent-blue); 
+          border-color: var(--accent); 
           background: rgba(59, 130, 246, 0.05); 
           box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); 
         }
@@ -210,7 +210,7 @@ export default function RosterConstruction({ rosterData = [] }) {
         }
         .progress-track { 
           height: 8px; 
-          background: var(--bg-dark); 
+          background: var(--surface-0); 
           border-radius: 3px; 
           position: relative; 
           overflow: visible;
@@ -253,15 +253,15 @@ export default function RosterConstruction({ rosterData = [] }) {
         }
         .delta-over {
           background: rgba(34, 197, 94, 0.15);
-          color: var(--accent-green);
+          color: var(--positive);
         }
         .delta-under {
           background: rgba(239, 68, 68, 0.15);
-          color: var(--accent-red);
+          color: var(--negative);
         }
         .delta-perfect {
           background: rgba(59, 130, 246, 0.15);
-          color: var(--accent-blue);
+          color: var(--accent);
         }
 
         .breadcrumb-nav {
@@ -271,7 +271,7 @@ export default function RosterConstruction({ rosterData = [] }) {
           font-family: 'JetBrains Mono', monospace;
           font-size: 1.1rem;
         }
-        .bc-node { color: var(--accent-blue); }
+        .bc-node { color: var(--accent); }
         .bc-sep { color: var(--text-muted); }
 
         .roster-grid {
@@ -280,12 +280,12 @@ export default function RosterConstruction({ rosterData = [] }) {
           gap: 1.25rem;
         }
         .mini-card {
-          background: var(--bg-card);
-          border: 1px solid var(--border);
+          background: var(--surface-1);
+          border: 1px solid var(--border-subtle);
           border-radius: 8px;
           padding: 1.25rem;
         }
-        .mini-card:hover { border-color: var(--accent-blue); }
+        .mini-card:hover { border-color: var(--accent); }
         
         .draft-strip { display: flex; gap: 4px; margin: 15px 0; }
         .pick-block {
@@ -401,7 +401,7 @@ export default function RosterConstruction({ rosterData = [] }) {
                     className="progress-fill" 
                     style={{ 
                       width: `${Math.min(pct, 100)}%`, 
-                      background: config.color || 'var(--accent-blue)' 
+                      background: config.color || 'var(--accent)' 
                     }} 
                   />
                 </div>
@@ -449,12 +449,12 @@ export default function RosterConstruction({ rosterData = [] }) {
                         className="target-marker" 
                         style={{ left: `${Math.min(config.target, 100)}%` }} 
                       />
-                      <div 
-                        className="progress-fill" 
-                        style={{ 
-                          width: `${Math.min(pct, 100)}%`, 
-                          background: 'var(--accent-red)' 
-                        }} 
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${Math.min(pct, 100)}%`,
+                          background: ARCHETYPE_METADATA[key]?.color || 'var(--accent)'
+                        }}
                       />
                     </div>
                   </div>
@@ -503,12 +503,12 @@ export default function RosterConstruction({ rosterData = [] }) {
                         className="target-marker" 
                         style={{ left: `${Math.min(target, 100)}%` }} 
                       />
-                      <div 
-                        className="progress-fill" 
-                        style={{ 
-                          width: `${Math.min(pct, 100)}%`, 
-                          background: 'var(--accent-yellow)' 
-                        }} 
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${Math.min(pct, 100)}%`,
+                          background: ARCHETYPE_METADATA[key]?.color || 'var(--accent)'
+                        }}
                       />
                     </div>
                   </div>

@@ -4,6 +4,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import { analyzeRosterStacks } from '../utils/stackAnalysis';
 import useMediaQuery from '../hooks/useMediaQuery';
+import { CombinedSearchInput } from './filters';
+import { NFL_TEAMS } from '../utils/nflTeams';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
 
@@ -170,21 +172,7 @@ function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
 
 // ── Archetype display helpers ─────────────────────────────────────────────────
 
-const ARCHETYPE_COLORS = {
-  RB_ZERO:          '#8b5cf6',
-  RB_HYPER_FRAGILE: '#f97316',
-  RB_HERO:          '#4bf1db',
-  RB_BALANCED:         '#ef4444',
-
-  QB_ELITE:         '#f59e0b',
-  QB_CORE:          '#60a5fa',
-  QB_LATE:          '#94a3b8',
-  TE_ELITE:         '#a855f7',
-  TE_ANCHOR:        '#34d399',
-  TE_LATE:          '#94a3b8',
-};
-
-function archetypeColor(key) { return ARCHETYPE_COLORS[key] || '#6b7280'; }
+function archetypeColor(key) { return ARCHETYPE_METADATA[key]?.color || '#6b7280'; }
 
 function ArchetypePill({ archetypeKey }) {
   const meta = ARCHETYPE_METADATA[archetypeKey];
@@ -212,7 +200,7 @@ function SortIcon({ col, sortKey, sortDir }) {
 // ── Position snapshot ─────────────────────────────────────────────────────────
 
 const POS_COLORS = {
-  QB: '#f59e0b', RB: '#10b981', WR: '#3b82f6', TE: '#a855f7',
+  QB: '#BF44EF', RB: '#10B981', WR: '#F59E0B', TE: '#3B82F6',
   K: '#6b7280', DEF: '#ef4444', DST: '#ef4444', default: '#eeeeee',
 };
 function posColor(pos) { return POS_COLORS[pos] || POS_COLORS.default; }
@@ -245,7 +233,7 @@ function shortEntry(id) {
 
 // ── Filter options ────────────────────────────────────────────────────────────
 
-const RB_OPTIONS = ['all', 'RB_ZERO', 'RB_HERO', 'RB_HYPER_FRAGILE', 'RB_BALANCED'];
+const RB_OPTIONS = ['all', 'RB_ZERO', 'RB_HERO', 'RB_DOUBLE_ANCHOR', 'RB_HYPER_FRAGILE', 'RB_BALANCED'];
 const QB_OPTIONS = ['all', 'QB_ELITE', 'QB_CORE', 'QB_LATE'];
 const TE_OPTIONS = ['all', 'TE_ELITE', 'TE_ANCHOR', 'TE_LATE'];
 
@@ -317,18 +305,9 @@ export default function RosterViewer({ rosterData = [] }) {
   const [qbFilter,  setQbFilter]            = useState('all');
   const [teFilter,  setTeFilter]            = useState('all');
   const [tournamentFilter, setTournamentFilter] = useState('all');
-  const [playerSearch, setPlayerSearch] = useState('');
+  const [combinedSearch, setCombinedSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [selectedTeams, setSelectedTeams] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showTeamDropdown, setShowTeamDropdown] = useState(false);
-  const [teamSearch, setTeamSearch] = useState('');
-  const [highlightIdx, setHighlightIdx] = useState(0);
-  const [teamHighlightIdx, setTeamHighlightIdx] = useState(0);
-  const searchRef = useRef(null);
-  const teamSearchRef = useRef(null);
-  const blurTimeout = useRef(null);
-  const teamBlurTimeout = useRef(null);
   const scrollRef = useRef(null);
 
   // Unique player names for autocomplete
@@ -338,15 +317,6 @@ export default function RosterViewer({ rosterData = [] }) {
     return [...names].sort();
   }, [rosterData]);
 
-  const searchQuery = playerSearch.trim();
-  const autocompleteSuggestions = useMemo(() => {
-    if (!searchQuery) return [];
-    const q = searchQuery.toLowerCase();
-    return allPlayerNames
-      .filter(n => n.toLowerCase().includes(q) && !selectedPlayers.includes(n))
-      .slice(0, 8);
-  }, [searchQuery, allPlayerNames, selectedPlayers]);
-
   // Unique team names for autocomplete
   const allTeamNames = useMemo(() => {
     const teams = new Set();
@@ -354,78 +324,47 @@ export default function RosterViewer({ rosterData = [] }) {
     return [...teams].sort();
   }, [rosterData]);
 
-  const teamSearchQuery = teamSearch.trim();
-  const teamAutocompleteSuggestions = useMemo(() => {
-    if (!teamSearchQuery) return allTeamNames.filter(t => !selectedTeams.includes(t));
-    const q = teamSearchQuery.toLowerCase();
+  const combinedQuery = combinedSearch.trim().toLowerCase();
+
+  const playerSuggestions = useMemo(() => {
+    if (!combinedQuery) return [];
+    return allPlayerNames
+      .filter(n => n.toLowerCase().includes(combinedQuery) && !selectedPlayers.includes(n))
+      .slice(0, 6);
+  }, [combinedQuery, allPlayerNames, selectedPlayers]);
+
+  const teamSuggestions = useMemo(() => {
+    if (!combinedQuery) return allTeamNames.filter(t => !selectedTeams.includes(t));
     return allTeamNames
-      .filter(t => t.toLowerCase().includes(q) && !selectedTeams.includes(t))
-      .slice(0, 8);
-  }, [teamSearchQuery, allTeamNames, selectedTeams]);
+      .filter(t => {
+        if (selectedTeams.includes(t)) return false;
+        const fullName = (NFL_TEAMS[t] || '').toLowerCase();
+        return t.toLowerCase().includes(combinedQuery) || fullName.includes(combinedQuery);
+      })
+      .slice(0, 4);
+  }, [combinedQuery, allTeamNames, selectedTeams]);
 
   const addTeam = useCallback((team) => {
     if (team && !selectedTeams.includes(team)) {
       setSelectedTeams(prev => [...prev, team]);
     }
-    setTeamSearch('');
-    setShowTeamDropdown(false);
-    setTeamHighlightIdx(0);
+    setCombinedSearch('');
   }, [selectedTeams]);
 
   const removeTeam = useCallback((team) => {
     setSelectedTeams(prev => prev.filter(t => t !== team));
   }, []);
 
-  const handleTeamKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (teamAutocompleteSuggestions.length > 0) {
-        addTeam(teamAutocompleteSuggestions[teamHighlightIdx] || teamAutocompleteSuggestions[0]);
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setTeamHighlightIdx(i => Math.min(i + 1, teamAutocompleteSuggestions.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setTeamHighlightIdx(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Escape') {
-      setShowTeamDropdown(false);
-    } else if (e.key === 'Backspace' && !teamSearch && selectedTeams.length > 0) {
-      setSelectedTeams(prev => prev.slice(0, -1));
-    }
-  }, [teamAutocompleteSuggestions, teamHighlightIdx, addTeam, teamSearch, selectedTeams]);
-
   const addPlayer = useCallback((name) => {
     if (name && !selectedPlayers.includes(name)) {
       setSelectedPlayers(prev => [...prev, name]);
     }
-    setPlayerSearch('');
-    setShowDropdown(false);
-    setHighlightIdx(0);
+    setCombinedSearch('');
   }, [selectedPlayers]);
 
   const removePlayer = useCallback((name) => {
     setSelectedPlayers(prev => prev.filter(n => n !== name));
   }, []);
-
-  const handleSearchKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (autocompleteSuggestions.length > 0) {
-        addPlayer(autocompleteSuggestions[highlightIdx] || autocompleteSuggestions[0]);
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightIdx(i => Math.min(i + 1, autocompleteSuggestions.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightIdx(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Escape') {
-      setShowDropdown(false);
-    } else if (e.key === 'Backspace' && !playerSearch && selectedPlayers.length > 0) {
-      setSelectedPlayers(prev => prev.slice(0, -1));
-    }
-  }, [autocompleteSuggestions, highlightIdx, addPlayer, playerSearch, selectedPlayers]);
 
   // Rarity model tunables
   const [alphaPhase]       = useState(1.2);
@@ -752,7 +691,8 @@ export default function RosterViewer({ rosterData = [] }) {
   const renderMobileSortBar = () => (
     <div className={css.sortBar}>
       <select
-        className={css.sortSelect}
+        className="filter-select"
+        style={{ flex: 1 }}
         value={sortKey}
         onChange={e => {
           const key = e.target.value;
@@ -777,17 +717,17 @@ export default function RosterViewer({ rosterData = [] }) {
   // ── Render: Mobile Chip Filters ─────────────────────────────────────────────
 
   const renderMobileChipFilters = () => (
-    <div className={css.chipStrip}>
+    <div className="filter-chip-group filter-chip-group--scroll">
       {CHIP_GROUPS.map((group, gi) => (
         <React.Fragment key={group.pos}>
-          {gi > 0 && <div className={css.chipSeparator} />}
+          {gi > 0 && <div className="filter-chip-group__separator" />}
           {group.options.map(opt => {
             const active = isChipActive(opt);
             const color = archetypeColor(opt);
             return (
               <button
                 key={opt}
-                className={`${css.chip} ${active ? css.chipActive : ''}`}
+                className={`filter-chip ${active ? 'filter-chip--active' : ''}`}
                 style={active ? {
                   background: `${color}25`,
                   borderColor: color,
@@ -809,7 +749,7 @@ export default function RosterViewer({ rosterData = [] }) {
   const renderCardList = () => (
     <div
       ref={scrollRef}
-      style={{ overflowY: 'auto', minHeight: 400, flexShrink: 0, borderRadius: 8, border: '1px solid var(--border)' }}
+      style={{ overflowY: 'auto', minHeight: 400, flexShrink: 0, borderRadius: 8, border: '1px solid var(--border-subtle)' }}
     >
       {displayed.length === 0 ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -841,7 +781,7 @@ export default function RosterViewer({ rosterData = [] }) {
         {!filtersOpen && activeFilterPills.length > 0 && (
           <div className={css.filterPillRow}>
             {activeFilterPills.map((p, i) => (
-              <span key={i} style={{ background: p.color + '18', color: p.color, border: `1px solid ${p.color}40` }} className={css.filterPillTag}>
+              <span key={i} style={{ background: p.color + '18', color: p.color, border: `1px solid ${p.color}40` }} className="filter-badge">
                 {p.label}
               </span>
             ))}
@@ -862,95 +802,25 @@ export default function RosterViewer({ rosterData = [] }) {
           <div>
             <span className={css.sectionLabel}>Search</span>
             <div className={css.searchRow}>
-              {/* Player Search */}
-              <div className={css.searchWrap} style={{ width: '100%' }}>
-                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Player Search</label>
-                <div className={css.searchInputBox}>
-                  {selectedPlayers.map(name => (
-                    <span key={name} className={css.selectedChip} style={{ background: '#00e5a015', color: '#00e5a0', border: '1px solid #00e5a035' }}>
-                      {name}
-                      <button onClick={(e) => { e.stopPropagation(); removePlayer(name); }} className={css.chipRemove} style={{ color: '#00e5a066' }}>✕</button>
-                    </span>
-                  ))}
-                  <input
-                    ref={searchRef}
-                    type="text"
-                    placeholder={selectedPlayers.length === 0 ? 'Search players…' : 'Add player…'}
-                    value={playerSearch}
-                    onChange={e => { setPlayerSearch(e.target.value); setShowDropdown(true); setHighlightIdx(0); }}
-                    onFocus={() => setShowDropdown(true)}
-                    onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
-                    onKeyDown={handleSearchKeyDown}
-                    style={{
-                      flex: 1, minWidth: 100, background: 'transparent', border: 'none', outline: 'none',
-                      color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
-                      padding: '4px 0',
-                    }}
-                  />
-                  {(selectedPlayers.length > 0 || playerSearch) && (
-                    <button onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }} className={css.clearBtn}>✕</button>
-                  )}
-                </div>
-                {showDropdown && autocompleteSuggestions.length > 0 && (
-                  <div className={css.autocompleteDropdown}>
-                    {autocompleteSuggestions.map((name, i) => (
-                      <div
-                        key={name}
-                        onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
-                        onMouseEnter={() => setHighlightIdx(i)}
-                        className={css.autocompleteItem}
-                        style={{ background: i === highlightIdx ? '#00e5a015' : 'transparent', borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
-                      >{name}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* Team Search */}
-              <div className={css.searchWrap} style={{ width: '100%' }}>
-                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Team Stack</label>
-                <div className={css.searchInputBox}>
-                  {selectedTeams.map(team => (
-                    <span key={team} className={css.selectedChip} style={{ background: '#3b82f615', color: '#60a5fa', border: '1px solid #3b82f635' }}>
-                      {team}
-                      <button onClick={(e) => { e.stopPropagation(); removeTeam(team); }} className={css.chipRemove} style={{ color: '#60a5fa66' }}>✕</button>
-                    </span>
-                  ))}
-                  <input
-                    ref={teamSearchRef}
-                    type="text"
-                    placeholder={selectedTeams.length === 0 ? 'Stack team…' : 'Add team…'}
-                    value={teamSearch}
-                    onChange={e => { setTeamSearch(e.target.value); setShowTeamDropdown(true); setTeamHighlightIdx(0); }}
-                    onFocus={() => setShowTeamDropdown(true)}
-                    onBlur={() => { teamBlurTimeout.current = setTimeout(() => setShowTeamDropdown(false), 150); }}
-                    onKeyDown={handleTeamKeyDown}
-                    style={{
-                      flex: 1, minWidth: 75, background: 'transparent', border: 'none', outline: 'none',
-                      color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
-                      padding: '4px 0',
-                    }}
-                  />
-                  {(selectedTeams.length > 0 || teamSearch) && (
-                    <button onClick={() => { setSelectedTeams([]); setTeamSearch(''); }} className={css.clearBtn}>✕</button>
-                  )}
-                </div>
-                {showTeamDropdown && teamAutocompleteSuggestions.length > 0 && (
-                  <div className={css.autocompleteDropdown}>
-                    {teamAutocompleteSuggestions.map((team, i) => (
-                      <div
-                        key={team}
-                        onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
-                        onMouseEnter={() => setTeamHighlightIdx(i)}
-                        className={css.autocompleteItem}
-                        style={{ background: i === teamHighlightIdx ? '#3b82f615' : 'transparent', borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
-                      >{team}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <CombinedSearchInput
+                selectedPlayers={selectedPlayers}
+                selectedTeams={selectedTeams}
+                onAddPlayer={addPlayer}
+                onAddTeam={addTeam}
+                onRemovePlayer={removePlayer}
+                onRemoveTeam={removeTeam}
+                onClear={() => { setSelectedPlayers([]); setSelectedTeams([]); setCombinedSearch(''); }}
+                playerSuggestions={playerSuggestions}
+                teamSuggestions={teamSuggestions}
+                teamNames={NFL_TEAMS}
+                searchValue={combinedSearch}
+                onSearchChange={setCombinedSearch}
+                placeholder="Search players & teams..."
+                label="Player / Team Search"
+              />
               {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
-                <span className={css.matchCount}>
-                  <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
+                <span className="filter-count" style={{ marginLeft: 0 }}>
+                  <strong style={{ color: '#00e5a0' }}>{displayed.length}</strong>
                   {' '}roster{displayed.length !== 1 ? 's' : ''} match
                 </span>
               )}
@@ -970,11 +840,12 @@ export default function RosterViewer({ rosterData = [] }) {
             <span className={css.sectionLabel}>Additional Filters</span>
             <div className={css.additionalFilters}>
               <div style={{ width: '100%' }}>
-                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Tournament</label>
+                <label className="filter-select-label">Tournament</label>
                 <select
                   value={tournamentFilter}
                   onChange={e => setTournamentFilter(e.target.value)}
-                  className={css.filterSelect}
+                  className="filter-select"
+                  style={{ width: '100%' }}
                 >
                   {allTournaments.map(t => (
                     <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
@@ -982,10 +853,10 @@ export default function RosterViewer({ rosterData = [] }) {
                 </select>
               </div>
               <div style={{ width: '100%' }}>
-                <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>CLV Filter</label>
-                <div style={{ display: 'flex', gap: 5 }}>
+                <label className="filter-select-label">CLV Filter</label>
+                <div className="filter-chip-group">
                   {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
-                    <button key={v} className={css.filterBtn} style={clvFilter === v ? { background: '#00e5a01a', borderColor: '#00e5a0', color: '#00e5a0' } : {}} onClick={() => setClvFilter(v)}>
+                    <button key={v} className={`filter-chip ${clvFilter === v ? 'filter-chip--active' : ''}`} onClick={() => setClvFilter(v)}>
                       {lbl}
                     </button>
                   ))}
@@ -997,152 +868,77 @@ export default function RosterViewer({ rosterData = [] }) {
       );
     }
 
-    // Desktop/Tablet filter body
-    return (
-      <>
-        {/* Section A: Search */}
-        <div>
-          <span className={css.sectionLabel}>Search</span>
-          <div className={css.searchRow}>
-            <div className={css.searchWrap} style={{ flex: '1 1 55%', minWidth: 250 }}>
-              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Player Search</label>
-              <div className={css.searchInputBox}>
-                {selectedPlayers.map(name => (
-                  <span key={name} className={css.selectedChip} style={{ background: '#00e5a015', color: '#00e5a0', border: '1px solid #00e5a035' }}>
-                    {name}
-                    <button onClick={(e) => { e.stopPropagation(); removePlayer(name); }} className={css.chipRemove} style={{ color: '#00e5a066' }}>✕</button>
-                  </span>
-                ))}
-                <input
-                  ref={searchRef}
-                  type="text"
-                  placeholder={selectedPlayers.length === 0 ? 'Search players to filter…' : 'Add player…'}
-                  value={playerSearch}
-                  onChange={e => { setPlayerSearch(e.target.value); setShowDropdown(true); setHighlightIdx(0); }}
-                  onFocus={() => setShowDropdown(true)}
-                  onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
-                  onKeyDown={handleSearchKeyDown}
-                  style={{
-                    flex: 1, minWidth: 125, background: 'transparent', border: 'none', outline: 'none',
-                    color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
-                    padding: '4px 0',
-                  }}
-                />
-                {(selectedPlayers.length > 0 || playerSearch) && (
-                  <button onClick={() => { setSelectedPlayers([]); setPlayerSearch(''); }} className={css.clearBtn}>✕</button>
-                )}
-              </div>
-              {showDropdown && autocompleteSuggestions.length > 0 && (
-                <div className={css.autocompleteDropdown}>
-                  {autocompleteSuggestions.map((name, i) => (
-                    <div
-                      key={name}
-                      onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurTimeout.current); addPlayer(name); }}
-                      onMouseEnter={() => setHighlightIdx(i)}
-                      className={css.autocompleteItem}
-                      style={{ background: i === highlightIdx ? '#00e5a015' : 'transparent', borderBottom: i < autocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
-                    >{name}</div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className={css.searchWrap} style={{ flex: '1 1 35%', minWidth: 180 }}>
-              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Team Stack</label>
-              <div className={css.searchInputBox}>
-                {selectedTeams.map(team => (
-                  <span key={team} className={css.selectedChip} style={{ background: '#3b82f615', color: '#60a5fa', border: '1px solid #3b82f635' }}>
-                    {team}
-                    <button onClick={(e) => { e.stopPropagation(); removeTeam(team); }} className={css.chipRemove} style={{ color: '#60a5fa66' }}>✕</button>
-                  </span>
-                ))}
-                <input
-                  ref={teamSearchRef}
-                  type="text"
-                  placeholder={selectedTeams.length === 0 ? 'Stack team…' : 'Add team…'}
-                  value={teamSearch}
-                  onChange={e => { setTeamSearch(e.target.value); setShowTeamDropdown(true); setTeamHighlightIdx(0); }}
-                  onFocus={() => setShowTeamDropdown(true)}
-                  onBlur={() => { teamBlurTimeout.current = setTimeout(() => setShowTeamDropdown(false), 150); }}
-                  onKeyDown={handleTeamKeyDown}
-                  style={{
-                    flex: 1, minWidth: 75, background: 'transparent', border: 'none', outline: 'none',
-                    color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
-                    padding: '4px 0',
-                  }}
-                />
-                {(selectedTeams.length > 0 || teamSearch) && (
-                  <button onClick={() => { setSelectedTeams([]); setTeamSearch(''); }} className={css.clearBtn}>✕</button>
-                )}
-              </div>
-              {showTeamDropdown && teamAutocompleteSuggestions.length > 0 && (
-                <div className={css.autocompleteDropdown}>
-                  {teamAutocompleteSuggestions.map((team, i) => (
-                    <div
-                      key={team}
-                      onMouseDown={(e) => { e.preventDefault(); clearTimeout(teamBlurTimeout.current); addTeam(team); }}
-                      onMouseEnter={() => setTeamHighlightIdx(i)}
-                      className={css.autocompleteItem}
-                      style={{ background: i === teamHighlightIdx ? '#3b82f615' : 'transparent', borderBottom: i < teamAutocompleteSuggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
-                    >{team}</div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {(selectedPlayers.length > 0 || selectedTeams.length > 0) && (
-              <span className={css.matchCount}>
-                <span style={{ color: '#00e5a0', fontWeight: 700 }}>{displayed.length}</span>
-                {' '}roster{displayed.length !== 1 ? 's' : ''} match
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Section B: Archetype Filters */}
-        <div className={css.sectionDivider}>
-          <span className={css.sectionLabel}>Archetype Filters</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-            <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
-            <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
-            <FilterGroup label="TE" options={TE_OPTIONS} value={teFilter} onChange={setTeFilter} counts={teCounts} />
-          </div>
-        </div>
-
-        {/* Section C: Additional Filters */}
-        <div className={css.sectionDivider}>
-          <span className={css.sectionLabel}>Additional Filters</span>
-          <div className={css.additionalFilters}>
-            <div>
-              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>Tournament</label>
-              <select
-                value={tournamentFilter}
-                onChange={e => setTournamentFilter(e.target.value)}
-                className={css.filterSelect}
-              >
-                {allTournaments.map(t => (
-                  <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={css.sectionLabel} style={{ fontSize: 11, display: 'block', marginBottom: 5 }}>CLV Filter</label>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
-                  <button key={v} className={css.filterBtn} style={clvFilter === v ? { background: '#00e5a01a', borderColor: '#00e5a0', color: '#00e5a0' } : {}} onClick={() => setClvFilter(v)}>
-                    {lbl}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
+    // Desktop/Tablet — no longer called (handled by renderDesktopFilters)
+    return null;
   };
+
+  const renderDesktopFilters = () => (
+    <>
+      {/* Row 1: Search + Tournament + CLV + Result Count */}
+      <div className={css.filterRow1}>
+        <div style={{ flex: '0 1 375px', minWidth: 180 }}>
+          <CombinedSearchInput
+            selectedPlayers={selectedPlayers}
+            selectedTeams={selectedTeams}
+            onAddPlayer={addPlayer}
+            onAddTeam={addTeam}
+            onRemovePlayer={removePlayer}
+            onRemoveTeam={removeTeam}
+            onClear={() => { setSelectedPlayers([]); setSelectedTeams([]); setCombinedSearch(''); }}
+            playerSuggestions={playerSuggestions}
+            teamSuggestions={teamSuggestions}
+            teamNames={NFL_TEAMS}
+            searchValue={combinedSearch}
+            onSearchChange={setCombinedSearch}
+            placeholder="Search players & teams..."
+            label="Player / Team Search"
+          />
+        </div>
+        <select
+          value={tournamentFilter}
+          onChange={e => setTournamentFilter(e.target.value)}
+          className="filter-select"
+        >
+          {allTournaments.map(t => (
+            <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
+          ))}
+        </select>
+        <div className="filter-chip-group">
+          {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
+            <button key={v} className={`filter-chip ${clvFilter === v ? 'filter-chip--active' : ''}`} onClick={() => setClvFilter(v)}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        {activeFilterPills.length > 0 && (
+          <span className="filter-count" style={{ marginLeft: 0 }}>
+            <strong style={{ color: 'var(--positive)' }}>{displayed.length}</strong>
+            {' '}roster{displayed.length !== 1 ? 's' : ''} match
+          </span>
+        )}
+      </div>
+
+      {/* Row 2: RB | QB | TE archetype chips */}
+      <div className={css.filterRow2}>
+        <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
+        <div className={css.filterSep} />
+        <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
+        <div className={css.filterSep} />
+        <FilterGroup label="TE" options={TE_OPTIONS} value={teFilter} onChange={setTeFilter} counts={teCounts} />
+      </div>
+    </>
+  );
 
   const renderControlPanel = () => (
     <div className={css.controlPanel}>
-      {renderFilterToggleHeader()}
-      {renderFilterBody()}
+      {isMobile ? (
+        <>
+          {renderFilterToggleHeader()}
+          {renderFilterBody()}
+        </>
+      ) : (
+        renderDesktopFilters()
+      )}
     </div>
   );
 
@@ -1284,62 +1080,35 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
   const total = archetypeOptions.reduce((sum, opt) => sum + (counts[opt] || 0), 0);
 
   return (
-    <div className={css.filterGroupRow}>
-      <div className={css.filterGroupInner}>
-        <span className={css.filterGroupLabel}>{label}</span>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {options.map(opt => {
-            const isActive = value === opt;
-            const color = opt === 'all' ? '#00e5a0' : archetypeColor(opt);
-            const name = opt === 'all' ? 'All' : (ARCHETYPE_METADATA[opt]?.name || opt);
-            const count = counts[opt];
-            return (
-              <button
-                key={opt}
-                title={ARCHETYPE_METADATA[opt]?.desc}
-                className={css.filterBtn}
-                style={{
-                  ...(opt === 'all'
-                    ? (isActive ? { background: color + '1a', borderColor: color, color } : {})
-                    : {
-                        background: isActive ? color + '30' : color + '12',
-                        borderColor: isActive ? color : color + '44',
-                        color: isActive ? color : color + 'cc',
-                      }),
-                }}
-                onClick={() => onChange(opt)}
-              >
-                {name}{opt !== 'all' && total > 0 ? ` ${((count || 0) / total * 100).toFixed(0)}%` : ''}
-              </button>
-            );
-          })}
-        </div>
+    <div className={css.filterGroupInner}>
+      <span className={css.filterGroupLabel} style={{ color: POS_COLORS[label] }}>{label}</span>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        {options.map(opt => {
+          const isActive = value === opt;
+          const color = opt === 'all' ? '#E8BF4A' : archetypeColor(opt);
+          const name = opt === 'all' ? 'All' : (ARCHETYPE_METADATA[opt]?.name || opt);
+          const count = counts[opt];
+          return (
+            <button
+              key={opt}
+              title={ARCHETYPE_METADATA[opt]?.desc}
+              className={`filter-chip ${isActive ? 'filter-chip--active' : ''}`}
+              style={{
+                ...(opt === 'all'
+                  ? (isActive ? { background: color + '1a', borderColor: color, color } : {})
+                  : {
+                      background: isActive ? color + '30' : color + '12',
+                      borderColor: isActive ? color : color + '44',
+                      color: isActive ? color : color + 'cc',
+                    }),
+              }}
+              onClick={() => onChange(opt)}
+            >
+              {name}{opt !== 'all' && total > 0 ? ` ${((count || 0) / total * 100).toFixed(0)}%` : ''}
+            </button>
+          );
+        })}
       </div>
-      {total > 0 && (
-        <div className={css.filterBar}>
-          {archetypeOptions.map(opt => {
-            const count = counts[opt] || 0;
-            if (count === 0) return null;
-            const pct = (count / total) * 100;
-            const color = archetypeColor(opt);
-            const name = ARCHETYPE_METADATA[opt]?.name || opt;
-            return (
-              <div
-                key={opt}
-                title={`${name}: ${pct.toFixed(1)}%`}
-                onClick={() => onChange(opt)}
-                style={{
-                  width: `${pct}%`,
-                  background: color,
-                  opacity: value === 'all' || value === opt ? 0.85 : 0.3,
-                  cursor: 'pointer',
-                  transition: 'opacity 0.2s',
-                }}
-              />
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

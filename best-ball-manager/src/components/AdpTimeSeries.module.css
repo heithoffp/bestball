@@ -6,6 +6,12 @@
   flex-direction: column;
   height: 100%;
   gap: 20px;
+  animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* --- Controls bar --- */
@@ -16,29 +22,9 @@
   flex-wrap: wrap;
 }
 
-.searchInput {
-  width: 250px;
-}
-
 .buttonGroup {
   display: flex;
   gap: 10px;
-}
-
-.checkboxLabel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  cursor: pointer;
-  user-select: none;
-  margin-left: 10px;
-}
-
-.playerCount {
-  margin-left: auto;
-  font-size: 15px;
-  color: var(--text-secondary);
 }
 
 /* --- Main two-pane layout --- */
@@ -63,8 +49,8 @@
   display: grid;
   grid-template-columns: 30px 1fr 50px 50px 75px 50px;
   padding: 10px 15px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 600;
   font-size: 15px;
 }
@@ -78,14 +64,14 @@
   display: grid;
   grid-template-columns: 30px 1fr 50px 50px 75px 50px;
   padding: 8px 15px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   align-items: center;
   font-size: 16px;
   cursor: pointer;
 }
 
 .playerRowSelected {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
 }
 
 .playerName {
@@ -106,22 +92,22 @@
 
 .monoCell {
   text-align: right;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .valueCell {
   text-align: right;
-  font-family: monospace;
+  font-family: var(--font-mono);
   line-height: 1.1;
 }
 
 .valueSub {
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .valuePlaceholder {
-  color: #444;
+  color: var(--text-muted);
 }
 
 .trendCell {
@@ -142,21 +128,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 /* --- Tooltip --- */
 .tooltip {
   padding: 10px 15px;
   min-width: 225px;
-  border: 1px solid #444;
-  background-color: rgba(20, 20, 20, 0.95);
+  max-width: 280px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background-color: var(--surface-3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .tooltipDate {
   font-size: 16px;
   margin-bottom: 10px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 5px;
 }
 
@@ -176,7 +165,7 @@
 
 .tooltipStats {
   font-size: 13px;
-  color: #aaa;
+  color: var(--text-secondary);
   margin-left: 10px;
 }
 
@@ -189,40 +178,6 @@
 .sortHeader {
   cursor: pointer;
   text-align: right;
-}
-
-/* --- Time scale toggle --- */
-.timeScaleGroup {
-  display: flex;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.timeScaleBtn {
-  background: transparent;
-  color: var(--text-secondary);
-  border: none;
-  border-right: 1px solid var(--border);
-  padding: 0.4rem 0.75rem;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.timeScaleBtn:last-child {
-  border-right: none;
-}
-
-.timeScaleBtn:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.timeScaleActive {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
 }
 
 /* --- Hide helpers --- */

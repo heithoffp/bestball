@@ -22,9 +22,9 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  active: 'var(--accent-green)',
-  trialing: 'var(--accent-blue)',
-  past_due: 'var(--accent-red)',
+  active: 'var(--positive)',
+  trialing: 'var(--accent)',
+  past_due: 'var(--negative)',
   canceled: 'var(--text-muted)',
 };
 
@@ -44,7 +44,7 @@ export default function AccountSettings({ isOpen, onClose }) {
   const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? null;
 
   const tierLabel = tier === 'pro' ? 'Pro' : tier === 'free' ? 'Free' : 'Guest';
-  const tierColor = tier === 'pro' ? 'var(--accent-blue)' : 'var(--text-muted)';
+  const tierColor = tier === 'pro' ? 'var(--accent)' : 'var(--text-muted)';
   const renewalDate = formatDate(subscription?.current_period_end);
   const cancelAtPeriodEnd = subscription?.cancel_at_period_end;
   const trialDaysRemaining = status === 'trialing' && subscription?.current_period_end

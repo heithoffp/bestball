@@ -9,6 +9,7 @@
 import { getAdapterForUrl } from '../adapters/registry.js';
 import { createReconnectingObserver } from '../utils/observer.js';
 import { writeEntries } from '../utils/bridge.js';
+import { initDraftOverlay } from './draft-overlay.js';
 
 const adapter = getAdapterForUrl(window.location.href);
 
@@ -26,6 +27,9 @@ if (adapter) {
       },
     });
   }
+
+  // Initialize draft overlay if on a draft page
+  initDraftOverlay();
 
   // Handle sync request from popup
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

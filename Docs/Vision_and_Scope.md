@@ -77,7 +77,7 @@ Player-level exposure table — the foundational "what do I own?" view. Filterab
 Time-series chart showing ADP movement for portfolio players. Answers "is the market agreeing or disagreeing with my drafts?" by surfacing price trends relative to what the user paid.
 
 #### 2.2.4 Draft Assistant
-**The one place the app is opinionated.** Strategy-aware candidate scoring during live drafts, balancing projected value, portfolio diversification, and archetype viability. Users accept computed opinions here because they need to make a decision in 30 seconds.
+Live-draft data companion — surfaces exposure %, ADP, and trend context for available players during live drafts. Consistent with Mirror-Not-Advisor: data only, no scoring or ranked recommendations.
 
 #### 2.2.5 Roster Viewer
 Individual roster deep-dive with composite grades, archetype classification, stack analysis, and CLV breakdown. Computed grades are appropriate here because the user is evaluating a single completed roster, not their portfolio strategy.
@@ -100,8 +100,6 @@ These principles govern all product decisions. When in doubt, refer back here.
 
 #### 1. Mirror, Not Advisor
 The app describes portfolio state. It does not prescribe actions or judge whether your portfolio is "good" or "bad." Show facts and let the user draw conclusions. Avoid computed opinions (health scores, letter grades, red/green good/bad indicators) on portfolio-level views. The moment you show a "B+" you're implying you know what "A" looks like — and you're asking the user to trust your model over their own judgment.
-
-**Exception:** The Draft Assistant and Roster Viewer are permitted to use computed scores and grades. Mid-draft speed requires opinionated recommendations, and individual roster evaluation benefits from composite grading. Portfolio-level views remain descriptive.
 
 #### 2. Zero-Config Insights
 Every feature must be useful immediately after CSV upload with no additional setup. No personal targets, no preference wizards, no required accounts, no watchlists to maintain. Features that require user configuration will be underutilized. If a feature can't deliver value without setup, redesign it until it can.

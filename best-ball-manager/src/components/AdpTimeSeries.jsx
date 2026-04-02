@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { parseAdpString } from '../utils/helpers';
 import styles from './AdpTimeSeries.module.css';
+import { SearchInput } from './filters';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 // --- Math Helper for Quartiles + mean ---
@@ -44,7 +45,7 @@ function SortIcon({ col, sortConfig }) {
 function CustomTooltip({ active, label, payload, richPlayerList }) {
   if (!active || !label) return null;
   return (
-    <div className={`card ${styles.tooltip}`}>
+    <div className={styles.tooltip}>
       <div className={styles.tooltipDate}>{label}</div>
       {payload && payload.map((entry) => {
         const player = richPlayerList.find(p => p.id === entry.dataKey);
@@ -69,14 +70,8 @@ function CustomTooltip({ active, label, payload, richPlayerList }) {
 }
 
 export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], rosterData = [], teams = 12 }) {
-  const [queryInput, setQueryInput] = useState('');
   const [query, setQuery] = useState('');
   const { isMobile, isTablet } = useMediaQuery();
-
-  useEffect(() => {
-    const timer = setTimeout(() => setQuery(queryInput), 250);
-    return () => clearTimeout(timer);
-  }, [queryInput]);
   const [showPickRanges, setShowPickRanges] = useState(true);
   const [selectedIds, setSelectedIds] = useState([]);
   const [timeScale, setTimeScale] = useState('1m');
@@ -345,22 +340,21 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
 
       {/* --- Controls --- */}
       <div className={styles.controls}>
-        <input
-            className={`path-input ${styles.searchInput}`}
+        <SearchInput
+            value={query}
+            onChange={setQuery}
             placeholder="Filter by name, team, pos..."
-            value={queryInput}
-            onChange={e => setQueryInput(e.target.value)}
         />
         <div className={styles.buttonGroup}>
             <button className="load-button" onClick={() => selectTopN(5)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>Select Top 5</button>
             <button className="load-button" onClick={() => setSelectedIds([])} style={{ width: 'auto', padding: '0.5rem 1rem' }}>Clear All</button>
         </div>
 
-        <div className={styles.timeScaleGroup}>
+        <div className="filter-btn-group">
             {[['1w', '1W'], ['1m', '1M'], ['all', 'All']].map(([value, label]) => (
                 <button
                     key={value}
-                    className={`${styles.timeScaleBtn} ${timeScale === value ? styles.timeScaleActive : ''}`}
+                    className={`filter-btn-group__item ${timeScale === value ? 'filter-btn-group__item--active' : ''}`}
                     onClick={() => setTimeScale(value)}
                 >
                     {label}
@@ -368,7 +362,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
             ))}
         </div>
 
-        <label className={styles.checkboxLabel}>
+        <label className="filter-checkbox">
             <input
                 type="checkbox"
                 checked={showPickRanges}
@@ -377,9 +371,9 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
             Show My Pick Ranges
         </label>
 
-        <div className={styles.playerCount}>
-            Showing {filteredAndSortedList.length} players ({selectedIds.length} selected)
-        </div>
+        <span className="filter-count">
+            <strong>{filteredAndSortedList.length}</strong> players ({selectedIds.length} selected)
+        </span>
       </div>
 
       <div className={styles.mainLayout}>

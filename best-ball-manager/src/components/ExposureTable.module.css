@@ -30,92 +30,66 @@
   align-items: center;
 }
 
-.checkboxLabel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
-.searchInput {
-  width: 250px;
-  margin: 0;
-}
-
-/* --- Filter Panel --- */
-.filterPanel {
-  display: flex;
-  gap: 15px;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 20px;
-  align-items: center;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.filterLabel {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
-  font-size: 15px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
-}
-
-.filterColumn {
+/* --- Control Panel (2-row filter bar) --- */
+.controlPanel {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  min-width: 180px;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+  margin-bottom: 14px;
 }
 
-.filterSelect {
-  padding: 8px 10px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.3);
-  color: inherit;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.filterResults {
-  flex: 1;
+.filterRow1 {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
 }
 
-.filterBadgeRow {
+.filterRow2 {
   display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.filterSep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+  margin: 0 var(--space-xs);
+  align-self: center;
+}
+
+.filterGroupInner {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.filterBadge {
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 700;
+.filterGroupLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-primary);
 }
 
 /* --- Info Banner --- */
 .infoBanner {
   padding: 13px 20px;
   margin-bottom: 15px;
-  border-radius: 8px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  font-size: 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  font-size: var(--text-base);
   color: var(--text-secondary);
   flex-shrink: 0;
 }
@@ -134,7 +108,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .headerCell {
@@ -143,7 +117,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
@@ -156,7 +130,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--card-bg, #1a1a2e);
+  background: var(--surface-1);
 }
 
 .sparklineWrap {
@@ -181,20 +155,20 @@
 
 .playerCard {
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
+  transition: background var(--duration-fast);
 }
 
 .playerCard:active {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
 }
 
 .cardRow1 {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .cardName {
@@ -224,7 +198,7 @@
 .cardRow2 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-sm);
   margin-top: 6px;
   font-size: 13px;
   color: var(--text-secondary);
@@ -269,79 +243,25 @@
 /* --- Mobile Sort Bar --- */
 .sortBar {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
   align-items: center;
   padding: 8px 0;
   margin-bottom: 4px;
   flex-shrink: 0;
 }
 
-.sortSelect {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.3);
-  color: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  min-height: 44px;
-}
-
 .sortDirButton {
   min-width: 44px;
   min-height: 44px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--surface-2);
   color: inherit;
   font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* --- Mobile Filter Chips --- */
-.chipStrip {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 4px 0;
-  flex-shrink: 0;
-  scrollbar-width: none;
-}
-
-.chipStrip::-webkit-scrollbar {
-  display: none;
-}
-
-.chipSeparator {
-  width: 1px;
-  background: rgba(255, 255, 255, 0.15);
-  flex: 0 0 1px;
-  align-self: stretch;
-  margin: 4px 2px;
-}
-
-.chip {
-  min-height: 36px;
-  border-radius: 16px;
-  flex: 0 0 auto;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(0, 0, 0, 0.2);
-  color: var(--text-secondary);
-  transition: all 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.chipActive {
-  border-color: currentColor;
 }
 
 /* ============ RESPONSIVE ============ */
@@ -363,15 +283,6 @@
   .toolbarRight {
     flex-wrap: wrap;
     gap: 10px;
-  }
-
-  .searchInput {
-    width: 100% !important;
-    order: -1;
-  }
-
-  .checkboxLabel {
-    font-size: 14px;
   }
 
   .filterPanel {

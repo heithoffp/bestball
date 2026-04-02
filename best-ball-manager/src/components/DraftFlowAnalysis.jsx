@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 import { analyzeStack } from '../utils/stackAnalysis';
 import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './DraftFlowAnalysis.module.css';
+import { SearchInput } from './filters';
 import { trackEvent } from '../utils/analytics';
 
 // ADP delta: positive = I drafted later than current ADP (got value), negative = I drafted earlier (overpaid)
@@ -118,7 +119,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
-  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const playerListRef = useRef(null);
   const adpDividerRef = useRef(null);
@@ -128,11 +128,6 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   const [mobileSubView, setMobileSubView] = useState('players');
   const [expandedBreakdowns, setExpandedBreakdowns] = useState(new Set());
   const [draftToast, setDraftToast] = useState(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSearchQuery(searchInput), 250);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
   // Scroll player list to center the ADP divider after each pick
   useEffect(() => {
@@ -776,24 +771,11 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           </div>
         )}
       </div>
-      <div className={styles.searchWrapper}>
-        <Search size={16} className={styles.searchIcon} />
-        <input
-          type="text"
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-          placeholder="Search all players..."
-          className={styles.searchInput}
-        />
-        {searchInput && (
-          <button
-            onClick={() => { setSearchInput(''); setSearchQuery(''); }}
-            className={styles.searchClear}
-          >
-            <X size={14} color="#64748b" />
-          </button>
-        )}
-      </div>
+      <SearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search all players..."
+      />
     </div>
   );
 
@@ -828,8 +810,8 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
     <div ref={playerListRef} className={`${styles.playerList} ${styles.scrollArea}`}>
       {displayPlayers.length === 0 ? (
         <div className={styles.playerListEmpty}>
-          {searchInput.trim() ? (
-            <>No players found matching "{searchInput}"<br/>
+          {searchQuery.trim() ? (
+            <>No players found matching "{searchQuery}"<br/>
             <span className={styles.playerListEmptySub}>Try a different name or clear the search.</span></>
           ) : (
             <>No player data available for this round.<br/>

@@ -16,7 +16,7 @@ import BetaBanner from './components/BetaBanner';
 import PlanPicker from './components/PlanPicker';
 import useMediaQuery from './hooks/useMediaQuery';
 import { trackEvent } from './utils/analytics';
-import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network } from 'lucide-react';
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -25,6 +25,7 @@ const tabs = [
   { key: 'timeseries', label: 'ADP Tracker', icon: TrendingUp },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
+  { key: 'combo', label: 'Combos', icon: Network },
   { key: 'help', label: 'Help', icon: HelpCircle },
 ];
 
@@ -36,8 +37,8 @@ const RosterViewer = lazy(() => import('./components/RosterViewer'));
 const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
 const HelpGuide = lazy(() => import('./components/HelpGuide'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
-// DISABLED for performance — keep source files intact
-// const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
+const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
+// DISABLED for performance — keep source file intact
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
 
 // Bundled assets (developer-controlled) — all use glob so missing files don't break the build
@@ -278,6 +279,7 @@ export default function App() {
                 rosterData={rosterData}
               />
             )}
+            {activeTab === 'combo' && <ComboAnalysis rosterData={rosterData} />}
             {activeTab === 'help' && <HelpGuide />}
           </Suspense>
         </div>

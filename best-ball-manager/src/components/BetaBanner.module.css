@@ -29,9 +29,9 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  background: var(--accent-blue);
+  background: var(--accent);
   color: #060E1F;
-  transition: opacity 0.15s;
+  transition: opacity var(--duration-fast);
   white-space: nowrap;
 }
 
@@ -48,7 +48,7 @@
   padding: 0.2rem;
   display: flex;
   align-items: center;
-  transition: opacity 0.15s;
+  transition: opacity var(--duration-fast);
 }
 
 .dismiss:hover {

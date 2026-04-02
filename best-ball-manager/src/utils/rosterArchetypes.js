@@ -28,6 +28,14 @@ export const PROTOCOL_TREE = {
       QB_ELITE: { children: { TE_LATE: 100, TE_ANCHOR: 0, TE_ELITE: 0} }
     }
   },
+  RB_DOUBLE_ANCHOR: {
+    color: '#f43f5e',
+    children: {
+      QB_CORE: { children: { TE_LATE: 60, TE_ANCHOR: 30, TE_ELITE: 10 } },
+      QB_LATE: { children: { TE_LATE: 70, TE_ANCHOR: 20, TE_ELITE: 10 } },
+      QB_ELITE: { children: { TE_ELITE: 40, TE_ANCHOR: 40, TE_LATE: 20 } }
+    }
+  },
   RB_BALANCED: {
     color: '#ef4444',
     children: {
@@ -40,16 +48,17 @@ export const PROTOCOL_TREE = {
  * Metadata for UI labels and descriptions
  */
 export const ARCHETYPE_METADATA = {
-  RB_ZERO: { name: 'Zero RB', desc: 'No RB R1-6. WR Capital Rich.' },
-  RB_HYPER_FRAGILE: { name: 'Hyper Fragile', desc: '3 RB R1-3. Capital Poor.' },
-  RB_HERO: { name: 'Hero RB', desc: '1 RB R1-2. Middle Class.' },
-  RB_BALANCED: { name: 'Balanced', desc: 'Balanced Approach' },
-  QB_ELITE: { name: 'Elite QB', desc: '1st QB in Rounds 1-4' },
-  QB_CORE: { name: 'Core QB', desc: 'Rounds 5-8' },
-  QB_LATE: { name: 'Late QB', desc: 'Round 9+' },
-  TE_ELITE: { name: 'Elite TE', desc: '1st TE in Rounds 1-4' },
-  TE_ANCHOR: { name: 'Anchor TE', desc: 'Rounds 5-8' },
-  TE_LATE: { name: 'Late TE', desc: 'Round 9+' }
+  RB_ZERO:          { name: 'Zero RB',        desc: 'No RB R1-6. WR Capital Rich.', color: '#06b6d4' },
+  RB_HYPER_FRAGILE: { name: 'Hyper Fragile',  desc: '3 RB R1-3. Capital Poor.',     color: '#eab308' },
+  RB_HERO:          { name: 'Hero RB',         desc: '1 RB R1-2. Middle Class.',     color: '#10B981' },
+  RB_DOUBLE_ANCHOR: { name: 'Double Anchor',   desc: '2 RBs R1-3, gap R4-5.',        color: '#f43f5e' },
+  RB_BALANCED:      { name: 'Balanced',        desc: 'Balanced Approach',            color: '#84cc16' },
+  QB_ELITE:         { name: 'Elite QB',       desc: '1st QB in Rounds 1-4',         color: '#BF44EF' },
+  QB_CORE:          { name: 'Core QB',        desc: 'Rounds 5-8',                   color: '#ec4899' },
+  QB_LATE:          { name: 'Late QB',        desc: 'Round 9+',                     color: '#fb7185' },
+  TE_ELITE:         { name: 'Elite TE',       desc: '1st TE in Rounds 1-4',         color: '#3B82F6' },
+  TE_ANCHOR:        { name: 'Anchor TE',      desc: 'Rounds 5-8',                   color: '#818cf8' },
+  TE_LATE:          { name: 'Late TE',        desc: 'Round 9+',                     color: '#38bdf8' },
 };
 
 /**
@@ -75,6 +84,7 @@ export function classifyRosterPath(roster) {
   // RB Capital Counts
   const rbRounds1to3 = countPosition(roster, 'RB', 1, 3);
   const rbRounds1to4 = countPosition(roster, 'RB', 1, 4);
+  const rbRounds4to5 = countPosition(roster, 'RB', 4, 5);
   const rbRounds4to6 = countPosition(roster, 'RB', 4, 6);
   const totalRBs = countPosition(roster, 'RB', 1, 17);
 
@@ -88,6 +98,9 @@ export function classifyRosterPath(roster) {
   } else if (rbRounds1to3 === 1 && rbRounds4to6 === 0) {
     // Hero RB: Exactly one elite RB and NO secondary RB until Round 7
     path.rb = 'RB_HERO';
+  } else if (rbRounds1to3 === 2 && rbRounds4to5 === 0) {
+    // Double Anchor: Exactly two early RBs with a deliberate gap before Round 6
+    path.rb = 'RB_DOUBLE_ANCHOR';
   } else {
     // Failed to meet strict structural thresholds
     path.rb = 'RB_BALANCED';

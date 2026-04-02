@@ -143,7 +143,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
         <p style={{ color: 'var(--text-muted)', margin: '0 0 0.25rem', fontSize: '0.875rem' }}>
           Full access to all Pro analytics features.
         </p>
-        <p style={{ color: trialUsed ? 'var(--text-muted)' : 'var(--accent-blue)', margin: '0 0 1.5rem', fontSize: '0.82rem', fontWeight: 500 }}>
+        <p style={{ color: trialUsed ? 'var(--text-muted)' : 'var(--accent)', margin: '0 0 1.5rem', fontSize: '0.82rem', fontWeight: 500 }}>
           {trialUsed
             ? 'Trial already used — subscribe to get full access.'
             : 'Start with a 7-day free trial — no charge until day 8.'}
@@ -186,8 +186,8 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
               style={{
                 flex: 1,
                 padding: '0.6rem 0.75rem',
-                background: 'var(--bg-hover)',
-                border: `1px solid ${promoState === 'valid' ? 'var(--accent-green)' : promoState === 'invalid' ? 'var(--accent-red, #e74c3c)' : 'var(--border)'}`,
+                background: 'var(--surface-2)',
+                border: `1px solid ${promoState === 'valid' ? 'var(--positive)' : promoState === 'invalid' ? 'var(--negative)' : 'var(--border-subtle)'}`,
                 borderRadius: '8px',
                 color: 'var(--text-primary)',
                 fontSize: '0.875rem',
@@ -201,8 +201,8 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
               disabled={!promoCode.trim() || promoState === 'validating' || promoState === 'valid'}
               style={{
                 padding: '0.6rem 1rem',
-                background: promoState === 'valid' ? 'var(--accent-green)' : 'var(--bg-hover)',
-                border: `1px solid ${promoState === 'valid' ? 'var(--accent-green)' : 'var(--border)'}`,
+                background: promoState === 'valid' ? 'var(--positive)' : 'var(--surface-2)',
+                border: `1px solid ${promoState === 'valid' ? 'var(--positive)' : 'var(--border-subtle)'}`,
                 borderRadius: '8px',
                 color: promoState === 'valid' ? '#000' : 'var(--text-primary)',
                 fontSize: '0.8rem',
@@ -229,7 +229,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
               gap: '0.4rem',
               marginTop: '0.4rem',
               fontSize: '0.8rem',
-              color: 'var(--accent-green)',
+              color: 'var(--positive)',
               fontWeight: 500,
             }}>
               <Tag size={12} />
@@ -240,7 +240,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
             <div style={{
               marginTop: '0.4rem',
               fontSize: '0.8rem',
-              color: 'var(--accent-red, #e74c3c)',
+              color: 'var(--negative)',
             }}>
               {promoError}
             </div>
@@ -254,7 +254,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
           style={{
             width: '100%',
             padding: '0.75rem',
-            background: 'var(--accent-blue)',
+            background: 'var(--accent)',
             color: '#000',
             border: 'none',
             borderRadius: '10px',
@@ -279,7 +279,7 @@ function PlanCard({ label, price, period, badge, discountedPrice, active, onClic
         flex: 1,
         padding: '1rem',
         background: active ? 'rgba(232, 191, 74, 0.08)' : 'transparent',
-        border: `2px solid ${active ? 'var(--accent-blue)' : 'var(--border)'}`,
+        border: `2px solid ${active ? 'var(--accent)' : 'var(--border-subtle)'}`,
         borderRadius: '10px',
         cursor: 'pointer',
         textAlign: 'left',
@@ -292,7 +292,7 @@ function PlanCard({ label, price, period, badge, discountedPrice, active, onClic
           position: 'absolute',
           top: '-0.6rem',
           right: '0.75rem',
-          background: 'var(--accent-green)',
+          background: 'var(--positive)',
           color: '#000',
           fontSize: '0.65rem',
           fontWeight: 700,
@@ -308,12 +308,12 @@ function PlanCard({ label, price, period, badge, discountedPrice, active, onClic
           width: 16,
           height: 16,
           borderRadius: '50%',
-          border: `2px solid ${active ? 'var(--accent-blue)' : 'var(--border)'}`,
+          border: `2px solid ${active ? 'var(--accent)' : 'var(--border-subtle)'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          {active && <Check size={10} style={{ color: 'var(--accent-blue)' }} />}
+          {active && <Check size={10} style={{ color: 'var(--accent)' }} />}
         </div>
         <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{label}</span>
       </div>
@@ -323,7 +323,7 @@ function PlanCard({ label, price, period, badge, discountedPrice, active, onClic
             <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-muted)', textDecoration: 'line-through', marginRight: '0.4rem' }}>
               {price}
             </span>
-            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--accent-green)' }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--positive)' }}>
               ${discountedPrice}
             </span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{period}</span>

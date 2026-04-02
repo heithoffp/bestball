@@ -2,14 +2,20 @@
 
 /* 1. Root / Header */
 .root {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-body);
   color: var(--text-primary);
-  padding: 0 0 40px;
-  overflow-y: auto;
+  padding: 0;
+  overflow: hidden;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .header {
@@ -18,12 +24,12 @@
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 18px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
 .title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 3px;
@@ -35,20 +41,46 @@
   font-size: 14px;
   color: var(--text-primary);
   margin: 5px 0 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* 2. Control Panel */
 .controlPanel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  padding: 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-sm);
   margin-bottom: 18px;
   flex-shrink: 0;
+}
+
+/* Desktop 2-row filter layout */
+.filterRow1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.filterRow2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.filterSep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+  margin: 0 var(--space-xs);
+  align-self: center;
 }
 
 .sectionLabel {
@@ -57,11 +89,11 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .sectionDivider {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 16px;
 }
 
@@ -88,7 +120,7 @@
 .filterToggleChevron {
   font-size: 13px;
   color: var(--text-secondary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   flex-shrink: 0;
   margin-left: 10px;
 }
@@ -101,14 +133,6 @@
   max-height: 28px;
 }
 
-.filterPillTag {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  border-radius: 4px;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-
 /* 3. Search */
 .searchRow {
   display: flex;
@@ -118,118 +142,19 @@
   flex-wrap: wrap;
 }
 
-.searchWrap {
-  position: relative;
-}
-
-.searchInputBox {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 5px 10px;
-  min-height: 40px;
-  box-sizing: border-box;
-}
-
-.selectedChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  border-radius: 4px;
-  padding: 3px 8px;
-  white-space: nowrap;
-}
-
-.chipRemove {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 0;
-  line-height: 1;
-}
-
-.clearBtn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 14px;
-  padding: 0 3px;
-}
-
-.autocompleteDropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-top: 3px;
-  max-height: 200px;
-  overflow-y: auto;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-}
-
-.autocompleteItem {
-  padding: 8px 15px;
-  cursor: pointer;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
 /* 4. Filter Groups */
-.filterGroupRow {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .filterGroupInner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .filterGroupLabel {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-primary);
-  min-width: 32px;
-}
-
-.filterBtn {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  border-radius: 6px;
-  padding: 5px 11px;
-  font-size: 13px;
-  font-family: 'JetBrains Mono', monospace;
-  cursor: pointer;
-  letter-spacing: 0.3px;
-  transition: all 0.12s;
-  white-space: nowrap;
-}
-
-.filterBar {
-  display: flex;
-  margin-left: 44px;
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
 }
 
 /* 5. Additional Filters */
@@ -241,31 +166,14 @@
   flex-wrap: wrap;
 }
 
-.filterSelect {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-
-.matchCount {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  color: var(--text-muted);
-  padding-top: 24px;
-  white-space: nowrap;
-}
-
 /* 6. Table */
 .tableWrap {
   overflow-x: auto;
+  overflow-y: auto;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  flex-shrink: 0;
+  border: 1px solid var(--border-subtle);
+  flex: 1;
+  min-height: 0;
 }
 
 .table {
@@ -275,13 +183,13 @@
 }
 
 .thead {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-2);
 }
 
 .th {
   padding: 14px 18px;
   text-align: left;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -289,23 +197,23 @@
   text-transform: uppercase;
   cursor: pointer;
   user-select: none;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 
 .row {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background var(--duration-fast);
 }
 
 .row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-2);
 }
 
 .rowOpen {
-  background: var(--bg-dark);
-  border-bottom: 1px solid #00e5a07a;
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--positive);
 }
 
 .td {
@@ -315,14 +223,14 @@
 
 /* 7. Entry / Badges / Chevron */
 .entryId {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   color: var(--text-secondary);
   letter-spacing: 0.5px;
 }
 
 .clvBadge {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 700;
   border: 1px solid;
@@ -331,7 +239,7 @@
 }
 
 .uniqBadge {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 700;
   border: 1px solid;
@@ -343,19 +251,19 @@
 .chevron {
   color: var(--text-secondary);
   font-size: 13px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* 8. Player Detail */
 .detail {
-  background: var(--bg-dark);
-  border-top: 1px solid #00e5a01a;
+  background: var(--surface-0);
+  border-top: 1px solid rgba(46, 204, 113, 0.1);
 }
 
 .dth {
   padding: 11px 18px;
   text-align: left;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -363,12 +271,12 @@
   text-transform: uppercase;
   cursor: pointer;
   user-select: none;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 
 .drow {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .dtd {
@@ -384,7 +292,7 @@
 
 .posPill {
   font-size: 13px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   border: 1px solid;
   border-radius: 3px;
   padding: 2px 6px;
@@ -413,11 +321,11 @@
 
 .clvText {
   position: relative;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 700;
   z-index: 1;
-  background: var(--bg-dark);
+  background: var(--surface-0);
   padding: 0 5px;
 }
 
@@ -440,34 +348,34 @@
   width: 30px;
   height: 22px;
   border-radius: 3px;
-  background: #111;
-  border: 1px solid #1a1a1a;
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
 }
 
 .capitalMapRoundLabel {
   font-size: 9px;
-  color: #555;
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   margin-top: 3px;
 }
 
 .capitalMapSummary {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
   margin-top: 8px;
   letter-spacing: 0.3px;
 }
 
 .capitalMapWrap {
   padding: 13px 18px 8px;
-  border-bottom: 1px solid #0f0f0f;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* 11. Stack Bar */
 .stackBar {
   padding: 10px 18px;
-  border-bottom: 1px solid #0f0f0f;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   gap: 15px;
   flex-wrap: wrap;
@@ -475,15 +383,15 @@
 }
 
 .stackLabel {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
 .stackPill {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   border-radius: 4px;
   padding: 4px 10px;
@@ -492,14 +400,14 @@
 /* 12. Grade Card */
 .gradeCard {
   padding: 10px 18px;
-  border-bottom: 1px solid #0f0f0f;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   gap: 20px;
   align-items: center;
 }
 
 .gradeLetter {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 700;
   min-width: 50px;
@@ -525,20 +433,20 @@
 
 .gradeBarTrack {
   height: 5px;
-  background: #1a1a1a;
+  background: var(--surface-0);
   border-radius: 2px;
 }
 
 .gradeBarFill {
   height: 5px;
   border-radius: 2px;
-  transition: width 0.3s;
+  transition: width 300ms var(--ease-default);
 }
 
 .gradeComposite {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* 13. Empty */
@@ -546,13 +454,13 @@
   text-align: center;
   padding: 75px 25px;
   color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* 14. Search Highlight */
 .searchHighlight {
-  background: #00e5a025;
-  color: #00e5a0;
+  background: rgba(46, 204, 113, 0.15);
+  color: var(--positive);
   border-radius: 2px;
   padding: 0 1px;
   font-weight: 700;
@@ -567,15 +475,15 @@
 
 /* === Mobile Roster Cards === */
 .rosterCard {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 10px 12px;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--duration-fast);
 }
 
 .rosterCard:active {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
 }
 
 .rosterCardHeader {
@@ -585,7 +493,7 @@
 }
 
 .rosterGradeLetter {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 700;
   flex-shrink: 0;
@@ -599,7 +507,7 @@
 }
 
 .rosterEntryId {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   color: var(--text-secondary);
   letter-spacing: 0.5px;
@@ -609,15 +517,15 @@
 }
 
 .rosterDraftDate {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .rosterChevron {
   font-size: 13px;
   color: var(--text-secondary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   flex-shrink: 0;
 }
 
@@ -654,32 +562,32 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   opacity: 0.7;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .cardStatValue {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 13px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .rosterCardExpanded {
   margin-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 6px;
 }
 
 /* === Mobile Player Detail Cards === */
 .playerDetailCard {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 7px 12px;
 }
 
 .playerDetailRow1 {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .playerDetailName {
@@ -702,81 +610,25 @@
 /* === Mobile Sort Bar === */
 .sortBar {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
   align-items: center;
   padding: 8px 0;
   margin-bottom: 4px;
   flex-shrink: 0;
 }
 
-.sortSelect {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.3);
-  color: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  min-height: 44px;
-  font-family: 'JetBrains Mono', monospace;
-}
-
 .sortDirButton {
   min-width: 44px;
   min-height: 44px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--surface-2);
   color: inherit;
   font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* === Mobile Chip Strip === */
-.chipStrip {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 4px 0;
-  flex-shrink: 0;
-  scrollbar-width: none;
-}
-
-.chipStrip::-webkit-scrollbar {
-  display: none;
-}
-
-.chipSeparator {
-  width: 1px;
-  background: rgba(255, 255, 255, 0.15);
-  flex: 0 0 1px;
-  align-self: stretch;
-  margin: 4px 2px;
-}
-
-.chip {
-  min-height: 36px;
-  border-radius: 16px;
-  flex: 0 0 auto;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(0, 0, 0, 0.2);
-  color: var(--text-secondary);
-  transition: all 0.15s;
-  -webkit-tap-highlight-color: transparent;
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.chipActive {
-  border-color: currentColor;
 }
 
 /* === Card list container === */
@@ -788,40 +640,36 @@
 /* === Mobile player sort bar (inside expanded detail) === */
 .playerSortBar {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
   align-items: center;
   padding: 8px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .playerSortSelect {
   flex: 1;
   padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--surface-2);
   color: inherit;
   font-size: 13px;
   cursor: pointer;
   min-height: 40px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .playerListScroll {
   max-height: 55vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-subtle);
 }
 
 /* ============ RESPONSIVE ============ */
 
 /* --- Mobile (max-width: 599px) --- */
 @media (max-width: 599px) {
-  .root {
-    padding: 0 0 20px;
-  }
-
   .header {
     margin-bottom: 12px;
     padding-bottom: 12px;
@@ -859,10 +707,7 @@
     gap: 12px;
   }
 
-  .filterSelect {
-    width: 100%;
-    min-height: 44px;
-  }
+
 
   .tableWrap {
     display: none;
@@ -903,13 +748,8 @@
     font-size: 22px;
   }
 
-  .matchCount {
-    padding-top: 0;
-  }
 
-  .filterBar {
-    display: none;
-  }
+
 }
 
 /* --- Tablet (600px – 899px) --- */

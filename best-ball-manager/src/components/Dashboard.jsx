@@ -1,16 +1,12 @@
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Legend } from 'recharts';
 import { Chrome, BarChart3, Users, TrendingUp, ListOrdered, Crosshair } from 'lucide-react';
-import { analyzePortfolioTree, PROTOCOL_TREE, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
+import { analyzePortfolioTree, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './Dashboard.module.css';
 
 const POS_COLORS = { QB: '#bf44ef', RB: '#10b981', WR: '#f59e0b', TE: '#3b82f6' };
 
-const ARCHETYPE_COLORS = {
-  QB_ELITE: '#bf44ef', QB_CORE: '#f59e0b', QB_LATE: '#10b981',
-  TE_ELITE: '#3b82f6', TE_ANCHOR: '#f97316', TE_LATE: '#6366f1',
-};
 
 const DRILL_CARDS = [
   { key: 'exposures', label: 'Exposures', icon: BarChart3 },
@@ -43,7 +39,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       .map(([key, node]) => ({
         key, label: ARCHETYPE_METADATA[key]?.name || key,
         count: node.count, pct: (node.count / totalEntries) * 100,
-        color: PROTOCOL_TREE[key]?.color || '#6b7280',
+        color: ARCHETYPE_METADATA[key]?.color || '#6b7280',
       }))
       .filter(d => d.count > 0);
 
@@ -58,7 +54,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       .map(([key, count]) => ({
         key, label: ARCHETYPE_METADATA[key]?.name || key,
         count, pct: (count / totalEntries) * 100,
-        color: ARCHETYPE_COLORS[key] || '#6b7280',
+        color: ARCHETYPE_METADATA[key]?.color || '#6b7280',
       }))
       .filter(d => d.count > 0);
 
@@ -75,7 +71,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       .map(([key, count]) => ({
         key, label: ARCHETYPE_METADATA[key]?.name || key,
         count, pct: (count / totalEntries) * 100,
-        color: ARCHETYPE_COLORS[key] || '#6b7280',
+        color: ARCHETYPE_METADATA[key]?.color || '#6b7280',
       }))
       .filter(d => d.count > 0);
 
@@ -96,7 +92,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
     return result;
   }, [masterPlayers]);
 
-  // ── Exposure by ADP Round (highest + lowest) ──
+  // ── Exposure by ADP Round (highest + lowest + blind spots) ──
   const exposureByRound = useMemo(() => {
     const totalRosters = metrics.totalRosters;
     if (totalRosters === 0) return [];
@@ -109,16 +105,62 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       );
       if (inRound.length === 0) continue;
       const sorted = [...inRound].sort((a, b) => a.count - b.count);
-      const lowest = sorted[0];
       const highest = sorted[sorted.length - 1];
+
+      const blindSpots = inRound
+        .filter(p => p.count === 0)
+        .sort((a, b) => a.adpPick - b.adpPick)
+        .slice(0, 3)
+        .map(p => ({ name: p.name, position: p.position, adp: p.adpDisplay }));
+
+      const lowestEntry = sorted[0];
+      const lowest = blindSpots.length === 0
+        ? { name: lowestEntry.name, position: lowestEntry.position, exposure: parseFloat(lowestEntry.exposure), adp: lowestEntry.adpDisplay }
+        : null;
+
       rounds.push({
         round: r,
-        lowest: { name: lowest.name, position: lowest.position, exposure: parseFloat(lowest.exposure), adp: lowest.adpDisplay },
+        lowest,
+        blindSpots,
         highest: { name: highest.name, position: highest.position, exposure: parseFloat(highest.exposure), adp: highest.adpDisplay },
       });
     }
     return rounds;
   }, [masterPlayers, metrics.totalRosters]);
+
+  // ── Top Team Stacks ──
+  const topTeamStacks = useMemo(() => {
+    if (rosterData.length === 0) return [];
+    const rosterMap = new Map();
+    rosterData.forEach(p => {
+      const id = p.entry_id || 'unknown';
+      if (!rosterMap.has(id)) rosterMap.set(id, []);
+      rosterMap.get(id).push(p);
+    });
+    const rosters = Array.from(rosterMap.values());
+    const totalRosters = rosters.length;
+    const teamCount = new Map();
+    rosters.forEach(roster => {
+      const countedTeams = new Set();
+      roster.filter(p => p.position === 'QB').forEach(qb => {
+        if (countedTeams.has(qb.team)) return;
+        const hasStack = roster.some(p =>
+          p.team === qb.team &&
+          p.name !== qb.name &&
+          ['WR', 'TE', 'RB'].includes(p.position)
+        );
+        if (hasStack) {
+          countedTeams.add(qb.team);
+          teamCount.set(qb.team, (teamCount.get(qb.team) || 0) + 1);
+        }
+      });
+    });
+    return Array.from(teamCount.entries())
+      .filter(([team]) => team && team !== 'N/A')
+      .map(([team, count]) => ({ team, count, pct: ((count / totalRosters) * 100).toFixed(1) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+  }, [rosterData]);
 
   // ── Draft Capital by Round (user vs market) ──
   const draftCapitalShape = useMemo(() => {
@@ -258,22 +300,63 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                 <div key={r.round} className={styles.exposureByRoundRow}>
                   <span className={styles.blindSpotRound}>R{r.round}</span>
                   <div className={styles.exposureByRoundPlayer}>
-                    <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }}>
-                      {r.highest.name}
-                    </span>
-                    <span className={styles.blindSpotAdp}>ADP {r.highest.adp}</span>
-                    <span className={styles.exposurePct}>{r.highest.exposure.toFixed(0)}%</span>
+                    <div className={styles.blindSpotEntry}>
+                      <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }}>
+                        {r.highest.name}
+                      </span>
+                      <span className={styles.blindSpotAdp}>ADP {r.highest.adp}</span>
+                      <span className={styles.exposurePct}>{r.highest.exposure.toFixed(0)}%</span>
+                    </div>
                   </div>
                   <div className={styles.exposureByRoundPlayer}>
-                    <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }}>
-                      {r.lowest.name}
-                    </span>
-                    <span className={styles.blindSpotAdp}>ADP {r.lowest.adp}</span>
-                    <span className={styles.exposurePct}>{r.lowest.exposure.toFixed(0)}%</span>
+                    {r.blindSpots.length > 0 ? (
+                      r.blindSpots.map(p => (
+                        <div key={p.name} className={styles.blindSpotEntry}>
+                          <span className={styles.blindSpotName} style={{ color: '#6b7280' }}>{p.name}</span>
+                          <span className={styles.blindSpotAdp}>ADP {p.adp}</span>
+                          <span className={styles.exposurePct} style={{ color: '#6b7280' }}>0%</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className={styles.blindSpotEntry}>
+                        <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }}>
+                          {r.lowest.name}
+                        </span>
+                        <span className={styles.blindSpotAdp}>ADP {r.lowest.adp}</span>
+                        <span className={styles.exposurePct}>{r.lowest.exposure.toFixed(0)}%</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Section 4: Top Team Stacks — narrow right column */}
+        {topTeamStacks.length > 0 && (
+          <div className={styles.teamStacksSection}>
+            <div className={styles.sectionTitle}>Top Team Stacks</div>
+            {(() => {
+              const maxCount = topTeamStacks[0].count;
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {topTeamStacks.map(({ team, count, pct }) => (
+                    <div key={team} className={styles.teamStackRow}>
+                      <span className={styles.teamStackName}>{team}</span>
+                      <div className={styles.exposureBarWrap}>
+                        <div
+                          className={styles.exposureBarFill}
+                          style={{ width: `${(count / maxCount) * 100}%`, background: '#3b82f6', opacity: 0.7 }}
+                        />
+                      </div>
+                      <span className={styles.teamStackCount}>{count}</span>
+                      <span className={styles.teamStackPct}>{pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -323,14 +406,16 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
               <XAxis
                 dataKey="round"
                 tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                axisLine={{ stroke: 'var(--border)' }}
+                axisLine={{ stroke: 'var(--border-subtle)' }}
                 tickLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border)',
+                  background: 'var(--surface-3)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 8,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                  maxWidth: 280,
                   fontSize: '0.8rem',
                 }}
                 labelFormatter={v => `Round ${v}`}

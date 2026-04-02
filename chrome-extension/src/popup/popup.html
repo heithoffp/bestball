@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=320">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
   <title>Best Ball Manager</title>
 </head>
@@ -40,6 +43,16 @@
       <button id="sync-btn">Sync Now</button>
       <p id="sync-result" class="sync-result" hidden></p>
       <button id="sign-out-btn">Sign Out</button>
+    </div>
+
+    <div class="overlay-section">
+      <div class="status-row">
+        <span class="status-label">Draft Overlay</span>
+        <label class="toggle">
+          <input id="overlay-toggle" type="checkbox" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
   </div>
   <script src="popup.js" type="module"></script>

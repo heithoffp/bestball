@@ -75,8 +75,8 @@
 **Tasks:** TASK-042, TASK-043, TASK-048, TASK-049
 
 ### FEAT-010: Draft Overlay UI
-**Status:** Not Started
-**Description:** Real-time candidate scoring overlay during live Underdog drafts using existing draftScorer.js logic. Displays composite scores, exposure warnings, and strategy fit inline with the draft board.
+**Status:** Complete
+**Description:** Inline overlay on Underdog live draft pages showing portfolio context (exposure %, correlation) injected directly into player rows. Handles react-virtualized recycling, theme-adaptive styling, and popup toggle. Per ADR-002, displays data only — no scoring or recommendations.
 **Tasks:** TASK-046, TASK-047
 
 ### FEAT-011: Portfolio Context Sync
