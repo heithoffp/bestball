@@ -1,11 +1,13 @@
 // src/components/RosterViewer.jsx
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { loadSimData, buildComboKey, lookupTier1 } from '../utils/uniquenessEngine';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import { analyzeRosterStacks } from '../utils/stackAnalysis';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { CombinedSearchInput } from './filters';
 import { NFL_TEAMS } from '../utils/nflTeams';
+import TournamentMultiSelect from './TournamentMultiSelect';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
 
@@ -35,139 +37,19 @@ function clvLabel(pct) {
 }
 
 
-// ── Uniqueness color scale (rank-normalized) ──────────────────────────────────
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function lerpColor(c1, c2, t) {
-  return `rgb(${Math.round(lerp(c1[0], c2[0], t))},
-              ${Math.round(lerp(c1[1], c2[1], t))},
-              ${Math.round(lerp(c1[2], c2[2], t))})`;
-}
+// ── Uniqueness display helper ────────────────────────────────────────────────��
 
 /**
- * t ∈ [0,1]
- * 0 = chalk (red), 0.5 = neutral (amber), 1 = unique (green)
+ * Format a uniqueness score for display.
+ * @param {{ found: boolean, count?: number, totalRosters: number }|null} score
+ * @param {boolean} loading - true while sim data is still fetching
+ * @returns {{ text: string, muted: boolean }}
  */
-function uniquenessColor(t) {
-  if (t <= 0.5) {
-    return lerpColor([255, 77, 109], [255, 159, 67], t * 2);
-  }
-  return lerpColor([255, 159, 67], [0, 229, 160], (t - 0.5) * 2);
-}
-
-// ── Helpers & priors (unchanged) ──────────
-
-const RB_ARCHETYPE_PREVALENCE = {
-  RB_BALANCED:         0.5,
-  RB_HERO:          0.25,
-  RB_ZERO:          0.17,
-  RB_HYPER_FRAGILE: 0.08,
-};
-
-const _surprisalValues = Object.values(RB_ARCHETYPE_PREVALENCE).map(p => -Math.log2(p));
-const _surprisalMin = Math.min(..._surprisalValues);
-const _surprisalMax = Math.max(..._surprisalValues);
-
-function archetypeRarityNorm(rbArchetype) {
-  const p = RB_ARCHETYPE_PREVALENCE[rbArchetype];
-  if (p == null) return 0.0;
-  const raw = -Math.log2(p);
-  return (_surprisalMax === _surprisalMin)
-    ? 0.5
-    : (raw - _surprisalMin) / (_surprisalMax - _surprisalMin);
-}
-
-/**
- * Calculates how "irrational" or rare a reach is based on whether the
- * player would have survived to the drafting team's NEXT pick.
- * We use the standard logistic CDF / survival function.
- */
-function survivalProbability(reachMagnitude, scale) {
-  return 1 - Math.exp(-reachMagnitude / scale);
-}
-
-function calculateCompositeRarity(rosterPlayers, rbArchetype, opts = {}) {
-  const {
-    alphaPhase = 1.2,
-    betaPhase = -0.5,
-    archetypeWeight = 1.5,
-    numTeams: _numTeams = 12,
-    reachThreshold = 0,
-    aggregation = 'rss',
-    topK = 3,
-    normalizeBy = 'sqrtN',
-    returnDetails = false,
-  } = opts;
-
-  const rawReachDevs = [];
-  const adjustedReachDevs = [];
-
-  rosterPlayers.forEach(p => {
-    const pick   = Number(p.pick || 0) || 0;
-    const adpRaw = Number(p.latestADP || p.adp || p.latestADPValue || 0) || (pick || 1000);
-    const adp    = Math.max(1, adpRaw);
-
-    const denom = alphaPhase * Math.sqrt(adp) + betaPhase;
-
-    const rawDeviation = Math.abs(adp - pick);
-    const deviationScaled = rawDeviation / Math.max(0.5, denom);
-
-    rawReachDevs.push(deviationScaled);
-
-    const uniquenessMultiplier = rawDeviation >= reachThreshold
-        ? survivalProbability(rawDeviation, denom * 2)
-        : 1.0;
-
-    const adjustedDev = deviationScaled * uniquenessMultiplier;
-    adjustedReachDevs.push(adjustedDev);
-  });
-
-  let aggregatedAdjusted;
-  if (aggregation === 'sum') {
-    aggregatedAdjusted = adjustedReachDevs.reduce((s, x) => s + x, 0);
-  } else if (aggregation === 'topk') {
-    const sorted = adjustedReachDevs.slice().sort((a, b) => b - a);
-    const k = Math.max(1, Math.min(topK, sorted.length));
-    aggregatedAdjusted = sorted.slice(0, k).reduce((s, x) => s + x, 0);
-  } else { // 'rss'
-    const sumsq = adjustedReachDevs.reduce((s, x) => s + x * x, 0);
-    aggregatedAdjusted = Math.sqrt(sumsq);
-  }
-
-  const nPlayers = Math.max(1, rosterPlayers.length);
-  let normalizedAdjusted = aggregatedAdjusted;
-  if (normalizeBy === 'sqrtN') {
-    normalizedAdjusted = aggregatedAdjusted / Math.sqrt(nPlayers);
-  }
-
-  const archBoostRaw = archetypeRarityNorm(rbArchetype);
-  const archetypeContribution = archetypeWeight * archBoostRaw;
-  const composite = normalizedAdjusted + archetypeContribution;
-
-  if (returnDetails) {
-    const rawDraftRarity = rawReachDevs.reduce((s, x) => s + x, 0);
-    return {
-      rawDraftRarity: Number(rawDraftRarity.toFixed(6)),
-      adjustedDraftRarityAggregated: Number(aggregatedAdjusted.toFixed(6)),
-      adjustedDraftRarityNormalized: Number(normalizedAdjusted.toFixed(6)),
-      archBoostRaw: Number(archBoostRaw.toFixed(6)),
-      archetypeContribution: Number(archetypeContribution.toFixed(6)),
-      composite: Number(composite.toFixed(6)),
-      details: {
-        perPlayer: rosterPlayers.map((p, i) => ({
-          pick: Number(p.pick || 0) || 0,
-          adp: Number(p.latestADP || p.adp || p.latestADPValue || 0) || (Number(p.pick || 0) || 1000),
-          rawReachDev: Number(rawReachDevs[i].toFixed(6)),
-          adjustedReachDev: Number(adjustedReachDevs[i].toFixed(6))
-        }))
-      }
-    };
-  }
-
-  return composite;
+function formatUniqueness(score, loading) {
+  if (loading || !score) return { text: '—', muted: true };
+  const m = (score.totalRosters / 1_000_000).toFixed(1) + 'M';
+  if (score.found) return { text: `${score.count} / ${m}`, muted: false };
+  return { text: `< 1 / ${m}`, muted: false };
 }
 
 // ── Archetype display helpers ─────────────────────────────────────────────────
@@ -247,36 +129,9 @@ const CHIP_GROUPS = [
 const SORT_OPTIONS = [
   { value: 'draftDate', label: 'Draft Date' },
   { value: 'avgCLV', label: 'Avg CLV' },
-  { value: 'rarityPercentile', label: 'Uniq Lift' },
+  { value: 'uniqueness', label: 'Uniqueness' },
 ];
 
-// ── Percentile rank ───────────────────────────────────────────────────────────
-
-function percentileRank(value, arr) {
-  if (!arr || arr.length === 0) return 0;
-  const sorted = [...arr].sort((a, b) => a - b);
-  let count = 0;
-  for (let i = 0; i < sorted.length; i++) {
-    if (sorted[i] <= value) count++;
-    else break;
-  }
-  return (count / sorted.length) * 100;
-}
-
-// ── Min-max normalizer ────────────────────────────────────────────────────────
-
-function normalize(list, key, outKey) {
-  const vals = list.map(r => r[key]).filter(v => v !== null && v !== undefined);
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
-  return list.map(r => ({
-    ...r,
-    [outKey]:
-      r[key] === null || r[key] === undefined || max === min
-        ? 0.5
-        : (r[key] - min) / (max - min),
-  }));
-}
 
 function HighlightedName({ name, query }) {
   if (!query) return <span className={css.playerName}>{name}</span>;
@@ -293,7 +148,7 @@ function HighlightedName({ name, query }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RosterViewer({ rosterData = [] }) {
+export default function RosterViewer({ rosterData = [], masterPlayers = [], initialFilter = null }) {
   const { isMobile } = useMediaQuery();
   const [expandedEntry, setExpandedEntry]   = useState(null);
   const [filtersOpen, setFiltersOpen]       = useState(false);
@@ -304,11 +159,26 @@ export default function RosterViewer({ rosterData = [] }) {
   const [rbFilter,  setRbFilter]            = useState('all');
   const [qbFilter,  setQbFilter]            = useState('all');
   const [teFilter,  setTeFilter]            = useState('all');
-  const [tournamentFilter, setTournamentFilter] = useState('all');
+  const [selectedTournaments, setSelectedTournaments] = useState([]);
   const [combinedSearch, setCombinedSearch] = useState('');
-  const [selectedPlayers, setSelectedPlayers] = useState([]);
+  const [selectedPlayers, setSelectedPlayers] = useState(() => initialFilter?.players ?? []);
   const [selectedTeams, setSelectedTeams] = useState([]);
+  const [navBannerPlayers, setNavBannerPlayers] = useState(() => initialFilter?.players ?? []);
   const scrollRef = useRef(null);
+
+  // ── Simulation data ──────────────────────────────────────────────────────────
+  const [tier1, setTier1] = useState(null);
+  useEffect(() => { loadSimData().then(setTier1); }, []);
+
+  // name (lowercase, normalised) → player_id from masterPlayers (uses full team name — matches sim format)
+  const nameToPlayerId = useMemo(() => {
+    const map = new Map();
+    masterPlayers.forEach(p => {
+      if (p.player_id && p.name)
+        map.set(p.name.trim().toLowerCase().replace(/\s+/g, ' '), p.player_id);
+    });
+    return map;
+  }, [masterPlayers]);
 
   // Unique player names for autocomplete
   const allPlayerNames = useMemo(() => {
@@ -366,11 +236,6 @@ export default function RosterViewer({ rosterData = [] }) {
     setSelectedPlayers(prev => prev.filter(n => n !== name));
   }, []);
 
-  // Rarity model tunables
-  const [alphaPhase]       = useState(1.2);
-  const [betaPhase]        = useState(-0.5);
-  const [archetypeBoostMax] = useState(0.5);
-
   // Group + classify each entry
   const rosters = useMemo(() => {
     const map = {};
@@ -404,57 +269,32 @@ export default function RosterViewer({ rosterData = [] }) {
         : null;
 
       const tournamentTitle = players[0]?.tournamentTitle || null;
+      const slateTitle = players[0]?.slateTitle || null;
 
       const projectedPoints = players.reduce((sum, p) => sum + (p.projectedPoints || 0), 0);
 
-      return { entry_id, players, avgCLV, posSnap, count: players.length, path, draftDate, tournamentTitle, projectedPoints };
-    });
-  }, [rosterData, alpha]);
+      // Annotate each player with simulation player_id via masterPlayers name lookup
+      const annotatedPlayers = players.map(p => ({
+        ...p,
+        player_id: nameToPlayerId.get(p.name?.trim().toLowerCase().replace(/\s+/g, ' ')) ?? null,
+      }));
 
-  // Compute per-roster composite rarity, percentile-rank + normalize for color
+      return { entry_id, players: annotatedPlayers, avgCLV, posSnap, count: players.length, path, draftDate, tournamentTitle, slateTitle, projectedPoints };
+    });
+  }, [rosterData, alpha, nameToPlayerId]);
+
+  // Per-roster uniqueness score via Tier 1 simulation lookup
   const rosterScores = useMemo(() => {
-    if (!rosters || rosters.length === 0) return {};
-
-    const rawRarity = [];
-
-    const tmp = rosters.map(r => {
-      const rarity = calculateCompositeRarity(r.players, r.path.rb, {
-        alphaPhase,
-        betaPhase,
-        archetypeWeight: 0.3,
-        aggregation: 'rss',
-        reachThreshold: 2,
-        normalizeBy: 'sqrtN',
-      });
-
-      rawRarity.push(rarity);
-
-      return {
-        entry_id: r.entry_id,
-        rarity,
-        rbArchetype: r.path.rb,
-      };
-    });
-
-    const rarityPercentiles = {};
-    tmp.forEach(t => {
-      rarityPercentiles[t.entry_id] = percentileRank(t.rarity, rawRarity);
-    });
-
-    let withNorm = tmp.map(t => ({ ...t, uniqLift: t.rarity }));
-    withNorm = normalize(withNorm, 'uniqLift', 'uniqLiftNorm');
-
     const byId = {};
-    withNorm.forEach(t => {
-      byId[t.entry_id] = {
-        rarity:           Number(t.rarity.toFixed(4)),
-        rarityPercentile: Math.round(rarityPercentiles[t.entry_id]),
-        uniqLiftNorm:     t.uniqLiftNorm ?? 0.5,
-        archBoost:        Number((1 + archetypeBoostMax * archetypeRarityNorm(t.rbArchetype)).toFixed(3)),
-      };
+    rosters.forEach(r => {
+      const key = buildComboKey(r.players);
+      const hit = key && tier1 ? lookupTier1(key, tier1) : null;
+      byId[r.entry_id] = hit
+        ? { found: true, count: hit.count, totalRosters: hit.totalRosters }
+        : { found: false, totalRosters: tier1?.metadata?.total_rosters ?? 1200000 };
     });
     return byId;
-  }, [rosters, alphaPhase, betaPhase, archetypeBoostMax]);
+  }, [rosters, tier1]);
 
   // Per-roster stack analysis
   const rosterStacks = useMemo(() => {
@@ -464,6 +304,7 @@ export default function RosterViewer({ rosterData = [] }) {
     });
     return byId;
   }, [rosters]);
+
 
 
   const rosterSearchMatches = useMemo(() => {
@@ -495,7 +336,9 @@ export default function RosterViewer({ rosterData = [] }) {
     if (rbFilter !== 'all') list = list.filter(r => r.path.rb === rbFilter);
     if (qbFilter !== 'all') list = list.filter(r => r.path.qb === qbFilter);
     if (teFilter !== 'all') list = list.filter(r => r.path.te === teFilter);
-    if (tournamentFilter !== 'all') list = list.filter(r => r.tournamentTitle === tournamentFilter);
+    if (selectedTournaments.length > 0) {
+      list = list.filter(r => selectedTournaments.includes(r.tournamentTitle));
+    }
 
     list.sort((a, b) => {
       if (['path.rb', 'path.qb', 'path.te'].includes(sortKey)) {
@@ -511,21 +354,30 @@ export default function RosterViewer({ rosterData = [] }) {
         const bt = b.draftDate ? b.draftDate.getTime() : -Infinity;
         return sortDir === 'asc' ? at - bt : bt - at;
       }
-      if (sortKey === 'rarityPercentile') {
-        const aid = rosterScores[a.entry_id]?.rarityPercentile ?? -Infinity;
-        const bid = rosterScores[b.entry_id]?.rarityPercentile ?? -Infinity;
-        return sortDir === 'asc' ? aid - bid : bid - aid;
+      if (sortKey === 'uniqueness') {
+        const as = rosterScores[a.entry_id];
+        const bs = rosterScores[b.entry_id];
+        const av = as?.found ? as.count : 0;
+        const bv = bs?.found ? bs.count : 0;
+        return sortDir === 'asc' ? av - bv : bv - av;
       }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, tournamentFilter, rosterScores, selectedPlayers, selectedTeams, rosterSearchMatches]);
+  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, selectedTournaments, rosterScores, selectedPlayers, selectedTeams, rosterSearchMatches]);
 
-  const allTournaments = useMemo(() => {
-    const titles = new Set();
-    rosters.forEach(r => { if (r.tournamentTitle) titles.add(r.tournamentTitle); });
-    return ['all', ...[...titles].sort()];
+  const slateGroups = useMemo(() => {
+    const map = new Map();
+    rosters.forEach(r => {
+      if (!r.tournamentTitle) return;
+      const slate = r.slateTitle || 'Other';
+      if (!map.has(slate)) map.set(slate, new Set());
+      map.get(slate).add(r.tournamentTitle);
+    });
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([slate, tourns]) => ({ slate, tournaments: [...tourns].sort() }));
   }, [rosters]);
 
   // Base list with all non-archetype filters applied
@@ -535,9 +387,11 @@ export default function RosterViewer({ rosterData = [] }) {
     if (selectedTeams.length > 0) list = list.filter(r => selectedTeams.every(team => r.players.some(p => p.team === team && !selectedPlayers.includes(p.name))));
     if (clvFilter === 'positive') list = list.filter(r => r.avgCLV !== null && r.avgCLV >= 0);
     if (clvFilter === 'negative') list = list.filter(r => r.avgCLV !== null && r.avgCLV < 0);
-    if (tournamentFilter !== 'all') list = list.filter(r => r.tournamentTitle === tournamentFilter);
+    if (selectedTournaments.length > 0) {
+      list = list.filter(r => selectedTournaments.includes(r.tournamentTitle));
+    }
     return list;
-  }, [rosters, clvFilter, tournamentFilter, selectedPlayers, selectedTeams, rosterSearchMatches]);
+  }, [rosters, clvFilter, selectedTournaments, selectedPlayers, selectedTeams, rosterSearchMatches]);
 
   const rbCounts = useMemo(() => {
     let list = baseFiltered;
@@ -599,9 +453,9 @@ export default function RosterViewer({ rosterData = [] }) {
     if (qbFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[qbFilter]?.name || qbFilter, color: archetypeColor(qbFilter) });
     if (teFilter !== 'all') pills.push({ label: ARCHETYPE_METADATA[teFilter]?.name || teFilter, color: archetypeColor(teFilter) });
     if (clvFilter !== 'all') pills.push({ label: clvFilter === 'positive' ? '+CLV' : '-CLV', color: '#00e5a0' });
-    if (tournamentFilter !== 'all') pills.push({ label: tournamentFilter, color: '#f59e0b' });
+    if (selectedTournaments.length > 0) pills.push({ label: `Tournament: ${selectedTournaments.length} selected`, color: '#f59e0b', onClear: () => setSelectedTournaments([]) });
     return pills;
-  }, [selectedPlayers, selectedTeams, rbFilter, qbFilter, teFilter, clvFilter, tournamentFilter]);
+  }, [selectedPlayers, selectedTeams, rbFilter, qbFilter, teFilter, clvFilter, selectedTournaments]);
 
   if (!rosterData.length) {
     return (
@@ -617,8 +471,8 @@ export default function RosterViewer({ rosterData = [] }) {
   const renderRosterCard = (roster, virtualRow) => {
     const clv    = clvLabel(roster.avgCLV);
     const isOpen = expandedEntry === roster.entry_id;
-    const scores = rosterScores[roster.entry_id] || {};
     const stacks = rosterStacks[roster.entry_id] || [];
+    const uniq   = formatUniqueness(rosterScores[roster.entry_id], !tier1);
 
     return (
       <div
@@ -666,8 +520,8 @@ export default function RosterViewer({ rosterData = [] }) {
           </div>
           <div className={css.cardStat}>
             <span className={css.cardStatLabel}>Uniq</span>
-            <span className={css.cardStatValue} style={{ color: uniquenessColor(scores.uniqLiftNorm ?? 0.5) }}>
-              {scores.rarity?.toFixed(2) ?? '—'}
+            <span className={css.cardStatValue} style={{ color: uniq.muted ? 'var(--text-muted)' : 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+              {uniq.text}
             </span>
           </div>
         </div>
@@ -841,16 +695,11 @@ export default function RosterViewer({ rosterData = [] }) {
             <div className={css.additionalFilters}>
               <div style={{ width: '100%' }}>
                 <label className="filter-select-label">Tournament</label>
-                <select
-                  value={tournamentFilter}
-                  onChange={e => setTournamentFilter(e.target.value)}
-                  className="filter-select"
-                  style={{ width: '100%' }}
-                >
-                  {allTournaments.map(t => (
-                    <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
-                  ))}
-                </select>
+                <TournamentMultiSelect
+                  slateGroups={slateGroups}
+                  selected={selectedTournaments}
+                  onChange={setSelectedTournaments}
+                />
               </div>
               <div style={{ width: '100%' }}>
                 <label className="filter-select-label">CLV Filter</label>
@@ -894,15 +743,11 @@ export default function RosterViewer({ rosterData = [] }) {
             label="Player / Team Search"
           />
         </div>
-        <select
-          value={tournamentFilter}
-          onChange={e => setTournamentFilter(e.target.value)}
-          className="filter-select"
-        >
-          {allTournaments.map(t => (
-            <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
-          ))}
-        </select>
+        <TournamentMultiSelect
+          slateGroups={slateGroups}
+          selected={selectedTournaments}
+          onChange={setSelectedTournaments}
+        />
         <div className="filter-chip-group">
           {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
             <button key={v} className={`filter-chip ${clvFilter === v ? 'filter-chip--active' : ''}`} onClick={() => setClvFilter(v)}>
@@ -959,9 +804,9 @@ export default function RosterViewer({ rosterData = [] }) {
             <th
               className={`${css.th} ${css.colUniq}`}
               style={{ textAlign: 'center', color: '#7dffcc' }}
-              onClick={() => toggleSort('rarityPercentile')}
+              onClick={() => toggleSort('uniqueness')}
             >
-              Uniq Lift <SortIcon col="rarityPercentile" sortKey={sortKey} sortDir={sortDir} />
+              Uniqueness <SortIcon col="uniqueness" sortKey={sortKey} sortDir={sortDir} />
             </th>
             <th className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center', cursor: 'default' }}></th>
@@ -971,11 +816,11 @@ export default function RosterViewer({ rosterData = [] }) {
           {displayed.map((roster) => {
             const clv    = clvLabel(roster.avgCLV);
             const isOpen = expandedEntry === roster.entry_id;
-            const scores = rosterScores[roster.entry_id] || {};
             const stacks = rosterStacks[roster.entry_id] || [];
-            const archNorm  = archetypeRarityNorm(roster.path.rb);
-            const boostPct  = Math.round(archetypeBoostMax * archNorm * 100);
-            const tooltipTxt = `Draft rarity × ${scores.archBoost ?? '—'}× arch boost (+${boostPct}% from ${roster.path.rb})`;
+            const uniq = formatUniqueness(rosterScores[roster.entry_id], !tier1);
+            const uniqTooltip = rosterScores[roster.entry_id]?.found
+              ? 'Observed in simulation — exact frequency count per simulated rosters.'
+              : !tier1 ? 'Loading simulation data…' : 'Not observed — this is a uniquely rare combo.';
             return (
               <React.Fragment key={roster.entry_id}>
                 <tr
@@ -1025,17 +870,22 @@ export default function RosterViewer({ rosterData = [] }) {
                   <td className={css.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
                   <td className={css.td}><ArchetypePill archetypeKey={roster.path.te} /></td>
 
-                  {/* Composite Uniq Lift */}
+                  {/* Uniqueness — simulation-based frequency lookup */}
                   <td className={`${css.td} ${css.colUniq}`} style={{ textAlign: 'center' }}>
                     <span
-                      title={tooltipTxt}
+                      title={uniqTooltip}
+                      aria-label={uniqTooltip}
                       className={css.uniqBadge}
                       style={{
-                        color: uniquenessColor(scores.uniqLiftNorm ?? 0.5),
-                        borderColor: uniquenessColor(scores.uniqLiftNorm ?? 0.5) + '55',
+                        display: 'inline-block',
+                        minWidth: '7ch',
+                        textAlign: 'right',
+                        color: uniq.muted ? 'var(--text-muted)' : 'var(--text-primary)',
+                        borderColor: 'transparent',
+                        fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      {scores.rarity?.toFixed(2) ?? '—'}
+                      {uniq.text}
                     </span>
                   </td>
 
@@ -1063,6 +913,18 @@ export default function RosterViewer({ rosterData = [] }) {
 
   return (
     <div className={css.root}>
+      {navBannerPlayers.length > 0 && (
+        <div className={css.navBanner}>
+          Showing rosters containing <strong>{navBannerPlayers.join(', ')}</strong>
+          {' — '}
+          <button
+            className={css.navBannerClear}
+            onClick={() => { setNavBannerPlayers([]); setSelectedPlayers([]); }}
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
       {/* Control Panel — collapsible */}
       {renderControlPanel()}
 

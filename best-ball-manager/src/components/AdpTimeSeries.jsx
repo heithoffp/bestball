@@ -216,7 +216,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], masterPlayers = [], r
 
   // 3. Filter and Sort
   const filteredAndSortedList = useMemo(() => {
-    let list = timeFilteredPlayers;
+    let list = timeFilteredPlayers.filter(p => p.lastAdp !== null);
     const q = (query || '').toLowerCase().trim();
     if (q) {
         list = list.filter(p => (`${p.name} ${p.team} ${p.position}`).toLowerCase().includes(q));

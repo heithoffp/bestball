@@ -41,10 +41,24 @@ const sections = [
       'Expand any roster to see the full grade breakdown, draft capital map, stack summary, and player-by-player detail',
     ],
     tips: [
-      'Composite grade combines projected points, CLV (Closing Line Value), rarity, and spike week potential',
       'CLV% shows how much value you captured relative to where a player ended up being drafted. Positive means you got a bargain',
-      'Uniqueness Lift measures how rare your roster construction is compared to the field. It\'s color-coded: green means your roster is highly differentiated (great for tournaments), red means it looks like a lot of other rosters in the pool',
-      'Spike week projection estimates the ceiling week score, which matters most in best-ball formats',
+      'Uniqueness score shows how often your exact first-4-pick combination appeared across 1.2M simulated drafts — lower is rarer',
+      '"< 1 / 1.2M" means your combo was never observed in simulation — genuinely rare construction',
+    ],
+  },
+  {
+    title: 'Uniqueness Score',
+    icon: null,
+    purpose: 'Your first 4 picks define your roster identity. Rounds 1–4 are where drafter intent crystallises — RB-heavy vs WR-heavy, early QB, team stacks. Rounds 5–6 add little additional signal.',
+    features: [
+      'Score format "X / 1.2M" — this exact combination of first 4 picks appeared X times across 1.2M simulated drafts',
+      '"< 1 / 1.2M" — this combination was never directly observed in simulation. Genuinely rare construction',
+      'Sort by Uniqueness to rank your rosters from rarest (lowest count) to most chalk (highest count)',
+    ],
+    tips: [
+      'The simulation models 100,000 drafts across 9 ADP time periods (Feb–Apr 2026) to represent the full season\'s draft landscape',
+      'A combo appearing in simulation isn\'t bad — it means smart drafters built that core too. Context is everything',
+      'Picks are sorted by ADP to identify your first 4 regardless of which round they were taken',
     ],
   },
   {

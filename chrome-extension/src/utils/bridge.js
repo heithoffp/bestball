@@ -75,6 +75,51 @@ export async function fetchTier() {
 }
 
 /**
+ * Reads portfolio entries from Supabase for the current authenticated user.
+ * Returns entries in the same shape accepted by writeEntries().
+ *
+ * @returns {Promise<Array>}
+ */
+export async function readEntries() {
+  if (!supabase) throw new Error('[BBM] Supabase not configured');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('[BBM] Not authenticated');
+
+  const { data, error } = await supabase
+    .from('extension_entries')
+    .select('entry_id, tournament, slate_title, draft_date, players')
+    .eq('user_id', session.user.id);
+
+  if (error) throw error;
+  return (data ?? []).map(row => ({
+    entryId: row.entry_id,
+    tournamentTitle: row.tournament,
+    slateTitle: row.slate_title ?? '',
+    draftDate: row.draft_date,
+    players: row.players ?? [],
+  }));
+}
+
+/**
+ * Reads the user's saved PlayerRankings data from Supabase.
+ * Returns an array of {name, rank, tierNum} in ranked order, or null if unavailable.
+ *
+ * @returns {Promise<Array<{name: string, rank: number, tierNum: number}>|null>}
+ */
+export async function readRankings() {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return null;
+  const { data, error } = await supabase
+    .from('user_rankings')
+    .select('rankings')
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.rankings ?? null;
+}
+
+/**
  * Writes portfolio entries to Supabase, replacing any existing rows for the user.
  * Entries must match the adapter interface Entry shape:
  *   { entryId, tournamentTitle, draftDate, players: [{name, position, team, pick, round}] }
@@ -105,6 +150,7 @@ export async function writeEntries(entries) {
     user_id: userId,
     entry_id: e.entryId,
     tournament: e.tournamentTitle ?? null,
+    slate_title: e.slateTitle ?? null,
     draft_date: e.draftDate ?? null,
     players: e.players ?? [],
     synced_at: new Date().toISOString(),

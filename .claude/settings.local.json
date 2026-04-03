@@ -44,7 +44,18 @@
       "Skill(hus-governance:hus-adr)",
       "Bash(find:*)",
       "Bash(bash:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(d2 --layout elk core.d2 core.svg)",
+      "Bash(d2 --layout elk feedback.d2 feedback.svg)",
+      "Bash(d2 --layout elk subsystems/chrome-extension-data-flow.d2 subsystems/chrome-extension-data-flow.svg)",
+      "Bash(cp tier1_frequency.json tier1_frequency.baseline.json)",
+      "Bash(cp tier2_conditional.json tier2_conditional.baseline.json)",
+      "Bash(ls -la *.baseline.json)",
+      "Bash(where python:*)",
+      "Bash(where py:*)",
+      "Bash(where python3:*)",
+      "Bash(py:*)",
+      "Bash(python3:*)"
     ]
   },
   "enabledPlugins": {

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { GripVertical, Download, Save, X } from 'lucide-react';
-import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDndMonitor } from '@dnd-kit/core';
+import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDndMonitor, useDroppable, useDraggable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { exportRankingsCSV, saveRankingsToAssets } from '../utils/rankingsExport';
 import FileUploadButton from './FileUploadButton';
@@ -67,6 +67,15 @@ function pointerInsertionPoint({ droppableRects, droppableContainers, pointerCoo
   return [];
 }
 
+function resolveDropTargetId(id) {
+  if (!id) return null;
+  if (typeof id !== 'string') return id;
+  if (id.startsWith('break:') || id.startsWith('insert:') || id.startsWith('tier-drag:')) {
+    return id.split(':').slice(1).join(':');
+  }
+  return id;
+}
+
 function getTierLabel(tierNum) {
   if (tierNum < 1) return TIER_LABELS[0];
   if (tierNum > TIER_LABELS.length) return TIER_LABELS[TIER_LABELS.length - 1];
@@ -78,9 +87,18 @@ function getTierColor(tierNum) {
 }
 
 /* ── Tier Divider (shared logic, renders differently for table vs cards) ── */
-function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelChange, onDelete, isMobile }) {
+function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelChange, onDelete, isMobile, dropId, canDrag }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: dropId || `break:${playerId}`,
+    data: { kind: 'tier-break', playerId },
+  });
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: `tier-drag:${playerId}`,
+    data: { kind: 'tier-drag', playerId, tierLabelText, tierColor },
+    disabled: !canDrag,
+  });
 
   const handleLabelClick = (e) => {
     e.stopPropagation();
@@ -102,7 +120,20 @@ function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelCha
 
   if (isMobile) {
     return (
-      <div className={s.tierDividerMobile} style={{ background: tierColor.border }}>
+      <div
+        ref={setDropRef}
+        className={s.tierDividerMobile}
+        style={{
+          background: tierColor.border,
+          outline: isOver ? '1px solid rgba(255,255,255,0.35)' : 'none',
+          opacity: isDragging ? 0.3 : 1,
+        }}
+      >
+        {canDrag && (
+          <div ref={setDragRef} className={s.tierDragHandle} {...listeners} {...attributes}>
+            <GripVertical size={14} />
+          </div>
+        )}
         {isEditing ? (
           <input
             autoFocus
@@ -128,8 +159,16 @@ function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelCha
   }
 
   return (
-    <tr>
+    <tr ref={setDropRef} style={{
+      ...(isOver ? { boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)' } : undefined),
+      opacity: isDragging ? 0.3 : 1,
+    }}>
       <td colSpan={10} className={s.tierDivider} style={{ background: tierColor.border }}>
+        {canDrag && (
+          <div ref={setDragRef} className={s.tierDragHandle} {...listeners} {...attributes}>
+            <GripVertical size={14} />
+          </div>
+        )}
         {isEditing ? (
           <input
             autoFocus
@@ -155,6 +194,34 @@ function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelCha
   );
 }
 
+function TierInsertZone({ playerId, isMobile, onClick, dropId }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: dropId || `insert:${playerId}`,
+    data: { kind: 'tier-insert', playerId },
+  });
+
+  if (isMobile) {
+    return (
+      <div ref={setNodeRef} className={s.tierInsertZoneMobile} onClick={onClick} style={isOver ? { opacity: 0.85 } : undefined}>
+        <div className={s.tierInsertMobileLine} />
+        <div className={s.tierInsertMobileBtn}>+</div>
+      </div>
+    );
+  }
+
+  return (
+    <tr ref={setNodeRef} className={s.tierInsertZone} onClick={onClick} title="Add tier break above this player">
+      <td colSpan={10} className={s.tierInsertCell} style={isOver ? { opacity: 0.85 } : undefined}>
+        <div className={s.tierInsertIndicator}>
+          <div className={s.tierInsertIndicatorLine} />
+          <div className={s.tierInsertIndicatorBtn}>+</div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/* ── Desktop Sortable Row ────────────────────────────────────── */
 /* ── Desktop Sortable Row ────────────────────────────────────── */
 const SortableRow = React.memo(function SortableRow({
   player, displayRank, posRank, tier, canDrag,
@@ -299,7 +366,7 @@ const SortableCard = React.memo(function SortableCard({
 });
 
 /* ── Custom Drag Overlay (portal-based, tracks pointer directly) ── */
-function PointerTrackingOverlay({ activePlayer, displayedPlayers }) {
+function PointerTrackingOverlay({ activePlayer, activeTierDrag, displayedPlayers }) {
   const [pos, setPos] = useState(null);
 
   useDndMonitor({
@@ -317,7 +384,24 @@ function PointerTrackingOverlay({ activePlayer, displayedPlayers }) {
     onDragCancel() { setPos(null); },
   });
 
-  if (!activePlayer || !pos) return null;
+  if (!pos) return null;
+
+  // Tier break drag overlay
+  if (activeTierDrag) {
+    return createPortal(
+      <div className={s.dragOverlayTier} style={{
+        left: pos.x + 12, top: pos.y - 16,
+        background: activeTierDrag.tierColor.border,
+      }}>
+        <GripVertical size={14} />
+        <span className={s.dragOverlayTierLabel}>{activeTierDrag.tierLabelText}</span>
+      </div>,
+      document.body
+    );
+  }
+
+  // Player drag overlay
+  if (!activePlayer) return null;
 
   const rank = displayedPlayers.findIndex(p => p.id === activePlayer.id) + 1;
 
@@ -612,46 +696,177 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
-    // Reorder players and transfer tier breaks in one pass using functional updaters.
-    // No closure over rankedPlayers — deps array stays empty.
+    const activeIdStr = String(active.id);
+
+    // ── Tier break drag ──────────────────────────────────────────
+    if (activeIdStr.startsWith('tier-drag:')) {
+      const sourcePlayerId = activeIdStr.slice('tier-drag:'.length);
+      const targetPlayerId = resolveDropTargetId(over.id);
+      if (!targetPlayerId || sourcePlayerId === targetPlayerId) return;
+      if (!overallTierBreaks.has(sourcePlayerId)) return;
+
+      // Move the tier break from source to target
+      setOverallTierBreaks(prev => {
+        const next = new Set(prev);
+        next.delete(sourcePlayerId);
+        next.add(targetPlayerId);
+        return next;
+      });
+
+      // Migrate the custom label
+      setTierLabels(prev => {
+        const next = { ...prev };
+        const label = next[sourcePlayerId];
+        if (label !== undefined) {
+          delete next[sourcePlayerId];
+          next[targetPlayerId] = label;
+        }
+        return next;
+      });
+
+      return;
+    }
+
+    // ── Player drag ──────────────────────────────────────────────
+    const overData = over.data?.current;
+    const targetId = resolveDropTargetId(over.id);
+    if (!targetId) return;
+
+    const fromIdx = rankedPlayers.findIndex(p => p.id === active.id);
+    const toIdx = rankedPlayers.findIndex(p => p.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const isTierBreakDrop = overData?.kind === 'tier-break';
+
+    // If the drop lands directly on a tier break and the dragged player is
+    // already touching that break, keep the row order fixed and move the break
+    // one slot instead. This lets a player change tiers without changing rank.
+    if (isTierBreakDrop) {
+      // Dragging the first player in a tier upward across the break.
+      if (active.id === targetId && overallTierBreaks.has(active.id)) {
+        const nextPlayer = rankedPlayers[fromIdx + 1];
+
+        setOverallTierBreaks(prev => {
+          const next = new Set(prev);
+          next.delete(active.id);
+          if (nextPlayer) next.add(nextPlayer.id);
+          return next;
+        });
+
+        setTierLabels(prev => {
+          const next = { ...prev };
+          const label = next[active.id];
+          if (label !== undefined) {
+            delete next[active.id];
+            if (nextPlayer) next[nextPlayer.id] = label;
+          }
+          return next;
+        });
+
+        return;
+      }
+
+      // Dragging the last player in a tier downward across the break.
+      if (fromIdx + 1 === toIdx && overallTierBreaks.has(targetId)) {
+        setOverallTierBreaks(prev => {
+          const next = new Set(prev);
+          next.delete(targetId);
+          next.add(active.id);
+          return next;
+        });
+
+        setTierLabels(prev => {
+          const next = { ...prev };
+          const label = next[targetId];
+          if (label !== undefined) {
+            delete next[targetId];
+            next[active.id] = label;
+          }
+          return next;
+        });
+
+        return;
+      }
+
+      // General case: player dropped on a tier break from a non-adjacent position.
+      // Reorder the player AND reassign the break so the player lands just below
+      // the tier bar (becoming the first player in that tier).
+      if (active.id !== targetId) {
+        setRankedPlayers(prev => {
+          const fi = prev.findIndex(p => p.id === active.id);
+          const ti = prev.findIndex(p => p.id === targetId);
+          if (fi === -1 || ti === -1) return prev;
+          const newList = [...prev];
+          const [moved] = newList.splice(fi, 1);
+          const insertIdx = fi < ti ? ti - 1 : ti;
+          newList.splice(insertIdx, 0, moved);
+          return newList;
+        });
+
+        if (overallTierBreaks.has(targetId)) {
+          setOverallTierBreaks(prev => {
+            const next = new Set(prev);
+            next.delete(targetId);
+            next.add(active.id);
+            return next;
+          });
+          setTierLabels(prev => {
+            const next = { ...prev };
+            const label = next[targetId];
+            if (label !== undefined) {
+              delete next[targetId];
+              next[active.id] = label;
+            }
+            return next;
+          });
+        }
+
+        return;
+      }
+    }
+
+    if (active.id === targetId) return;
+
+    // Reorder the dragged player to the target position.
     setRankedPlayers(prev => {
       const fromIdx = prev.findIndex(p => p.id === active.id);
-      if (fromIdx === -1) return prev;
-      const toIdx = prev.findIndex(p => p.id === over.id);
-      if (toIdx === -1) return prev;
+      const toIdx = prev.findIndex(p => p.id === targetId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
 
       const newList = [...prev];
       const [moved] = newList.splice(fromIdx, 1);
-      // When dragging down, removing the item shifts all subsequent indices by -1
+
+      // When dragging down, removing the item shifts all subsequent indices by -1.
       const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
       newList.splice(insertIdx, 0, moved);
 
-      // Transfer tier breaks after reorder.
-      setOverallTierBreaks(prevBreaks => {
-        const set = new Set(prevBreaks);
-
-        // 1. If the dragged player had a tier break, move it to its old successor.
-        if (set.has(active.id)) {
-          set.delete(active.id);
-          const successor = prev[fromIdx + 1];
-          if (successor && successor.id !== over.id) set.add(successor.id);
-        }
-
-        // 2. If inserting before a tier-start player, take over the tier break
-        //    so the dragged player becomes the new top of that tier.
-        if (set.has(over.id)) {
-          set.delete(over.id);
-          set.add(active.id);
-        }
-
-        return set;
-      });
-
       return newList;
     });
-  }, []); // no deps — all reads via functional updaters
+
+    // If the target player owns a tier break, the dragged player was just
+    // inserted before it — which visually places the player above the break.
+    // Reassign the break to the dragged player so it becomes the new first
+    // player in that tier (landing below the break, as the user expects).
+    if (overallTierBreaks.has(targetId)) {
+      setOverallTierBreaks(prev => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        next.add(active.id);
+        return next;
+      });
+      setTierLabels(prev => {
+        const next = { ...prev };
+        const label = next[targetId];
+        if (label !== undefined) {
+          delete next[targetId];
+          next[active.id] = label;
+        }
+        return next;
+      });
+    }
+  }, [overallTierBreaks, rankedPlayers]); // needs current rows + breaks for boundary moves
 
   /* --- tier toggle --- */
   const handleTierToggle = useCallback((playerId) => {
@@ -693,15 +908,25 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
     }
   }, [rankedPlayers, fullTierMap, tierLabels]);
 
-  /* --- drag overlay player lookup --- */
-  const activePlayer = activeId ? rankedPlayers.find(p => p.id === activeId) : null;
+  /* --- drag overlay lookup --- */
+  const activeIdStr = activeId ? String(activeId) : '';
+  const isTierDragActive = activeIdStr.startsWith('tier-drag:');
+  const activePlayer = (!isTierDragActive && activeId) ? rankedPlayers.find(p => p.id === activeId) : null;
+  const activeTierDrag = isTierDragActive ? (() => {
+    const playerId = activeIdStr.slice('tier-drag:'.length);
+    const tierNum = fullTierMap.get(playerId) || 1;
+    return {
+      playerId,
+      tierLabelText: tierNumLabels.get(tierNum) || getTierLabel(tierNum),
+      tierColor: getTierColor(tierNum),
+    };
+  })() : null;
 
   /* --- empty state --- */
   if (!initialPlayers || initialPlayers.length === 0) {
     return (
       <div className={s.emptyState}>
         <div className={s.emptyHeader}>
-          <h2 className={s.headerTitle}>Player Rankings</h2>
           {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} onBeforeUpload={uploadAuthGuard} />}
         </div>
         <p className={s.emptyText}>
@@ -769,6 +994,8 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
                     onTierLabelChange={handleTierLabelChange}
                     onDelete={handleTierToggle}
                     isMobile={false}
+                    dropId={`break:${item.playerId}`}
+                    canDrag={canDrag && viewMode === 'overall' && overallTierBreaks.has(item.playerId)}
                   />
                 ) : (
                   <tr>
@@ -783,18 +1010,12 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
           if (item.type === 'tier-insert') {
             return (
               <tbody key={vRow.key}>
-                <tr
-                  className={s.tierInsertZone}
+                <TierInsertZone
+                  playerId={item.playerId}
+                  isMobile={false}
                   onClick={() => handleTierToggle(item.playerId)}
-                  title="Add tier break above this player"
-                >
-                  <td colSpan={10} className={s.tierInsertCell}>
-                    <div className={s.tierInsertIndicator}>
-                      <div className={s.tierInsertIndicatorLine} />
-                      <div className={s.tierInsertIndicatorBtn}>+</div>
-                    </div>
-                  </td>
-                </tr>
+                  dropId={`insert:${item.playerId}`}
+                />
               </tbody>
             );
           }
@@ -856,6 +1077,8 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
                   onTierLabelChange={handleTierLabelChange}
                   onDelete={handleTierToggle}
                   isMobile={true}
+                  dropId={`break:${item.playerId}`}
+                  canDrag={canDrag && viewMode === 'overall' && overallTierBreaks.has(item.playerId)}
                 />
               ) : (
                 <div className={s.tierDividerMobile} style={{ background: item.tierColor.border }}>
@@ -868,10 +1091,12 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
         if (item.type === 'tier-insert') {
           return (
             <div key={vRow.key} style={wrapperStyle}>
-              <div className={s.tierInsertZoneMobile} onClick={() => handleTierToggle(item.playerId)}>
-                <div className={s.tierInsertMobileLine} />
-                <div className={s.tierInsertMobileBtn}>+</div>
-              </div>
+              <TierInsertZone
+                playerId={item.playerId}
+                isMobile={true}
+                onClick={() => handleTierToggle(item.playerId)}
+                dropId={`insert:${item.playerId}`}
+              />
             </div>
           );
         }
@@ -897,9 +1122,6 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
     <div className={s.root}>
       {/* Header row */}
       <div className={s.headerRow}>
-        <div className={s.headerLeft}>
-          <h2 className={s.headerTitle}>Player Rankings</h2>
-        </div>
         <div className={s.headerRight}>
           {/* Search */}
           <SearchInput
@@ -915,6 +1137,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
             className={s.saveBtn}
             style={{
               background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : 'var(--gradient-accent)',
+              color: (saveStatus === 'saved' || saveStatus === 'error') ? 'white' : undefined,
               cursor: saveStatus === 'saving' ? 'wait' : 'pointer',
               opacity: saveStatus === 'saving' ? 0.7 : 1,
             }}
@@ -980,7 +1203,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
         </SortableContext>
 
         {/* Drag overlay — portal-based, tracks pointer directly to avoid virtualizer offset */}
-        <PointerTrackingOverlay activePlayer={activePlayer} displayedPlayers={displayedPlayers} />
+        <PointerTrackingOverlay activePlayer={activePlayer} activeTierDrag={activeTierDrag} displayedPlayers={displayedPlayers} />
       </DndContext>
     </div>
   );

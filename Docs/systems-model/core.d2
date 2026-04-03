@@ -39,7 +39,6 @@ P5: Archetype Classification {
 P6: Auth & Cloud Sync {
   style.fill: "#7B68EE"
   style.font-color: "#FFFFFF"
-  style.stroke-dash: 5
 }
 P7: Build & Deploy Pipeline {
   style.fill: "#7B68EE"
@@ -48,14 +47,16 @@ P7: Build & Deploy Pipeline {
 P8: Subscription Flow {
   style.fill: "#7B68EE"
   style.font-color: "#FFFFFF"
-  style.stroke-dash: 5
 }
 P9: Chrome Extension {
   style.fill: "#7B68EE"
   style.font-color: "#FFFFFF"
-  style.stroke-dash: 5
 }
 P10: Governance Process {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P11: Entries Scraper {
   style.fill: "#7B68EE"
   style.font-color: "#FFFFFF"
 }
@@ -90,6 +91,14 @@ A7: Landing Page {
   style.font-color: "#FFFFFF"
   style.stroke-dash: 5
 }
+A8: Design System {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+A9: Chrome Extension Package {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
 
 # --- External Systems (Orange) ---
 E1: Underdog Fantasy {
@@ -107,7 +116,6 @@ E3: Vercel {
 E4: Stripe {
   style.fill: "#E67E22"
   style.font-color: "#FFFFFF"
-  style.stroke-dash: 5
 }
 E5: Sleeper / DraftKings {
   style.fill: "#E67E22"
@@ -132,9 +140,9 @@ A4 -> P1: Loads saved data {style.stroke: "#333"}
 R2 -> P7: Triggers deploy {style.stroke: "#333"}
 P7 -> E3: Deploys to Vercel {style.stroke: "#333"}
 E3 -> R1: Serves application {style.stroke: "#333"}
-R1 -> P6: Signs up / logs in {style.stroke-dash: 5}
-P6 -> E2: Auth + storage {style.stroke-dash: 5}
-E2 -> A4: Cloud sync {style.stroke-dash: 5}
+R1 -> P6: Signs up / logs in {style.stroke: "#333"}
+P6 -> E2: Auth + storage {style.stroke: "#333"}
+E2 -> A4: Cloud sync {style.stroke: "#333"}
 R1 -> E1: Drafts on platform {style.stroke: "#333"}
 E1 -> A1: Exports CSV {style.stroke: "#333"}
 R2 -> R3: Directs development {style.stroke: "#333"}
@@ -145,11 +153,20 @@ P10 -> A6: Maintains artifacts {style.stroke: "#333"}
 A6 -> R3: Guides priorities {style.stroke: "#333"}
 A5 -> R3: Informs decisions {style.stroke: "#333"}
 
+# --- Newly current interactions (were aspirational) ---
+P8 -> E4: Processes payments {style.stroke: "#333"}
+R1 -> P8: Subscribes {style.stroke: "#333"}
+P8 -> P6: Requires auth {style.stroke: "#333"}
+P9 -> E1: Overlays draft page {style.stroke: "#333"}
+P9 -> P3: Reads exposure/correlation {style.stroke: "#333"}
+
+# --- New interactions (delta) ---
+P11 -> E1: Scrapes entries {style.stroke: "#333"}
+P11 -> E2: Writes roster data {style.stroke: "#333"}
+P9 -> E2: Reads portfolio data {style.stroke: "#333"}
+A8 -> A3: Styles all UI {style.stroke: "#333"}
+
 # --- Aspirational Interactions (dashed) ---
-P8 -> E4: Processes payments {style.stroke-dash: 5}
-R1 -> P8: Subscribes {style.stroke-dash: 5}
-P9 -> E1: Overlays draft page {style.stroke-dash: 5}
-P9 -> P4: Uses scoring engine {style.stroke-dash: 5}
 E5 -> A1: Exports CSV {style.stroke-dash: 5}
 R1 -> A7: Discovers product {style.stroke-dash: 5}
 A7 -> P6: Drives signup {style.stroke-dash: 5}

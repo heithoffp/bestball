@@ -204,6 +204,7 @@ if (!window.__BBM_initialized) {
             draftMeta.push({
               draftId:         draft.id,
               tournamentTitle: tr.title ?? slate.title ?? '',
+              slateTitle:      slate.title ?? '',
               draftAt:         draft.draft_at ?? draft.draftAt ?? null,
             });
           }
@@ -214,7 +215,7 @@ if (!window.__BBM_initialized) {
 
     const entries = [];
 
-    for (const { draftId, tournamentTitle, draftAt } of draftMeta) {
+    for (const { draftId, tournamentTitle, slateTitle, draftAt } of draftMeta) {
       let data;
       try {
         data = await apiFetch('https://api.underdogfantasy.com/v2/drafts/' + draftId);
@@ -238,7 +239,8 @@ if (!window.__BBM_initialized) {
 
       entries.push({
         entryId:         String(draft.id),
-        tournamentTitle,
+        tournamentTitle: draft.title ?? tournamentTitle,
+        slateTitle,
         draftDate:       draftAt,
         players:         userPicks.map(p => normalizePick(p, draft)),
       });

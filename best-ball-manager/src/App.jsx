@@ -16,6 +16,7 @@ import BetaBanner from './components/BetaBanner';
 import PlanPicker from './components/PlanPicker';
 import useMediaQuery from './hooks/useMediaQuery';
 import { trackEvent } from './utils/analytics';
+import BrandLogo from './components/BrandLogo';
 import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network } from 'lucide-react';
 
 const tabs = [
@@ -75,9 +76,16 @@ export default function App() {
   const [authModalMessage, setAuthModalMessage] = useState('');
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [isUsingDemoData, setIsUsingDemoData] = useState(false);
+  const [rosterNavContext, setRosterNavContext] = useState(null);
   const openAuthModal = useCallback((message) => {
     setAuthModalMessage(message || '');
     setShowAuthModal(true);
+  }, []);
+
+  const navigateToRosters = useCallback((context) => {
+    setRosterNavContext(context);
+    setActiveTab('rosters');
+    trackEvent('tab_viewed', { tab: 'rosters' });
   }, []);
 
   useEffect(() => {
@@ -195,7 +203,10 @@ export default function App() {
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <BrandLogo size={36} />
+          <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
+        </div>
         <div className="auth-button-group">
           {user && supabase && (
             <button
@@ -226,7 +237,7 @@ export default function App() {
               <button
                 key={key}
                 className={`tab-button${activeTab === key ? ' active' : ''}${locked ? ' locked' : ''}`}
-                onClick={() => { setActiveTab(key); trackEvent('tab_viewed', { tab: key }); }}
+                onClick={() => { if (key === 'rosters') setRosterNavContext(null); setActiveTab(key); trackEvent('tab_viewed', { tab: key }); }}
               >
                 {isMobile ? (
                   <>
@@ -255,7 +266,7 @@ export default function App() {
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
             {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} />}
-            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} />}
+            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={navigateToRosters} />}
             {activeTab === 'draftflow' && (
               canAccessFeature(tier, 'draftflow') || subLoading
                 ? <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />
@@ -263,7 +274,7 @@ export default function App() {
             )}
             {activeTab === 'rosters' && (
               canAccessFeature(tier, 'rosters') || subLoading
-                ? <RosterViewer rosterData={rosterData} />
+                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} initialFilter={rosterNavContext} />
                 : <LockedFeature featureName="Roster Viewer" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'rankings' && (

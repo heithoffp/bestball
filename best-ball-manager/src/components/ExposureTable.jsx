@@ -6,6 +6,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import TabLayout from './TabLayout';
 import { SearchInput } from './filters';
 import { NFL_TEAMS } from '../utils/nflTeams';
+import TournamentMultiSelect from './TournamentMultiSelect';
 import styles from './ExposureTable.module.css';
 
 // --- Shared Utilities ---
@@ -73,7 +74,7 @@ const SORT_OPTIONS = [
   { value: 'adpTrend', label: 'Trend' },
 ];
 
-export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
+export default function ExposureTable({ masterPlayers = [], rosterData = [], onNavigateToRosters = null }) {
   const { isMobile } = useMediaQuery();
 
   const [search, setSearch] = useState('');
@@ -84,14 +85,14 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
   const [rbFilter, setRbFilter] = useState('Any');
   const [qbFilter, setQbFilter] = useState('Any');
   const [teFilter, setTeFilter] = useState('Any');
-  const [tournamentFilter, setTournamentFilter] = useState('all');
+  const [selectedTournaments, setSelectedTournaments] = useState([]);
 
   const [expandedId, setExpandedId] = useState(null);
 
   // Reset expandedId when filters/sort/search change
   useEffect(() => {
     setExpandedId(null);
-  }, [search, sortField, sortDir, rbFilter, qbFilter, teFilter, tournamentFilter, showUndrafted]);
+  }, [search, sortField, sortDir, rbFilter, qbFilter, teFilter, selectedTournaments, showUndrafted]);
 
   const onSort = (field) => {
     if (field === sortField) {
@@ -123,7 +124,8 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
       const qbMatch = qbFilter === 'Any' || path.qb === qbFilter;
       const teMatch = teFilter === 'Any' || path.te === teFilter;
       const rosterTournament = roster[0]?.tournamentTitle || null;
-      const tournamentMatch = tournamentFilter === 'all' || rosterTournament === tournamentFilter;
+      const tournamentMatch = selectedTournaments.length === 0
+        || selectedTournaments.includes(rosterTournament);
 
       if (rbMatch && qbMatch && teMatch && tournamentMatch) {
         filtered.push({ id, roster, path });
@@ -153,12 +155,19 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
       totalFilteredEntries: filtered.length,
       playerExposures: exposures
     };
-  }, [rosterData, rbFilter, qbFilter, teFilter, tournamentFilter]);
+  }, [rosterData, rbFilter, qbFilter, teFilter, selectedTournaments]);
 
-  const allTournaments = useMemo(() => {
-    const titles = new Set();
-    rosterData.forEach(p => { if (p.tournamentTitle) titles.add(p.tournamentTitle); });
-    return ['all', ...[...titles].sort()];
+  const slateGroups = useMemo(() => {
+    const map = new Map();
+    rosterData.forEach(p => {
+      if (!p.tournamentTitle) return;
+      const slate = p.slateTitle || 'Other';
+      if (!map.has(slate)) map.set(slate, new Set());
+      map.get(slate).add(p.tournamentTitle);
+    });
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([slate, tourns]) => ({ slate, tournaments: [...tourns].sort() }));
   }, [rosterData]);
 
 
@@ -201,7 +210,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
     });
   }, [masterPlayers, playerExposures]);
 
-  const hasActiveFilter = rbFilter !== 'Any' || qbFilter !== 'Any' || teFilter !== 'Any' || tournamentFilter !== 'all';
+  const hasActiveFilter = rbFilter !== 'Any' || qbFilter !== 'Any' || teFilter !== 'Any' || selectedTournaments.length > 0;
 
   const filteredAndSorted = useMemo(() => {
     const q = normalizedQuery(search);
@@ -293,15 +302,11 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
           <span className="filter-select-label">Player / Team Search</span>
           <SearchInput value={search} onChange={setSearch} placeholder="Search name, team, pos..." />
         </div>
-        <select
-          value={tournamentFilter}
-          onChange={e => setTournamentFilter(e.target.value)}
-          className="filter-select"
-        >
-          {allTournaments.map(t => (
-            <option key={t} value={t}>{t === 'all' ? 'All Tournaments' : t}</option>
-          ))}
-        </select>
+        <TournamentMultiSelect
+          slateGroups={slateGroups}
+          selected={selectedTournaments}
+          onChange={setSelectedTournaments}
+        />
         <button
           className={`filter-chip ${showUndrafted ? 'filter-chip--active' : ''}`}
           style={showUndrafted ? { background: 'var(--accent-muted)', borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
@@ -493,6 +498,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
             <col className={styles.colCount} />
             <col className={styles.colAdp} />
             <col className={`${styles.colTrend} ${styles.trendCol}`} />
+            {onNavigateToRosters && <col className={styles.colNav} />}
           </colgroup>
 
           <thead className={styles.thead}>
@@ -504,13 +510,14 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
               <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('count')}>Count {sortArrow('count')}</th>
               <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('adp')}>ADP {sortArrow('adp')}</th>
               <th className={`${styles.headerCell} ${styles.trendCol}`} onClick={() => onSort('adpTrend')}>ADP Trend {sortArrow('adpTrend')}</th>
+              {onNavigateToRosters && <th className={styles.headerCell} />}
             </tr>
           </thead>
 
           <tbody>
             {filteredAndSorted.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <td colSpan={onNavigateToRosters ? 8 : 7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                   {masterPlayers.length === 0
                     ? 'No data loaded. Sync your portfolio from the Chrome extension to see exposure data.'
                     : 'No players match.'}
@@ -519,7 +526,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
             ) : (
               <>
                 {virtualizer.getVirtualItems().length > 0 && (
-                  <tr><td colSpan={7} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
+                  <tr><td colSpan={onNavigateToRosters ? 8 : 7} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
                 )}
                 {virtualizer.getVirtualItems().map(virtualRow => {
                   const p = filteredAndSorted[virtualRow.index];
@@ -545,11 +552,23 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [] }) {
                           <AdpSparkline history={p.history} />
                         </div>
                       </td>
+                      {onNavigateToRosters && (
+                        <td className={styles.cell} style={{ textAlign: 'center' }}>
+                          {displayCount > 0 && (
+                            <button
+                              className={styles.seeRostersBtn}
+                              onClick={e => { e.stopPropagation(); onNavigateToRosters({ players: [p.name] }); }}
+                            >
+                              Rosters →
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
                 {virtualizer.getVirtualItems().length > 0 && (
-                  <tr><td colSpan={7} style={{
+                  <tr><td colSpan={onNavigateToRosters ? 8 : 7} style={{
                     height: virtualizer.getTotalSize() - (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
                     padding: 0, border: 'none'
                   }} /></tr>

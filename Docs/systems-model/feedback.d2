@@ -103,12 +103,12 @@ FL3: FL3 Governance-Development\n(Balancing, Active) {
   A6 -> R3: Constrains scope
 }
 
-# --- FL4: Adoption-Revenue-Investment (Reinforcing, Aspirational) ---
+# --- FL4: Adoption-Revenue-Investment (Reinforcing, Partially Active) ---
+# Payment infra live, no subscribers yet
 
-FL4: FL4 Adoption-Revenue\n(Reinforcing, Aspirational) {
-  style.fill: "#F5F5F5"
-  style.stroke: "#999999"
-  style.stroke-dash: 5
+FL4: FL4 Adoption-Revenue\n(Reinforcing, Partially Active) {
+  style.fill: "#F0FFF0"
+  style.stroke: "#2ECC71"
   style.font-size: 16
 
   R1b: Subscribers {
@@ -119,56 +119,80 @@ FL4: FL4 Adoption-Revenue\n(Reinforcing, Aspirational) {
   P8: Payments {
     style.fill: "#7B68EE"
     style.font-color: "#FFFFFF"
-    style.stroke-dash: 5
   }
   R2c: Dev Investment {
     style.fill: "#4A90D9"
     style.font-color: "#FFFFFF"
-    style.stroke-dash: 5
   }
   A3c: New Features {
     style.fill: "#2ECC71"
     style.font-color: "#FFFFFF"
-    style.stroke-dash: 5
   }
 
   R1b -> P8: Subscribe {style.stroke-dash: 5}
-  P8 -> R2c: Revenue funds dev {style.stroke-dash: 5}
-  R2c -> A3c: Builds features {style.stroke-dash: 5}
+  P8 -> R2c: Revenue funds dev
+  R2c -> A3c: Builds features
   A3c -> R1b: Attracts users {style.stroke-dash: 5}
 }
 
-# --- FL5: Portfolio Context Sync (Reinforcing, Aspirational) ---
+# --- FL5: Portfolio Context Sync (Reinforcing, Active) ---
+# Extension syncs entries -> Supabase -> overlay shows context during draft
 
-FL5: FL5 Portfolio Context Sync\n(Reinforcing, Aspirational) {
-  style.fill: "#F5F5F5"
-  style.stroke: "#999999"
-  style.stroke-dash: 5
+FL5: FL5 Portfolio Context Sync\n(Reinforcing, Active) {
+  style.fill: "#F0F8FF"
+  style.stroke: "#4A90D9"
   style.font-size: 16
 
   R1c: Drafter {
     style.fill: "#4A90D9"
     style.font-color: "#FFFFFF"
-    style.stroke-dash: 5
+  }
+  P11: Entries Scraper {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+  }
+  E2: Supabase {
+    style.fill: "#E67E22"
+    style.font-color: "#FFFFFF"
   }
   P9: Chrome Extension {
     style.fill: "#7B68EE"
     style.font-color: "#FFFFFF"
-    style.stroke-dash: 5
   }
-  P4: Scoring Engine {
+  P3c: Analytics Engine {
     style.fill: "#7B68EE"
     style.font-color: "#FFFFFF"
-    style.stroke-dash: 5
-  }
-  P3c: Portfolio Context {
-    style.fill: "#7B68EE"
-    style.font-color: "#FFFFFF"
-    style.stroke-dash: 5
   }
 
-  R1c -> P9: Drafts with overlay {style.stroke-dash: 5}
-  P9 -> P4: Scores candidates {style.stroke-dash: 5}
-  P4 -> P3c: Uses portfolio data {style.stroke-dash: 5}
-  P3c -> R1c: Better picks feed back {style.stroke-dash: 5}
+  R1c -> P11: Visits entries page
+  P11 -> E2: Writes roster data
+  E2 -> P9: Reads portfolio
+  P9 -> P3c: Computes exposure
+  P3c -> R1c: Shows context in overlay
+}
+
+# --- FL6: Design Consistency (Reinforcing, Active) ---
+# Token system ensures consistent styling across all components
+
+FL6: FL6 Design Consistency\n(Reinforcing, Active) {
+  style.fill: "#FFFFF0"
+  style.stroke: "#2ECC71"
+  style.font-size: 16
+
+  A8: Design System {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+  }
+  A3d: UI Components {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+  }
+  R1d: User Experience {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+  }
+
+  A8 -> A3d: Tokens style components
+  A3d -> R1d: Consistent visual quality
+  R1d -> A8: Feedback refines tokens
 }

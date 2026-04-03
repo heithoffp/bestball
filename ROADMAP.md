@@ -43,7 +43,7 @@
 ### FEAT-004: Vision Alignment Fixes
 **Status:** In Progress
 **Description:** Neutralize opinionated color scales (correlation in Draft Assistant, Uniqueness Lift in Roster Viewer), remove RB Protocol Blurbs from Draft Assistant, remove Grading System and Spike Points from Roster Viewer, remove archetype target weightings, remove JaccardAnalysis tab, rename "Falling" badge to neutral "ADP Rising" label, replace Uniqueness Lift with First 6 Pick Uniqueness (Monte Carlo-based), and rename LIFT parameter to plain-English label. Each fix addresses a violation of the Mirror, Not Advisor design principle.
-**Tasks:** TASK-033, TASK-034, TASK-035, TASK-036, TASK-037, TASK-038, TASK-039, TASK-040
+**Tasks:** TASK-033, TASK-034, TASK-035, TASK-036, TASK-037, TASK-038, TASK-039, TASK-040, TASK-112, TASK-113, TASK-114, TASK-115
 
 ### FEAT-005: Re-enable Combo Analysis
 **Status:** Not Started
@@ -61,6 +61,11 @@
 **Status:** Not Started
 **Description:** CSV format validation with actionable error messages for non-Underdog formats, upload confirmation dialog with one-level undo via backup key, ADP freshness indicator showing last-updated date, and drag-and-drop file upload support.
 
+### FEAT-023: Cross-Module Roster Navigation
+**Status:** Not Started
+**Description:** Contextual "See Roster(s)" button that appears across analytical modules, allowing users to jump to the Roster Viewer tab with pre-set filters matching the insight they're exploring. Turns independent views into an interconnected analytical surface. Applies to Dashboard (player exposure, archetype segments), Exposure Analysis (player rows), Combo Analysis (stack profiles), ADP Tracker (player on chart), and Roster Construction (tree nodes). Does not apply to Roster Viewer (destination), Player Rankings (pre-draft prep), Draft Assistant (live draft), or Help Guide. Directly solves the Dashboard known limitation: "Drill-down cards do not pass filter state to destination tabs."
+**Tasks:** TASK-124, TASK-125, TASK-126
+
 ---
 
 ## EPIC-03: Chrome Extension / Draft Overlay
@@ -75,14 +80,20 @@
 **Tasks:** TASK-042, TASK-043, TASK-048, TASK-049
 
 ### FEAT-010: Draft Overlay UI
-**Status:** Complete
+**Status:** In Progress
 **Description:** Inline overlay on Underdog live draft pages showing portfolio context (exposure %, correlation) injected directly into player rows. Handles react-virtualized recycling, theme-adaptive styling, and popup toggle. Per ADR-002, displays data only — no scoring or recommendations.
-**Tasks:** TASK-046, TASK-047
+**Tasks:** TASK-046, TASK-047, TASK-096
 
 ### FEAT-011: Portfolio Context Sync
 **Status:** Not Started
 **Description:** Sync portfolio data between the web app and extension so the overlay has access to current exposure percentages, archetype distribution, and draft history for exposure-aware recommendations.
 **Tasks:** TASK-044, TASK-045
+
+### FEAT-022: Extension Setup & Trust UX
+**Status:** Not Started
+**Description:** The overlay's floating icon serves as a "confidence hub" — sync progress visibility, connectivity status with actionable errors, tournament selection for scoping overlay data, and a setup verification summary. Users open the panel, verify everything is configured and connected, close it, and draft with confidence. Addresses systems model findings F-010, F-011, F-012, F-013.
+**Depends on:** TASK-100 (floating logo button provides the UI surface)
+**Tasks:** TASK-106, TASK-107, TASK-108
 
 ---
 

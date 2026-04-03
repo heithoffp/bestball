@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import { supabase } from './supabaseClient';
 
 const TIER_LABELS = [
   'S', 'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F',
@@ -80,5 +81,25 @@ export async function saveRankingsToAssets(rankedPlayers, tierMap, tierLabels = 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Save failed' }));
     throw new Error(err.error || 'Save failed');
+  }
+
+  // Also persist to Supabase so the Chrome extension can read tier breaks
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const rankings = rankedPlayers.map((p, idx) => ({
+          name: p.name.trim().toLowerCase(),
+          rank: idx + 1,
+          tierNum: tierMap ? (tierMap.get(p.id) || 1) : 1,
+        }));
+        await supabase.from('user_rankings').upsert(
+          { user_id: user.id, rankings, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        );
+      }
+    } catch {
+      // Non-fatal — local save already succeeded
+    }
   }
 }

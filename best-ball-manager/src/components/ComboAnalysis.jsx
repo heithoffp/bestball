@@ -85,6 +85,10 @@ export default function ComboAnalysis({ rosterData = [] }) {
   const [playerSearch, setPlayerSearch] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [excludeTE, setExcludeTE] = useState(false);
+  const [excludeRB, setExcludeRB] = useState(false);
+  const [sortKey, setSortKey] = useState('stackPct');
+  const [sortDir, setSortDir] = useState('desc');
   const blurTimeout = useRef(null);
 
   // Group flat player rows into per-roster arrays
@@ -104,6 +108,10 @@ export default function ComboAnalysis({ rosterData = [] }) {
   const stackProfilesData = useMemo(() => {
     if (activeTab !== 'stacks') return null;
 
+    const allowedPositions = ['WR', 'TE', 'RB'].filter(pos =>
+      !(pos === 'TE' && excludeTE) && !(pos === 'RB' && excludeRB)
+    );
+
     const qbGroups = new Map();
 
     rosters.forEach(roster => {
@@ -119,7 +127,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
           .filter(p =>
             p.team === qb.team &&
             p.name !== qb.name &&
-            ['WR', 'TE', 'RB'].includes(p.position)
+            allowedPositions.includes(p.position)
           )
           .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -135,16 +143,23 @@ export default function ComboAnalysis({ rosterData = [] }) {
     });
 
     return Array.from(qbGroups.values())
-      .map(g => ({
-        ...g,
-        // Non-naked sorted by count desc, naked always last
-        sortedCombos: [
-          ...Array.from(g.combos.values()).filter(c => c.players.length > 0).sort((a, b) => b.count - a.count),
-          ...Array.from(g.combos.values()).filter(c => c.players.length === 0),
-        ],
-      }))
-      .sort((a, b) => b.totalDrafts - a.totalDrafts);
-  }, [rosters, activeTab]);
+      .map(g => {
+        const nakedCount = Array.from(g.combos.values())
+          .filter(c => c.players.length === 0)
+          .reduce((sum, c) => sum + c.count, 0);
+        const stackPct = ((g.totalDrafts - nakedCount) / g.totalDrafts) * 100;
+        return {
+          ...g,
+          stackPct,
+          // Non-naked sorted by count desc, naked always last
+          sortedCombos: [
+            ...Array.from(g.combos.values()).filter(c => c.players.length > 0).sort((a, b) => b.count - a.count),
+            ...Array.from(g.combos.values()).filter(c => c.players.length === 0),
+          ],
+        };
+      })
+      .sort((a, b) => b.stackPct - a.stackPct || b.totalDrafts - a.totalDrafts);
+  }, [rosters, activeTab, excludeTE, excludeRB]);
 
   // Player names present in any stack (for autocomplete)
   const allStackPlayerNames = useMemo(() => {
@@ -213,6 +228,19 @@ export default function ComboAnalysis({ rosterData = [] }) {
     setExpandedQBs(new Set());
     setPlayerSearch('');
     setSelectedPlayer('');
+    setExcludeTE(false);
+    setExcludeRB(false);
+    setSortKey('stackPct');
+    setSortDir('desc');
+  };
+
+  const handleSort = (key) => {
+    if (key === sortKey) {
+      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
   };
 
   const handleSelectPlayer = (name) => {
@@ -274,8 +302,25 @@ export default function ComboAnalysis({ rosterData = [] }) {
       {/* ── Stack Profiles ─────────────────────────────────────────────────── */}
       {activeTab === 'stacks' && (
         <>
+          {/* Position exclusion toggles + player filter */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+          <div className="filter-btn-group">
+            <button
+              className={`filter-btn-group__item${excludeTE ? ' filter-btn-group__item--active' : ''}`}
+              onClick={() => setExcludeTE(v => !v)}
+            >
+              Exclude TE
+            </button>
+            <button
+              className={`filter-btn-group__item${excludeRB ? ' filter-btn-group__item--active' : ''}`}
+              onClick={() => setExcludeRB(v => !v)}
+            >
+              Exclude RB
+            </button>
+          </div>
+
           {/* Player filter with autocomplete */}
-          <div style={{ position: 'relative', marginBottom: 8, maxWidth: 320 }}>
+          <div style={{ position: 'relative', maxWidth: 320, flex: '1 1 200px' }}>
             <input
               type="text"
               placeholder="Filter by player…"
@@ -341,28 +386,54 @@ export default function ComboAnalysis({ rosterData = [] }) {
               </div>
             )}
           </div>
+          </div>
 
           <div className="card" style={{ padding: 0, overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ background: 'var(--surface-2)', fontSize: 12, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
-                <tr>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', width: 180 }}>QB</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'left' }}>STACK DIVERSITY</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'center', width: 80 }}>DRAFTS</th>
-                </tr>
+                {(() => {
+                  const SortHeader = ({ label, colKey, align = 'left', width }) => (
+                    <th
+                      onClick={() => handleSort(colKey)}
+                      style={{
+                        padding: '12px 20px',
+                        textAlign: align,
+                        width,
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {label}{sortKey === colKey ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                    </th>
+                  );
+                  return (
+                    <tr>
+                      <SortHeader label="QB" colKey="name" width={180} />
+                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>STACK DIVERSITY</th>
+                      <SortHeader label="STACK %" colKey="stackPct" align="center" width={80} />
+                      <SortHeader label="DRAFTS" colKey="totalDrafts" align="center" width={80} />
+                    </tr>
+                  );
+                })()}
               </thead>
               <tbody>
-                {(stackProfilesData ?? [])
-                  .filter(g => {
+                {(() => {
+                  const filtered = (stackProfilesData ?? []).filter(g => {
                     if (g.qb.team === 'N/A') return false;
-                    // Show QB if it has at least one qualifying stack segment
                     const qualifying = g.sortedCombos.filter(c => c.count >= minCount && c.players.length > 0);
                     if (qualifying.length === 0) return false;
-                    // If player filter active, QB must have a qualifying stack with that player
                     if (selectedPlayer) return qualifying.some(c => c.players.some(p => p.name === selectedPlayer));
                     return true;
-                  })
-                  .map(group => {
+                  });
+                  const sorted = [...filtered].sort((a, b) => {
+                    let cmp = 0;
+                    if (sortKey === 'stackPct') cmp = a.stackPct - b.stackPct;
+                    else if (sortKey === 'totalDrafts') cmp = a.totalDrafts - b.totalDrafts;
+                    else if (sortKey === 'name') cmp = a.qb.name.localeCompare(b.qb.name);
+                    return sortDir === 'desc' ? -cmp : cmp;
+                  });
+                  return sorted.map(group => {
                     const isExpanded = expandedQBs.has(group.qb.name);
 
                     // Bar segments: filter by minCount, exclude naked, reorder if player active
@@ -445,6 +516,10 @@ export default function ComboAnalysis({ rosterData = [] }) {
                           </td>
 
                           <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 700, fontSize: 15 }}>
+                            {group.stackPct.toFixed(1)}%
+                          </td>
+
+                          <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 700, fontSize: 15 }}>
                             {group.totalDrafts}
                           </td>
                         </tr>
@@ -487,7 +562,8 @@ export default function ComboAnalysis({ rosterData = [] }) {
                         )}
                       </React.Fragment>
                     );
-                  })}
+                  });
+                })()}
               </tbody>
             </table>
           </div>

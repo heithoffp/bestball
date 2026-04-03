@@ -4,27 +4,58 @@
 
 | TASK-057 | Redesign Combo Analysis tab — Stack Profiles, Team Stacks, QB Pairs |
 | TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list |
-
+| TASK-099 | Draft overlay — show tier breaks from PlayerRankings when sorted by My Rank |
+| TASK-100 | Draft overlay — floating logo button in bottom-left for configuration |
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
 | TASK-057 | Redesign Combo Analysis tab — Stack Profiles, Team Stacks, QB Pairs | In Progress | P2 | [Plan](docs/plans/TASK-057.md) | No |
-| TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list | In Progress | P2 | [Plan](docs/plans/TASK-093.md) | No |
 | TASK-061 | Migrate AdpTimeSeries, DraftFlowAnalysis, PlayerRankings to shared filter system | Todo | P2 | [Plan](docs/plans/TASK-061.md) — Draft | No |
-| TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric | Todo | P3 | [Plan](docs/plans/TASK-039.md) — Draft | No |
-| TASK-087 | PlayerRankings: Add "Reset to ADP order" button | Todo | P3 | [Plan](docs/plans/TASK-087.md) — Draft | No |
+| TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list | In Progress | P2 | [Plan](docs/plans/TASK-093.md) | No |
+| TASK-099 | Draft overlay — show tier breaks from PlayerRankings when sorted by My Rank | In Progress | P2 | [Plan](docs/plans/TASK-099.md) | No |
+| TASK-103 | Extension — start/stop overlay on SPA navigation to/from draft pages | Todo | P2 | [Plan](docs/plans/TASK-103.md) — Draft | No |
+| TASK-106 | Overlay confidence panel — sync progress and connectivity status | Todo | P2 | [Plan](docs/plans/TASK-106.md) — Draft | No |
+| TASK-107 | Overlay confidence panel — tournament selection filter | Todo | P2 | [Plan](docs/plans/TASK-107.md) — Draft | No |
+| TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric (Parent — see TASK-112–115) | Todo | P2 | [Plan](docs/plans/TASK-039.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
 | TASK-052 | Portfolio-wide pick quality summary — value/reach histogram by ADP round | Todo | P3 | [Plan](docs/plans/TASK-052.md) — Draft | No |
 | TASK-053 | Inter-roster similarity score — portfolio diversity metric | Todo | P3 | [Plan](docs/plans/TASK-053.md) — Draft | No |
 | TASK-069 | Migrate hardcoded font-size values to typography tokens | Todo | P3 | [Plan](docs/plans/TASK-069.md) — Draft | No |
 | TASK-075 | Migrate ComboAnalysis inline styles to CSS module | Todo | P3 | [Plan](docs/plans/TASK-075.md) — Draft | No |
+| TASK-087 | PlayerRankings: Add "Reset to ADP order" button | Todo | P3 | [Plan](docs/plans/TASK-087.md) — Draft | No |
+| TASK-097 | Draft overlay — stack and ADP riser badges on player rows | Todo | P3 | [Plan](docs/plans/TASK-097.md) — Draft | No |
+| TASK-100 | Draft overlay — floating logo button in bottom-left for configuration | In Progress | P3 | [Plan](docs/plans/TASK-100.md) | No |
+| TASK-102 | Extension sync — improve error message when already on Underdog completed entries page | Todo | P3 | [Plan](docs/plans/TASK-102.md) — Draft | No |
+| TASK-108 | Overlay confidence panel — setup verification and settings | Todo | P3 | [Plan](docs/plans/TASK-108.md) — Draft | No |
+| TASK-125 | Cross-module roster nav — Dashboard integration | Todo | P3 | [Plan](docs/plans/TASK-125.md) — Draft | No |
+| TASK-126 | Cross-module roster nav — Combo Analysis, ADP Tracker, Roster Construction | Todo | P3 | [Plan](docs/plans/TASK-126.md) — Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-115 | Uniqueness engine JS integration + UI in RosterViewer | Done | P2 | [Plan](docs/archive/plans/TASK-115.md) | Yes | 2026-04-03 |
+| TASK-124 | Cross-module roster nav — core mechanism + Exposure Analysis integration | Done | P2 | [Plan](docs/archive/plans/TASK-124.md) | Yes | 2026-04-03 |
+| TASK-114 | Uniqueness simulation — temporal weighting across ADP epochs | Done | P2 | [Plan](docs/archive/plans/TASK-114.md) | Yes | 2026-04-03 |
+| TASK-122 | Integrate calibration into simulation engine | Done | P3 | [Plan](docs/archive/plans/TASK-122.md) | Yes | 2026-04-03 |
+| TASK-123 | Refine sigma calibration — plateau cap, round stratification, mean shift, position sigma_max | Done | P3 | [Plan](docs/archive/plans/TASK-123.md) | Yes | 2026-04-03 |
+| TASK-121 | Validate fitted model against held-out historical data | Done | P3 | [Plan](docs/archive/plans/TASK-121.md) | Yes | 2026-04-03 |
+| TASK-120 | Fit roster-state position modifiers and team stacking multipliers | Done | P2 | [Plan](docs/archive/plans/TASK-120.md) | Yes | 2026-04-03 |
+| TASK-119 | Fit σ(ADP) from extracted picks | Done | P2 | [Plan](docs/archive/plans/TASK-119.md) | Yes | 2026-04-03 |
+| TASK-118 | ETL — Stream BBM 6 picks into clean intermediate format | Done | P2 | [Plan](docs/archive/plans/TASK-118.md) | Yes | 2026-04-03 |
+| TASK-117 | Optimize simulation engine performance — target < 300s for 100K sims | Done | P3 | [Plan](docs/archive/plans/TASK-117.md) | Yes | 2026-04-03 |
+| TASK-112 | Uniqueness simulation engine MVP — Python Conditional Logit draft simulator | Done | P2 | [Plan](docs/archive/plans/TASK-112.md) | Yes | 2026-04-03 |
+| TASK-116 | Draggable tier breaks in PlayerRankings | Done | P3 | [Plan](docs/archive/plans/TASK-116.md) | Yes | 2026-04-03 |
+| TASK-111 | Stack Profiles — Sortable table columns (QB, Stack %, Drafts) | Done | P3 | [Plan](docs/archive/plans/TASK-111.md) | Yes | 2026-04-03 |
+| TASK-110 | Stack Profiles — Stack % column, default sort, and full button labels | Done | P3 | [Plan](docs/archive/plans/TASK-110.md) | Yes | 2026-04-03 |
+| TASK-109 | Stack Profiles — Excludes TE / Excludes RB position filters | Done | P3 | [Plan](docs/archive/plans/TASK-109.md) | Yes | 2026-04-03 |
+| TASK-105 | Tournament filter — multi-select with slate-grouped checklist | Done | P3 | [Plan](docs/archive/plans/TASK-105.md) | Yes | 2026-04-03 |
+| TASK-104 | UI housecleaning — ADP filter, column spacing, Rankings title, Save button, hierarchical tournament dropdown | Done | P3 | [Plan](docs/archive/plans/TASK-104.md) | Yes | 2026-04-03 |
+| TASK-098 | Fix extension sync — tournament names are wrong | Done | P2 | [Plan](docs/archive/plans/TASK-098.md) | Yes | 2026-04-03 |
+| TASK-101 | Fix overlay headers (Exp/Corr) not rendering on navigate-to-draft from preview window | Done | P2 | [Plan](docs/archive/plans/TASK-101.md) | Yes | 2026-04-03 |
+| TASK-096 | Live draft overlay — wire up exposure and correlation from portfolio data | Done | P2 | [Plan](docs/archive/plans/TASK-096.md) | Yes | 2026-04-03 |
 | TASK-095 | Fix RB_DOUBLE_ANCHOR color clash and missing filter options | Done | P3 | [Plan](docs/archive/plans/TASK-095.md) | Yes | 2026-04-02 |
 | TASK-094 | Add RB_DOUBLE_ANCHOR archetype to roster classification | Done | P3 | [Plan](docs/archive/plans/TASK-094.md) | Yes | 2026-04-02 |
 | TASK-092 | Fix PlayerRankings tab performance — drag render, adpLookup dep, measureElement, handleDragEnd | Done | P2 | [Plan](docs/archive/plans/TASK-092.md) | Yes | 2026-04-02 |
@@ -110,3 +141,4 @@
 |----|-------|--------|----------|------|--------|
 | TASK-047 | Draft overlay scoring | Cancelled | P2 | [Plan](docs/plans/TASK-047.md) | Removed per ADR-002 — Mirror-Not-Advisor is now unconditional; no scoring in overlay |
 | TASK-067 | Update app header branding — 'BEST BALL EXPOSURES' → 'BEST BALL PORTFOLIO MANAGER' | Cancelled | P2 | [Plan](docs/plans/TASK-067.md) | Domain is bestballexposures.com — header branding is correct as-is |
+| TASK-113 | Uniqueness simulation — behavioral multipliers (ω_struct, ω_stack) | Cancelled | P2 | [Plan](docs/plans/TASK-113.md) | Superseded by TASK-120 + TASK-122 — ω_struct covered by empirically fitted position_modifiers, ω_stack covered by empirically fitted stacking_multipliers |
