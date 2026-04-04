@@ -1,0 +1,77 @@
+=== Best Ball Uniqueness Simulation ===
+  Simulations: 833,334
+  Teams: 12, Rounds: 6
+  Calibration: sigma_slope=0.12011  sigma_intercept=0.09875
+               sigma_min=1.4202  sigma_max=4.6335
+               position_modifiers=True  stacking=True
+  ADP cutoff: 120.0
+  Seed: 42
+
+Running simulation...
+  Multi-epoch mode: 9 epochs (one per ISO week)
+
+  Epoch 1/9: 2026-02-08  (92,592 sims, seed=42, 120 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 2/9: 2026-02-15  (92,592 sims, seed=43, 119 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 3/9: 2026-02-21  (92,592 sims, seed=44, 118 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 4/9: 2026-03-01  (92,592 sims, seed=45, 118 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 5/9: 2026-03-07  (92,592 sims, seed=46, 118 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 6/9: 2026-03-15  (92,592 sims, seed=47, 118 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 7/9: 2026-03-22  (92,592 sims, seed=48, 117 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 8/9: 2026-03-28  (92,592 sims, seed=49, 119 players)
+  Simulation 18,518 / 92,592
+  Simulation 37,036 / 92,592
+  Simulation 55,554 / 92,592
+  Simulation 74,072 / 92,592
+  Simulation 92,590 / 92,592
+  Epoch 9/9: 2026-04-02  (92,598 sims, seed=50, 118 players)
+  Simulation 18,519 / 92,598
+  Simulation 37,038 / 92,598
+  Simulation 55,557 / 92,598
+  Simulation 74,076 / 92,598
+  Simulation 92,595 / 92,598
+
+  Completed in 3408.2s
+  Total rosters: 10,000,008
+  Total unique combos: 1,182,917
+
+Generating outputs...
+  Tier 1: C:\Software\Personal\BestBall\simulation\output\tier1_frequency.json
+  Tier 2: C:\Software\Personal\BestBall\simulation\output\tier2_conditional.json
+
+
+Done.

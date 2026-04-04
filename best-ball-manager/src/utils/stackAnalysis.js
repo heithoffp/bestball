@@ -28,59 +28,49 @@ export function analyzeStack(player, currentPicks) {
   if (playerPos === 'QB' && (wrs.length > 0 || tes.length > 0)) {
     const passTargets = wrs.length + tes.length;
     if (passTargets >= 2) {
-      stackType = '\uD83D\uDD25 ELITE OVERSTACK';
+      stackType = 'QB MULTI';
       priority = 100;
-      color = '#a855f7';
-      icon = '\u26A1\u26A1';
+      color = '#BF44EF';
     } else {
-      stackType = '\u26A1 ELITE STACK';
+      stackType = 'QB STACK';
       priority = 90;
-      color = '#8b5cf6';
-      icon = '\u26A1';
+      color = '#BF44EF';
     }
   } else if ((playerPos === 'WR' || playerPos === 'TE') && qbs.length > 0) {
     const passTargets = wrs.length + tes.length;
     if (passTargets >= 1) {
-      stackType = '\uD83D\uDD25 ELITE OVERSTACK';
+      stackType = 'QB MULTI';
       priority = 100;
-      color = '#a855f7';
-      icon = '\u26A1\u26A1';
+      color = '#BF44EF';
     } else {
-      stackType = '\u26A1 ELITE STACK';
+      stackType = 'QB STACK';
       priority = 90;
-      color = '#8b5cf6';
-      icon = '\u26A1';
+      color = '#BF44EF';
     }
   } else if (playerPos === 'WR' && wrs.length >= 1) {
-    stackType = `\uD83D\uDC8E WR OVERSTACK (${wrs.length + 1})`;
+    stackType = `WR \u00D7${wrs.length + 1}`;
     priority = 80;
-    color = '#06b6d4';
-    icon = '\uD83D\uDC8E';
+    color = '#F59E0B';
   } else if (playerPos === 'TE' && tes.length >= 1) {
-    stackType = `\uD83D\uDC8E TE OVERSTACK (${tes.length + 1})`;
+    stackType = `TE \u00D7${tes.length + 1}`;
     priority = 80;
-    color = '#06b6d4';
-    icon = '\uD83D\uDC8E';
+    color = '#3B82F6';
   } else if (playerPos === 'RB' && rbs.length >= 1) {
-    stackType = `\uD83D\uDD04 RB STACK (${rbs.length + 1})`;
+    stackType = `RB \u00D7${rbs.length + 1}`;
     priority = 60;
-    color = '#f59e0b';
-    icon = '\uD83D\uDD04';
+    color = '#10B981';
   } else if (playerPos === 'RB' && (wrs.length > 0 || tes.length > 0)) {
-    stackType = '\u25CB Game Stack';
+    stackType = 'GAME';
     priority = 40;
-    color = '#64748b';
-    icon = '\u25CB';
+    color = '#8A9BB5';
   } else if ((playerPos === 'WR' || playerPos === 'TE') && rbs.length > 0) {
-    stackType = '\u25CB Game Stack';
+    stackType = 'GAME';
     priority = 40;
-    color = '#64748b';
-    icon = '\u25CB';
+    color = '#8A9BB5';
   } else {
-    stackType = '\u25CF Stack';
+    stackType = 'STACK';
     priority = 30;
-    color = '#64748b';
-    icon = '\u25CF';
+    color = '#5A6A80';
   }
 
   return {

@@ -182,6 +182,8 @@ if (!window.__BBM_initialized) {
   }
 
   async function syncEntries() {
+    window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'discovery' }, '*');
+
     await resolveUnderdogUserId();
 
     const { slates } = await apiFetch('https://api.underdogfantasy.com/v2/user/completed_slates');
@@ -213,13 +215,18 @@ if (!window.__BBM_initialized) {
       }
     }
 
+    const total   = draftMeta.length;
     const entries = [];
 
-    for (const { draftId, tournamentTitle, slateTitle, draftAt } of draftMeta) {
+    window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: 0, total }, '*');
+
+    for (let i = 0; i < draftMeta.length; i++) {
+      const { draftId, tournamentTitle, slateTitle, draftAt } = draftMeta[i];
       let data;
       try {
         data = await apiFetch('https://api.underdogfantasy.com/v2/drafts/' + draftId);
       } catch {
+        window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: i + 1, total }, '*');
         continue;
       }
 
@@ -228,7 +235,10 @@ if (!window.__BBM_initialized) {
       const userId       = window.__BBM.userId;
       const draftEntries = draft.draft_entries ?? draft.draftEntries ?? [];
       const userEntry    = draftEntries.find(e => (e.user_id ?? e.userId) === userId);
-      if (!userEntry) continue;
+      if (!userEntry) {
+        window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: i + 1, total }, '*');
+        continue;
+      }
 
       // Load players + appearances for this slate (no-op if already loaded)
       if (slateId) await ensureSlateLoaded(slateId);
@@ -244,6 +254,8 @@ if (!window.__BBM_initialized) {
         draftDate:       draftAt,
         players:         userPicks.map(p => normalizePick(p, draft)),
       });
+
+      window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: i + 1, total }, '*');
     }
 
     return entries;

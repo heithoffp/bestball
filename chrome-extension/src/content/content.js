@@ -28,8 +28,8 @@ if (adapter) {
     });
   }
 
-  // Initialize draft overlay if on a draft page
-  initDraftOverlay();
+  // Initialize draft overlay — pass sync callback so the overlay panel can trigger entry scraping
+  initDraftOverlay(() => adapter.getEntries().then(entries => writeEntries(entries)));
 
   // Handle sync request from popup
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

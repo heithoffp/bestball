@@ -73,21 +73,16 @@ export function exportRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
 
 export async function saveRankingsToAssets(rankedPlayers, tierMap, tierLabels = {}) {
   const csv = buildRankingsCSV(rankedPlayers, tierMap, tierLabels);
-  const res = await fetch('/__save-rankings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: csv,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Save failed' }));
-    throw new Error(err.error || 'Save failed');
-  }
 
-  // Also persist to Supabase so the Chrome extension can read tier breaks
+  // Persist to Supabase storage + IndexedDB so rankings restore on next load
   if (supabase) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { syncSaveFile } = await import('./storage');
+      await syncSaveFile({ id: 'rankings', type: 'rankings', filename: 'rankings.csv', text: csv, userId: user.id });
+
+      // Also save to user_rankings table so the Chrome extension can read tier breaks
+      try {
         const rankings = rankedPlayers.map((p, idx) => ({
           name: p.name.trim().toLowerCase(),
           rank: idx + 1,
@@ -97,9 +92,21 @@ export async function saveRankingsToAssets(rankedPlayers, tierMap, tierLabels = 
           { user_id: user.id, rankings, updated_at: new Date().toISOString() },
           { onConflict: 'user_id' }
         );
+      } catch {
+        // Non-fatal — storage save already succeeded
       }
-    } catch {
-      // Non-fatal — local save already succeeded
     }
+  }
+
+  // Dev-only: also write to local asset file via Vite dev server (non-fatal in production)
+  try {
+    const res = await fetch('/__save-rankings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: csv,
+    });
+    if (!res.ok) throw new Error('Dev server save failed');
+  } catch {
+    // Expected in production — endpoint only exists in Vite dev server
   }
 }

@@ -47,9 +47,9 @@ function clvLabel(pct) {
  */
 function formatUniqueness(score, loading) {
   if (loading || !score) return { text: '—', muted: true };
-  const m = (score.totalRosters / 1_000_000).toFixed(1) + 'M';
-  if (score.found) return { text: `${score.count} / ${m}`, muted: false };
-  return { text: `< 1 / ${m}`, muted: false };
+  if (!score.found) return { text: '0.0', muted: false };
+  const perMillion = (score.count / (score.totalRosters / 1_000_000)).toFixed(1);
+  return { text: perMillion, muted: false };
 }
 
 // ── Archetype display helpers ─────────────────────────────────────────────────
@@ -129,7 +129,7 @@ const CHIP_GROUPS = [
 const SORT_OPTIONS = [
   { value: 'draftDate', label: 'Draft Date' },
   { value: 'avgCLV', label: 'Avg CLV' },
-  { value: 'uniqueness', label: 'Uniqueness' },
+  { value: 'uniqueness', label: 'Early Combo Rate' },
 ];
 
 
@@ -291,7 +291,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
       const hit = key && tier1 ? lookupTier1(key, tier1) : null;
       byId[r.entry_id] = hit
         ? { found: true, count: hit.count, totalRosters: hit.totalRosters }
-        : { found: false, totalRosters: tier1?.metadata?.total_rosters ?? 1200000 };
+        : { found: false, totalRosters: tier1?.metadata?.total_rosters ?? 10000000 };
     });
     return byId;
   }, [rosters, tier1]);
@@ -805,8 +805,9 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
               className={`${css.th} ${css.colUniq}`}
               style={{ textAlign: 'center', color: '#7dffcc' }}
               onClick={() => toggleSort('uniqueness')}
+              title="Expected occurrences of this roster's first-4-round player combo per 1 million simulated drafts"
             >
-              Uniqueness <SortIcon col="uniqueness" sortKey={sortKey} sortDir={sortDir} />
+              Early Combo Rate / 1M <SortIcon col="uniqueness" sortKey={sortKey} sortDir={sortDir} />
             </th>
             <th className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center', cursor: 'default' }}></th>

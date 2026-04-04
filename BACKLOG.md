@@ -2,22 +2,19 @@
 
 ## Now
 
-| TASK-057 | Redesign Combo Analysis tab — Stack Profiles, Team Stacks, QB Pairs |
-| TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list |
-| TASK-099 | Draft overlay — show tier breaks from PlayerRankings when sorted by My Rank |
-| TASK-100 | Draft overlay — floating logo button in bottom-left for configuration |
+| TASK-130 | Sync progress bar in FAB overlay panel |
+| TASK-133 | Rankings tab not loading saved rankings from Supabase on startup |
+
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
-| TASK-057 | Redesign Combo Analysis tab — Stack Profiles, Team Stacks, QB Pairs | In Progress | P2 | [Plan](docs/plans/TASK-057.md) | No |
+| TASK-133 | Rankings tab not loading saved rankings from Supabase on startup | In Progress | P2 | [Plan](docs/plans/TASK-133.md) | No |
+| TASK-131 | Refactor draft-overlay.js to be adapter-agnostic | Todo | P2 | [Plan](docs/plans/TASK-131.md) — Pending Approval | No |
+| TASK-132 | DraftKings adapter — entries scraping + draft overlay | Todo | P2 | [Plan](docs/plans/TASK-132.md) — Draft | No |
 | TASK-061 | Migrate AdpTimeSeries, DraftFlowAnalysis, PlayerRankings to shared filter system | Todo | P2 | [Plan](docs/plans/TASK-061.md) — Draft | No |
-| TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list | In Progress | P2 | [Plan](docs/plans/TASK-093.md) | No |
-| TASK-099 | Draft overlay — show tier breaks from PlayerRankings when sorted by My Rank | In Progress | P2 | [Plan](docs/plans/TASK-099.md) | No |
-| TASK-103 | Extension — start/stop overlay on SPA navigation to/from draft pages | Todo | P2 | [Plan](docs/plans/TASK-103.md) — Draft | No |
-| TASK-106 | Overlay confidence panel — sync progress and connectivity status | Todo | P2 | [Plan](docs/plans/TASK-106.md) — Draft | No |
-| TASK-107 | Overlay confidence panel — tournament selection filter | Todo | P2 | [Plan](docs/plans/TASK-107.md) — Draft | No |
 | TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric (Parent — see TASK-112–115) | Todo | P2 | [Plan](docs/plans/TASK-039.md) — Draft | No |
+| TASK-130 | Sync progress bar in FAB overlay panel | In Progress | P3 | [Plan](docs/plans/TASK-130.md) | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
 | TASK-052 | Portfolio-wide pick quality summary — value/reach histogram by ADP round | Todo | P3 | [Plan](docs/plans/TASK-052.md) — Draft | No |
 | TASK-053 | Inter-roster similarity score — portfolio diversity metric | Todo | P3 | [Plan](docs/plans/TASK-053.md) — Draft | No |
@@ -25,7 +22,6 @@
 | TASK-075 | Migrate ComboAnalysis inline styles to CSS module | Todo | P3 | [Plan](docs/plans/TASK-075.md) — Draft | No |
 | TASK-087 | PlayerRankings: Add "Reset to ADP order" button | Todo | P3 | [Plan](docs/plans/TASK-087.md) — Draft | No |
 | TASK-097 | Draft overlay — stack and ADP riser badges on player rows | Todo | P3 | [Plan](docs/plans/TASK-097.md) — Draft | No |
-| TASK-100 | Draft overlay — floating logo button in bottom-left for configuration | In Progress | P3 | [Plan](docs/plans/TASK-100.md) | No |
 | TASK-102 | Extension sync — improve error message when already on Underdog completed entries page | Todo | P3 | [Plan](docs/plans/TASK-102.md) — Draft | No |
 | TASK-108 | Overlay confidence panel — setup verification and settings | Todo | P3 | [Plan](docs/plans/TASK-108.md) — Draft | No |
 | TASK-125 | Cross-module roster nav — Dashboard integration | Todo | P3 | [Plan](docs/plans/TASK-125.md) — Draft | No |
@@ -36,6 +32,17 @@
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-134 | Roster Viewer — rename Uniqueness to Early Combo Rate with tooltip and 1-decimal display | Done | P3 | [Plan](docs/archive/plans/TASK-134.md) | Yes | 2026-04-04 |
+| TASK-128 | Scale simulation to 10M rosters and report uniqueness as X per million | Done | P2 | [Plan](docs/archive/plans/TASK-128.md) | Yes | 2026-04-04 |
+| TASK-129 | Move sign-in, sign-out, and sync into FAB overlay panel | Done | P2 | [Plan](docs/archive/plans/TASK-129.md) | No | 2026-04-04 |
+| TASK-107 | Overlay confidence panel — tournament selection filter | Done | P2 | [Plan](docs/archive/plans/TASK-107.md) | Yes | 2026-04-04 |
+| TASK-127 | Refit simulation model to first-4-round data only | Done | P2 | [Plan](docs/archive/plans/TASK-127.md) | Yes | 2026-04-04 |
+| TASK-106 | Overlay confidence panel — sync progress and connectivity status | Done | P2 | [Plan](docs/archive/plans/TASK-106.md) | Yes | 2026-04-04 |
+| TASK-103 | Extension — start/stop overlay on SPA navigation to/from draft pages | Done | P2 | [Plan](docs/archive/plans/TASK-103.md) | Yes | 2026-04-03 |
+| TASK-099 | Draft overlay — show tier breaks from PlayerRankings when sorted by My Rank | Done | P2 | [Plan](docs/archive/plans/TASK-099.md) | Yes | 2026-04-03 |
+| TASK-100 | Draft overlay — floating logo button in bottom-left for configuration | Done | P3 | [Plan](docs/archive/plans/TASK-100.md) | Yes | 2026-04-03 |
+| TASK-093 | PlayerRankings: Fix drag-and-drop overlay offset in virtualized list | Done | P2 | [Plan](docs/archive/plans/TASK-093.md) | Yes | 2026-04-03 |
+| TASK-057 | Redesign Combo Analysis tab — Stack Profiles, Team Stacks, QB Pairs | Done | P2 | [Plan](docs/archive/plans/TASK-057.md) | Yes | 2026-04-03 |
 | TASK-115 | Uniqueness engine JS integration + UI in RosterViewer | Done | P2 | [Plan](docs/archive/plans/TASK-115.md) | Yes | 2026-04-03 |
 | TASK-124 | Cross-module roster nav — core mechanism + Exposure Analysis integration | Done | P2 | [Plan](docs/archive/plans/TASK-124.md) | Yes | 2026-04-03 |
 | TASK-114 | Uniqueness simulation — temporal weighting across ADP epochs | Done | P2 | [Plan](docs/archive/plans/TASK-114.md) | Yes | 2026-04-03 |

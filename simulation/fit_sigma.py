@@ -76,6 +76,10 @@ def main():
     df = pd.read_csv(INPUT_PATH)
     print(f"  Loaded {len(df):,} rows.")
 
+    # Filter to rounds 1-4 only — combo key scope; round 5-6 behavior is irrelevant noise
+    df = df[df["team_pick_number"] <= 4].copy()
+    print(f"  Filtered to rounds 1-4: {len(df):,} rows remaining.")
+
     # Drop rows with invalid ADP (DEF/K sometimes have ADP=0 or very small)
     before = len(df)
     df = df[df["projection_adp"] > 0].copy()
@@ -206,7 +210,7 @@ def main():
     print(f"  {'Round':>6}  {'Bands':>6}  {'sigma_max':>10}")
     print("  " + "-" * 28)
     round_sigma_max = {}
-    for rnd in range(1, 7):
+    for rnd in range(1, 5):
         rnd_df = df[df["team_pick_number"] == rnd].copy()
         rnd_df["adp_band_mid"] = pd.cut(
             rnd_df["projection_adp"], bins=bins, labels=midpoints, right=True
@@ -291,6 +295,7 @@ def main():
         existing = {}
 
     existing.update({
+        "training_rounds": 4,
         "sigma_slope": sigma_slope,
         "sigma_intercept": sigma_intercept,
         "sigma_min": sigma_min,

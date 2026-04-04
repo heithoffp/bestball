@@ -290,6 +290,11 @@ def fit_stacking_multipliers(augmented: list[dict], adp_path: str) -> dict:
 
 def main():
     rows = load_picks(PICKS_PATH)
+
+    # Filter to rounds 1-4 only — combo key scope; round 5-6 behavior is irrelevant noise
+    rows = [r for r in rows if int(r["team_pick_number"]) <= 4]
+    print(f"  After round filter (<=4): {len(rows):,} rows.")
+
     augmented = reconstruct_roster_states(rows)
 
     position_modifiers = fit_position_modifiers(augmented)

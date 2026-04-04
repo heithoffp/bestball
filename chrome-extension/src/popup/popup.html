@@ -13,48 +13,7 @@
   <div class="container">
     <h1>Best Ball Manager</h1>
     <p class="version">v0.1.0</p>
-
-    <div class="status-section">
-      <div class="status-row">
-        <span class="status-label">Status</span>
-        <span id="connection-status" class="status-value">Not connected</span>
-      </div>
-      <div class="status-row">
-        <span class="status-label">Platform</span>
-        <span id="platform-status" class="status-value">--</span>
-      </div>
-      <div class="status-row">
-        <span class="status-label">Last sync</span>
-        <span id="sync-status" class="status-value">Never</span>
-      </div>
-    </div>
-
-    <div id="auth-form" class="auth-section" hidden>
-      <p class="auth-label">Sign in to sync your portfolio</p>
-      <input id="auth-email" type="email" placeholder="Email" autocomplete="email" />
-      <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password" />
-      <button id="sign-in-btn">Sign In</button>
-      <p id="auth-error" class="auth-error" hidden></p>
-    </div>
-
-    <div id="auth-info" class="auth-section" hidden>
-      <p id="auth-user-email" class="auth-user"></p>
-      <span id="auth-tier" class="tier-badge" hidden></span>
-      <button id="sync-btn">Sync Now</button>
-      <p id="sync-result" class="sync-result" hidden></p>
-      <button id="sign-out-btn">Sign Out</button>
-    </div>
-
-    <div class="overlay-section">
-      <div class="status-row">
-        <span class="status-label">Draft Overlay</span>
-        <label class="toggle">
-          <input id="overlay-toggle" type="checkbox" checked>
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </div>
+    <p class="popup-hint">Open Underdog Fantasy to access the draft overlay.</p>
   </div>
-  <script src="popup.js" type="module"></script>
 </body>
 </html>

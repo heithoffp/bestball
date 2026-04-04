@@ -954,11 +954,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
             {stackInfo && (
               <span className={styles.stackBadge} style={{
                 color: stackInfo.color,
-                background: stackInfo.priority >= 90
-                  ? `linear-gradient(135deg, ${stackInfo.color}22, ${stackInfo.color}33)`
-                  : `${stackInfo.color}22`,
-                border: stackInfo.priority >= 90 ? `1.5px solid ${stackInfo.color}` : 'none',
-                boxShadow: stackInfo.priority >= 90 ? `0 0 12px ${stackInfo.color}44` : 'none',
+                background: `${stackInfo.color}1A`,
               }}>
                 {stackInfo.type}
               </span>
@@ -1061,14 +1057,10 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
             </span>
             {stackInfo && (
               <span
-                className={`${styles.stackBadge} ${stackInfo.priority >= 90 ? styles.stackBadgeElite : ''}`}
+                className={styles.stackBadge}
                 style={{
-                  background: stackInfo.priority >= 90
-                    ? `linear-gradient(135deg, ${stackInfo.color}22, ${stackInfo.color}33)`
-                    : `${stackInfo.color}22`,
                   color: stackInfo.color,
-                  borderColor: stackInfo.priority >= 90 ? stackInfo.color : undefined,
-                  boxShadow: stackInfo.priority >= 90 ? `0 0 12px ${stackInfo.color}44` : 'none'
+                  background: `${stackInfo.color}1A`,
                 }}
               >
                 {stackInfo.type}

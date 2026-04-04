@@ -34,6 +34,13 @@ h1 {
   font-family: 'JetBrains Mono', monospace;
 }
 
+.popup-hint {
+  margin-top: 16px;
+  color: #8A9BB5;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* ── Status Section ── */
 .status-section {
   margin-top: 16px;

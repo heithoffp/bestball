@@ -138,6 +138,12 @@ export default function App() {
           setRosterData([]);
           setIsUsingDemoData(false);
         }
+        // Restore user's saved rankings from Supabase (overrides ADP default)
+        const savedRankings = await syncGetFile('rankings', user.id);
+        if (savedRankings) {
+          const { parseCSVText } = await import('./utils/csv');
+          setRankingsSource(await parseCSVText(savedRankings.text));
+        }
         setStatus({ type: '', msg: '' });
       } else {
         // Unauthenticated: read-only demo preview

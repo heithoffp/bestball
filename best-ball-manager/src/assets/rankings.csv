@@ -1,11 +1,11 @@
 id,firstName,lastName,adp,projectedPoints,positionRank,slotName,teamName,lineupStatus,byeWeek,tier,tierNum
-eec15e8b-2a0d-4693-98b9-a64aeaf975d6,Jahmyr,Gibbs,1,277.9,RB1,RB,Detroit Lions,,,S,1
-b01bb761-f415-43c6-9e28-ba81d9e75025,Bijan,Robinson,2,294.9,RB2,RB,Atlanta Falcons,,,S,1
-d0ee72eb-4443-41aa-889f-a24475b7db74,Jonathan,Taylor,3,264.4,RB3,RB,Indianapolis Colts,,,S,1
-93457447-77e6-4549-9b82-e31a83dbafef,Ja'Marr,Chase,4,247.5,WR1,WR,Cincinnati Bengals,,,S,1
-465c2f4e-57a5-457b-88ce-d2ed4d65270e,Jaxon,Smith-Njigba,5,235.1,WR2,WR,Seattle Seahawks,,,S,1
-4ddd8cfb-b50e-4272-bb28-5eab5f1c926a,Puka,Nacua,6,278.0,WR3,WR,Los Angeles Rams,,,S,1
-3d2608fd-ae3b-4d6d-9e8d-254e3c8604b1,Christian,McCaffrey,7,260.0,RB4,RB,San Francisco 49ers,,,S,1
+b01bb761-f415-43c6-9e28-ba81d9e75025,Bijan,Robinson,1,294.9,RB1,RB,Atlanta Falcons,,,S,1
+eec15e8b-2a0d-4693-98b9-a64aeaf975d6,Jahmyr,Gibbs,2,277.9,RB2,RB,Detroit Lions,,,S,1
+93457447-77e6-4549-9b82-e31a83dbafef,Ja'Marr,Chase,3,247.5,WR1,WR,Cincinnati Bengals,,,S,1
+4ddd8cfb-b50e-4272-bb28-5eab5f1c926a,Puka,Nacua,4,278.0,WR2,WR,Los Angeles Rams,,,S,1
+d0ee72eb-4443-41aa-889f-a24475b7db74,Jonathan,Taylor,5,264.4,RB3,RB,Indianapolis Colts,,,S,1
+3d2608fd-ae3b-4d6d-9e8d-254e3c8604b1,Christian,McCaffrey,6,260.0,RB4,RB,San Francisco 49ers,,,S,1
+465c2f4e-57a5-457b-88ce-d2ed4d65270e,Jaxon,Smith-Njigba,7,235.1,WR3,WR,Seattle Seahawks,,,S,1
 a4cde3b6-aafd-4dc5-a553-dd18731672c6,CeeDee,Lamb,8,222.5,WR4,WR,Dallas Cowboys,,,S,1
 b4ef5d2e-dc01-4891-94bb-1014c7ad3ef5,Amon-Ra,St. Brown,9,227.5,WR5,WR,Detroit Lions,,,S,1
 bf1dcb04-74d5-4b96-a35d-17bb278191af,Justin,Jefferson,10,203.6,WR6,WR,Minnesota Vikings,,,S,1
