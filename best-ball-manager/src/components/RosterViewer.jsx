@@ -156,14 +156,15 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   const [sortDir, setSortDir]               = useState('desc');
   const alpha = 0.5; // Balanced CLV curve
   const [clvFilter, setClvFilter]           = useState('all');
-  const [rbFilter,  setRbFilter]            = useState('all');
-  const [qbFilter,  setQbFilter]            = useState('all');
-  const [teFilter,  setTeFilter]            = useState('all');
+  const [rbFilter,  setRbFilter]            = useState(() => initialFilter?.archetype?.rb ?? 'all');
+  const [qbFilter,  setQbFilter]            = useState(() => initialFilter?.archetype?.qb ?? 'all');
+  const [teFilter,  setTeFilter]            = useState(() => initialFilter?.archetype?.te ?? 'all');
   const [selectedTournaments, setSelectedTournaments] = useState([]);
   const [combinedSearch, setCombinedSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState(() => initialFilter?.players ?? []);
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [navBannerPlayers, setNavBannerPlayers] = useState(() => initialFilter?.players ?? []);
+  const [navBannerArchetype, setNavBannerArchetype] = useState(() => initialFilter?.archetype ?? null);
   const scrollRef = useRef(null);
 
   // ── Simulation data ──────────────────────────────────────────────────────────
@@ -914,7 +915,32 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
 
   return (
     <div className={css.root}>
-      {navBannerPlayers.length > 0 && (
+      {navBannerArchetype ? (
+        <div className={css.navBanner}>
+          {(() => {
+            const type = Object.keys(navBannerArchetype)[0];
+            const key = navBannerArchetype[type];
+            const label = ARCHETYPE_METADATA[key]?.name ?? key;
+            return (
+              <>
+                Showing {type.toUpperCase()} archetype: <strong>{label}</strong>
+                {' — '}
+                <button
+                  className={css.navBannerClear}
+                  onClick={() => {
+                    if (type === 'rb') setRbFilter('all');
+                    else if (type === 'qb') setQbFilter('all');
+                    else if (type === 'te') setTeFilter('all');
+                    setNavBannerArchetype(null);
+                  }}
+                >
+                  Clear filter
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      ) : navBannerPlayers.length > 0 ? (
         <div className={css.navBanner}>
           Showing rosters containing <strong>{navBannerPlayers.join(', ')}</strong>
           {' — '}
@@ -925,7 +951,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
             Clear filter
           </button>
         </div>
-      )}
+      ) : null}
       {/* Control Panel — collapsible */}
       {renderControlPanel()}
 

@@ -55,7 +55,15 @@
       "Bash(where py:*)",
       "Bash(where python3:*)",
       "Bash(py:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.draftkings.com)",
+      "WebFetch(domain:www.draftkings.com)",
+      "WebFetch(domain:apidog.com)",
+      "WebFetch(domain:seandrummy.medium.com)",
+      "WebFetch(domain:gacolitti.github.io)",
+      "Bash(npx vite:*)"
     ]
   },
   "enabledPlugins": {

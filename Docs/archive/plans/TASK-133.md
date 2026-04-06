@@ -1,3 +1,4 @@
+<!-- Completed: 2026-04-04 | Commit: -- -->
 # TASK-133: Rankings tab not loading saved rankings from Supabase on startup
 
 **Status:** Pending Approval

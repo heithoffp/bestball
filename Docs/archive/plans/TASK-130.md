@@ -1,3 +1,4 @@
+<!-- Completed: 2026-04-04 | Commit: -- -->
 # TASK-130: Sync progress bar in FAB overlay panel
 
 **Status:** Pending Approval

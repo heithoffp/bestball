@@ -271,7 +271,7 @@ export default function App() {
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
-            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} />}
+            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onNavigateToRosters={navigateToRosters} />}
             {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={navigateToRosters} />}
             {activeTab === 'draftflow' && (
               canAccessFeature(tier, 'draftflow') || subLoading

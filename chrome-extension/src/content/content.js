@@ -28,15 +28,15 @@ if (adapter) {
     });
   }
 
-  // Initialize draft overlay — pass sync callback so the overlay panel can trigger entry scraping
-  initDraftOverlay(() => adapter.getEntries().then(entries => writeEntries(entries)));
+  // Initialize draft overlay — pass adapter and sync callback so the overlay can trigger entry scraping
+  initDraftOverlay(adapter, () => adapter.getEntries().then(entries => writeEntries(entries, { platform: adapter.platform })));
 
   // Handle sync request from popup
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type !== 'SYNC_ENTRIES') return false;
 
     adapter.getEntries()
-      .then(entries => writeEntries(entries))
+      .then(entries => writeEntries(entries, { platform: adapter.platform }))
       .then(({ count }) => sendResponse({ ok: true, count }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
 

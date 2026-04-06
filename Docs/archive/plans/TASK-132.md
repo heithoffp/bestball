@@ -1,3 +1,4 @@
+<!-- Completed: 2026-04-05 | Commit: see git history -->
 # TASK-132: DraftKings adapter — entries scraping + draft overlay
 
 **Status:** Approved
@@ -84,10 +85,6 @@ return {
 The player list and picks panel both use `.BaseTable__body` + `[role="row"].BaseTable__row`. Distinguish the player list by selecting the `BaseTable__body` that does NOT contain a `[data-key="position"]` header column (the picks panel has that header).
 ```js
 const allBodies = document.querySelectorAll('.BaseTable__body');
-// Player list body is the one whose sibling header has data-key="QueueIcon"
-// Simpler: find the body whose rows contain .PlayerCell_player-name with ADP data
-// Use the larger body (player list is ~726px, picks panel is ~296px)
-// Safest: get the body that is NOT inside the picks panel table
 const picksTable = document.querySelector('[data-key="position"]')?.closest('.BaseTable__table');
 const playerListBody = [...allBodies].find(b => !picksTable?.contains(b));
 return [...(playerListBody?.querySelectorAll('[role="row"].BaseTable__row') ?? [])];

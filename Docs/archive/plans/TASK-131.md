@@ -1,3 +1,4 @@
+<!-- Completed: 2026-04-04 | Commit: 1457e4e -->
 # TASK-131: Refactor draft-overlay.js to be adapter-agnostic
 
 **Status:** Pending Approval

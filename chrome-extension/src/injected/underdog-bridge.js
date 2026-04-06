@@ -206,7 +206,7 @@ if (!window.__BBM_initialized) {
             draftMeta.push({
               draftId:         draft.id,
               tournamentTitle: tr.title ?? slate.title ?? '',
-              slateTitle:      slate.title ?? '',
+              slateTitle:      slate.title ? `UD ${slate.title}` : '',
               draftAt:         draft.draft_at ?? draft.draftAt ?? null,
             });
           }

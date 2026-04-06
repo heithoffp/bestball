@@ -7,11 +7,12 @@
  */
 
 import underdogAdapter from './underdog.js';
+import draftkingsAdapter from './draftkings.js';
 
 /** @type {import('./interface.js').PlatformAdapter[]} */
 const adapters = [
   underdogAdapter,
-  // Future: draftkingsAdapter, sleeperAdapter, etc.
+  draftkingsAdapter,
 ];
 
 /**

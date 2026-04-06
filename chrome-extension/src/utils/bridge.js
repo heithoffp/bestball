@@ -120,26 +120,57 @@ export async function readRankings() {
 }
 
 /**
- * Writes portfolio entries to Supabase, replacing any existing rows for the user.
+ * Writes portfolio entries to Supabase for the current user.
+ * When `platform` is provided, only deletes that platform's previous entries
+ * (tracked via chrome.storage), leaving other platforms' entries untouched.
+ * When `platform` is omitted, falls back to full-replace (legacy behavior).
+ *
  * Entries must match the adapter interface Entry shape:
  *   { entryId, tournamentTitle, draftDate, players: [{name, position, team, pick, round}] }
  *
  * @param {Array} entries
+ * @param {{ platform?: string }} [options]
  * @returns {Promise<{count: number}>}
  */
-export async function writeEntries(entries) {
+export async function writeEntries(entries, { platform } = {}) {
   if (!supabase) throw new Error('[BBM] Supabase not configured');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('[BBM] Not authenticated');
 
   const userId = session.user.id;
 
-  // Full replace: delete all existing rows for this user, then insert the new batch
-  const { error: deleteError } = await supabase
-    .from('extension_entries')
-    .delete()
-    .eq('user_id', userId);
-  if (deleteError) throw deleteError;
+  if (platform) {
+    // Per-platform scoped delete: only remove this platform's previous entries.
+    // Previous entry IDs are stored in chrome.storage so we can clean up stale entries
+    // (e.g. drafts the user left) without touching other platforms' rows.
+    const storageKey = `${platform}_entry_ids`;
+    const stored = await new Promise(r => chrome.storage.local.get([storageKey], r));
+    const previousIds = stored[storageKey] ?? [];
+
+    if (previousIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('extension_entries')
+        .delete()
+        .eq('user_id', userId)
+        .in('entry_id', previousIds);
+      if (deleteError) throw deleteError;
+    } else if (platform === 'underdog') {
+      // Migration path: first sync under new per-platform mode for Underdog.
+      // No stored IDs yet, so fall back to full replace to avoid duplicates.
+      const { error: deleteError } = await supabase
+        .from('extension_entries')
+        .delete()
+        .eq('user_id', userId);
+      if (deleteError) throw deleteError;
+    }
+  } else {
+    // Legacy full-replace (no platform specified)
+    const { error: deleteError } = await supabase
+      .from('extension_entries')
+      .delete()
+      .eq('user_id', userId);
+    if (deleteError) throw deleteError;
+  }
 
   if (entries.length === 0) {
     await chrome.storage.local.set({ lastSync: Date.now(), entryCount: 0 });
@@ -161,6 +192,8 @@ export async function writeEntries(entries) {
     .insert(rows, { count: 'exact' });
   if (insertError) throw insertError;
 
-  await chrome.storage.local.set({ lastSync: Date.now(), entryCount: entries.length });
+  const update = { lastSync: Date.now(), entryCount: entries.length };
+  if (platform) update[`${platform}_entry_ids`] = entries.map(e => e.entryId);
+  await chrome.storage.local.set(update);
   return { count: count ?? entries.length };
 }

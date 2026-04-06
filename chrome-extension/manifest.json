@@ -7,7 +7,9 @@
   "host_permissions": [
     "https://app.underdogfantasy.com/*",
     "https://api.underdogfantasy.com/*",
-    "https://stats.underdogfantasy.com/*"
+    "https://stats.underdogfantasy.com/*",
+    "https://www.draftkings.com/*",
+    "https://api.draftkings.com/*"
   ],
   "background": {
     "service_worker": "src/background.js",
@@ -24,11 +26,25 @@
       "matches": ["https://app.underdogfantasy.com/*"],
       "js": ["src/content/content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.draftkings.com/*"],
+      "js": ["src/content/content.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_title": "Best Ball Manager"
   },
-  "icons": {}
+  "icons": {},
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "https://app.underdogfantasy.com/*",
+        "https://www.draftkings.com/*"
+      ],
+      "resources": []
+    }
+  ]
 }

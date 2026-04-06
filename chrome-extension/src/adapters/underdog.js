@@ -71,6 +71,20 @@ const underdogAdapter = {
     return document.querySelector('[role="grid"]');
   },
 
+  getRowId(row) {
+    return row.getAttribute('data-id');
+  },
+
+  /**
+   * Underdog: insert inside the rightSide container, before the first stat cell.
+   */
+  getInjectionPoint(row) {
+    const rightSide = row.querySelector('[class*="rightSide"]');
+    if (!rightSide) return {};
+    const before = rightSide.querySelector('[class*="statCell"]') ?? null;
+    return { parent: rightSide, before };
+  },
+
   getStyles() {
     return {
       fontFamily:  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -87,6 +101,36 @@ const underdogAdapter = {
   getPlayerRows() {
     return [...document.querySelectorAll('[data-testid="player-cell-wrapper"]')];
   },
+
+  selectors: {
+    gridSelector:              '[role="grid"]',
+    rowSelector:               '[data-testid="player-cell-wrapper"]',
+    rightSideSelector:         '[class*="rightSide"]',
+    statCellSelector:          '[class*="statCell"]',
+    sortButtonsSelector:       '[class*="playerListSortButtons"]',
+    myPicksSelector:           '[class*="playerPickCell"]',
+    playerNameInRowSelector:   '[class*="playerName"]',
+    positionSectionSelector:   '[class*="positionSection"]',
+    positionHeaderSelector:    '[class*="positionHeader"]',
+    stackPillTargetSelector:   '[class*="playerPosition"]',
+  },
+
+  /**
+   * Returns true when the draft board is currently sorted by "My Rank".
+   *
+   * Underdog marks the active sort button by adding a CSS-module-hashed class
+   * (verified via DevTools 2026-04-03 — class list is the only DOM change on sort).
+   * Pairing the class selector with the span text guards against hash collisions
+   * if Underdog re-deploys with a different hash.
+   */
+  isMyRankSort() {
+    const activeBtn = document.querySelector('button.styles__active__A5wMB');
+    return activeBtn?.querySelector('span')?.textContent?.trim().toLowerCase() === 'my rank';
+  },
+
+  platform: 'underdog',
+
+  syncPageErrorMessage: 'Navigate to your Underdog entries page first',
 };
 
 export default underdogAdapter;

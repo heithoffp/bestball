@@ -16,6 +16,20 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Player link button ── */
+.playerLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.playerLink:hover {
+  text-decoration: underline;
+}
+
 /* ── Headline Metrics ── */
 .metricsRow {
   display: grid;

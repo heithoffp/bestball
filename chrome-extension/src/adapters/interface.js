@@ -79,6 +79,27 @@
  *   Returns DOM elements representing individual player rows on the
  *   draft board. Used for inline annotation injection.
  *   Returns empty array if not on a draft page.
+ *
+ * @property {Object} selectors
+ *   Platform-specific CSS selectors for DOM injection.
+ * @property {string} selectors.gridSelector            - Virtualized grid container
+ * @property {string} selectors.rowSelector             - Individual player row element
+ * @property {string} selectors.rightSideSelector       - Right-side stat area within a row
+ * @property {string} selectors.statCellSelector        - Native stat cell (ADP/Proj) within rightSide
+ * @property {string} selectors.sortButtonsSelector     - Sort button bar above the draft board
+ * @property {string} selectors.myPicksSelector         - "My team" picked player cells
+ * @property {string} selectors.playerNameInRowSelector - Player name element within a row
+ * @property {string} selectors.positionSectionSelector - Position grouping section in "my team"
+ * @property {string} selectors.positionHeaderSelector  - Position label within a positionSection
+ * @property {string} selectors.stackPillTargetSelector - Element within a row where stack pills are appended
+ *
+ * @property {() => boolean} isMyRankSort
+ *   Returns true when the draft board is currently sorted by the user's custom rank.
+ *   Return false if the platform has no such sort mode.
+ *
+ * @property {string} syncPageErrorMessage
+ *   Error message shown in the panel when the user triggers sync but is not on
+ *   the platform's completed entries page.
  */
 
 // This file is types-only — no runtime exports.

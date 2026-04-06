@@ -16,7 +16,7 @@ const DRILL_CARDS = [
   { key: 'draftflow', label: 'Draft Assistant', icon: Crosshair },
 ];
 
-export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate }) {
+export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate, onNavigateToRosters = null }) {
   const { isMobile } = useMediaQuery();
 
   // ── Headline Metrics ──
@@ -262,7 +262,10 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                 <h4 style={{ color: POS_COLORS[pos] }}>{pos}</h4>
                 {topExposures[pos].map(p => (
                   <div key={p.name} className={styles.exposureRow}>
-                    <span className={styles.exposureName}>{p.name}</span>
+                    {onNavigateToRosters
+                      ? <button className={styles.playerLink} title="See rosters" onClick={() => onNavigateToRosters({ players: [p.name] })}>{p.name}</button>
+                      : <span className={styles.exposureName}>{p.name}</span>
+                    }
                     <div className={styles.exposureBarWrap}>
                       <div
                         className={styles.exposureBarFill}
@@ -301,9 +304,10 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                   <span className={styles.blindSpotRound}>R{r.round}</span>
                   <div className={styles.exposureByRoundPlayer}>
                     <div className={styles.blindSpotEntry}>
-                      <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }}>
-                        {r.highest.name}
-                      </span>
+                      {onNavigateToRosters
+                        ? <button className={styles.playerLink} title="See rosters" style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }} onClick={() => onNavigateToRosters({ players: [r.highest.name] })}>{r.highest.name}</button>
+                        : <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }}>{r.highest.name}</span>
+                      }
                       <span className={styles.blindSpotAdp}>ADP {r.highest.adp}</span>
                       <span className={styles.exposurePct}>{r.highest.exposure.toFixed(0)}%</span>
                     </div>
@@ -319,9 +323,10 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                       ))
                     ) : (
                       <div className={styles.blindSpotEntry}>
-                        <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }}>
-                          {r.lowest.name}
-                        </span>
+                        {onNavigateToRosters
+                          ? <button className={styles.playerLink} title="See rosters" style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }} onClick={() => onNavigateToRosters({ players: [r.lowest.name] })}>{r.lowest.name}</button>
+                          : <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }}>{r.lowest.name}</span>
+                        }
                         <span className={styles.blindSpotAdp}>ADP {r.lowest.adp}</span>
                         <span className={styles.exposurePct}>{r.lowest.exposure.toFixed(0)}%</span>
                       </div>
@@ -367,10 +372,10 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         <div className={styles.shapeCard}>
           <div className={styles.sectionTitle}>Archetype Distribution</div>
           {[
-            { title: 'RB Archetype', data: rbDistribution },
-            { title: 'QB Archetype', data: qbDistribution },
-            { title: 'TE Archetype', data: teDistribution },
-          ].map(({ title, data }) => {
+            { title: 'RB Archetype', data: rbDistribution, type: 'rb' },
+            { title: 'QB Archetype', data: qbDistribution, type: 'qb' },
+            { title: 'TE Archetype', data: teDistribution, type: 'te' },
+          ].map(({ title, data, type }) => {
             const totalPct = data.reduce((sum, d) => sum + d.pct, 0) || 1;
             return (
             <div key={title} className={styles.archetypeBlock}>
@@ -379,8 +384,13 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                 {data.map(seg => (
                   <div
                     key={seg.key}
-                    style={{ width: `${(seg.pct / totalPct) * 100}%`, background: seg.color }}
-                    title={`${seg.label}: ${seg.count} (${seg.pct.toFixed(0)}%)`}
+                    style={{
+                      width: `${(seg.pct / totalPct) * 100}%`,
+                      background: seg.color,
+                      cursor: onNavigateToRosters ? 'pointer' : 'default',
+                    }}
+                    title={onNavigateToRosters ? `${seg.label}: ${seg.count} (${seg.pct.toFixed(0)}%) — See rosters` : `${seg.label}: ${seg.count} (${seg.pct.toFixed(0)}%)`}
+                    onClick={onNavigateToRosters ? () => onNavigateToRosters({ archetype: { [type]: seg.key } }) : undefined}
                   />
                 ))}
               </div>

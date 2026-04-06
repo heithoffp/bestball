@@ -82,7 +82,7 @@
 ### FEAT-010: Draft Overlay UI
 **Status:** In Progress
 **Description:** Inline overlay on Underdog live draft pages showing portfolio context (exposure %, correlation) injected directly into player rows. Handles react-virtualized recycling, theme-adaptive styling, and popup toggle. Per ADR-002, displays data only — no scoring or recommendations.
-**Tasks:** TASK-046, TASK-047, TASK-096
+**Tasks:** TASK-046, TASK-047, TASK-096, TASK-138, TASK-139
 
 ### FEAT-011: Portfolio Context Sync
 **Status:** Not Started

@@ -13,24 +13,24 @@
 import { createReconnectingObserver } from '../utils/observer.js';
 import { readEntries, readRankings, getAuthSession, signIn, signOut, fetchTier } from '../utils/bridge.js';
 
-const GRID_SELECTOR = '[role="grid"]';
-const ROW_SELECTOR = '[data-testid="player-cell-wrapper"]';
-const RIGHT_SIDE_SELECTOR = '[class*="rightSide"]';
-const STAT_CELL_SELECTOR = '[class*="statCell"]';
-const SORT_BUTTONS_SELECTOR = '[class*="playerListSortButtons"]';
 const INJECTED_ATTR = 'data-bbm-injected';
 const PLAYER_ID_ATTR = 'data-bbm-player-id';
 const HEADER_INJECTED_ATTR = 'data-bbm-headers-injected';
+
+let adapter = null;
+let corrPopupPortal = null; // Single shared popup, appended to document.body
 
 let gridObserver = null;
 let enabled = true;
 let rafId = null;
 let lastUrl = window.location.href;
+let wasOnDraftPage = false;
 
 // Portfolio data for metric computation
 let playerIndexMap = new Map();  // lowerCasedName -> Set<rosterIndex>
 let playerTeamMap = new Map();   // lowerCasedName -> team abbreviation
 let playerPositionMap = new Map(); // lowerCasedName -> position
+let abbreviatedNameMap = new Map(); // "j. jefferson" -> "justin jefferson" (for DK-style names)
 let totalRosters = 0;
 let currentPicks = [];           // [{name, position, round}, ...]
 let picksObserver = null;
@@ -55,12 +55,6 @@ let allEntries = [];            // cached raw entries; re-filter in memory on fi
 let selectedTournaments = new Set();
 let expandedSlates = new Set(); // slate names currently expanded in the filter panel
 
-// Underdog selectors — verified against live DOM 2026-04-03.
-const MY_PICKS_SELECTOR = '[class*="playerPickCell"]';
-const PLAYER_NAME_IN_ROW_SELECTOR = '[class*="playerName"]';
-const POSITION_SECTION_SELECTOR = '[class*="positionSection"]';
-const POSITION_HEADER_SELECTOR = '[class*="positionHeader"]';
-
 // Tier label/color tables — must match PlayerRankings.jsx
 const TIER_LABELS = ['S','A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F'];
 const TIER_BORDER_COLORS = {
@@ -77,26 +71,6 @@ function getTierLabel(tierNum) {
 
 function getTierBorderColor(tierNum) {
   return TIER_BORDER_COLORS[getTierLabel(tierNum)] || '#555';
-}
-
-/**
- * Returns true when the draft board is currently sorted by "My Rank".
- *
- * Underdog marks the active sort button by adding a CSS-module-hashed class
- * (verified via DevTools 2026-04-03 — class list is the only DOM change on sort).
- * Pairing the class selector with the span text guards against hash collisions
- * if Underdog re-deploys with a different hash.
- */
-function isMyRankSort() {
-  const activeBtn = document.querySelector('button.styles__active__A5wMB');
-  return activeBtn?.querySelector('span')?.textContent?.trim().toLowerCase() === 'my rank';
-}
-
-/**
- * Check if the current page is an Underdog draft page.
- */
-export function isDraftPage() {
-  return /^\/draft\/[a-f0-9-]+/i.test(window.location.pathname);
 }
 
 // --- Confidence panel helpers (TASK-106) ---
@@ -170,6 +144,10 @@ function escapeHtml(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function titleCase(str) {
+  return String(str ?? '').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function renderTournamentFilter() {
@@ -268,6 +246,7 @@ function applyPortfolioFilter() {
   playerIndexMap = new Map();
   playerTeamMap = new Map();
   playerPositionMap = new Map();
+  abbreviatedNameMap = new Map();
   filtered.forEach((entry, rosterIdx) => {
     (entry.players ?? []).forEach(p => {
       if (!p.name) return;
@@ -278,6 +257,40 @@ function applyPortfolioFilter() {
       if (p.position && !playerPositionMap.has(key)) playerPositionMap.set(key, p.position);
     });
   });
+
+  // Build abbreviated name reverse-lookup: "j. jefferson" → "justin jefferson"
+  // Handles DK-style abbreviated display names (first initial + last name).
+  // Ambiguous abbreviations store candidate arrays for DOM-based disambiguation.
+  for (const fullName of playerIndexMap.keys()) {
+    const parts = fullName.split(/\s+/);
+    if (parts.length < 2) continue;
+    const firstInitial = parts[0][0];
+    const lastName = parts.slice(1).join(' ');
+    const abbrev = `${firstInitial}. ${lastName}`;
+    if (abbreviatedNameMap.has(abbrev)) {
+      const existing = abbreviatedNameMap.get(abbrev);
+      const candidate = {
+        fullName,
+        position: playerPositionMap.get(fullName)?.toUpperCase() ?? null,
+        team: playerTeamMap.get(fullName)?.toUpperCase() ?? null,
+      };
+      if (typeof existing === 'string') {
+        // Convert first entry to array, add second candidate
+        abbreviatedNameMap.set(abbrev, [
+          {
+            fullName: existing,
+            position: playerPositionMap.get(existing)?.toUpperCase() ?? null,
+            team: playerTeamMap.get(existing)?.toUpperCase() ?? null,
+          },
+          candidate,
+        ]);
+      } else if (Array.isArray(existing)) {
+        existing.push(candidate);
+      }
+    } else {
+      abbreviatedNameMap.set(abbrev, fullName);
+    }
+  }
 
   renderTournamentFilter();
   sweepRows();
@@ -398,7 +411,7 @@ async function handleSync() {
 
   if (!syncCallback) {
     if (resultEl) {
-      resultEl.textContent = 'Navigate to your Underdog entries page first';
+      resultEl.textContent = adapter.syncPageErrorMessage;
       resultEl.classList.add('error');
       resultEl.style.display = 'block';
     }
@@ -439,7 +452,7 @@ async function handleSync() {
     if (resultEl) {
       const msg = err.message ?? 'Sync failed';
       resultEl.textContent = msg.includes('Could not establish connection')
-        ? 'Navigate to your Underdog entries page first'
+        ? adapter.syncPageErrorMessage
         : msg;
       resultEl.classList.add('error');
       resultEl.style.display = 'block';
@@ -523,21 +536,35 @@ async function loadRankingsData() {
 }
 
 /**
- * Read current picks from the Underdog "my team" panel.
+ * Read current picks from the draft board's roster panel.
+ * Uses adapter.getCurrentPicks() when available (DK), otherwise falls back
+ * to the Underdog "my team" panel DOM traversal.
+ * Resolves abbreviated names so correlation lookups work correctly.
  * Updates the currentPicks array and triggers a row re-sweep.
  */
 function resolveCurrentPicks() {
-  const pickEls = document.querySelectorAll(MY_PICKS_SELECTOR);
-  const picks = [];
-  pickEls.forEach((el, idx) => {
-    const nameEl = el.querySelector(PLAYER_NAME_IN_ROW_SELECTOR);
-    const section = el.closest(POSITION_SECTION_SELECTOR);
-    const position = section?.querySelector(POSITION_HEADER_SELECTOR)?.textContent?.trim() ?? '';
-    const name = nameEl?.textContent?.trim();
-    if (name) {
-      picks.push({ name, position, round: idx + 1 });
-    }
-  });
+  let picks;
+  if (adapter.getCurrentPicks) {
+    const raw = adapter.getCurrentPicks();
+    if (!raw) return;
+    picks = raw.map(p => ({
+      name: resolvePlayerKey(p.name, { position: p.position }) ?? p.name,
+      position: p.position,
+      round: p.round,
+    }));
+  } else {
+    picks = [];
+    const pickEls = document.querySelectorAll(adapter.selectors.myPicksSelector);
+    pickEls.forEach((el, idx) => {
+      const nameEl = el.querySelector(adapter.selectors.playerNameInRowSelector);
+      const section = el.closest(adapter.selectors.positionSectionSelector);
+      const position = section?.querySelector(adapter.selectors.positionHeaderSelector)?.textContent?.trim() ?? '';
+      const name = nameEl?.textContent?.trim();
+      if (name) {
+        picks.push({ name, position, round: idx + 1 });
+      }
+    });
+  }
   // Only re-sweep if picks actually changed
   const changed =
     picks.length !== currentPicks.length ||
@@ -577,8 +604,53 @@ function stopPicksObserver() {
  * @returns {string|null}
  */
 function getPlayerNameFromRow(row) {
-  const nameEl = row.querySelector(PLAYER_NAME_IN_ROW_SELECTOR);
+  const nameEl = row.querySelector(adapter.selectors.playerNameInRowSelector);
   return nameEl?.textContent?.trim() ?? null;
+}
+
+/**
+ * Resolve a display name (possibly abbreviated like "J. Jefferson") to the
+ * canonical full name used in playerIndexMap. Returns the lowercased key
+ * suitable for map lookups, or null if unresolvable.
+ *
+ * When an abbreviated name is ambiguous (multiple portfolio players share
+ * the same first-initial + last-name), the optional second parameter enables
+ * disambiguation. Pass a DOM row element (uses adapter.getPlayerContext) or
+ * a {position, team} context object directly.
+ *
+ * @param {string} displayName
+ * @param {Element|{position: string, team: string}} [rowOrContext] - DOM row or context for disambiguation
+ * @returns {string|null}
+ */
+function resolvePlayerKey(displayName, rowOrContext) {
+  if (!displayName) return null;
+  const key = displayName.trim().toLowerCase();
+  // Direct match (full name or already known)
+  if (playerIndexMap.has(key)) return key;
+  // Abbreviated name lookup ("j. jefferson" → "justin jefferson")
+  const resolved = abbreviatedNameMap.get(key);
+  if (typeof resolved === 'string') return resolved;
+
+  // Ambiguous — try to disambiguate with context
+  if (Array.isArray(resolved) && rowOrContext) {
+    const ctx = (rowOrContext instanceof Element && adapter.getPlayerContext)
+      ? adapter.getPlayerContext(rowOrContext)
+      : rowOrContext;
+    let candidates = resolved;
+    if (ctx.position) {
+      const pos = ctx.position.toUpperCase();
+      const byPos = candidates.filter(c => c.position === pos);
+      if (byPos.length === 1) return byPos[0].fullName;
+      if (byPos.length > 1) candidates = byPos;
+    }
+    if (ctx.team) {
+      const team = ctx.team.toUpperCase();
+      const byTeam = candidates.filter(c => c.team === team);
+      if (byTeam.length === 1) return byTeam[0].fullName;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -590,7 +662,9 @@ function getPlayerNameFromRow(row) {
  */
 function computeExposure(playerName) {
   if (totalRosters === 0) return 0;
-  const rosterSet = playerIndexMap.get(playerName.trim().toLowerCase());
+  const key = resolvePlayerKey(playerName);
+  if (!key) return 0;
+  const rosterSet = playerIndexMap.get(key);
   if (!rosterSet) return 0;
   return (rosterSet.size / totalRosters) * 100;
 }
@@ -603,7 +677,8 @@ function computeExposure(playerName) {
  * @returns {{ score: number, breakdown: Array<{name, position, round, pct}> }}
  */
 function computeCorrelation(playerName) {
-  const candidateRosters = playerIndexMap.get(playerName.trim().toLowerCase()) ?? new Set();
+  const candidateKey = resolvePlayerKey(playerName);
+  const candidateRosters = (candidateKey && playerIndexMap.get(candidateKey)) ?? new Set();
   const breakdown = [];
   let sumProb = 0;
   let comparisons = 0;
@@ -649,21 +724,23 @@ function updateRowMetrics(row) {
 
   const playerName = getPlayerNameFromRow(row);
   if (!playerName || totalRosters === 0) return;
+  // Resolve once with row context (handles abbreviated name disambiguation)
+  const resolvedName = resolvePlayerKey(playerName, row) ?? playerName;
 
-  const expPct = computeExposure(playerName);
+  const expPct = computeExposure(resolvedName);
   exp.textContent = `${Math.round(expPct)}%`;
 
   const corrValue = corrTrigger.querySelector('.bbm-corr-value');
   const popup = corrTrigger.querySelector('.bbm-corr-popup');
   if (!corrValue || !popup) return;
 
-  const { score, breakdown } = computeCorrelation(playerName);
+  const { score, breakdown } = computeCorrelation(resolvedName);
   corrValue.textContent = `${score}%`;
   populateCorrPopup(popup, breakdown);
 
-  applyStackBadge(row, playerName);
+  applyStackBadge(row, resolvedName);
 
-  applyTierBreak(row, playerName);
+  applyTierBreak(row, resolvedName);
 }
 
 /**
@@ -685,7 +762,7 @@ function populateCorrPopup(popup, breakdown) {
       .map(
         b => `<div class="bbm-corr-popup-row">
           <span class="bbm-corr-popup-pos">${b.position}</span>
-          <span class="bbm-corr-popup-name">${b.name}</span>
+          <span class="bbm-corr-popup-name">${titleCase(b.name)}</span>
           <div class="bbm-corr-popup-bar">
             <div class="bbm-corr-popup-bar-fill" style="width:${b.pct}%;background:#3b82f6"></div>
           </div>
@@ -708,7 +785,7 @@ function applyStackBadge(row, playerName) {
   const info = analyzeStackOverlay(playerName);
   if (!info) return;
 
-  const positionRow = row.querySelector('[class*="playerPosition"]');
+  const positionRow = row.querySelector(adapter.selectors.stackPillTargetSelector);
   if (!positionRow) return;
 
   const pill = document.createElement('span');
@@ -728,7 +805,8 @@ function applyStackBadge(row, playerName) {
  * @returns {{ type: string, color: string }|null}
  */
 function analyzeStackOverlay(playerName) {
-  const key = playerName.trim().toLowerCase();
+  const key = resolvePlayerKey(playerName);
+  if (!key) return null;
   const team = playerTeamMap.get(key);
   const pos = playerPositionMap.get(key);
   if (!team || !pos || currentPicks.length === 0) return null;
@@ -784,9 +862,36 @@ function createOverlayElements() {
     '<div class="bbm-corr-popup-empty">No draft data yet</div>';
 
   corr.appendChild(corrValue);
-  corr.appendChild(popup);
+  corr.appendChild(popup); // source popup — stays hidden, used as data source
+
+  // Show portal popup on hover (portaled to document.body to escape overflow/stacking)
+  corr.addEventListener('mouseenter', () => {
+    ensureCorrPopupPortal();
+    corrPopupPortal.innerHTML = popup.innerHTML;
+    const rect = corr.getBoundingClientRect();
+    corrPopupPortal.style.left = `${Math.max(8, rect.right - 280)}px`;
+    corrPopupPortal.style.top = `${rect.bottom + 4}px`;
+    corrPopupPortal.style.display = 'block';
+  });
+  corr.addEventListener('mouseleave', () => {
+    if (corrPopupPortal) corrPopupPortal.style.display = 'none';
+  });
 
   return [exp, corr];
+}
+
+/**
+ * Lazily create the shared correlation popup portal on document.body.
+ * This element lives outside DK's BaseTable hierarchy so it escapes
+ * overflow clipping, will-change stacking contexts, and event capture.
+ */
+function ensureCorrPopupPortal() {
+  if (corrPopupPortal && document.body.contains(corrPopupPortal)) return;
+  corrPopupPortal = document.createElement('div');
+  corrPopupPortal.className = 'bbm-corr-popup';
+  corrPopupPortal.id = 'bbm-corr-popup-portal';
+  corrPopupPortal.style.cssText = 'display: none; position: fixed; z-index: 10001;';
+  document.body.appendChild(corrPopupPortal);
 }
 
 /**
@@ -795,7 +900,7 @@ function createOverlayElements() {
  * Injects a stack pill inline after the player name element when applicable.
  */
 function processRow(row) {
-  const playerId = row.getAttribute('data-id');
+  const playerId = adapter.getRowId?.(row) ?? row.getAttribute('data-id');
   if (!playerId) return;
 
   const existing = row.getAttribute(INJECTED_ATTR);
@@ -810,31 +915,37 @@ function processRow(row) {
   row.querySelectorAll('.bbm-tier-badge').forEach(el => el.remove());
   row.removeAttribute('data-bbm-tier');
 
-  const rightSide = row.querySelector(RIGHT_SIDE_SELECTOR);
-  if (!rightSide) return;
+  // Each adapter decides where Exp/Corr cells go via getInjectionPoint().
+  const { parent: insertParent, before: refNode } = adapter.getInjectionPoint?.(row) ?? {};
+  if (!insertParent) return;
 
-  // Insert before the first native stat cell (ADP)
-  const firstStatCell = rightSide.querySelector(STAT_CELL_SELECTOR);
   const [exp, corr] = createOverlayElements();
 
-  if (firstStatCell) {
-    rightSide.insertBefore(corr, firstStatCell);
-    rightSide.insertBefore(exp, corr);
+  if (refNode) {
+    insertParent.insertBefore(exp, refNode);
+    insertParent.insertBefore(corr, refNode);
   } else {
-    rightSide.prepend(exp, corr);
+    insertParent.append(exp, corr);
+  }
+
+  // Adapter may need to reposition cells after insertion (e.g. DK absolute positioning)
+  if (adapter.postInjectRow) {
+    adapter.postInjectRow(row, exp, corr);
   }
 
   row.setAttribute(INJECTED_ATTR, playerId);
   row.setAttribute(PLAYER_ID_ATTR, playerId);
 
   const playerName = getPlayerNameFromRow(row);
+  // Resolve once with row context (handles abbreviated name disambiguation)
+  const resolvedName = resolvePlayerKey(playerName, row) ?? playerName;
 
   // Populate metrics if portfolio data is available
-  if (totalRosters > 0 && playerName) {
-    const expPct = computeExposure(playerName);
+  if (totalRosters > 0 && resolvedName) {
+    const expPct = computeExposure(resolvedName);
     exp.textContent = `${Math.round(expPct)}%`;
 
-    const { score, breakdown } = computeCorrelation(playerName);
+    const { score, breakdown } = computeCorrelation(resolvedName);
     const corrValue = corr.querySelector('.bbm-corr-value');
     const popup = corr.querySelector('.bbm-corr-popup');
     corrValue.textContent = `${score}%`;
@@ -842,10 +953,10 @@ function processRow(row) {
   }
 
   // Inject stack pill inline after player name
-  if (playerName) applyStackBadge(row, playerName);
+  if (resolvedName) applyStackBadge(row, resolvedName);
 
   // Inject tier break indicator if sorted by My Rank and rankings data is available
-  applyTierBreak(row, playerName);
+  applyTierBreak(row, resolvedName);
 }
 
 /**
@@ -859,9 +970,10 @@ function applyTierBreak(row, playerName) {
   row.querySelectorAll('.bbm-tier-badge').forEach(el => el.remove());
   row.removeAttribute('data-bbm-tier');
 
-  if (!isMyRankSort() || playerRankingsMap.size === 0 || !playerName) return;
+  if (!adapter.isMyRankSort() || playerRankingsMap.size === 0 || !playerName) return;
 
-  const entry = playerRankingsMap.get(playerName.trim().toLowerCase());
+  const resolvedKey = resolvePlayerKey(playerName);
+  const entry = playerRankingsMap.get(resolvedKey ?? playerName.trim().toLowerCase());
   if (!entry) return;
 
   const { tierNum, rank } = entry;
@@ -877,7 +989,6 @@ function applyTierBreak(row, playerName) {
   badge.className = 'bbm-tier-badge';
   badge.style.color = color;
   badge.innerHTML = `<span class="bbm-tier-pill">${label}</span>`;
-  row.style.position = 'relative';
   row.prepend(badge);
 }
 
@@ -892,7 +1003,7 @@ function applyTierBreak(row, playerName) {
  * sidesteps this structural mismatch.
  */
 function injectHeaders() {
-  const sortBar = document.querySelector(SORT_BUTTONS_SELECTOR);
+  const sortBar = document.querySelector(adapter.selectors.sortButtonsSelector);
   if (!sortBar) return;
 
   // Lazily wire the sort observer — startOverlay() may have run before the sort
@@ -904,19 +1015,24 @@ function injectHeaders() {
 
   if (sortBar.hasAttribute(HEADER_INJECTED_ATTR)) return;
 
+  // Adapter-specific header injection (DK uses proper gridcells)
+  if (adapter.injectHeaderCells) {
+    adapter.injectHeaderCells(sortBar);
+    sortBar.setAttribute(HEADER_INJECTED_ATTR, 'true');
+    return;
+  }
+
+  // Default: absolute-positioned labels (Underdog)
   // Measure actual cell positions from a rendered row to stay robust
   // against future layout changes
-  const sampleRow = document.querySelector(ROW_SELECTOR);
+  const sampleRow = document.querySelector(adapter.selectors.rowSelector);
   if (!sampleRow) return; // no rows yet — will retry on next sweep
 
-  const rightSide = sampleRow.querySelector(RIGHT_SIDE_SELECTOR);
-  if (!rightSide) return;
-
   const sortBarRect = sortBar.getBoundingClientRect();
-  const rightSideRect = rightSide.getBoundingClientRect();
 
-  // Find BBM stat cells (first two children of rightSide are ours)
-  const bbmCells = rightSide.querySelectorAll('.bbm-stat-cell');
+  // Find BBM stat cells — may be inside a rightSide container (Underdog)
+  // or direct children of the row (DK)
+  const bbmCells = sampleRow.querySelectorAll('.bbm-stat-cell');
   if (bbmCells.length < 2) return;
 
   const expRect = bbmCells[0].getBoundingClientRect();
@@ -966,7 +1082,9 @@ function sweepRows() {
   rafId = requestAnimationFrame(() => {
     rafId = null;
     if (!enabled) return;
-    const rows = document.querySelectorAll(ROW_SELECTOR);
+    // Use adapter.getPlayerRows() when available (e.g. DK scopes to player list only,
+    // excluding roster panel and picks panel BaseTables)
+    const rows = adapter.getPlayerRows?.() ?? document.querySelectorAll(adapter.selectors.rowSelector);
     rows.forEach(processRow);
     injectHeaders(); // must run after processRow so BBM cells exist for measurement
   });
@@ -977,11 +1095,17 @@ function sweepRows() {
  */
 function removeAllOverlays() {
   document.querySelectorAll('.bbm-inline-overlay').forEach(el => el.remove());
+  document.querySelectorAll('.bbm-tier-badge').forEach(el => el.remove());
+  document.querySelectorAll('[data-bbm-tier]').forEach(el => el.removeAttribute('data-bbm-tier'));
   document.querySelectorAll(`[${INJECTED_ATTR}]`).forEach(row => {
     row.removeAttribute(INJECTED_ATTR);
     row.removeAttribute(PLAYER_ID_ATTR);
   });
   removeHeaders();
+  if (corrPopupPortal) {
+    corrPopupPortal.remove();
+    corrPopupPortal = null;
+  }
 }
 
 /**
@@ -993,6 +1117,11 @@ function injectStyles() {
   const style = document.createElement('style');
   style.id = 'bbm-overlay-styles';
   style.textContent = `
+    /* DK: allow overlay cells to overflow fixed-width rows (scoped to rows, not scroll container) */
+    .BaseTable__row {
+      overflow: visible !important;
+    }
+
     .bbm-stat-cell {
       color: inherit;
       opacity: 0.6;
@@ -1019,18 +1148,15 @@ function injectStyles() {
       opacity: 1;
     }
 
-    /* Correlation popup — hidden by default, shown on hover */
+    /* Correlation popup — hidden by default, shown via JS mouseenter/mouseleave */
     .bbm-corr-popup {
       display: none;
-      position: absolute;
-      right: 0;
-      top: 100%;
-      margin-top: 4px;
       background: var(--bg-primary, #1a1a2e);
+      color: #E8E8E8;
       border: 1px solid var(--border-color, #333);
       border-radius: 8px;
       padding: 8px 0;
-      z-index: 9999;
+      z-index: 10001;
       min-width: 220px;
       max-width: 300px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -1038,13 +1164,10 @@ function injectStyles() {
       text-align: left;
       opacity: 1;
     }
-    .bbm-corr-trigger:hover .bbm-corr-popup {
-      display: block;
-    }
     .bbm-corr-popup-title {
       padding: 0 12px 6px;
       font-size: 10px;
-      color: inherit;
+      color: #E8E8E8;
       opacity: 0.5;
       text-transform: uppercase;
       font-weight: 700;
@@ -1053,7 +1176,7 @@ function injectStyles() {
     .bbm-corr-popup-empty {
       padding: 4px 12px;
       font-size: 12px;
-      color: inherit;
+      color: #E8E8E8;
       opacity: 0.4;
       font-style: italic;
     }
@@ -1124,13 +1247,12 @@ function injectStyles() {
       position: absolute;
       left: 0;
       right: 0;
-      top: 0;
-      transform: translateY(-50%);
+      top: -7px;
       display: flex;
       align-items: center;
       gap: 6px;
       pointer-events: none;
-      z-index: 3;
+      z-index: 0;
       padding: 0 10px;
     }
     .bbm-tier-badge::before,
@@ -1490,7 +1612,7 @@ function startOverlay() {
   startPicksObserver();  // watches "my team" panel for new picks
 
   gridObserver = createReconnectingObserver({
-    targetSelector: GRID_SELECTOR,
+    targetSelector: adapter.selectors.gridSelector,
     onMutation: sweepRows,
     onReconnect: () => {
       console.log('[BBM] Draft grid reconnected — re-sweeping rows');
@@ -1499,7 +1621,7 @@ function startOverlay() {
   });
 
   // Observe sort bar for active-sort changes so tier badges update immediately
-  const sortBarEl = document.querySelector(SORT_BUTTONS_SELECTOR);
+  const sortBarEl = document.querySelector(adapter.selectors.sortButtonsSelector);
   if (sortBarEl) {
     sortObserver = new MutationObserver(sweepRows);
     sortObserver.observe(sortBarEl, { attributes: true, subtree: true });
@@ -1637,9 +1759,10 @@ function handleUrlChange() {
   const currentUrl = window.location.href;
   if (currentUrl === lastUrl) return;
 
-  const wasOnDraft = /^\/draft\/[a-f0-9-]+/i.test(new URL(lastUrl).pathname);
-  const isOnDraft = isDraftPage();
+  const wasOnDraft = wasOnDraftPage;
   lastUrl = currentUrl;
+  wasOnDraftPage = adapter.isDraftPage();
+  const isOnDraft = wasOnDraftPage;
 
   if (!wasOnDraft && isOnDraft) {
     if (enabled) startOverlay();
@@ -1678,19 +1801,22 @@ function watchNavigation() {
  * pre-draft and during draft. Row injection (startOverlay) only runs
  * on actual draft pages where the player grid exists.
  */
-export function initDraftOverlay(onSync = null) {
+export function initDraftOverlay(platformAdapter, onSync = null) {
+  adapter = platformAdapter;
   syncCallback = onSync;
-  console.log('[BBM] Initializing on Underdog page');
+  console.log('[BBM] Initializing draft overlay');
 
   chrome.storage.local.get(['overlayEnabled', 'tournamentFilter'], (result) => {
     enabled = result.overlayEnabled !== false; // default to true
     selectedTournaments = new Set(result.tournamentFilter ?? []);
 
+    wasOnDraftPage = adapter.isDraftPage();
+
     injectStyles();
     injectFloatingButton();
     watchNavigation();
 
-    if (isDraftPage() && enabled) {
+    if (wasOnDraftPage && enabled) {
       startOverlay(); // startOverlay calls loadPortfolioData
     } else {
       // Not a draft page — still load data for panel status + tournament filter
@@ -1717,7 +1843,7 @@ export function initDraftOverlay(onSync = null) {
     const toggle = document.getElementById('bbm-overlay-toggle');
     if (toggle) toggle.checked = enabled;
     if (enabled) {
-      if (isDraftPage()) startOverlay();
+      if (adapter.isDraftPage()) startOverlay();
     } else {
       stopOverlay();
     }
