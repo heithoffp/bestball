@@ -34,7 +34,7 @@ const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
 
 export default function AccountSettings({ isOpen, onClose }) {
   const { user, signOut } = useAuth();
-  const { tier, status, subscription, isProUser, openPlanPicker, redirectToPortal } = useSubscription();
+  const { tier, status, subscription, isProUser, isBetaActive, betaDaysRemaining, betaExpiresAt, openPlanPicker, redirectToPortal } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -43,7 +43,8 @@ export default function AccountSettings({ isOpen, onClose }) {
 
   const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? null;
 
-  const tierLabel = tier === 'pro' ? 'Pro' : tier === 'free' ? 'Free' : 'Guest';
+  const isBetaPro = tier === 'pro' && isBetaActive && !subscription;
+  const tierLabel = isBetaPro ? 'Pro — Beta' : tier === 'pro' ? 'Pro' : tier === 'free' ? 'Free' : 'Guest';
   const tierColor = tier === 'pro' ? 'var(--accent)' : 'var(--text-muted)';
   const renewalDate = formatDate(subscription?.current_period_end);
   const cancelAtPeriodEnd = subscription?.cancel_at_period_end;
@@ -138,6 +139,15 @@ export default function AccountSettings({ isOpen, onClose }) {
             </div>
           )}
 
+          {isBetaPro && betaExpiresAt && (
+            <div className={styles.row}>
+              <span className={styles.label}>Beta ends</span>
+              <span style={{ color: betaDaysRemaining <= 7 ? 'var(--negative)' : 'var(--text-primary)', fontWeight: 500 }}>
+                {formatDate(betaExpiresAt.toISOString())} ({betaDaysRemaining} day{betaDaysRemaining !== 1 ? 's' : ''} left)
+              </span>
+            </div>
+          )}
+
           {isProUser && renewalDate && (
             <div className={styles.row}>
               <span className={styles.label}>{cancelAtPeriodEnd ? 'Ends on' : 'Renews on'}</span>
@@ -154,7 +164,7 @@ export default function AccountSettings({ isOpen, onClose }) {
         )}
 
         <div className={styles.actions}>
-          {isProUser ? (
+          {isProUser && !isBetaPro ? (
             <button className={styles.primaryBtn} onClick={handleManageBilling} disabled={loading}>
               <CreditCard size={16} />
               {loading ? 'Opening...' : 'Manage Billing'}

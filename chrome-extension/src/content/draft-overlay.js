@@ -1660,8 +1660,8 @@ function injectFloatingButton() {
 
   const fab = document.createElement('button');
   fab.id = 'bbm-fab';
-  fab.title = 'Best Ball Manager';
-  fab.innerHTML = `<svg width="36" height="36" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Best Ball Manager">
+  fab.title = 'Best Ball Exposures';
+  fab.innerHTML = `<svg width="36" height="36" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Best Ball Exposures">
     <defs>
       <linearGradient id="bb-gold" x1="10" y1="10" x2="38" y2="38" gradientUnits="userSpaceOnUse">
         <stop offset="0%"   stop-color="#F0CC5B"/>
@@ -1683,7 +1683,7 @@ function injectFloatingButton() {
   const panel = document.createElement('div');
   panel.id = 'bbm-panel';
   panel.innerHTML = `
-    <div class="bbm-panel-title">Best Ball Manager</div>
+    <div class="bbm-panel-title">Best Ball Exposures</div>
     <div id="bbm-auth-section"></div>
     <hr class="bbm-panel-divider" />
     <div class="bbm-panel-row">

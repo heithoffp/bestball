@@ -28,7 +28,6 @@ const tabs = [
   { key: 'combo', label: 'Combos', icon: Network },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
-  { key: 'help', label: 'Help', icon: HelpCircle },
 ];
 
 // Lazy-loaded tab components (P2: code splitting)
@@ -37,7 +36,7 @@ const AdpTimeSeries = lazy(() => import('./components/AdpTimeSeries'));
 const DraftFlowAnalysis = lazy(() => import('./components/DraftFlowAnalysis'));
 const RosterViewer = lazy(() => import('./components/RosterViewer'));
 const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
-const HelpGuide = lazy(() => import('./components/HelpGuide'));
+// HelpGuide tab removed — contextual help is now per-tab via global Help button
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 // DISABLED for performance — keep source file intact
@@ -83,6 +82,8 @@ export default function App() {
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [isUsingDemoData, setIsUsingDemoData] = useState(false);
   const [rosterNavContext, setRosterNavContext] = useState(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const toggleHelp = useCallback(() => setHelpOpen(h => !h), []);
   const openAuthModal = useCallback((message) => {
     setAuthModalMessage(message || '');
     setShowAuthModal(true);
@@ -271,7 +272,7 @@ export default function App() {
               <button
                 key={key}
                 className={`tab-button${activeTab === key ? ' active' : ''}${locked ? ' locked' : ''}`}
-                onClick={() => { if (key === 'rosters') setRosterNavContext(null); setActiveTab(key); trackEvent('tab_viewed', { tab: key }); }}
+                onClick={() => { if (key === 'rosters') setRosterNavContext(null); setActiveTab(key); setHelpOpen(false); trackEvent('tab_viewed', { tab: key }); }}
               >
                 {isMobile ? (
                   <>
@@ -288,6 +289,20 @@ export default function App() {
               </button>
             );
           })}
+          <button
+            className={`tab-button${helpOpen ? ' help-active' : ''}`}
+            onClick={toggleHelp}
+            aria-label={helpOpen ? 'Close help' : 'Show help'}
+          >
+            {isMobile ? (
+              <>
+                <HelpCircle className="tab-icon" size={20} />
+                <span>Help</span>
+              </>
+            ) : (
+              'Help'
+            )}
+          </button>
         </div>
 
         {isUsingDemoData && rosterData.length > 0 && (
@@ -299,21 +314,21 @@ export default function App() {
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
-            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onNavigateToRosters={navigateToRosters} />}
-            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={navigateToRosters} />}
+            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
+            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
             {activeTab === 'draftflow' && (
               canAccessFeature(tier, 'draftflow') || subLoading
-                ? <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} />
+                ? <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Draft Assistant" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'rosters' && (
               canAccessFeature(tier, 'rosters') || subLoading
-                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} initialFilter={rosterNavContext} />
+                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} initialFilter={rosterNavContext} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Roster Viewer" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'rankings' && (
               canAccessFeature(tier, 'rankings') || subLoading
-                ? <PlayerRankings rankingsByPlatform={rankingsByPlatform} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} onRankingsUpload={handleRankingsUpload} uploadAuthGuard={uploadAuthGuard} />
+                ? <PlayerRankings rankingsByPlatform={rankingsByPlatform} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} onRankingsUpload={handleRankingsUpload} uploadAuthGuard={uploadAuthGuard} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Player Rankings" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'timeseries' && (
@@ -324,10 +339,11 @@ export default function App() {
                 teams={12}
                 rosterData={rosterData}
                 onNavigateToRosters={navigateToRosters}
+                helpOpen={helpOpen}
+                onHelpToggle={toggleHelp}
               />
             )}
-            {activeTab === 'combo' && <ComboAnalysis rosterData={rosterData} onNavigateToRosters={navigateToRosters} />}
-            {activeTab === 'help' && <HelpGuide />}
+            {activeTab === 'combo' && <ComboAnalysis rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
           </Suspense>
         </div>
       </div>

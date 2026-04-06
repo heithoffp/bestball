@@ -24,11 +24,11 @@ export default function BetaBanner() {
       <div className={`${styles.banner} ${styles.info}`}>
         <Clock size={16} />
         <span>
-          Your beta access expires in <strong>{betaDaysRemaining} day{betaDaysRemaining !== 1 ? 's' : ''}</strong>.
-          Start a free trial to keep Pro features.
+          Your free beta access ends after the NFL Draft (April 25) — <strong>{betaDaysRemaining} day{betaDaysRemaining !== 1 ? 's' : ''} left</strong>.
+          Subscribe now to keep Pro features.
         </span>
         <button className={styles.action} onClick={() => openPlanPicker()}>
-          Start Free Trial
+          Subscribe
         </button>
         <button className={styles.dismiss} onClick={() => setDismissed(true)} aria-label="Dismiss">
           <X size={14} />
@@ -43,7 +43,7 @@ export default function BetaBanner() {
       <div className={`${styles.banner} ${styles.warning}`}>
         <AlertTriangle size={16} />
         <span>
-          Your beta access has ended. Start a 7-day free trial, or use code <strong>BETA25</strong> for 25% off.
+          Your beta access has ended. Use code <strong>BETA25</strong> for 25% off when you subscribe.
         </span>
         <button className={styles.action} onClick={() => openPlanPicker('BETA25')}>
           Subscribe Now

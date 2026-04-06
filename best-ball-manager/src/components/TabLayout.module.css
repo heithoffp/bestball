@@ -71,6 +71,11 @@
   padding: 0;
 }
 
+/* ── Content relative wrapper (for help overlay positioning) ── */
+.contentRelative {
+  position: relative;
+}
+
 /* ── Responsive ── */
 @media (max-width: 599px) {
   .toolbar {

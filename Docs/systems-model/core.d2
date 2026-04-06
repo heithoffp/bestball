@@ -60,6 +60,18 @@ P11: Entries Scraper {
   style.fill: "#7B68EE"
   style.font-color: "#FFFFFF"
 }
+P12: Contextual Help {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P13: Feedback Pipeline {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+P14: Feature Gating {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
 
 # --- Artifacts (Green) ---
 A1: Roster CSVs {
@@ -117,10 +129,10 @@ E4: Stripe {
   style.fill: "#E67E22"
   style.font-color: "#FFFFFF"
 }
-E5: Sleeper / DraftKings {
+E5: DraftKings / Sleeper {
   style.fill: "#E67E22"
   style.font-color: "#FFFFFF"
-  style.stroke-dash: 5
+  style.stroke-dash: 3
 }
 
 # --- Current Interactions (solid) ---
@@ -166,7 +178,16 @@ P11 -> E2: Writes roster data {style.stroke: "#333"}
 P9 -> E2: Reads portfolio data {style.stroke: "#333"}
 A8 -> A3: Styles all UI {style.stroke: "#333"}
 
+# --- New interactions (delta 2026-04-06) ---
+R1 -> P13: Submits feedback {style.stroke: "#333"}
+P13 -> E2: Routes via Edge Function {style.stroke: "#333"}
+P13 -> R2: Delivers feedback email {style.stroke: "#333"}
+P14 -> A3: Gates tab access {style.stroke: "#333"}
+P8 -> P14: Tier feeds gating {style.stroke: "#333"}
+P12 -> A3: Help annotations {style.stroke: "#333"}
+E5 -> A2: DK ADP snapshots {style.stroke: "#333"}
+E5 -> A1: DK roster CSVs {style.stroke: "#333"}
+
 # --- Aspirational Interactions (dashed) ---
-E5 -> A1: Exports CSV {style.stroke-dash: 5}
 R1 -> A7: Discovers product {style.stroke-dash: 5}
 A7 -> P6: Drives signup {style.stroke-dash: 5}

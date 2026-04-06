@@ -3,7 +3,7 @@
 const FEATURE_ACCESS = {
   dashboard:    'guest',
   exposures:    'guest',
-  timeseries:   'guest',
+  timeseries:   'pro',
   help:         'guest',
   draftflow:    'pro',
   rosters:      'pro',

@@ -9,6 +9,7 @@ import { canonicalName, expandTeam } from '../utils/helpers';
 import FileUploadButton from './FileUploadButton';
 import { SearchInput } from './filters';
 import useMediaQuery from '../hooks/useMediaQuery';
+import TabLayout from './TabLayout';
 import s from './PlayerRankings.module.css';
 
 const POS_COLORS = {
@@ -40,6 +41,15 @@ const TIER_COLORS = {
   'D-': { bg: 'rgba(168,85,247,0.12)', text: '#a855f7',  border: '#a855f7' },
   'F':  { bg: 'rgba(107,114,128,0.12)', text: '#6b7280', border: '#6b7280' },
 };
+
+const HELP_ANNOTATIONS = [
+  { id: 'search-controls', label: 'Search & Actions', anchor: 'below', description: 'Search by player or team. Save your rankings, export to CSV, or upload a rankings file.' },
+  { id: 'platform-toggle', label: 'Platform Toggle', anchor: 'below', description: 'Switch between Underdog and DraftKings rankings. Each platform has its own saved order.' },
+  { id: 'position-filter', label: 'Position Filter', anchor: 'below', description: 'View overall rankings or filter to a single position. Player count updates to match.' },
+  { id: 'tier-breaks', label: 'Tier Breaks', anchor: 'below', description: 'Colored dividers group players into tiers. Click a label to rename it, drag to reposition, or ✕ to remove.' },
+  { id: 'drag-reorder', label: 'Drag to Reorder', anchor: 'below', description: 'Drag the grip handle to set your personal ranking order. Rankings are per-platform.' },
+  { id: 'keyboard-shortcuts', label: 'Keyboard Shortcuts', anchor: 'below', description: 'Arrow keys move selection. T inserts a tier break. Delete removes the selected tier break.' },
+];
 
 /* Pointer-based insertion-point collision detection — finds the first droppable
    whose vertical midpoint is at or below the pointer Y. This gives natural
@@ -421,7 +431,7 @@ function PointerTrackingOverlay({ activePlayer, activeTierDrag, displayedPlayers
 }
 
 /* ── Main component ──────────────────────────────────────────── */
-export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers, onRankingsUpload, uploadAuthGuard, adpByPlatform = {} }) {
+export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers, onRankingsUpload, uploadAuthGuard, adpByPlatform = {}, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
 
   /* --- state --- */
@@ -492,6 +502,18 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     setOverallTierBreaks(new Set());
     setTierLabels({});
     const projMap = adpByPlatform?.[selectedPlatform]?.projPointsMap ?? {};
+    // Build name→id lookup from the platform's ADP rows so saved rankings with stale
+    // gen_ IDs get resolved to the real platform ID (e.g. DraftKings numeric IDs).
+    const adpRows = adpByPlatform?.[selectedPlatform]?.latestRows ?? [];
+    const nameToAdpId = new Map();
+    adpRows.forEach(r => {
+      const n = canonicalName(
+        (`${r.firstName || r.first_name || ''} ${r.lastName || r.last_name || ''}`).trim()
+        || r.Name || r.name || ''
+      );
+      const id = r.id || r.ID;
+      if (n && id) nameToAdpId.set(n, String(id));
+    });
     let players = activeSource.map(row => {
       const firstName = row.firstName || row.first_name || row['First Name'] || '';
       const lastName = row.lastName || row.last_name || row['Last Name'] || '';
@@ -500,8 +522,12 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
       const nameKey = canonicalName(name);
       const projRaw = row.projectedPoints || row.projected_points || '';
       const proj = projRaw || (projMap[nameKey] != null ? String(projMap[nameKey]) : '');
+      const rawId = row.id || row.ID || '';
+      const id = (!rawId || rawId.startsWith('gen_'))
+        ? (nameToAdpId.get(nameKey) || `gen_${name.replace(/\s+/g, '_')}`)
+        : rawId;
       return {
-        id: row.id || `gen_${name.replace(/\s+/g, '_')}`,
+        id,
         firstName,
         lastName,
         name,
@@ -919,7 +945,7 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
 
   /* --- export --- */
   const handleExport = useCallback(() => {
-    exportRankingsCSV(rankedPlayers, fullTierMap, tierLabels);
+    exportRankingsCSV(rankedPlayers, fullTierMap, tierLabels, selectedPlatform || 'underdog');
   }, [rankedPlayers, fullTierMap, tierLabels]);
 
   /* --- save to assets --- */
@@ -956,7 +982,7 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     return (
       <div className={s.emptyState}>
         <div className={s.emptyHeader}>
-          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} />}
+          {onRankingsUpload && <FileUploadButton label="Upload CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} className={s.exportBtn} />}
         </div>
         <p className={s.emptyText}>
           No rankings data loaded. Use the Upload button to import a Rankings CSV.
@@ -992,11 +1018,11 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
           <col className={s.colProj} />
         </colgroup>
         <thead>
-          <tr className={s.stickyHead}>
+          <tr className={s.stickyHead} data-help-id="drag-reorder">
             <th className={s.headerCell} />
-            <th className={s.headerCell}>#</th>
+            <th className={s.headerCell} data-help-id="keyboard-shortcuts">#</th>
             <th className={s.headerCell}>Pos#</th>
-            <th className={s.headerCell}>Tier</th>
+            <th className={s.headerCell} data-help-id="tier-breaks">Tier</th>
             <th className={s.headerCellName}>Player</th>
             <th className={s.headerCell}>Pos</th>
             <th className={s.headerCell}>Team</th>
@@ -1148,9 +1174,10 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
   };
 
   return (
+    <TabLayout flush helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
     <div className={s.root}>
       {/* Header row */}
-      <div className={s.headerRow}>
+      <div className={s.headerRow} data-help-id="search-controls">
         <div className={s.headerRight}>
           {/* Search */}
           <SearchInput
@@ -1183,7 +1210,7 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
               <button onClick={handleExport} className={s.exportBtn}>
                 <Download size={14} /> Export
               </button>
-              {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} />}
+              {onRankingsUpload && <FileUploadButton label="Upload CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} className={s.exportBtn} />}
             </>
           )}
         </div>
@@ -1191,7 +1218,7 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
 
       {/* Platform toggle — only when multiple platforms have ADP data */}
       {availablePlatforms.length > 1 && (
-        <div className="filter-btn-group" style={{ padding: '0 0 8px' }}>
+        <div className="filter-btn-group" style={{ padding: '0 0 8px' }} data-help-id="platform-toggle">
           {['underdog', 'draftkings']
             .filter(p => availablePlatforms.includes(p))
             .map(p => (
@@ -1207,7 +1234,7 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
       )}
 
       {/* Position toggle */}
-      <div className="filter-chip-group" style={{ padding: '0 0 8px' }}>
+      <div className="filter-chip-group" style={{ padding: '0 0 8px' }} data-help-id="position-filter">
         {VIEWS.map(v => {
           const isActive = viewMode === v;
           const posClass = v !== 'overall' ? `filter-chip--pos-${v.toLowerCase()}` : '';
@@ -1252,5 +1279,6 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
         <PointerTrackingOverlay activePlayer={activePlayer} activeTierDrag={activeTierDrag} displayedPlayers={displayedPlayers} />
       </DndContext>
     </div>
+    </TabLayout>
   );
 }

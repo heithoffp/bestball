@@ -7,6 +7,7 @@ import { parseAdpString, canonicalName } from '../utils/helpers';
 import styles from './AdpTimeSeries.module.css';
 import { SearchInput } from './filters';
 import useMediaQuery from '../hooks/useMediaQuery';
+import TabLayout from './TabLayout';
 
 // --- Math Helper for Quartiles + mean ---
 const calculateBoxPlot = (values) => {
@@ -83,7 +84,7 @@ function CustomTooltip({ active, label, payload, richPlayerList }) {
   );
 }
 
-export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, masterPlayers = [], rosterData = [], teams = 12, onNavigateToRosters = null }) {
+export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, masterPlayers = [], rosterData = [], teams = 12, onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const [query, setQuery] = useState('');
   const { isMobile, isTablet } = useMediaQuery();
   const [showPickRanges, setShowPickRanges] = useState(false);
@@ -115,6 +116,20 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
   }, [availablePlatforms]);
 
   const isBothMode = platformFilter === 'all' && isTwoPlat;
+
+  const helpAnnotations = useMemo(() => {
+    const items = [
+      { id: 'controls', label: 'Search & Filters', description: 'Filter players by name, team, or position. Switch the time window to scope trend calculations.' },
+      { id: 'player-table', label: 'Player Selection', description: 'Click a row to add that player to the chart. Up to 10 players can be tracked at once.' },
+      { id: 'trend-col', label: 'Trend Column', description: 'ADP movement over the selected time window — rising means going earlier in drafts.' },
+      { id: 'value-col', label: 'Value Column', description: 'Difference between your average pick and current ADP — positive means you drafted them later than market.' },
+    ];
+    if (!isBothMode) {
+      items.push({ id: 'pick-ranges', label: 'My Pick Ranges', description: 'Overlays a quartile box on the chart showing where you actually picked each player.' });
+    }
+    items.push({ id: 'chart-area', label: 'ADP History Chart', description: 'ADP over time for selected players. Lower = drafted earlier. Hover for exact values.', anchor: 'above' });
+    return items;
+  }, [isBothMode]);
 
   const activeSnapshots = useMemo(() => {
     if (platformFilter === 'all') return adpSnapshots;
@@ -373,10 +388,11 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
   const chartHeight = isMobile ? 260 : isTablet ? 420 : 540;
 
   return (
+    <TabLayout flush helpAnnotations={helpAnnotations} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
     <div className={styles.root}>
 
       {/* --- Controls --- */}
-      <div className={styles.controls}>
+      <div className={styles.controls} data-help-id="controls">
         <SearchInput value={query} onChange={setQuery} placeholder="Filter by name, team, pos..." />
 
         <div className={styles.buttonGroup}>
@@ -405,7 +421,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         )}
 
         {!isBothMode && (
-          <label className="filter-checkbox">
+          <label className="filter-checkbox" data-help-id="pick-ranges">
             <input type="checkbox" checked={showPickRanges} onChange={e => setShowPickRanges(e.target.checked)} />
             My Pick Ranges
           </label>
@@ -419,7 +435,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
       <div className={styles.mainLayout}>
 
         {/* --- Top strip: player selector table --- */}
-        <div className={`card ${styles.tablePane}`}>
+        <div className={`card ${styles.tablePane}`} data-help-id="player-table">
 
           {/* Header */}
           <div className={styles.tableHeader} style={{ gridTemplateColumns: tableGrid }}>
@@ -437,17 +453,17 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
                 <div className={styles.colHeader} onClick={() => handleSort('udAdp')}>UD ADP <SortIcon col="udAdp" sortConfig={sortConfig} /></div>
                 <div className={styles.colHeader} onClick={() => handleSort('dkAdp')}>DK ADP <SortIcon col="dkAdp" sortConfig={sortConfig} /></div>
                 {!isTablet && <div className={styles.colHeader} onClick={() => handleSort('deltaAdp')}>Δ UD-DK <SortIcon col="deltaAdp" sortConfig={sortConfig} /></div>}
-                <div className={styles.colHeader} onClick={() => handleSort('udTrend')}>UD Trend <SortIcon col="udTrend" sortConfig={sortConfig} /></div>
+                <div className={styles.colHeader} data-help-id="trend-col" onClick={() => handleSort('udTrend')}>UD Trend <SortIcon col="udTrend" sortConfig={sortConfig} /></div>
                 {!isTablet && <div className={styles.colHeader} onClick={() => handleSort('dkTrend')}>DK Trend <SortIcon col="dkTrend" sortConfig={sortConfig} /></div>}
               </>
             ) : !isTwoPlat && !isMobile ? (
               <>
                 <div className={styles.colHeader} onClick={() => handleSort('lastAdp')}>ADP <SortIcon col="lastAdp" sortConfig={sortConfig} /></div>
-                <div className={styles.colHeader} onClick={() => handleSort('change')}>Trend <SortIcon col="change" sortConfig={sortConfig} /></div>
+                <div className={styles.colHeader} data-help-id="trend-col" onClick={() => handleSort('change')}>Trend <SortIcon col="change" sortConfig={sortConfig} /></div>
               </>
             ) : null}
             {!isMobile && <div className={styles.colHeader} onClick={() => handleSort('exposure')}>Exp <SortIcon col="exposure" sortConfig={sortConfig} /></div>}
-            {!isMobile && !isTablet && <div className={styles.colHeader} onClick={() => handleSort('value')}>Value <SortIcon col="value" sortConfig={sortConfig} /></div>}
+            {!isMobile && !isTablet && <div className={styles.colHeader} data-help-id="value-col" onClick={() => handleSort('value')}>Value <SortIcon col="value" sortConfig={sortConfig} /></div>}
             {isMobile && <div className={styles.colHeader} onClick={() => handleSort(isTwoPlat ? 'udTrend' : 'change')}>Trend <SortIcon col={isTwoPlat ? 'udTrend' : 'change'} sortConfig={sortConfig} /></div>}
             {onNavigateToRosters && <div />}
           </div>
@@ -532,7 +548,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         </div>
 
         {/* --- Chart --- */}
-        <div className={`card ${styles.chartPane}`}>
+        <div className={`card ${styles.chartPane}`} data-help-id="chart-area">
           {selectedIds.length === 0 ? (
             <div className={styles.chartEmpty}>Select players from the list to view ADP history</div>
           ) : (
@@ -581,5 +597,6 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         </div>
       </div>
     </div>
+    </TabLayout>
   );
 }

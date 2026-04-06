@@ -6,6 +6,15 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './DraftFlowAnalysis.module.css';
 import { SearchInput } from './filters';
 import { trackEvent } from '../utils/analytics';
+import TabLayout from './TabLayout';
+
+const HELP_ANNOTATIONS = [
+  { id: 'draft-slot', label: 'Draft Slot', description: 'Set your draft position (1–12) to align the player window with your snake pick.' },
+  { id: 'draft-board', label: 'Draft Board', description: 'Your picks so far. Undo or clear to explore different draft paths.' },
+  { id: 'player-search', label: 'Player Search', description: 'Search any player by name — bypasses the ADP window to find anyone in the player pool.' },
+  { id: 'column-headers', label: 'Player Columns', description: 'ADP = consensus draft position. Avg = your historical pick. Correlation = co-occurrence with your picks. Global = portfolio-wide ownership %.' },
+  { id: 'player-list', label: 'Available Players', description: 'Players in the ADP window for this pick. Click a row to draft that player.', anchor: 'above' },
+];
 
 // ADP delta: positive = I drafted later than current ADP (got value), negative = I drafted earlier (overpaid)
 const getAdpDeltaColor = (delta) => {
@@ -114,7 +123,7 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
   return true;
 }
 
-export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}) {
+export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [], helpOpen, onHelpToggle }) {
   useEffect(() => { trackEvent('draft_session_started'); }, []);
 
   const [currentPicks, setCurrentPicks] = useState([]);
@@ -701,7 +710,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   );
 
   const renderDraftControls = () => (
-    <div style={{ flexShrink: 0 }}>
+    <div style={{ flexShrink: 0 }} data-help-id="draft-slot">
       <div className={styles.controlsRow}>
         <div className={styles.controlCard}>
           <span className={styles.controlLabel}>Draft Slot</span>
@@ -725,7 +734,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
   const renderDraftBoard = () => (
     <div className={styles.boardPanel}>
-      <div className={styles.boardHeader}>
+      <div className={styles.boardHeader} data-help-id="draft-board">
         <h2 className={styles.boardTitle}>Draft Board</h2>
         {currentPicks.length > 0 && (
           <div className={styles.buttonRow}>
@@ -771,16 +780,18 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
           </div>
         )}
       </div>
-      <SearchInput
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder="Search all players..."
-      />
+      <div data-help-id="player-search">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search all players..."
+        />
+      </div>
     </div>
   );
 
   const renderColumnHeaders = () => (
-    <div className={styles.columnHeaders}>
+    <div className={styles.columnHeaders} data-help-id="column-headers">
       <div className={styles.colPlayer}>
         <span className={styles.colHeader} title="Player name, position, and any relevant badges (stack type, strategy warnings, ADP trend)">Player</span>
       </div>
@@ -807,7 +818,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
   );
 
   const renderPlayerList = () => (
-    <div ref={playerListRef} className={`${styles.playerList} ${styles.scrollArea}`}>
+    <div ref={playerListRef} className={`${styles.playerList} ${styles.scrollArea}`} data-help-id="player-list">
       {displayPlayers.length === 0 ? (
         <div className={styles.playerListEmpty}>
           {searchQuery.trim() ? (
@@ -877,28 +888,30 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = []}
 
   // --- MAIN RENDER ---
   return (
-    <div className={styles.root}>
-      {isMobile && renderSegmentedControl()}
-      {isMobile && renderContextBar()}
+    <TabLayout helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle} flush>
+      <div className={styles.root}>
+        {isMobile && renderSegmentedControl()}
+        {isMobile && renderContextBar()}
 
-      {isMobile ? (
-        mobileSubView === 'board' ? renderBoardView() : renderPlayersView()
-      ) : (
-        <>
-          <div className={styles.leftColumn}>
-            {renderDraftControls()}
-            {renderDraftBoard()}
-          </div>
-          <div className={styles.rightColumn}>
-            {renderPlayerListHeader()}
-            {renderColumnHeaders()}
-            {renderPlayerList()}
-          </div>
-        </>
-      )}
+        {isMobile ? (
+          mobileSubView === 'board' ? renderBoardView() : renderPlayersView()
+        ) : (
+          <>
+            <div className={styles.leftColumn}>
+              {renderDraftControls()}
+              {renderDraftBoard()}
+            </div>
+            <div className={styles.rightColumn}>
+              {renderPlayerListHeader()}
+              {renderColumnHeaders()}
+              {renderPlayerList()}
+            </div>
+          </>
+        )}
 
-      {isMobile && draftToast && renderToast()}
-    </div>
+        {isMobile && draftToast && renderToast()}
+      </div>
+    </TabLayout>
   );
 }
 

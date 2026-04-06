@@ -20,7 +20,7 @@
 **Status:** Not Started
 **Description:** Payment processing (Stripe or similar) with subscription tier gating and self-service subscription management. Determines which features are available to free vs paid users.
 **Depends on:** FEAT-021 — pricing and tier decisions should be made before implementing payment integration.
-**Tasks:** TASK-013, TASK-014, TASK-015, TASK-016, TASK-025, TASK-026
+**Tasks:** TASK-013, TASK-014, TASK-015, TASK-016, TASK-025, TASK-026, TASK-161, TASK-162
 
 ### FEAT-003: Deployment & Infrastructure Polish
 **Status:** In Progress
@@ -28,9 +28,9 @@
 **Tasks:** TASK-008, TASK-009, TASK-010, TASK-011, TASK-012, TASK-018
 
 ### FEAT-021: Commercial Strategy & Positioning
-**Status:** Complete
-**Description:** Competitive analysis (pricing, features, positioning vs. Best Ball Overlay), pricing model and tier definition, channel strategy for reaching serious best-ball drafters, and launch planning. This is a research/strategy feature — outputs inform FEAT-002 (tier gating) and FEAT-014 (landing page messaging).
-**Tasks:** TASK-001, TASK-002, TASK-003, TASK-020, TASK-021, TASK-024
+**Status:** In Progress (reopened for competitive refresh — free tools emerging on r/bestball)
+**Description:** Competitive analysis (pricing, features, positioning vs. Best Ball Overlay and emerging free tools), pricing model and tier definition, channel strategy for reaching serious best-ball drafters, and launch planning. Reopened April 2026 to refresh competitive landscape — free tools appearing on r/bestball weren't in original analysis. Outputs inform FEAT-002 (tier gating) and FEAT-014 (landing page messaging).
+**Tasks:** TASK-001, TASK-002, TASK-003, TASK-020, TASK-021, TASK-024, TASK-163, TASK-164
 
 ---
 
@@ -105,16 +105,18 @@
 
 ### FEAT-012: First-Run Experience
 **Status:** Not Started
-**Description:** Empty state guidance on all tabs (Dashboard has partial empty state; other tabs need it). Sample data button that loads bundled demo CSVs so users can explore without their own data.
-**Tasks:** TASK-023
+**Description:** Empty state guidance on all tabs (Dashboard has partial empty state; other tabs need it). Sample data button that loads bundled demo CSVs so users can explore without their own data. Feature gating evaluation for guest conversion path.
+**Tasks:** TASK-023, TASK-168, TASK-169, TASK-172, TASK-173
 
 ### FEAT-013: Contextual Help
 **Status:** Not Started
 **Description:** Replace standalone Help tab with per-tab help widgets that highlight key features, important elements, and terminology contextually. Serves as onboarding for new users and reference for experienced ones.
+**Tasks:** TASK-151, TASK-152, TASK-153, TASK-154, TASK-155, TASK-156, TASK-157, TASK-158
 
 ### FEAT-014: Landing Page
 **Status:** Not Started
-**Description:** Marketing site with clear value proposition, product screenshots, pricing tiers, competitor comparison, and signup CTA. First touchpoint for potential subscribers.
+**Description:** Marketing site with clear value proposition, product screenshots, pricing tiers, competitor comparison, and signup CTA. First touchpoint for potential subscribers. Must look polished (not "AI slop"), load fast, and have compelling Open Graph previews for Reddit/social sharing.
+**Tasks:** TASK-165, TASK-166, TASK-167
 
 ---
 
@@ -155,4 +157,4 @@
 ### FEAT-020: Multi-Platform CSV Support
 **Status:** In Progress
 **Description:** Auto-detect and parse Sleeper and DraftKings CSV export formats alongside Underdog. No user selection required — format detection is automatic per the Zero-Config Insights principle.
-**Tasks:** TASK-141, TASK-142, TASK-143, TASK-144, TASK-145
+**Tasks:** TASK-141, TASK-142, TASK-143, TASK-144, TASK-145, TASK-160

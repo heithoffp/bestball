@@ -11,10 +11,13 @@ function getTierLabel(tierNum) {
   return TIER_LABELS[tierNum - 1];
 }
 
-const CSV_COLUMNS = ['id', 'name', 'firstName', 'lastName', 'adp', 'projectedPoints',
+const CSV_COLUMNS_DEFAULT = ['id', 'firstName', 'lastName', 'adp', 'projectedPoints',
   'positionRank', 'slotName', 'teamName', 'lineupStatus', 'byeWeek', 'tier', 'tierNum'];
 
-function buildRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
+const CSV_COLUMNS_DK = ['ID', 'Name', 'Position', 'ADP', 'Team', 'tier', 'tierNum'];
+
+function buildRankingsCSV(rankedPlayers, tierMap, tierLabels = {}, platform = 'underdog') {
+  const isDK = platform === 'draftkings';
   const positionCounters = {};
 
   const breakPlayerIds = new Set();
@@ -41,9 +44,19 @@ function buildRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
       displayLabel = getTierLabel(tierNum);
     }
 
+    if (isDK) {
+      return {
+        ID: p.id || '',
+        Name: p.name || '',
+        Position: pos,
+        ADP: String(idx + 1),
+        Team: p.teamName || '',
+        tier: displayLabel,
+        tierNum: String(tierNum),
+      };
+    }
     return {
       id: p.id || '',
-      name: p.name || '',
       firstName: p.firstName || '',
       lastName: p.lastName || '',
       adp: String(idx + 1),
@@ -58,11 +71,11 @@ function buildRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
     };
   });
 
-  return Papa.unparse(rows, { columns: CSV_COLUMNS });
+  return Papa.unparse(rows, { columns: isDK ? CSV_COLUMNS_DK : CSV_COLUMNS_DEFAULT });
 }
 
-export function exportRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
-  const csv = buildRankingsCSV(rankedPlayers, tierMap, tierLabels);
+export function exportRankingsCSV(rankedPlayers, tierMap, tierLabels = {}, platform = 'underdog') {
+  const csv = buildRankingsCSV(rankedPlayers, tierMap, tierLabels, platform);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

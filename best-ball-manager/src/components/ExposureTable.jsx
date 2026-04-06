@@ -75,7 +75,15 @@ const SORT_OPTIONS = [
   { value: 'adpTrend', label: 'Trend' },
 ];
 
-export default function ExposureTable({ masterPlayers = [], rosterData = [], onNavigateToRosters = null }) {
+const HELP_ANNOTATIONS = [
+  { id: 'search-controls', label: 'Search & Filters', anchor: 'below', description: 'Search by player name, team, or position. Filter by tournament to scope exposure to specific slates.' },
+  { id: 'archetype-filters', label: 'Strategy Filters', anchor: 'below', description: 'Filter by RB/QB/TE draft strategy. Exposure % recalculates for matching rosters only.' },
+  { id: 'show-undrafted', label: 'Show 0% Toggle', anchor: 'below', description: 'Include players you haven\'t drafted. Useful for spotting ADP market gaps.' },
+  { id: 'column-headers', label: 'Sortable Columns', anchor: 'below', description: 'Click any column header to sort. Exposure % = how many of your rosters include this player.' },
+  { id: 'adp-trend', label: 'ADP Trend', anchor: 'left', description: 'Sparkline showing 2-week ADP movement. Rising ADP = falling draft cost.' },
+];
+
+export default function ExposureTable({ masterPlayers = [], rosterData = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
 
   const [search, setSearch] = useState('');
@@ -298,7 +306,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
   const renderDesktopFilters = () => (
     <div className={styles.controlPanel}>
       {/* Row 1: Search + Tournament + Show 0% toggle chip + Result count */}
-      <div className={styles.filterRow1}>
+      <div className={styles.filterRow1} data-help-id="search-controls">
         <div style={{ flex: '0 1 375px', minWidth: 180 }}>
           <span className="filter-select-label">Player / Team Search</span>
           <SearchInput value={search} onChange={setSearch} placeholder="Search name, team, pos..." />
@@ -312,6 +320,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
           className={`filter-chip ${showUndrafted ? 'filter-chip--active' : ''}`}
           style={showUndrafted ? { background: 'var(--accent-muted)', borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
           onClick={() => setShowUndrafted(prev => !prev)}
+          data-help-id="show-undrafted"
         >
           Show 0% Exposures
         </button>
@@ -323,7 +332,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
         )}
       </div>
       {/* Row 2: Archetype chips */}
-      <div className={styles.filterRow2}>
+      <div className={styles.filterRow2} data-help-id="archetype-filters">
         <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} posColor={getPosColor('RB')} />
         <div className={styles.filterSep} />
         <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} posColor={getPosColor('QB')} />
@@ -503,14 +512,14 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
           </colgroup>
 
           <thead className={styles.thead}>
-            <tr>
+            <tr data-help-id="column-headers">
               <th className={styles.headerCell} onClick={() => onSort('name')}>Player {sortArrow('name')}</th>
               <th className={styles.headerCell} onClick={() => onSort('position')}>Pos {sortArrow('position')}</th>
               <th className={styles.headerCell} onClick={() => onSort('team')}>Team {sortArrow('team')}</th>
               <th className={styles.headerCell} onClick={() => onSort('exposure')}>Exposure % {sortArrow('exposure')}</th>
               <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('count')}>Count {sortArrow('count')}</th>
               <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('adp')}>ADP {sortArrow('adp')}</th>
-              <th className={`${styles.headerCell} ${styles.trendCol}`} onClick={() => onSort('adpTrend')}>ADP Trend {sortArrow('adpTrend')}</th>
+              <th className={`${styles.headerCell} ${styles.trendCol}`} onClick={() => onSort('adpTrend')} data-help-id="adp-trend">ADP Trend {sortArrow('adpTrend')}</th>
               {onNavigateToRosters && <th className={styles.headerCell} />}
             </tr>
           </thead>
@@ -622,6 +631,9 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
       toolbar={toolbarControls}
       banner={bannerContent}
       flush
+      helpAnnotations={HELP_ANNOTATIONS}
+      helpOpen={helpOpen}
+      onHelpToggle={onHelpToggle}
     >
       {isMobile ? (
         <>

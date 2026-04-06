@@ -1,3 +1,4 @@
+<!-- Completed: 2026-04-06 | Commit: f914fa9 -->
 # TASK-149: User Feedback Button — in-app form that emails feedback to developer via Resend
 
 **Status:** Approved

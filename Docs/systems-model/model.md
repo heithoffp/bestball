@@ -1,8 +1,8 @@
 # Systems Model — Best Ball Portfolio Manager
 
 **Created:** 2026-03-27
-**Last Updated:** 2026-04-03
-**Mode:** Delta (7-day update)
+**Last Updated:** 2026-04-06
+**Mode:** Delta (3-day update)
 **Governance Tier:** Standard
 
 ---
@@ -35,9 +35,9 @@
 
 | ID | Name | State |
 |----|------|-------|
-| P1 | CSV Data Pipeline | Current |
+| P1 | CSV Data Pipeline | Current (multi-platform — Underdog + DraftKings) |
 | P2 | ADP Snapshot Collection | Current |
-| P3 | Portfolio Analytics Engine | Current |
+| P3 | Portfolio Analytics Engine | Current (platform-aware CLV, per-platform ADP, cross-module nav) |
 | P4 | Draft Scoring Engine | Current |
 | P5 | Archetype Classification | Current |
 | P6 | Auth & Cloud Sync Flow | Current |
@@ -46,6 +46,9 @@
 | P9 | Chrome Extension Overlay | Current (partial — Underdog only) |
 | P10 | hus-skills Governance Process | Current |
 | P11 | Entries Scraper (Extension → Supabase) | Current |
+| P12 | Contextual Help System | Current |
+| P13 | User Feedback Pipeline | Current |
+| P14 | Feature Gating Engine | Current |
 
 ### Artifacts (Green)
 
@@ -66,19 +69,19 @@
 | ID | Name | State |
 |----|------|-------|
 | E1 | Underdog Fantasy Platform | Current |
-| E2 | Supabase (Auth + Storage) | Current |
+| E2 | Supabase (Auth + Storage + Edge Functions) | Current |
 | E3 | Vercel (Hosting + Analytics) | Current |
 | E4 | Stripe (Payments) | Current |
-| E5 | Sleeper / DraftKings Platforms | Aspirational |
+| E5 | DraftKings / Sleeper Platforms | Partially Current (DK live, Sleeper aspirational) |
 
 ---
 
 ## System Boundary
 
-- **Internal:** R2, R3, P1–P7, P10, P11, A1–A6, A8, A9
+- **Internal:** R2, R3, P1–P7, P10–P14, A1–A6, A8, A9
 - **External:** E1–E5
-- **Boundary-straddling:** P6 (our code, depends on E2), P7 (our config, depends on E3), P8 (our code, depends on E4), P9/P11 (our code, depends on E1+E2)
-- **Aspirational:** A7, E5
+- **Boundary-straddling:** P6 (our code, depends on E2), P7 (our config, depends on E3), P8 (our code, depends on E4), P9/P11 (our code, depends on E1+E2), P13 (our code, depends on E2)
+- **Aspirational:** A7, E5 (Sleeper only)
 
 ---
 
@@ -117,7 +120,6 @@
 | 29 | P8 | E4 | Processes payments | Current |
 | 30 | R1 | P8 | Subscribes to plan | Current |
 | 31 | P9 | E1 | Overlays on draft page | Current |
-| 33 | E5 | A1 | Exports roster CSV | Aspirational |
 | 34 | R1 | A7 | Discovers product | Aspirational |
 | 35 | A7 | P6 | Drives signup | Aspirational |
 | 36 | P11 | E1 | Scrapes entries from Underdog | Current |
@@ -126,8 +128,17 @@
 | 39 | A8 | A3 | Token system styles all UI | Current |
 | 40 | P8 | P6 | Subscription requires auth | Current |
 | 41 | P9 | P3 | Uses portfolio analytics for exposure/correlation | Current |
+| 42 | R1 | P13 | Submits in-app feedback | Current |
+| 43 | P13 | E2 | Routes via Edge Function | Current |
+| 44 | P13 | R2 | Delivers feedback email | Current |
+| 45 | P14 | A3 | Gates tab access by tier | Current |
+| 46 | P8 | P14 | Subscription tier feeds gating | Current |
+| 47 | P12 | A3 | Overlays help annotations | Current |
+| 48 | E5 | A2 | DraftKings ADP snapshots | Current |
+| 49 | E5 | A1 | DraftKings roster CSVs | Current |
 
-**Removed:** Interaction 32 (P9 → P4 "Uses scoring engine") — per ADR-002, overlay shows data only, no scoring.
+**Removed:** Interaction 32 (P9 → P4 "Uses scoring engine") — per ADR-002, overlay shows data only.
+**Removed:** Interaction 33 (E5 → A1 aspirational) — replaced by interactions 48 and 49 (DraftKings now current).
 
 ---
 
@@ -138,9 +149,10 @@
 | FL1 | Draft-Analyze-Draft | Reinforcing | Active | R1→E1→A1→P1→P3→A3→R1 | Core value loop: draft, upload, see portfolio shape, make better next draft. More drafts = richer data = better insights. |
 | FL2 | ADP-Value Discovery | Reinforcing | Active | R2→P2→A2→P1→P3→A3→R1 | Fresh ADP snapshots update CLV and trends. More snapshots = richer timeline. Bottlenecked on R2 manual collection. |
 | FL3 | Governance-Development | Balancing | Active | R2→R3→P10→A6→R3 | Governance constrains pace to prevent scope drift. Balancing: faster dev resisted by process overhead. |
-| FL4 | Adoption-Revenue-Investment | Reinforcing | Partially Active | R1→P8→E4→R2→R3→A3→R1 | Subscribers fund new features, attracting more subscribers. Payment infrastructure is live; no subscribers yet, so loop hasn't completed a full cycle. |
-| FL5 | Portfolio Context Sync | Reinforcing | Active | R1→P11→E2→P9→P3→A3→R1 | Extension scrapes entries → Supabase → web app reads portfolio → extension overlay shows exposure/correlation during draft. Loop is running end-to-end. |
+| FL4 | Adoption-Revenue-Investment | Reinforcing | Partially Active | R1→P8→E4→R2→R3→A3→R1 | Subscribers fund new features, attracting more subscribers. Payment infrastructure is live; no subscribers yet. Blocked upstream by T8 (acquisition funnel). |
+| FL5 | Portfolio Context Sync | Reinforcing | Active | R1→P11→E2→P9→P3→A3→R1 | Extension scrapes entries → Supabase → web app reads portfolio → extension overlay shows exposure/correlation during draft. |
 | FL6 | Design Consistency | Reinforcing | Active | A8→A3→R1 | Token system ensures new components inherit consistent styling. More components → tokens refined → higher quality floor. |
+| FL7 | User Feedback | Reinforcing | Partially Active | R1→P13→E2→R2→R3→A3→R1 | Users submit in-app feedback → Supabase Edge Function → email to developer → improvements built → users benefit. Infrastructure live; no external users yet. |
 
 ---
 
@@ -149,7 +161,7 @@
 | File | Focus |
 |------|-------|
 | `core.d2` / `core.svg` | All blocks and interactions (current + aspirational) |
-| `feedback.d2` / `feedback.svg` | Six feedback loops with state annotations |
+| `feedback.d2` / `feedback.svg` | Seven feedback loops with state annotations |
 | `subsystems/chrome-extension.d2` / `.svg` | Chrome extension architecture |
 | `subsystems/chrome-extension-data-flow.d2` / `.svg` | Extension runtime data flow |
 
@@ -157,23 +169,25 @@
 
 ## Integration Summary
 
-### Delta 2026-04-03 — Resolved Themes
+### Delta 2026-04-06 — Resolved Themes
 
 | Theme | Status | Resolution |
 |-------|--------|------------|
 | T1: Commercial Strategy Gap | **Resolved** | FEAT-021 complete — pricing, positioning, channel strategy decided |
-| T2: User Insight Blindness | **Mostly Resolved** | TASK-010 added feature analytics; extension eliminates CSV for Underdog users. F-005 (Underdog-only assumption) still open. |
+| T2: User Insight Blindness | **Mostly Resolved** | Feature analytics + extension scraper + feedback button. F-005 residual partially resolved by DraftKings support. |
 | T3: Auth-Payment Chain | **Resolved** | Full auth + Stripe + subscription management live |
 
-### Delta 2026-04-03 — Current Tiers
+### Delta 2026-04-06 — Current Tiers
 
 #### Tier 1 — Address Now
-- **T6: Extension Confidence & Trust** — The extension works technically but provides no feedback about its state. Sync progress, connectivity health, tournament scoping, and error recovery are all invisible. The floating icon needs to become a confidence hub.
+- **T8: Acquisition Funnel & Discoverability** — No landing page, no public presence. Competitors already posting on r/bestball. The product is invisible to potential users.
+- **T10: Commercial Strategy Refresh** — March 30 competitive analysis didn't account for free tools now appearing on r/bestball. "Why pay $20/mo?" needs a sharper answer.
 
 #### Tier 2 — Address Soon
-- **T7: Extension Lifecycle Management** — Overlay doesn't start/stop cleanly on SPA navigation. Tracked as TASK-103.
+- **T9: Conversion Path & First Impression** — Guest tier shows only 2 of 7 tabs. No sample data for empty-state users. Free competitors show everything. Bridge needed.
+- **T6: Extension Confidence & Trust** — Overlay lacks sync visibility, tournament selection, connectivity status. Demoted from Tier 1 — launch readiness takes priority.
 
 #### Tier 3 — Address Later
+- **T7: Extension Lifecycle Management** — SPA navigation handling. Tracked as TASK-103.
 - **T5: Governance Calibration** — Revisit if velocity feels constrained.
 - **T4: Operational Resilience** — Automate ADP scraping before scaling to paying users.
-- **T2 (residual): Platform Assumption** — Underdog-only market assumption still unvalidated.

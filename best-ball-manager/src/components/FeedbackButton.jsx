@@ -5,6 +5,7 @@ import styles from './FeedbackButton.module.css';
 const FUNCTION_URL = import.meta.env.VITE_SUPABASE_URL
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-feedback`
   : null;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 const TYPES = ['Bug', 'Suggestion', 'Other'];
 const MAX_CHARS = 1000;
@@ -44,7 +45,7 @@ export default function FeedbackButton() {
     try {
       const res = await fetch(FUNCTION_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
         body: JSON.stringify({
           type,
           message: message.trim(),

@@ -63,7 +63,9 @@
       "WebFetch(domain:apidog.com)",
       "WebFetch(domain:seandrummy.medium.com)",
       "WebFetch(domain:gacolitti.github.io)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(d2 docs/systems-model/feedback.d2 docs/systems-model/feedback.svg --layout elk)",
+      "Bash(curl -s -L -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.reddit.com/r/BestBall/comments/1sda3k2/i_built_a_free_chrome_extension_for_tracking_best/.json\")"
     ]
   },
   "enabledPlugins": {

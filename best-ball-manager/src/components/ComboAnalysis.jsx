@@ -98,7 +98,20 @@ function SegmentTooltip({ children, label, style }) {
   );
 }
 
-export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = null }) {
+const STACK_HELP_ANNOTATIONS = [
+  { id: 'position-toggles', label: 'Position Filters', anchor: 'below', description: 'Exclude TEs or RBs from stack combos to isolate WR-only or WR+TE stacks.' },
+  { id: 'player-filter', label: 'Player Search', anchor: 'below', description: 'Type a name to highlight every QB who shares a stack with that player across your portfolio.' },
+  { id: 'diversity-col', label: 'Stack Diversity Bar', anchor: 'below', description: 'Each colored segment is a unique stack combo. Wider = more frequent. Hover a segment to see who\'s in it.' },
+  { id: 'stack-pct-col', label: 'Stack %', anchor: 'below', description: 'How often you paired this QB with any same-team pass-catcher. Click column headers to sort the table.' },
+  { id: 'qb-col', label: 'Click to Expand', anchor: 'below', description: 'Click any QB row to see every stack combo broken down with counts and percentages. Rosters → navigates to that combo.' },
+];
+
+const QBPAIRS_HELP_ANNOTATIONS = [
+  { id: 'qbpairs-desc', label: 'QB Pairs', anchor: 'below', description: 'Every QB pairing rostered together, ranked by frequency. Rosters with only one QB are excluded.' },
+  { id: 'qbpairs-row', label: 'Frequency Bar', anchor: 'below', description: 'The background fill shows frequency relative to your most common pairing. The #1 pair is highlighted in gold.' },
+];
+
+export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const [activeTab, setActiveTab] = useState('stacks');
   const [expandedQBs, setExpandedQBs] = useState(new Set());
   const [minCount, setMinCount] = useState(1);
@@ -317,14 +330,14 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
   );
 
   return (
-    <TabLayout toolbar={toolbarControls}>
+    <TabLayout toolbar={toolbarControls} helpAnnotations={activeTab === 'stacks' ? STACK_HELP_ANNOTATIONS : QBPAIRS_HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
 
       {/* ── Stack Profiles ─────────────────────────────────────────────────── */}
       {activeTab === 'stacks' && (
         <>
           {/* Position exclusion toggles + player filter */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <div className="filter-btn-group">
+          <div className="filter-btn-group" data-help-id="position-toggles">
             <button
               className={`filter-btn-group__item${excludeTE ? ' filter-btn-group__item--active' : ''}`}
               onClick={() => setExcludeTE(v => !v)}
@@ -340,7 +353,7 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
           </div>
 
           {/* Player filter with autocomplete */}
-          <div style={{ position: 'relative', maxWidth: 320, flex: '1 1 200px' }}>
+          <div data-help-id="player-filter" style={{ position: 'relative', maxWidth: 320, flex: '1 1 200px' }}>
             <input
               type="text"
               placeholder="Filter by player…"
@@ -412,9 +425,10 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ background: 'var(--surface-2)', fontSize: 12, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
                 {(() => {
-                  const SortHeader = ({ label, colKey, align = 'left', width }) => (
+                  const SortHeader = ({ label, colKey, align = 'left', width, helpId }) => (
                     <th
                       onClick={() => handleSort(colKey)}
+                      data-help-id={helpId}
                       style={{
                         padding: '12px 20px',
                         textAlign: align,
@@ -429,9 +443,9 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
                   );
                   return (
                     <tr>
-                      <SortHeader label="QB" colKey="name" width={180} />
-                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>STACK DIVERSITY</th>
-                      <SortHeader label="STACK %" colKey="stackPct" align="center" width={80} />
+                      <SortHeader label="QB" colKey="name" width={180} helpId="qb-col" />
+                      <th data-help-id="diversity-col" style={{ padding: '12px 20px', textAlign: 'left' }}>STACK DIVERSITY</th>
+                      <SortHeader label="STACK %" colKey="stackPct" align="center" width={80} helpId="stack-pct-col" />
                       <SortHeader label="DRAFTS" colKey="totalDrafts" align="center" width={80} />
                     </tr>
                   );
@@ -599,7 +613,7 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
       {/* ── QB Pairs — Frequency Leaderboard ───────────────────────────────── */}
       {activeTab === 'qbpairs' && (
         <div className="card" style={{ padding: '16px 24px', overflow: 'auto' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+          <div data-help-id="qbpairs-desc" style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
             Most frequent QB pairings on the same roster.
           </div>
           {(qbPairsData?.filter(p => p.count >= minCount) ?? []).length === 0 ? (
@@ -617,7 +631,8 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
                   return (
                     <div
                       key={`${pair.qb1.name}||${pair.qb2.name}`}
-                                            style={{
+                      data-help-id={pair.rank === 1 ? 'qbpairs-row' : undefined}
+                      style={{
                         position: 'relative',
                         overflow: 'hidden',
                         borderRadius: 6,

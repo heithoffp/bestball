@@ -196,3 +196,40 @@ FL6: FL6 Design Consistency\n(Reinforcing, Active) {
   A3d -> R1d: Consistent visual quality
   R1d -> A8: Feedback refines tokens
 }
+
+# --- FL7: User Feedback (Reinforcing, Partially Active) ---
+# Users submit feedback -> dev receives email -> improvements built -> users benefit
+
+FL7: FL7 User Feedback\n(Reinforcing, Partially Active) {
+  style.fill: "#F0FFF8"
+  style.stroke: "#2ECC71"
+  style.font-size: 16
+
+  R1e: Drafter {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+    style.stroke-dash: 5
+  }
+  P13: Feedback Pipeline {
+    style.fill: "#7B68EE"
+    style.font-color: "#FFFFFF"
+  }
+  E2b: Supabase {
+    style.fill: "#E67E22"
+    style.font-color: "#FFFFFF"
+  }
+  R2d: Developer {
+    style.fill: "#4A90D9"
+    style.font-color: "#FFFFFF"
+  }
+  A3e: Improvements {
+    style.fill: "#2ECC71"
+    style.font-color: "#FFFFFF"
+  }
+
+  R1e -> P13: Submits feedback {style.stroke-dash: 5}
+  P13 -> E2b: Routes via Edge Function
+  E2b -> R2d: Delivers email
+  R2d -> A3e: Builds improvements
+  A3e -> R1e: Better experience {style.stroke-dash: 5}
+}

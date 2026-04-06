@@ -6,7 +6,7 @@ import AuthModal from './AuthModal';
 
 export default function AuthButton() {
   const { user, loading } = useAuth();
-  const { isProUser, openPlanPicker } = useSubscription();
+  const { isProUser, isBetaActive, subscription, openPlanPicker } = useSubscription();
   const [modalOpen, setModalOpen] = useState(false);
 
   if (!supabase) return null;
@@ -22,9 +22,9 @@ export default function AuthButton() {
             className="auth-avatar"
           />
         )}
-        {!isProUser && (
+        {(!isProUser || (isBetaActive && !subscription)) && (
           <button className="toolbar-btn toolbar-btn--upgrade" onClick={() => openPlanPicker()}>
-            Start Free Trial
+            Subscribe
           </button>
         )}
       </div>

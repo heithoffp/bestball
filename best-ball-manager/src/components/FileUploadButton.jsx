@@ -9,7 +9,7 @@ function readFileAsText(file) {
   });
 }
 
-export default function FileUploadButton({ label, onUpload, onBeforeUpload }) {
+export default function FileUploadButton({ label, onUpload, onBeforeUpload, className }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
@@ -41,7 +41,7 @@ export default function FileUploadButton({ label, onUpload, onBeforeUpload }) {
         onChange={handleFile}
       />
       <button
-        className="toolbar-btn"
+        className={className ?? 'toolbar-btn'}
         onClick={handleClick}
         disabled={uploading}
       >

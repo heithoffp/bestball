@@ -3,6 +3,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Legend } from 'rech
 import { Chrome, BarChart3, Users, TrendingUp, ListOrdered, Crosshair } from 'lucide-react';
 import { analyzePortfolioTree, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import useMediaQuery from '../hooks/useMediaQuery';
+import TabLayout from './TabLayout';
 import styles from './Dashboard.module.css';
 
 const POS_COLORS = { QB: '#bf44ef', RB: '#10b981', WR: '#f59e0b', TE: '#3b82f6' };
@@ -21,7 +22,17 @@ const DRILL_CARDS = [
   { key: 'draftflow', label: 'Draft Assistant', icon: Crosshair },
 ];
 
-export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate, onNavigateToRosters = null }) {
+const HELP_ANNOTATIONS = [
+  { id: 'metrics-row', label: 'Portfolio Summary', description: 'Roster count and unique players drafted.' },
+  { id: 'top-exposures', label: 'Top Exposures', description: 'Most-drafted players per position. Bar = exposure %.' },
+  { id: 'exposure-by-round', label: 'Exposure by Round', description: 'Highest/lowest exposure per ADP round. Grey = 0% blind spots.' },
+  { id: 'team-stacks', label: 'Team Stacks', description: 'QB + teammate pairings across rosters.' },
+  { id: 'archetype-dist', label: 'Archetypes', description: 'RB/QB/TE strategy mix. Click a segment to filter rosters.' },
+  { id: 'draft-capital', label: 'Draft Capital', description: 'Position mix by round. Solid = yours, faded = market.' },
+  { id: 'drill-cards', label: 'Navigation', description: 'Click to jump to a detail tab.' },
+];
+
+export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate, onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
   const [hoveredSeg, setHoveredSeg] = useState(null);
 
@@ -243,9 +254,15 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
   }
 
   return (
+    <TabLayout
+      helpAnnotations={HELP_ANNOTATIONS}
+      helpOpen={helpOpen}
+      onHelpToggle={onHelpToggle}
+      flush
+    >
     <div className={styles.root}>
       {/* Section 1: Headline Metrics */}
-      <div className={styles.metricsRow}>
+      <div className={styles.metricsRow} data-help-id="metrics-row">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Rosters</div>
           <div className={styles.metricValue}>{metrics.totalRosters}</div>
@@ -260,7 +277,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       {/* Sections 2 + 3: Top Exposures and Exposure by ADP Round — side by side */}
       <div className={styles.exposurePair}>
         {/* Section 2: Top Exposures by Position */}
-        <div className={styles.exposureSection}>
+        <div className={styles.exposureSection} data-help-id="top-exposures">
           <div className={styles.sectionTitle}>Top Exposures</div>
           <div className={styles.exposureGrid}>
             {['QB', 'RB', 'WR', 'TE'].map(pos => (
@@ -297,7 +314,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
 
         {/* Section 3: Exposure by Round (highest + lowest) */}
         {exposureByRound.length > 0 && (
-          <div className={styles.exposureSection}>
+          <div className={styles.exposureSection} data-help-id="exposure-by-round">
             <div className={styles.sectionTitle}>Exposure by ADP Round</div>
             <div className={styles.exposureByRoundGrid}>
               <div className={styles.exposureByRoundHeader}>
@@ -354,7 +371,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
 
         {/* Section 4: Top Team Stacks — narrow right column */}
         {topTeamStacks.length > 0 && (
-          <div className={styles.teamStacksSection}>
+          <div className={styles.teamStacksSection} data-help-id="team-stacks">
             <div className={styles.sectionTitle}>Top Team Stacks</div>
             {(() => {
               const maxCount = topTeamStacks[0].count;
@@ -383,7 +400,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       {/* Section 4: Shape Visualizations */}
       <div className={styles.shapeGrid}>
         {/* Archetype Distributions */}
-        <div className={styles.shapeCard}>
+        <div className={styles.shapeCard} data-help-id="archetype-dist">
           <div className={styles.sectionTitle}>Archetype Distribution</div>
           {[
             { title: 'RB Archetype', data: rbDistribution, type: 'rb' },
@@ -440,7 +457,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         </div>
 
         {/* Draft Capital by Round — You vs Market */}
-        <div className={styles.shapeCard}>
+        <div className={styles.shapeCard} data-help-id="draft-capital">
           <div className={styles.sectionTitle}>Draft Capital by Round</div>
           <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
             <BarChart data={draftCapitalShape} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
@@ -491,7 +508,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       </div>
 
       {/* Section 4: Drill-Down Cards */}
-      <div className={styles.drillRow}>
+      <div className={styles.drillRow} data-help-id="drill-cards">
         {DRILL_CARDS.map(({ key, label, icon: Icon }) => (
           <div
             key={key}
@@ -508,5 +525,6 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         ))}
       </div>
     </div>
+    </TabLayout>
   );
 }

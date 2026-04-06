@@ -8,8 +8,19 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import { CombinedSearchInput } from './filters';
 import { NFL_TEAMS } from '../utils/nflTeams';
 import TournamentMultiSelect from './TournamentMultiSelect';
+import TabLayout from './TabLayout';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
+
+const HELP_ANNOTATIONS = [
+  { id: 'filter-search',     label: 'Player / Team Search',  description: 'Search by player or team name to filter to rosters containing that pick.' },
+  { id: 'filter-tournament', label: 'Tournament Filter',     description: 'Filter to a specific tournament or slate.' },
+  { id: 'filter-clv',        label: 'CLV Filter',            description: 'Filter by CLV direction — +CLV rosters contain picks that got cheaper after the draft.' },
+  { id: 'filter-archetype',  label: 'Archetype Filters',     description: 'Filter by construction archetype. Counts show how many of your rosters match each style.' },
+  { id: 'col-archetype',     label: 'Archetypes',            description: "Each roster's RB, QB, and TE draft strategy, classified by pick position and capital." },
+  { id: 'col-uniqueness',    label: 'Early Combo Rate',      description: 'How often this first-4-round combo appeared per 1M simulated drafts. Lower = rarer construction.' },
+  { id: 'col-clv',           label: 'Avg CLV%',              description: "Average Closing Line Value across all picks. Positive means the player's ADP rose after your draft." },
+];
 
 // ── CLV helpers ───────────────────────────────────────────────────────────────
 
@@ -147,7 +158,7 @@ function HighlightedName({ name, query }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RosterViewer({ rosterData = [], masterPlayers = [], initialFilter = null }) {
+export default function RosterViewer({ rosterData = [], masterPlayers = [], initialFilter = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
   const [expandedEntry, setExpandedEntry]   = useState(null);
   const [filtersOpen, setFiltersOpen]       = useState(false);
@@ -715,7 +726,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
     <>
       {/* Row 1: Search + Tournament + CLV + Result Count */}
       <div className={css.filterRow1}>
-        <div style={{ flex: '0 1 375px', minWidth: 180 }}>
+        <div data-help-id="filter-search" style={{ flex: '0 1 375px', minWidth: 180 }}>
           <CombinedSearchInput
             selectedPlayers={selectedPlayers}
             selectedTeams={selectedTeams}
@@ -733,12 +744,14 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
             label="Player / Team Search"
           />
         </div>
-        <TournamentMultiSelect
-          slateGroups={slateGroups}
-          selected={selectedTournaments}
-          onChange={setSelectedTournaments}
-        />
-        <div className="filter-chip-group">
+        <div data-help-id="filter-tournament">
+          <TournamentMultiSelect
+            slateGroups={slateGroups}
+            selected={selectedTournaments}
+            onChange={setSelectedTournaments}
+          />
+        </div>
+        <div data-help-id="filter-clv" className="filter-chip-group">
           {[['all', 'All'], ['positive', '+CLV'], ['negative', '-CLV']].map(([v, lbl]) => (
             <button key={v} className={`filter-chip ${clvFilter === v ? 'filter-chip--active' : ''}`} onClick={() => setClvFilter(v)}>
               {lbl}
@@ -754,7 +767,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
       </div>
 
       {/* Row 2: RB | QB | TE archetype chips */}
-      <div className={css.filterRow2}>
+      <div data-help-id="filter-archetype" className={css.filterRow2}>
         <FilterGroup label="RB" options={RB_OPTIONS} value={rbFilter} onChange={setRbFilter} counts={rbCounts} />
         <div className={css.filterSep} />
         <FilterGroup label="QB" options={QB_OPTIONS} value={qbFilter} onChange={setQbFilter} counts={qbCounts} />
@@ -788,10 +801,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
             <th className={css.th} style={{ textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center' }}>Snapshot</th>
             <th className={`${css.th} ${css.colProjPts}`} style={{ textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" sortKey={sortKey} sortDir={sortDir} /></th>
-            <th className={css.th} style={{ color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th data-help-id="col-archetype" className={css.th} style={{ color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" sortKey={sortKey} sortDir={sortDir} /></th>
             <th
+              data-help-id="col-uniqueness"
               className={`${css.th} ${css.colUniq}`}
               style={{ textAlign: 'center', color: '#7dffcc' }}
               onClick={() => toggleSort('uniqueness')}
@@ -799,7 +813,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
             >
               Early Combo Rate / 1M <SortIcon col="uniqueness" sortKey={sortKey} sortDir={sortDir} />
             </th>
-            <th className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" sortKey={sortKey} sortDir={sortDir} /></th>
+            <th data-help-id="col-clv" className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center', cursor: 'default' }}></th>
           </tr>
         </thead>
@@ -902,6 +916,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   );
 
   return (
+    <TabLayout title="Rosters" helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle} flush>
     <div className={css.root}>
       {navBannerArchetype ? (
         <div className={css.navBanner}>
@@ -947,6 +962,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
       {isMobile && renderMobileSortBar()}
       {isMobile ? renderCardList() : renderTable()}
     </div>
+    </TabLayout>
   );
 }
 
