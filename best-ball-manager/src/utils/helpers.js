@@ -1,4 +1,35 @@
 // src/utils/helpers.js
+import { NFL_TEAMS } from './nflTeams';
+
+/**
+ * Expand a team abbreviation to its full name.
+ * Returns the full name if known, otherwise returns the value as-is.
+ * Used to normalize team names across platforms (DK uses abbrevs, UD uses full names).
+ */
+export function expandTeam(raw = '') {
+  const s = String(raw).trim();
+  if (!s || s.toUpperCase() === 'FA') return '';
+  return NFL_TEAMS[s.toUpperCase()] || s;
+}
+
+/**
+ * Canonical player name key for cross-platform matching.
+ * Strips generational suffixes (Jr., Sr., II–V), removes periods from
+ * initials (D.J. → DJ), normalizes whitespace, and lowercases.
+ * Use for map keys and comparisons — NOT for display.
+ */
+const SUFFIX_RE = /\s+(jr\.?|sr\.?|ii|iii|iv|v)\s*$/i;
+
+export function canonicalName(name = '') {
+  return String(name)
+    .trim()
+    .replace(/^"|"$/g, '')
+    .replace(SUFFIX_RE, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
 
 // stable id generator used for canonical player_id
 export function stableId(input = '') {
@@ -33,7 +64,7 @@ export function parseAdpString(rawAdp) {
 
   return {
     pick: value,
-    display: str
+    display: value.toFixed(1)
   };
 }
 
@@ -54,13 +85,8 @@ export function parseAdpString(rawAdp) {
  *  - history: [{ date, adpPick, adpDisplay }, ... ] aligned to adpSnapshots (or empty)
  */
 export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSnapshots = []) {
-  // helper: normalize names for matching
-  const normalize = (s = '') =>
-    String(s || '')
-      .trim()
-      .replace(/^"|"$/g, '')
-      .replace(/\s+/g, ' ')
-      .toLowerCase();
+  // normalize names for matching — uses canonicalName for cross-platform consistency
+  const normalize = (s = '') => canonicalName(s);
 
   // Build snapshot lookups (sorted by date ascending)
   const snapshotLookups = (Array.isArray(adpSnapshots) && adpSnapshots.length > 0)
@@ -73,7 +99,7 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
           (snap.rows || []).forEach(row => {
             const nameCandidate = (
               (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`).trim()
-              || row['Player Name'] || row.player_name || row.Player || ''
+              || row.Name || row['Player Name'] || row.player_name || row.Player || ''
             ).trim().replace(/\s+/g, ' ');
 
             if (!nameCandidate) return;
@@ -82,7 +108,7 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
             const parsedAdp = parseAdpString(rawAdp);
             lookup.set(key, { row, parsedAdp, displayName: nameCandidate });
           });
-          return { date: snap.date, lookup };
+          return { date: snap.date, platform: snap.platform || 'unknown', lookup };
         })
     : [];
 
@@ -109,11 +135,14 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
     ...latestSnapNames
   ]);
 
-  // Also keep a mapping normalized -> display name (prefer latest snapshot display, then roster original)
+  // Build display name map — roster names (UD-sourced) always take priority over ADP snapshot names.
+  // This is critical for sim player_id matching: the sim was built from UD data, so player names must
+  // match UD's convention (e.g. "Brian Thomas" not "Brian Thomas Jr.", "Luther Burden" not "Luther Burden III").
   const displayNameFor = {};
   latestLookup && Array.from(latestLookup.entries()).forEach(([k, v]) => { displayNameFor[k] = v.displayName || k; });
-  rosters.forEach(r => { const k = normalize(r.name); if (!displayNameFor[k]) displayNameFor[k] = r.name; });
   Object.keys(adpMap || {}).forEach(k => { const n = normalize(k); if (!displayNameFor[n]) displayNameFor[n] = k; });
+  // Roster override: always use the roster (UD) display name for drafted players
+  rosters.forEach(r => { const k = normalize(r.name); displayNameFor[k] = r.name; });
 
   // BUILD MASTER LIST
   const final = Array.from(allNormalizedNamesSet).map(normName => {
@@ -133,17 +162,17 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
     if (latestEntry && latestEntry.row) {
       const row = latestEntry.row;
       pos = row.slotName || row.position || row.Position || row.pos || row.Pos || row['Position'] || row['SlotName'] || row.slot || 'N/A';
-      team = row.teamName || row.team || row.Team || row.NFL_Team || row['NFL Team'] || row['TeamName'] || 'N/A';
+      team = expandTeam(row.teamName || row.team || row.Team || row.NFL_Team || row['NFL Team'] || row['TeamName'] || '');
     } else {
       // check adpMap (some consumers populate slotName/teamName there)
       const adpObj = adpMap && (adpMap[displayName] || adpMap[normName] || adpMap[Object.keys(adpMap).find(k => normalize(k) === normName)]);
       if (adpObj) {
         pos = adpObj.slotName || adpObj.position || adpObj.pos || pos;
-        team = adpObj.teamName || adpObj.team || adpObj.Team || team;
+        team = expandTeam(adpObj.teamName || adpObj.team || adpObj.Team || '');
       }
       // fallback to roster CSV
       if ((pos === 'N/A' || !pos) && rosterInstance) pos = rosterInstance.position || pos;
-      if ((team === 'N/A' || !team) && rosterInstance) team = rosterInstance.team || team;
+      if ((team === 'N/A' || !team) && rosterInstance) team = expandTeam(rosterInstance.team || '') || team;
     }
 
     // Resolve ADP pick/display (prefer adpMap parsed pick, then latest snapshot parsed)
@@ -164,6 +193,7 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
       const e = snapObj.lookup.get(normName);
       return {
         date: snapObj.date,
+        platform: snapObj.platform || 'unknown',
         adpPick: e?.parsedAdp?.pick ?? null,
         adpDisplay: e?.parsedAdp?.display ?? '-'
       };

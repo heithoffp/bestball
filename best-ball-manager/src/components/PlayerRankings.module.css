@@ -336,10 +336,12 @@
 
 .posCell {
   padding: 8px 5px;
+  text-align: center;
 }
 
 .teamCell {
   padding: 8px 5px;
+  text-align: center;
   color: var(--text-secondary);
   font-size: 16px;
   overflow: hidden;
@@ -349,17 +351,20 @@
 
 .adpCell {
   padding: 8px 5px;
+  text-align: center;
   color: var(--text-secondary);
   font-size: 16px;
 }
 
 .diffCell {
   padding: 8px 5px;
+  text-align: center;
   font-size: 16px;
 }
 
 .projCell {
   padding: 8px 5px;
+  text-align: center;
   color: var(--text-secondary);
   font-size: 16px;
 }

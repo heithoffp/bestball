@@ -14,6 +14,7 @@ export const NFL_TEAMS = {
   HOU: 'Houston Texans',
   IND: 'Indianapolis Colts',
   JAC: 'Jacksonville Jaguars',
+  JAX: 'Jacksonville Jaguars',
   KC:  'Kansas City Chiefs',
   LAC: 'Los Angeles Chargers',
   LAR: 'Los Angeles Rams',

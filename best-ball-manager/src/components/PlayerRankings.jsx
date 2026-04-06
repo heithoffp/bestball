@@ -5,6 +5,7 @@ import { GripVertical, Download, Save, X } from 'lucide-react';
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDndMonitor, useDroppable, useDraggable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { exportRankingsCSV, saveRankingsToAssets } from '../utils/rankingsExport';
+import { canonicalName, expandTeam } from '../utils/helpers';
 import FileUploadButton from './FileUploadButton';
 import { SearchInput } from './filters';
 import useMediaQuery from '../hooks/useMediaQuery';
@@ -420,7 +421,7 @@ function PointerTrackingOverlay({ activePlayer, activeTierDrag, displayedPlayers
 }
 
 /* ── Main component ──────────────────────────────────────────── */
-export default function PlayerRankings({ initialPlayers, masterPlayers, onRankingsUpload, uploadAuthGuard }) {
+export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers, onRankingsUpload, uploadAuthGuard, adpByPlatform = {} }) {
   const { isMobile } = useMediaQuery();
 
   /* --- state --- */
@@ -435,17 +436,39 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   const scrollContainerRef = useRef(null);
   const prevInitialPlayersRef = useRef(null);
 
+  /* --- platform state --- */
+  const availablePlatforms = useMemo(
+    () => Object.keys(adpByPlatform).filter(p => adpByPlatform[p]?.latestRows?.length > 0),
+    [adpByPlatform]
+  );
+  const [selectedPlatform, setSelectedPlatform] = useState(null);
+  const platformInitDone = useRef(false);
+  useEffect(() => {
+    if (!platformInitDone.current && availablePlatforms.length > 0) {
+      platformInitDone.current = true;
+      const preferred = availablePlatforms.includes('underdog') ? 'underdog' : availablePlatforms[0];
+      setSelectedPlatform(preferred);
+    }
+  }, [availablePlatforms]);
+
   /* --- dnd-kit sensors --- */
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 2 } });
   const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } });
   const sensors = useSensors(pointerSensor, touchSensor);
+
+  /* --- active source: saved rankings for selected platform, or ADP rows as fallback --- */
+  const activeSource = useMemo(() => {
+    const saved = selectedPlatform ? rankingsByPlatform?.[selectedPlatform] : null;
+    if (saved?.length > 0) return saved;
+    return adpByPlatform?.[selectedPlatform]?.latestRows ?? [];
+  }, [rankingsByPlatform, selectedPlatform, adpByPlatform]);
 
   /* --- ADP lookup from masterPlayers --- */
   const adpLookup = useMemo(() => {
     if (!masterPlayers || masterPlayers.length === 0) return new Map();
     const map = new Map();
     masterPlayers.forEach(p => {
-      const key = (p.name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const key = canonicalName(p.name);
       if (!key) return;
       const adpDisplay = p.latestADPDisplay || p.adpDisplay;
       const adpPick = p.latestADP || p.adp;
@@ -458,19 +481,25 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
     return map;
   }, [masterPlayers]);
 
-  /* --- initialise from props --- */
+  /* --- initialise from activeSource --- */
   useEffect(() => {
-    if (!initialPlayers || initialPlayers.length === 0) return;
-    // Only re-seed when the players array identity changes (new upload).
+    if (!activeSource || activeSource.length === 0) return;
+    // Only re-seed when the source array identity changes (platform switch or new upload).
     // Excludes adpLookup from deps so ADP refreshes don't wipe manual ranking order.
-    if (prevInitialPlayersRef.current === initialPlayers) return;
-    prevInitialPlayersRef.current = initialPlayers;
-    let players = initialPlayers.map(row => {
+    if (prevInitialPlayersRef.current === activeSource) return;
+    prevInitialPlayersRef.current = activeSource;
+    // Clear tier state — ordering changes entirely between platforms/sources
+    setOverallTierBreaks(new Set());
+    setTierLabels({});
+    const projMap = adpByPlatform?.[selectedPlatform]?.projPointsMap ?? {};
+    let players = activeSource.map(row => {
       const firstName = row.firstName || row.first_name || row['First Name'] || '';
       const lastName = row.lastName || row.last_name || row['Last Name'] || '';
-      const name = `${firstName} ${lastName}`.trim() || row['Player Name'] || row.player_name || 'Unknown';
+      const name = `${firstName} ${lastName}`.trim() || row['Player Name'] || row.player_name || row.Name || row.name || 'Unknown';
       const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
-      const nameKey = name.trim().replace(/\s+/g, ' ').toLowerCase();
+      const nameKey = canonicalName(name);
+      const projRaw = row.projectedPoints || row.projected_points || '';
+      const proj = projRaw || (projMap[nameKey] != null ? String(projMap[nameKey]) : '');
       return {
         id: row.id || `gen_${name.replace(/\s+/g, '_')}`,
         firstName,
@@ -479,10 +508,10 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
         adp: isNaN(adpVal) ? 9999 : adpVal,
         originalAdp: isNaN(adpVal) ? '-' : String(adpVal),
         latestAdp: adpLookup.get(nameKey) || null,
-        projectedPoints: row.projectedPoints || row.projected_points || '',
+        projectedPoints: proj,
         positionRank: row.positionRank || '',
-        slotName: row.slotName || row.position || 'N/A',
-        teamName: row.teamName || row.team || '',
+        slotName: row.slotName || row.position || row.Position || row.pos || 'N/A',
+        teamName: expandTeam(row.teamName || row.team || row.Team || ''),
         lineupStatus: row.lineupStatus || '',
         byeWeek: row.byeWeek || '',
         _csvTier: row.tier || '',
@@ -532,7 +561,8 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
         setTierLabels(restoredLabels);
       }
     }
-  }, [initialPlayers]); // adpLookup intentionally excluded — see prevInitialPlayersRef guard above
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSource]); // adpLookup intentionally excluded — ADP refreshes must not wipe manual order
 
   /* --- derived display list --- */
   const isSearching = searchTerm.trim().length > 0;
@@ -674,7 +704,6 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   }, [displayedPlayers, tierMap, tierNumLabels, posRankMap, allTierNums]);
 
   /* --- virtualizer --- */
-  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: flatItems.length,
     getScrollElement: () => scrollContainerRef.current,
@@ -898,7 +927,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   const handleSave = useCallback(async () => {
     setSaveStatus('saving');
     try {
-      await saveRankingsToAssets(rankedPlayers, fullTierMap, tierLabels);
+      await saveRankingsToAssets(rankedPlayers, fullTierMap, tierLabels, selectedPlatform || 'underdog');
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus(null), 2000);
     } catch (err) {
@@ -906,7 +935,7 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
       setSaveStatus('error');
       setTimeout(() => setSaveStatus(null), 3000);
     }
-  }, [rankedPlayers, fullTierMap, tierLabels]);
+  }, [rankedPlayers, fullTierMap, tierLabels, selectedPlatform]);
 
   /* --- drag overlay lookup --- */
   const activeIdStr = activeId ? String(activeId) : '';
@@ -923,11 +952,11 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
   })() : null;
 
   /* --- empty state --- */
-  if (!initialPlayers || initialPlayers.length === 0) {
+  if (availablePlatforms.length === 0 && Object.values(rankingsByPlatform).every(r => !r?.length)) {
     return (
       <div className={s.emptyState}>
         <div className={s.emptyHeader}>
-          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} onBeforeUpload={uploadAuthGuard} />}
+          {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} />}
         </div>
         <p className={s.emptyText}>
           No rankings data loaded. Use the Upload button to import a Rankings CSV.
@@ -1154,11 +1183,28 @@ export default function PlayerRankings({ initialPlayers, masterPlayers, onRankin
               <button onClick={handleExport} className={s.exportBtn}>
                 <Download size={14} /> Export
               </button>
-              {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={onRankingsUpload} onBeforeUpload={uploadAuthGuard} />}
+              {onRankingsUpload && <FileUploadButton label="Upload Rankings CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} />}
             </>
           )}
         </div>
       </div>
+
+      {/* Platform toggle — only when multiple platforms have ADP data */}
+      {availablePlatforms.length > 1 && (
+        <div className="filter-btn-group" style={{ padding: '0 0 8px' }}>
+          {['underdog', 'draftkings']
+            .filter(p => availablePlatforms.includes(p))
+            .map(p => (
+              <button
+                key={p}
+                className={`filter-btn-group__item ${selectedPlatform === p ? 'filter-btn-group__item--active' : ''}`}
+                onClick={() => setSelectedPlatform(p)}
+              >
+                {p === 'underdog' ? 'Underdog Rankings' : 'DraftKings Rankings'}
+              </button>
+            ))}
+        </div>
+      )}
 
       {/* Position toggle */}
       <div className="filter-chip-group" style={{ padding: '0 0 8px' }}>

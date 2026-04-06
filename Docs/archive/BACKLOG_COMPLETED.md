@@ -2,10 +2,18 @@
 
 Full history of all closed tasks. See `BACKLOG.md` for active work and the 5 most recent completions.
 
+## Cancelled Tasks
+
+| ID | Title | Priority | Notes | Cancelled |
+|----|-------|----------|-------|-----------|
+| TASK-061 | Migrate AdpTimeSeries, DraftFlowAnalysis, PlayerRankings to shared filter system | P2 | Dependencies TASK-058/059/060 never materialized; filter work took a different path via TASK-090/081 (per-tab compact bars) | 2026-04-06 |
+
 ## Completed Tasks
 
 | ID | Title | Status | Priority | Plan | Verified | Completed |
 |----|-------|--------|----------|------|----------|-----------|
+| TASK-141 | Multi-platform ADP foundation — split pipeline by platform | Done | P1 | — | No | 2026-04-06 |
+| TASK-039 | Replace Uniqueness Lift with First 6 Pick Uniqueness metric (Parent) | Done | P2 | [Plan](plans/TASK-039.md) | No | 2026-04-03 |
 | TASK-125 | Cross-module roster nav — Dashboard integration | Done | P3 | [Plan](plans/TASK-125.md) | No | 2026-04-04 |
 | TASK-131 | Refactor draft-overlay.js to be adapter-agnostic | Done | P2 | [Plan](plans/TASK-131.md) | No | 2026-04-04 |
 | TASK-133 | Rankings tab not loading saved rankings from Supabase on startup | Done | P2 | [Plan](plans/TASK-133.md) | No | 2026-04-04 |

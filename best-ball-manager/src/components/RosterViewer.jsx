@@ -1,9 +1,9 @@
 // src/components/RosterViewer.jsx
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { loadSimData, buildComboKey, lookupTier1 } from '../utils/uniquenessEngine';
+import { canonicalName } from '../utils/helpers';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
-import { analyzeRosterStacks } from '../utils/stackAnalysis';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { CombinedSearchInput } from './filters';
 import { NFL_TEAMS } from '../utils/nflTeams';
@@ -35,7 +35,6 @@ function clvLabel(pct) {
               :             '#ff4d6d';
   return { text: `${sign}${pct.toFixed(2)}%`, color };
 }
-
 
 // ── Uniqueness display helper ────────────────────────────────────────────────��
 
@@ -176,7 +175,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
     const map = new Map();
     masterPlayers.forEach(p => {
       if (p.player_id && p.name)
-        map.set(p.name.trim().toLowerCase().replace(/\s+/g, ' '), p.player_id);
+        map.set(canonicalName(p.name), p.player_id);
     });
     return map;
   }, [masterPlayers]);
@@ -277,10 +276,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
       // Annotate each player with simulation player_id via masterPlayers name lookup
       const annotatedPlayers = players.map(p => ({
         ...p,
-        player_id: nameToPlayerId.get(p.name?.trim().toLowerCase().replace(/\s+/g, ' ')) ?? null,
+        player_id: nameToPlayerId.get(canonicalName(p.name)) ?? null,
       }));
 
-      return { entry_id, players: annotatedPlayers, avgCLV, posSnap, count: players.length, path, draftDate, tournamentTitle, slateTitle, projectedPoints };
+      const adpPlatform = players.find(p => p.adpPlatform !== 'global')?.adpPlatform || 'global';
+      return { entry_id, players: annotatedPlayers, avgCLV, posSnap, count: players.length, path, draftDate, tournamentTitle, slateTitle, projectedPoints, adpPlatform };
     });
   }, [rosterData, alpha, nameToPlayerId]);
 
@@ -296,15 +296,6 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
     });
     return byId;
   }, [rosters, tier1]);
-
-  // Per-roster stack analysis
-  const rosterStacks = useMemo(() => {
-    const byId = {};
-    rosters.forEach(r => {
-      byId[r.entry_id] = analyzeRosterStacks(r.players);
-    });
-    return byId;
-  }, [rosters]);
 
 
 
@@ -472,7 +463,6 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   const renderRosterCard = (roster, virtualRow) => {
     const clv    = clvLabel(roster.avgCLV);
     const isOpen = expandedEntry === roster.entry_id;
-    const stacks = rosterStacks[roster.entry_id] || [];
     const uniq   = formatUniqueness(rosterScores[roster.entry_id], !tier1);
 
     return (
@@ -531,9 +521,8 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
         {isOpen && (
           <div className={css.rosterCardExpanded} onClick={e => e.stopPropagation()}>
             <DraftCapitalMap players={roster.players} isMobile={true} />
-            <StackSummaryBar stacks={stacks} />
             <div className={css.playerListScroll}>
-              <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} isMobile={true} />
+              <PlayerDetail players={roster.players} alpha={alpha} isMobile={true} />
             </div>
           </div>
         )}
@@ -818,7 +807,6 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
           {displayed.map((roster) => {
             const clv    = clvLabel(roster.avgCLV);
             const isOpen = expandedEntry === roster.entry_id;
-            const stacks = rosterStacks[roster.entry_id] || [];
             const uniq = formatUniqueness(rosterScores[roster.entry_id], !tier1);
             const uniqTooltip = rosterScores[roster.entry_id]?.found
               ? 'Observed in simulation — exact frequency count per simulated rosters.'
@@ -901,7 +889,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
                 {isOpen && (
                   <tr>
                     <td colSpan={10} style={{ padding: 0 }}>
-                      <PlayerDetail players={roster.players} alpha={alpha} stacks={stacks} isMobile={false} />
+                      <PlayerDetail players={roster.players} alpha={alpha} isMobile={false} />
                     </td>
                   </tr>
                 )}
@@ -1070,40 +1058,11 @@ function DraftCapitalMap({ players, isMobile = false }) {
   );
 }
 
-// ── Stack summary bar ────────────────────────────────────────────────────────
-
-function StackSummaryBar({ stacks }) {
-  if (!stacks || stacks.length === 0) return null;
-  return (
-    <div className={css.stackBar}>
-      <span className={css.stackLabel}>STACKS</span>
-      {stacks.map((s, i) => (
-        <span key={i} className={css.stackPill} style={{
-          background: s.color + '15', color: s.color,
-          border: `1px solid ${s.color}33`,
-        }}>
-          <span style={{ fontWeight: 700 }}>{s.team}:</span>{' '}
-          {s.members.map(m => m.name.split(' ').pop()).join(' + ')}{' '}
-          <span style={{ opacity: 0.7 }}>({s.type.replace(/^[^\w]*/, '')})</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ── Expanded player detail ────────────────────────────────────────────────────
 
-function PlayerDetail({ players, alpha = 0.5, stacks = [], isMobile = false }) {
+function PlayerDetail({ players, alpha = 0.5, isMobile = false }) {
   const [pSort, setPSort] = useState('pick');
   const [pDir,  setPDir]  = useState('asc');
-
-  const stackPlayerTeams = useMemo(() => {
-    const map = {};
-    stacks.forEach(s => {
-      s.members.forEach(m => { map[m.name] = s.color; });
-    });
-    return map;
-  }, [stacks]);
 
   const sorted = useMemo(() => [...players].sort((a, b) => {
     let av, bv;
@@ -1139,12 +1098,10 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], isMobile = false }) {
         {sorted.map((p, i) => {
           const clvPct = calcCLV(p.pick, p.latestADP, alpha);
           const clv = clvLabel(clvPct);
-          const stackColor = stackPlayerTeams[p.name];
           return (
             <div key={`${p.name}-${i}`} className={css.playerDetailCard}>
               <div className={css.playerDetailRow1}>
                 <span className={css.playerDetailName}>
-                  {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
                   {p.name}
                 </span>
                 <span className={css.posPill} style={{ background: posColor(p.position) + '22', color: posColor(p.position), borderColor: posColor(p.position) + '55' }}>
@@ -1179,7 +1136,6 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], isMobile = false }) {
   return (
     <div className={css.detail}>
       <DraftCapitalMap players={players} isMobile={false} />
-      <StackSummaryBar stacks={stacks} />
       <table className={css.table}>
         <thead>
           <tr className={css.thead} style={{ background: '#080808' }}>
@@ -1196,12 +1152,10 @@ function PlayerDetail({ players, alpha = 0.5, stacks = [], isMobile = false }) {
           {sorted.map((p, i) => {
             const clvPct = calcCLV(p.pick, p.latestADP, alpha);
             const clv = clvLabel(clvPct);
-            const stackColor = stackPlayerTeams[p.name];
             return (
               <tr key={`${p.name}-${i}`} className={css.drow}>
                 <td className={css.dtd}>
                   <span className={css.playerName}>
-                    {stackColor && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: stackColor, marginRight: 6, verticalAlign: 'middle' }} />}
                     {p.name}
                   </span>
                 </td>

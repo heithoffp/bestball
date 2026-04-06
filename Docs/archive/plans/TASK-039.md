@@ -1,6 +1,7 @@
+<!-- Completed: 2026-04-03 | Closed via child task completion — TASK-112, TASK-114, TASK-115 done; TASK-113 superseded; TASK-134 completed the rename to "Early Combo Rate" -->
 # TASK-039: Replace Uniqueness Lift with First 6 Pick Uniqueness metric (Parent)
 
-**Status:** Draft — Broken into sub-tasks
+**Status:** Done — closed via child completion
 **Priority:** P2
 
 ---
@@ -13,10 +14,12 @@ Per ADR-003, the output uses a two-tier hybrid model: exact frequency table for 
 ## Sub-Tasks
 | ID | Title | Status |
 |----|-------|--------|
-| TASK-112 | Uniqueness simulation engine MVP — Python Conditional Logit draft simulator | Todo |
-| TASK-113 | Uniqueness simulation — behavioral multipliers (ω_struct, ω_stack) | Todo |
-| TASK-114 | Uniqueness simulation — temporal weighting across ADP epochs | Todo |
-| TASK-115 | Uniqueness engine JS integration + UI in RosterViewer | Todo |
+| TASK-112 | Uniqueness simulation engine MVP — Python Conditional Logit draft simulator | Done |
+| TASK-113 | Uniqueness simulation — behavioral multipliers (ω_struct, ω_stack) | Superseded — calibration handled via TASK-120–123 |
+| TASK-114 | Uniqueness simulation — temporal weighting across ADP epochs | Done |
+| TASK-115 | Uniqueness engine JS integration + UI in RosterViewer | Done |
+
+TASK-134 (Rename Uniqueness to Early Combo Rate) also closed 2026-04-04.
 
 ## Dependencies
 - TASK-038 (Done) — Grading system removal cleans up the existing uniqueness infrastructure

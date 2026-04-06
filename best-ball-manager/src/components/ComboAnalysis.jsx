@@ -43,6 +43,26 @@ function PlayerBadge({ name, position }) {
   );
 }
 
+const seeRostersBtnStyle = {
+  background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer',
+  fontSize: 12, fontFamily: 'var(--font-mono)', padding: '2px 6px',
+  whiteSpace: 'nowrap', opacity: 0.8, flexShrink: 0,
+};
+
+function NavBtn({ players, onNavigateToRosters }) {
+  if (!onNavigateToRosters) return null;
+  return (
+    <button
+      style={seeRostersBtnStyle}
+      onClick={e => { e.stopPropagation(); onNavigateToRosters({ players }); }}
+      onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.textDecoration = 'underline'; }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = 0.8; e.currentTarget.style.textDecoration = 'none'; }}
+    >
+      Rosters →
+    </button>
+  );
+}
+
 // Lightweight hover tooltip for stack diversity bar segments
 function SegmentTooltip({ children, label, style }) {
   const [visible, setVisible] = useState(false);
@@ -78,7 +98,7 @@ function SegmentTooltip({ children, label, style }) {
   );
 }
 
-export default function ComboAnalysis({ rosterData = [] }) {
+export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = null }) {
   const [activeTab, setActiveTab] = useState('stacks');
   const [expandedQBs, setExpandedQBs] = useState(new Set());
   const [minCount, setMinCount] = useState(1);
@@ -187,7 +207,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
     const pairMap = new Map();
 
     rosters.forEach(roster => {
-      const qbs = roster.filter(p => p.position === 'QB');
+      const qbs = roster.filter(p => p.position === 'QB' && p.team !== 'FA');
       if (qbs.length < 2) return;
 
       for (let i = 0; i < qbs.length; i++) {
@@ -420,7 +440,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
               <tbody>
                 {(() => {
                   const filtered = (stackProfilesData ?? []).filter(g => {
-                    if (g.qb.team === 'N/A') return false;
+                    if (g.qb.team === 'N/A' || g.qb.team === 'FA') return false;
                     const qualifying = g.sortedCombos.filter(c => c.count >= minCount && c.players.length > 0);
                     if (qualifying.length === 0) return false;
                     if (selectedPlayer) return qualifying.some(c => c.players.some(p => p.name === selectedPlayer));
@@ -450,7 +470,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                     return (
                       <React.Fragment key={group.qb.name}>
                         <tr
-                          onClick={() => toggleQB(group.qb.name)}
+                                                    onClick={() => toggleQB(group.qb.name)}
                           style={{
                             borderTop: '1px solid var(--border-subtle)',
                             cursor: 'pointer',
@@ -459,8 +479,13 @@ export default function ComboAnalysis({ rosterData = [] }) {
                         >
                           {/* QB name + team */}
                           <td style={{ padding: '14px 20px', verticalAlign: 'middle' }}>
-                            <div style={{ fontWeight: 700, fontSize: 15 }}>{group.qb.name}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{group.qb.team}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: 15 }}>{group.qb.name}</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{group.qb.team}</div>
+                              </div>
+                              <NavBtn players={[group.qb.name]} onNavigateToRosters={onNavigateToRosters} />
+                            </div>
                           </td>
 
                           {/* Diversity bar + legend */}
@@ -541,7 +566,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                                     const pct = ((combo.count / group.totalDrafts) * 100).toFixed(1);
                                     const color = comboColor(i);
                                     return (
-                                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                      <div key={i} className="combo-row" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <div style={{
                                           width: 3, alignSelf: 'stretch', borderRadius: 2,
                                           background: color, opacity: 0.85, flexShrink: 0,
@@ -549,9 +574,10 @@ export default function ComboAnalysis({ rosterData = [] }) {
                                         <div style={{ flex: 1, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                                           {combo.players.map((p, j) => <PlayerBadge key={j} name={p.name} position={p.position} />)}
                                         </div>
-                                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, textAlign: 'right', flexShrink: 0 }}>
                                           <span style={{ fontWeight: 700, fontSize: 14 }}>{combo.count}</span>
                                           <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 6 }}>{pct}%</span>
+                                          <NavBtn players={[group.qb.name, ...combo.players.map(p => p.name)]} onNavigateToRosters={onNavigateToRosters} />
                                         </div>
                                       </div>
                                     );
@@ -591,7 +617,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                   return (
                     <div
                       key={`${pair.qb1.name}||${pair.qb2.name}`}
-                      style={{
+                                            style={{
                         position: 'relative',
                         overflow: 'hidden',
                         borderRadius: 6,
@@ -637,7 +663,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                           <PlayerBadge name={pair.qb2.name} position="QB" />
                         </div>
 
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, textAlign: 'right', flexShrink: 0 }}>
                           <span style={{
                             fontFamily: 'var(--font-mono)',
                             fontWeight: 700,
@@ -649,6 +675,7 @@ export default function ComboAnalysis({ rosterData = [] }) {
                           <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 7 }}>
                             {pair.pct}%
                           </span>
+                          <NavBtn players={[pair.qb1.name, pair.qb2.name]} onNavigateToRosters={onNavigateToRosters} />
                         </div>
                       </div>
                     </div>

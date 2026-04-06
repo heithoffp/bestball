@@ -91,6 +91,11 @@ export async function syncGetFile(id, userId) {
   if (userId) {
     try {
       const cloudFile = await cloudGetFile(id, userId);
+      if (cloudFile?.__notFound) {
+        // Cloud explicitly says file doesn't exist — purge stale local copy
+        await deleteFile(id);
+        return null;
+      }
       if (cloudFile) {
         await saveFile(cloudFile);
         return cloudFile;

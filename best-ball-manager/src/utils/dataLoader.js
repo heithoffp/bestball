@@ -1,5 +1,51 @@
 import { parseCSVText } from './csv';
-import { processMasterList, parseAdpString } from './helpers';
+import { processMasterList, parseAdpString, canonicalName } from './helpers';
+
+/** Extract a normalized name from a CSV row, handling multiple column conventions. */
+function rowName(row) {
+  return (
+    (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim())
+    || row.Name || row['Player Name'] || row.player_name || row.Player || ''
+  ).trim().replace(/\s+/g, ' ') || null;
+}
+
+/**
+ * Build an ADP lookup map from parsed CSV rows.
+ * Returns { adpMap, teamLookup, projPointsMap } keyed by normalized player name.
+ */
+function buildLookupsFromRows(rows) {
+  const adpMap = {};
+  const teamLookup = {};
+  const projPointsMap = {};
+
+  rows.forEach(row => {
+    const name = rowName(row);
+    if (!name) return;
+    const key = canonicalName(name);
+
+    const rawTeam = row.teamName || row.team || row.Team || row['Team Abbr'] || row['team_abbr'] || '';
+    const teamVal = rawTeam.trim().toUpperCase();
+    if (teamVal) teamLookup[key] = teamVal;
+
+    const rawAdp = row.adp ?? row.ADP ?? row['ADP'] ?? row['Adp'] ?? row['Round.Pick'] ?? '';
+    const parsed = parseAdpString(rawAdp);
+    adpMap[key] = parsed ? parsed : { display: String(rawAdp), pick: NaN };
+
+    const rawProj = row.projectedPoints || row.projected_points || row['Projected Points'] || '';
+    const projVal = parseFloat(rawProj);
+    if (!isNaN(projVal) && projVal > 0) projPointsMap[key] = projVal;
+  });
+
+  return { adpMap, teamLookup, projPointsMap };
+}
+
+/** Infer draft platform from slate title string. Returns 'underdog', 'draftkings', or null. */
+function detectPlatformFromSlate(slateTitle) {
+  const t = (slateTitle || '').toLowerCase();
+  if (t.includes('ud')) return 'underdog';
+  if (t.includes('draftkings')) return 'draftkings';
+  return null;
+}
 
 /**
  * processLoadedData({ rosterText, rosterRows, adpFiles, rankingsText?, projectionsText? })
@@ -12,7 +58,7 @@ import { processMasterList, parseAdpString } from './helpers';
  * @param {Array<{text: string, date: string, filename: string}>} adpFiles - ADP snapshot files
  * @param {string} [rankingsText] - Raw CSV text for rankings
  * @param {string} [projectionsText] - Raw CSV text for projections
- * @returns {{ rosterData, masterPlayers, adpSnapshots, rankingsSource }}
+ * @returns {{ rosterData, masterPlayers, adpSnapshots, rankingsSource, adpByPlatform }}
  */
 export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, adpFiles = [], rankingsText, projectionsText }) {
   // 1) Build roster rows — either from pre-mapped extension entries or by parsing CSV text
@@ -45,9 +91,9 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
   }
 
   // 2) Parse ADP snapshots
-  const snapshots = await Promise.all(adpFiles.map(async ({ text, date, filename }) => {
+  const snapshots = await Promise.all(adpFiles.map(async ({ text, date, filename, platform }) => {
     const rows = await parseCSVText(String(text));
-    return { date, fileName: filename, rows, rawText: text };
+    return { date, fileName: filename, rows, rawText: text, platform: platform || 'unknown' };
   }));
   snapshots.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -60,49 +106,39 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
     } else if (projectionsText) {
       rankingsSource = await parseCSVText(String(projectionsText));
     }
-    return { rosterData: mappedRosters, masterPlayers: master, adpSnapshots: [], rankingsSource };
+    return { rosterData: mappedRosters, masterPlayers: master, adpSnapshots: [], rankingsSource, adpByPlatform: {} };
   }
 
-  // 3) Build lookups from latest snapshot
+  // 3) Build lookups from latest snapshot (most recent across all platforms)
   const latest = snapshots[snapshots.length - 1];
-  const localAdpMap = {};
-  const teamLookup = {};
-  const projPointsMap = {};
+  const { adpMap: localAdpMap, teamLookup, projPointsMap } = latest?.rows
+    ? buildLookupsFromRows(latest.rows)
+    : { adpMap: {}, teamLookup: {}, projPointsMap: {} };
 
-  if (latest && latest.rows) {
-    latest.rows.forEach(row => {
-      const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
-        || row['Player Name'] || row.player_name || row.Player);
+  // Merge projected points from all other snapshots — some platforms (e.g. DK) omit projections
+  for (const snap of snapshots) {
+    if (snap === latest) continue;
+    snap.rows.forEach(row => {
+      const name = rowName(row);
       if (!name) return;
-      const normalizedName = name.trim().replace(/\s+/g, ' ');
-
-      const rawTeam = row.team || row.Team || row['Team Abbr'] || row['team_abbr'] || '';
-      const teamVal = rawTeam.trim().toUpperCase();
-      if (teamVal) {
-        teamLookup[normalizedName] = teamVal;
-      }
-
-      const rawAdp = row.adp ?? row.ADP ?? row['ADP'] ?? row['Adp'] ?? row['Round.Pick'] ?? '';
-      const parsed = parseAdpString(rawAdp, 12);
-      localAdpMap[normalizedName] = parsed ? parsed : { display: String(rawAdp), pick: NaN };
-
+      const key = canonicalName(name);
+      if (projPointsMap[key] != null) return;
       const rawProj = row.projectedPoints || row.projected_points || row['Projected Points'] || '';
       const projVal = parseFloat(rawProj);
-      if (!isNaN(projVal) && projVal > 0) {
-        projPointsMap[normalizedName] = projVal;
-      }
+      if (!isNaN(projVal) && projVal > 0) projPointsMap[key] = projVal;
     });
+  }
 
+  if (latest && latest.rows) {
     // Backfill missing projections using nearest same-position ADP neighbor
     const posProjections = {};
     latest.rows.forEach(row => {
-      const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
-        || row['Player Name'] || row.player_name || row.Player);
+      const name = rowName(row);
       if (!name) return;
-      const normalizedName = name.trim().replace(/\s+/g, ' ');
+      const key = canonicalName(name);
       const pos = (row.position || row.Position || row.pos || row.slotName || 'N/A').toUpperCase();
-      const adp = localAdpMap[normalizedName]?.pick;
-      const proj = projPointsMap[normalizedName];
+      const adp = localAdpMap[key]?.pick;
+      const proj = projPointsMap[key];
       if (proj != null && Number.isFinite(adp)) {
         (posProjections[pos] ??= []).push({ adp, proj });
       }
@@ -110,13 +146,12 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
     Object.values(posProjections).forEach(arr => arr.sort((a, b) => a.adp - b.adp));
 
     latest.rows.forEach(row => {
-      const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
-        || row['Player Name'] || row.player_name || row.Player);
+      const name = rowName(row);
       if (!name) return;
-      const normalizedName = name.trim().replace(/\s+/g, ' ');
-      if (projPointsMap[normalizedName] != null) return;
+      const key = canonicalName(name);
+      if (projPointsMap[key] != null) return;
       const pos = (row.position || row.Position || row.pos || row.slotName || 'N/A').toUpperCase();
-      const adp = localAdpMap[normalizedName]?.pick;
+      const adp = localAdpMap[key]?.pick;
       const group = posProjections[pos];
       if (!group?.length || !Number.isFinite(adp)) return;
       let lo = 0, hi = group.length - 1, best = group[0];
@@ -125,12 +160,13 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
         if (Math.abs(group[mid].adp - adp) < Math.abs(best.adp - adp)) best = group[mid];
         if (group[mid].adp < adp) lo = mid + 1; else hi = mid - 1;
       }
-      projPointsMap[normalizedName] = best.proj;
+      projPointsMap[key] = best.proj;
     });
 
     // Backfill projections for roster players not in ADP snapshot (rookies/FAs)
     mappedRosters.forEach(player => {
-      if (projPointsMap[player.name] != null) return;
+      const key = canonicalName(player.name);
+      if (projPointsMap[key] != null) return;
       const pos = (player.position || 'N/A').toUpperCase();
       const adpProxy = player.pick || NaN;
       const group = posProjections[pos];
@@ -141,37 +177,66 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
         if (Math.abs(group[mid].adp - adpProxy) < Math.abs(best.adp - adpProxy)) best = group[mid];
         if (group[mid].adp < adpProxy) lo = mid + 1; else hi = mid - 1;
       }
-      projPointsMap[player.name] = best.proj;
+      projPointsMap[key] = best.proj;
     });
+  }
+
+  // Merge projections.csv into projPointsMap — authoritative source shared across all platforms
+  if (projectionsText) {
+    const projRows = await parseCSVText(String(projectionsText));
+    projRows.forEach(row => {
+      const name = rowName(row);
+      if (!name) return;
+      const key = canonicalName(name);
+      const rawProj = row.projectedPoints || row.projected_points || '';
+      const projVal = parseFloat(rawProj);
+      if (!isNaN(projVal) && projVal > 0) projPointsMap[key] = projVal;
+    });
+  }
+
+  // 3b) Build per-platform ADP grouping
+  const adpByPlatform = {};
+  for (const snap of snapshots) {
+    const p = snap.platform || 'unknown';
+    if (!adpByPlatform[p]) adpByPlatform[p] = { snapshots: [], latestAdpMap: {}, latestRows: [] };
+    adpByPlatform[p].snapshots.push(snap);
+  }
+  for (const data of Object.values(adpByPlatform)) {
+    const platLatest = data.snapshots[data.snapshots.length - 1];
+    data.latestRows = platLatest.rows;
+    data.latestAdpMap = buildLookupsFromRows(platLatest.rows).adpMap;
+    data.projPointsMap = projPointsMap;
   }
 
   // 4) Build universe of all ADP players
   const universePlayers = [];
   if (latest && latest.rows) {
     latest.rows.forEach(row => {
-      const name = (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
-        || row['Player Name'] || row.player_name || row.Player);
+      const name = rowName(row);
       if (!name) return;
-      const normalizedName = name.trim().replace(/\s+/g, ' ');
       universePlayers.push({
-        name: normalizedName,
+        name,
         position: row.position || row.Position || row.pos || 'N/A',
-        team: teamLookup[normalizedName] || 'N/A'
+        team: teamLookup[canonicalName(name)] || 'N/A'
       });
     });
   }
 
   // Enrich rosters with ADP data
   const enrichedRosters = mappedRosters.map(player => {
-    const latestTeam = teamLookup[player.name];
-    const adpData = localAdpMap[player.name];
+    const key = canonicalName(player.name);
+    const latestTeam = teamLookup[key];
+    const detectedPlatform = detectPlatformFromSlate(player.slateTitle);
+    const platformAdpMap = detectedPlatform ? adpByPlatform[detectedPlatform]?.latestAdpMap : null;
+    const adpData = (platformAdpMap && platformAdpMap[key]) || localAdpMap[key];
     return {
       ...player,
       team: latestTeam || player.team || 'N/A',
       latestADP: adpData ? adpData.pick : null,
       latestADPDisplay: adpData ? adpData.display : 'N/A',
       adpDiff: adpData && player.pick ? (adpData.pick - player.pick).toFixed(2) : null,
-      projectedPoints: projPointsMap[player.name] || null,
+      projectedPoints: projPointsMap[key] || null,
+      adpPlatform: detectedPlatform || 'global',
     };
   });
 
@@ -188,5 +253,5 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
     rankingsSource = await parseCSVText(String(projectionsText));
   }
 
-  return { rosterData: enrichedRosters, masterPlayers: master, adpSnapshots: snapshots, rankingsSource };
+  return { rosterData: enrichedRosters, masterPlayers: master, adpSnapshots: snapshots, rankingsSource, adpByPlatform };
 }

@@ -1,6 +1,5 @@
 /* === AdpTimeSeries CSS Module === */
 
-/* Root layout */
 .root {
   display: flex;
   flex-direction: column;
@@ -11,114 +10,184 @@
 
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* --- Controls bar --- */
 .controls {
   display: flex;
-  gap: 15px;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .buttonGroup {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
-/* --- Main two-pane layout --- */
+/* --- Main stacked layout --- */
 .mainLayout {
   display: flex;
+  flex-direction: column;
   gap: 20px;
-  align-items: stretch;
-  height: 625px;
+  flex: 1;
+  min-height: 0;
 }
 
-/* --- Table pane (left) --- */
+/* --- Table pane (top strip) --- */
 .tablePane {
-  flex: 0 0 30%;
+  flex: 0 0 auto;
+  height: 220px;
   padding: 0 !important;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 100%;
 }
 
+/* --- Table header --- */
 .tableHeader {
   display: grid;
-  grid-template-columns: 30px 1fr 65px 65px 90px 65px;
   column-gap: 8px;
-  padding: 10px 15px;
+  padding: 7px 18px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border-subtle);
-  font-weight: 600;
-  font-size: 15px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
+.colHeader {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: var(--text-xs, 0.7rem);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  text-align: right;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.colHeader:hover {
+  color: var(--text-primary);
+}
+
+/* --- Table body --- */
 .tableBody {
   flex: 1;
   overflow-y: auto;
 }
 
+/* --- Player row --- */
 .playerRow {
   display: grid;
-  grid-template-columns: 30px 1fr 65px 65px 90px 65px;
   column-gap: 8px;
-  padding: 8px 15px;
+  padding: 6px 18px;
   border-bottom: 1px solid var(--border-subtle);
   align-items: center;
-  font-size: 16px;
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
 }
 
 .playerRowSelected {
   background: var(--surface-2);
 }
 
-.playerName {
-  overflow: hidden;
+.navBtnCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.seeRostersBtn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
   white-space: nowrap;
-  text-overflow: ellipsis;
-  padding-right: 10px;
+  opacity: 0.8;
 }
 
-.playerNameText {
+.seeRostersBtn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* --- Player cell: badge + name inline --- */
+.playerCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.playerName {
+  font-size: var(--text-sm, 0.8rem);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
 }
 
-.playerMeta {
-  font-size: 14px;
-  color: var(--text-secondary);
+/* --- Position badge --- */
+.posBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
+.posBadge[data-pos="QB"]    { background: rgba(191, 68, 239, 0.15); color: #BF44EF; }
+.posBadge[data-pos="RB"]    { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+.posBadge[data-pos="WR"]    { background: rgba(245, 158, 11, 0.15);  color: #F59E0B; }
+.posBadge[data-pos="TE"]    { background: rgba(59, 130, 246, 0.15);  color: #3B82F6; }
+.posBadge[data-pos="OTHER"] { background: rgba(90, 106, 128, 0.15); color: #5A6A80; }
+
+/* --- Data cells --- */
 .monoCell {
   text-align: right;
   font-family: var(--font-mono);
+  font-size: var(--text-sm, 0.8rem);
+  color: var(--text-primary);
+}
+
+.dimCell {
+  text-align: right;
+  font-size: var(--text-sm, 0.8rem);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.trendCell {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm, 0.8rem);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .valueCell {
   text-align: right;
   font-family: var(--font-mono);
-  line-height: 1.1;
-}
-
-.valueSub {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.valuePlaceholder {
-  color: var(--text-muted);
-}
-
-.trendCell {
-  text-align: right;
+  font-size: var(--text-sm, 0.8rem);
   font-weight: 600;
-  font-size: 15px;
 }
 
-/* --- Chart pane (right) --- */
+/* --- Chart pane (bottom) --- */
 .chartPane {
   flex: 1;
   min-height: 0;
@@ -131,12 +200,19 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
+  font-size: var(--text-base, 0.9rem);
+}
+
+/* --- Sort icon --- */
+.sortIcon {
+  opacity: 0.3;
+  font-size: 11px;
 }
 
 /* --- Tooltip --- */
 .tooltip {
-  padding: 10px 15px;
-  min-width: 225px;
+  padding: 10px 14px;
+  min-width: 200px;
   max-width: 280px;
   border: 1px solid var(--border-default);
   border-radius: 8px;
@@ -145,20 +221,24 @@
 }
 
 .tooltipDate {
-  font-size: 16px;
-  margin-bottom: 10px;
+  font-size: var(--text-sm, 0.8rem);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  margin-bottom: 8px;
   border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 5px;
 }
 
 .tooltipEntry {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .tooltipEntryHeader {
   display: flex;
   justify-content: space-between;
-  font-size: 15px;
+  gap: 12px;
+  font-size: var(--text-sm, 0.8rem);
+  font-family: var(--font-mono);
 }
 
 .tooltipEntryName {
@@ -166,43 +246,18 @@
 }
 
 .tooltipStats {
-  font-size: 13px;
+  font-size: var(--text-xs, 0.7rem);
   color: var(--text-secondary);
-  margin-left: 10px;
+  margin-top: 2px;
 }
-
-/* --- Sort icon --- */
-.sortIcon {
-  opacity: 0.3;
-  font-size: 13px;
-}
-
-.sortHeader {
-  cursor: pointer;
-  text-align: right;
-}
-
-/* --- Hide helpers --- */
-.hideOnMobile {}
 
 /* ===================== */
 /* Mobile overrides      */
 /* ===================== */
 @media (max-width: 599px) {
-  .root {
-    height: auto;
-    gap: 12px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
   .controls {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .searchInput {
-    width: 100%;
   }
 
   .buttonGroup {
@@ -210,54 +265,13 @@
     justify-content: space-between;
   }
 
-  .checkboxLabel {
-    font-size: 14px;
-    margin-left: 0;
-  }
-
-  .playerCount {
-    margin-left: 0;
-    font-size: 13px;
-  }
-
-  .mainLayout {
-    flex-direction: column;
-    height: auto;
-    gap: 12px;
-  }
-
-  .chartPane {
-    order: -1;
-    pointer-events: none;
-  }
-
   .tablePane {
-    flex: 0 0 auto;
-    height: auto;
-    max-height: none;
-    overflow: visible;
-  }
-
-  .tableBody {
-    max-height: none;
-    overflow-y: visible;
-  }
-
-  .tableHeader {
-    grid-template-columns: 30px 1fr 50px;
-  }
-
-  .playerRow {
-    grid-template-columns: 30px 1fr 50px;
-  }
-
-  .hideOnMobile {
-    display: none;
+    height: 170px;
   }
 
   .tooltip {
-    min-width: 180px;
-    font-size: 13px;
+    min-width: 160px;
+    font-size: 12px;
   }
 }
 
@@ -265,20 +279,8 @@
 /* Tablet overrides      */
 /* ===================== */
 @media (min-width: 600px) and (max-width: 899px) {
-  .mainLayout {
-    height: 500px;
-  }
-
-  .tableHeader {
-    grid-template-columns: 30px 1fr 50px 50px 50px;
-  }
-
-  .playerRow {
-    grid-template-columns: 30px 1fr 50px 50px 50px;
-  }
-
-  .hideOnTablet {
-    display: none;
+  .tablePane {
+    height: 200px;
   }
 
   .chartPane {

@@ -25,7 +25,15 @@ export async function cloudGetFile(id, userId) {
   const { data: csvData, error: csvError } = await supabase.storage
     .from(BUCKET)
     .download(csvPath);
-  if (csvError) return null;
+  if (csvError) {
+    // Distinguish explicit not-found from network/other errors so callers can
+    // invalidate their local cache rather than silently serving stale data.
+    const msg = csvError.message || '';
+    if (msg.toLowerCase().includes('not found') || csvError.statusCode === 404 || csvError.error === 'not_found') {
+      return { __notFound: true };
+    }
+    return null;
+  }
 
   const text = await csvData.text();
 

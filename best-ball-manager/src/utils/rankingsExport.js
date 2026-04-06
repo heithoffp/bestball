@@ -11,7 +11,7 @@ function getTierLabel(tierNum) {
   return TIER_LABELS[tierNum - 1];
 }
 
-const CSV_COLUMNS = ['id', 'firstName', 'lastName', 'adp', 'projectedPoints',
+const CSV_COLUMNS = ['id', 'name', 'firstName', 'lastName', 'adp', 'projectedPoints',
   'positionRank', 'slotName', 'teamName', 'lineupStatus', 'byeWeek', 'tier', 'tierNum'];
 
 function buildRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
@@ -43,6 +43,7 @@ function buildRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
 
     return {
       id: p.id || '',
+      name: p.name || '',
       firstName: p.firstName || '',
       lastName: p.lastName || '',
       adp: String(idx + 1),
@@ -71,15 +72,16 @@ export function exportRankingsCSV(rankedPlayers, tierMap, tierLabels = {}) {
   URL.revokeObjectURL(url);
 }
 
-export async function saveRankingsToAssets(rankedPlayers, tierMap, tierLabels = {}) {
+export async function saveRankingsToAssets(rankedPlayers, tierMap, tierLabels = {}, platform = 'underdog') {
   const csv = buildRankingsCSV(rankedPlayers, tierMap, tierLabels);
+  const storageId = `rankings_${platform}`;
 
   // Persist to Supabase storage + IndexedDB so rankings restore on next load
   if (supabase) {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { syncSaveFile } = await import('./storage');
-      await syncSaveFile({ id: 'rankings', type: 'rankings', filename: 'rankings.csv', text: csv, userId: user.id });
+      await syncSaveFile({ id: storageId, type: 'rankings', filename: `${storageId}.csv`, text: csv, userId: user.id });
 
       // Also save to user_rankings table so the Chrome extension can read tier breaks
       try {
@@ -89,8 +91,8 @@ export async function saveRankingsToAssets(rankedPlayers, tierMap, tierLabels = 
           tierNum: tierMap ? (tierMap.get(p.id) || 1) : 1,
         }));
         await supabase.from('user_rankings').upsert(
-          { user_id: user.id, rankings, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id' }
+          { user_id: user.id, platform, rankings, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,platform' }
         );
       } catch {
         // Non-fatal — storage save already succeeded

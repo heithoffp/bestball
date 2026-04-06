@@ -17,6 +17,7 @@ import PlanPicker from './components/PlanPicker';
 import useMediaQuery from './hooks/useMediaQuery';
 import { trackEvent } from './utils/analytics';
 import BrandLogo from './components/BrandLogo';
+import FeedbackButton from './components/FeedbackButton';
 import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network } from 'lucide-react';
 
 const tabs = [
@@ -24,9 +25,9 @@ const tabs = [
   { key: 'exposures', label: 'Exposures', icon: BarChart3 },
   { key: 'rosters', label: 'Rosters', icon: Users },
   { key: 'timeseries', label: 'ADP Tracker', icon: TrendingUp },
+  { key: 'combo', label: 'Combos', icon: Network },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
-  { key: 'combo', label: 'Combos', icon: Network },
   { key: 'help', label: 'Help', icon: HelpCircle },
 ];
 
@@ -57,7 +58,11 @@ async function loadBundledAdp() {
     const fileName = parts[parts.length - 1];
     const dateMatch = fileName.match(/(\d{4}-\d{2}-\d{2})/);
     const dateStr = dateMatch ? dateMatch[1] : fileName;
-    return { text: String(text), date: dateStr, filename: fileName };
+    const platformMatch = fileName.match(/^(underdog|draftking)_adp_/);
+    const platform = platformMatch
+      ? (platformMatch[1] === 'draftking' ? 'draftkings' : platformMatch[1])
+      : 'unknown';
+    return { text: String(text), date: dateStr, filename: fileName, platform };
   }));
   return files;
 }
@@ -66,9 +71,10 @@ export default function App() {
   const [rosterData, setRosterData] = useState([]);
   const [masterPlayers, setMasterPlayers] = useState([]);
   const [adpSnapshots, setAdpSnapshots] = useState([]);
+  const [adpByPlatform, setAdpByPlatform] = useState({});
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [rankingsSource, setRankingsSource] = useState([]);
+  const [rankingsByPlatform, setRankingsByPlatform] = useState({});
   const { isMobile } = useMediaQuery();
   const { user, loading: authLoading, recoveryMode } = useAuth();
   const { tier, loading: subLoading } = useSubscription();
@@ -117,6 +123,23 @@ export default function App() {
     return true;
   }
 
+  async function loadPerPlatformRankings(userId) {
+    const { parseCSVText } = await import('./utils/csv');
+    const platforms = ['underdog', 'draftkings'];
+    const rankingsMap = {};
+    for (const p of platforms) {
+      let file = await syncGetFile(`rankings_${p}`, userId);
+      // One-time legacy fallback: migrate 'rankings' → rankings_underdog for existing users
+      if (!file && p === 'underdog') {
+        file = await syncGetFile('rankings', userId);
+      }
+      if (file) {
+        rankingsMap[p] = await parseCSVText(file.text);
+      }
+    }
+    setRankingsByPlatform(rankingsMap);
+  }
+
   async function loadData() {
     setStatus({ type: 'loading', msg: 'Loading data...' });
     try {
@@ -133,17 +156,13 @@ export default function App() {
             projectionsText: projectionsRaw ? String(projectionsRaw) : undefined,
           });
           setAdpSnapshots(result.adpSnapshots);
+          setAdpByPlatform(result.adpByPlatform || {});
           setMasterPlayers(result.masterPlayers);
-          setRankingsSource(result.rankingsSource);
           setRosterData([]);
           setIsUsingDemoData(false);
         }
-        // Restore user's saved rankings from Supabase (overrides ADP default)
-        const savedRankings = await syncGetFile('rankings', user.id);
-        if (savedRankings) {
-          const { parseCSVText } = await import('./utils/csv');
-          setRankingsSource(await parseCSVText(savedRankings.text));
-        }
+        // Restore per-platform saved rankings from Supabase
+        await loadPerPlatformRankings(user.id);
         setStatus({ type: '', msg: '' });
       } else {
         // Unauthenticated: read-only demo preview
@@ -174,6 +193,10 @@ export default function App() {
     });
 
     applyResult(result);
+    // Demo mode: seed rankings from bundled rankings.csv (underdog slot as default)
+    if (result.rankingsSource?.length > 0) {
+      setRankingsByPlatform({ underdog: result.rankingsSource });
+    }
     setIsUsingDemoData(true);
   }
 
@@ -181,17 +204,21 @@ export default function App() {
     setRosterData(result.rosterData);
     setMasterPlayers(result.masterPlayers);
     setAdpSnapshots(result.adpSnapshots);
-    setRankingsSource(result.rankingsSource);
+    setAdpByPlatform(result.adpByPlatform || {});
     setStatus({ type: '', msg: '' });
     if (result.adpSnapshots?.length > 0) trackEvent('adp_snapshot_loaded');
   }
 
-  const handleRankingsUpload = useCallback(async (text, filename) => {
+  const handleRankingsUpload = useCallback(async (text, filename, platform = 'underdog') => {
     setStatus({ type: 'loading', msg: 'Processing rankings...' });
     try {
-      await syncSaveFile({ id: 'rankings', type: 'rankings', filename, text, userId: user?.id });
-      const rankingsFile = await syncGetFile('rankings', user?.id);
-      if (rankingsFile) setRankingsSource(await import('./utils/csv').then(m => m.parseCSVText(rankingsFile.text)));
+      const storageId = `rankings_${platform}`;
+      await syncSaveFile({ id: storageId, type: 'rankings', filename, text, userId: user?.id });
+      const rankingsFile = await syncGetFile(storageId, user?.id);
+      if (rankingsFile) {
+        const rows = await import('./utils/csv').then(m => m.parseCSVText(rankingsFile.text));
+        setRankingsByPlatform(prev => ({ ...prev, [platform]: rows }));
+      }
       setStatus({ type: '', msg: '' });
     } catch (err) {
       console.error('Rankings upload failed', err);
@@ -214,6 +241,7 @@ export default function App() {
           <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
         </div>
         <div className="auth-button-group">
+          <FeedbackButton />
           {user && supabase && (
             <button
               className="toolbar-btn"
@@ -285,18 +313,20 @@ export default function App() {
             )}
             {activeTab === 'rankings' && (
               canAccessFeature(tier, 'rankings') || subLoading
-                ? <PlayerRankings initialPlayers={rankingsSource} masterPlayers={masterPlayers} onRankingsUpload={handleRankingsUpload} uploadAuthGuard={uploadAuthGuard} />
+                ? <PlayerRankings rankingsByPlatform={rankingsByPlatform} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} onRankingsUpload={handleRankingsUpload} uploadAuthGuard={uploadAuthGuard} />
                 : <LockedFeature featureName="Player Rankings" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'timeseries' && (
               <AdpTimeSeries
                 adpSnapshots={adpSnapshots}
+                adpByPlatform={adpByPlatform}
                 masterPlayers={masterPlayers}
                 teams={12}
                 rosterData={rosterData}
+                onNavigateToRosters={navigateToRosters}
               />
             )}
-            {activeTab === 'combo' && <ComboAnalysis rosterData={rosterData} />}
+            {activeTab === 'combo' && <ComboAnalysis rosterData={rosterData} onNavigateToRosters={navigateToRosters} />}
             {activeTab === 'help' && <HelpGuide />}
           </Suspense>
         </div>

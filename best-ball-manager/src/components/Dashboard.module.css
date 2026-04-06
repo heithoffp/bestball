@@ -283,12 +283,29 @@
   margin-bottom: 2px;
 }
 
-.exposureByRoundLabel {
+.exposureByRoundColGroup {
+  display: grid;
+  grid-template-columns: 1fr 46px 42px;
+  gap: 0 8px;
+  align-items: center;
+}
+
+.exposureByRoundSectionLabel {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.exposureByRoundColLabel {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: right;
+  opacity: 0.6;
 }
 
 .exposureByRoundRow {
@@ -308,9 +325,10 @@
 }
 
 .blindSpotEntry {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 46px 42px;
+  gap: 0 8px;
   align-items: center;
-  gap: var(--space-sm);
   min-width: 0;
 }
 
@@ -323,7 +341,6 @@
 }
 
 .blindSpotName {
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -332,9 +349,9 @@
 
 .blindSpotAdp {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
-  flex-shrink: 0;
+  text-align: right;
 }
 
 /* ── Capital Legend ── */

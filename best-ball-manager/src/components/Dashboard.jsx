@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Legend } from 'recharts';
 import { Chrome, BarChart3, Users, TrendingUp, ListOrdered, Crosshair } from 'lucide-react';
 import { analyzePortfolioTree, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
@@ -6,6 +6,11 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './Dashboard.module.css';
 
 const POS_COLORS = { QB: '#bf44ef', RB: '#10b981', WR: '#f59e0b', TE: '#3b82f6' };
+
+const fmtAdp = v => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n.toFixed(1) : '-';
+};
 
 
 const DRILL_CARDS = [
@@ -18,6 +23,7 @@ const DRILL_CARDS = [
 
 export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate, onNavigateToRosters = null }) {
   const { isMobile } = useMediaQuery();
+  const [hoveredSeg, setHoveredSeg] = useState(null);
 
   // ── Headline Metrics ──
   const metrics = useMemo(() => {
@@ -156,7 +162,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       });
     });
     return Array.from(teamCount.entries())
-      .filter(([team]) => team && team !== 'N/A')
+      .filter(([team]) => team && team !== 'N/A' && team !== 'FA')
       .map(([team, count]) => ({ team, count, pct: ((count / totalRosters) * 100).toFixed(1) }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 15);
@@ -296,8 +302,16 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
             <div className={styles.exposureByRoundGrid}>
               <div className={styles.exposureByRoundHeader}>
                 <span className={styles.blindSpotRound} />
-                <span className={styles.exposureByRoundLabel}>Highest</span>
-                <span className={styles.exposureByRoundLabel}>Lowest</span>
+                <div className={styles.exposureByRoundColGroup}>
+                  <span className={styles.exposureByRoundSectionLabel}>Highest</span>
+                  <span className={styles.exposureByRoundColLabel}>ADP</span>
+                  <span className={styles.exposureByRoundColLabel}>Exp</span>
+                </div>
+                <div className={styles.exposureByRoundColGroup}>
+                  <span className={styles.exposureByRoundSectionLabel}>Lowest</span>
+                  <span className={styles.exposureByRoundColLabel}>ADP</span>
+                  <span className={styles.exposureByRoundColLabel}>Exp</span>
+                </div>
               </div>
               {exposureByRound.map(r => (
                 <div key={r.round} className={styles.exposureByRoundRow}>
@@ -308,8 +322,8 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                         ? <button className={styles.playerLink} title="See rosters" style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }} onClick={() => onNavigateToRosters({ players: [r.highest.name] })}>{r.highest.name}</button>
                         : <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.highest.position] || 'var(--text-primary)' }}>{r.highest.name}</span>
                       }
-                      <span className={styles.blindSpotAdp}>ADP {r.highest.adp}</span>
-                      <span className={styles.exposurePct}>{r.highest.exposure.toFixed(0)}%</span>
+                      <span className={styles.blindSpotAdp}>{fmtAdp(r.highest.adp)}</span>
+                      <span className={styles.exposurePct} style={{ textAlign: 'right' }}>{r.highest.exposure.toFixed(0)}%</span>
                     </div>
                   </div>
                   <div className={styles.exposureByRoundPlayer}>
@@ -317,8 +331,8 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                       r.blindSpots.map(p => (
                         <div key={p.name} className={styles.blindSpotEntry}>
                           <span className={styles.blindSpotName} style={{ color: '#6b7280' }}>{p.name}</span>
-                          <span className={styles.blindSpotAdp}>ADP {p.adp}</span>
-                          <span className={styles.exposurePct} style={{ color: '#6b7280' }}>0%</span>
+                          <span className={styles.blindSpotAdp}>{fmtAdp(p.adp)}</span>
+                          <span className={styles.exposurePct} style={{ color: '#6b7280', textAlign: 'right' }}>0%</span>
                         </div>
                       ))
                     ) : (
@@ -327,8 +341,8 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                           ? <button className={styles.playerLink} title="See rosters" style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }} onClick={() => onNavigateToRosters({ players: [r.lowest.name] })}>{r.lowest.name}</button>
                           : <span className={styles.blindSpotName} style={{ color: POS_COLORS[r.lowest.position] || 'var(--text-primary)' }}>{r.lowest.name}</span>
                         }
-                        <span className={styles.blindSpotAdp}>ADP {r.lowest.adp}</span>
-                        <span className={styles.exposurePct}>{r.lowest.exposure.toFixed(0)}%</span>
+                        <span className={styles.blindSpotAdp}>{fmtAdp(r.lowest.adp)}</span>
+                        <span className={styles.exposurePct} style={{ textAlign: 'right' }}>{r.lowest.exposure.toFixed(0)}%</span>
                       </div>
                     )}
                   </div>
@@ -381,27 +395,44 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
             <div key={title} className={styles.archetypeBlock}>
               <div className={styles.archetypeLabel}>{title}</div>
               <div className={styles.stackedBar}>
-                {data.map(seg => (
-                  <div
-                    key={seg.key}
-                    style={{
-                      width: `${(seg.pct / totalPct) * 100}%`,
-                      background: seg.color,
-                      cursor: onNavigateToRosters ? 'pointer' : 'default',
-                    }}
-                    title={onNavigateToRosters ? `${seg.label}: ${seg.count} (${seg.pct.toFixed(0)}%) — See rosters` : `${seg.label}: ${seg.count} (${seg.pct.toFixed(0)}%)`}
-                    onClick={onNavigateToRosters ? () => onNavigateToRosters({ archetype: { [type]: seg.key } }) : undefined}
-                  />
-                ))}
+                {data.map(seg => {
+                  const isHovered = hoveredSeg?.type === type && hoveredSeg?.key === seg.key;
+                  const isDimmed = hoveredSeg?.type === type && !isHovered;
+                  return (
+                    <div
+                      key={seg.key}
+                      style={{
+                        width: `${(seg.pct / totalPct) * 100}%`,
+                        background: seg.color,
+                        cursor: onNavigateToRosters ? 'pointer' : 'default',
+                        opacity: isDimmed ? 0.35 : 1,
+                        filter: isHovered ? 'brightness(1.25)' : 'none',
+                        transition: 'opacity 150ms ease, filter 150ms ease',
+                      }}
+                      title={onNavigateToRosters ? `${seg.label}: ${seg.count} (${seg.pct.toFixed(0)}%) — See rosters` : `${seg.label}: ${seg.count} (${seg.pct.toFixed(0)}%)`}
+                      onMouseEnter={() => setHoveredSeg({ type, key: seg.key })}
+                      onMouseLeave={() => setHoveredSeg(null)}
+                      onClick={onNavigateToRosters ? () => onNavigateToRosters({ archetype: { [type]: seg.key } }) : undefined}
+                    />
+                  );
+                })}
               </div>
               <div className={styles.legend}>
-                {data.map(seg => (
-                  <div key={seg.key} className={styles.legendItem}>
-                    <div className={styles.legendDot} style={{ background: seg.color }} />
-                    <span>{seg.label}:</span>
-                    <span className={styles.legendCount}>{seg.count} ({seg.pct.toFixed(0)}%)</span>
-                  </div>
-                ))}
+                {data.map(seg => {
+                  const isHovered = hoveredSeg?.type === type && hoveredSeg?.key === seg.key;
+                  const isDimmed = hoveredSeg?.type === type && !isHovered;
+                  return (
+                    <div
+                      key={seg.key}
+                      className={styles.legendItem}
+                      style={{ opacity: isDimmed ? 0.4 : 1, transition: 'opacity 150ms ease' }}
+                    >
+                      <div className={styles.legendDot} style={{ background: seg.color }} />
+                      <span>{seg.label}:</span>
+                      <span className={styles.legendCount}>{seg.count} ({seg.pct.toFixed(0)}%)</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

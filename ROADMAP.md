@@ -153,5 +153,6 @@
 **Description:** Passively surface risers and fallers on the dashboard using existing `masterPlayers[].history` data. Zero-config — no watchlist required, consistent with the Zero-Config Insights design principle.
 
 ### FEAT-020: Multi-Platform CSV Support
-**Status:** Not Started
+**Status:** In Progress
 **Description:** Auto-detect and parse Sleeper and DraftKings CSV export formats alongside Underdog. No user selection required — format detection is automatic per the Zero-Config Insights principle.
+**Tasks:** TASK-141, TASK-142, TASK-143, TASK-144, TASK-145

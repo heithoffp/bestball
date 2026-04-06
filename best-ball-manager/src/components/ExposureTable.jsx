@@ -6,6 +6,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import TabLayout from './TabLayout';
 import { SearchInput } from './filters';
 import { NFL_TEAMS } from '../utils/nflTeams';
+import { canonicalName } from '../utils/helpers';
 import TournamentMultiSelect from './TournamentMultiSelect';
 import styles from './ExposureTable.module.css';
 
@@ -135,7 +136,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
     const playerCounts = {};
     filtered.forEach(({ roster }) => {
       roster.forEach(player => {
-        const key = String(player.name || '').trim();
+        const key = canonicalName(player.name || '');
         if (!key) return;
         if (!playerCounts[key]) playerCounts[key] = { count: 0 };
         playerCounts[key].count++;
@@ -177,7 +178,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
     return masterPlayers.map(p => {
-      const nameKey = String(p.name || '').trim();
+      const nameKey = canonicalName(p.name || '');
       const filtered = playerExposures[nameKey];
 
       // Compute 2-week ADP trend
