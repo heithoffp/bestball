@@ -552,6 +552,26 @@
   margin: 0 0.5rem;
 }
 
+.footerLinks {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+.footerLinks span {
+  margin: 0 0.5rem;
+}
+
+.footerLink {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footerLink:hover {
+  color: var(--gold);
+}
+
 /* ── Screenshot lightbox ── */
 .lightbox {
   position: fixed;

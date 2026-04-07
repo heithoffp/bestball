@@ -14,7 +14,6 @@ import { initDraftOverlay } from './draft-overlay.js';
 const adapter = getAdapterForUrl(window.location.href);
 
 if (adapter) {
-  console.log(`[BBM] Content script loaded on ${window.location.hostname}`);
 
   // Set up a reconnecting observer on the app root to detect major DOM changes.
   const appRoot = document.querySelector('#root, #app, [data-reactroot]');
@@ -23,7 +22,6 @@ if (adapter) {
       targetSelector: '#root, #app, [data-reactroot]',
       onMutation: () => {},
       onReconnect: () => {
-        console.log('[BBM] App root reconnected after re-render');
       },
     });
   }
@@ -43,5 +41,4 @@ if (adapter) {
     return true; // keep channel open for async response
   });
 } else {
-  console.log('[BBM] Content script loaded but no adapter matched');
 }

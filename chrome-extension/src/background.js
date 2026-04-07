@@ -20,10 +20,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
   if (adapter) {
     activeTabs.set(tabId, { url: tab.url });
-    console.log(`[BBM] Adapter matched for tab ${tabId}: ${tab.url}`);
   } else if (activeTabs.has(tabId)) {
     activeTabs.delete(tabId);
-    console.log(`[BBM] Tab ${tabId} left supported platform`);
   }
 });
 
@@ -42,4 +40,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-console.log('[BBM] Background service worker initialized');

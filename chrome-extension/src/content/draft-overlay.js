@@ -501,7 +501,6 @@ async function loadPortfolioData() {
     applyPortfolioFilter();
     loadState = 'ready';
     loadError = null;
-    console.log(`[BBM] Portfolio loaded: ${allEntries.length} entries, ${slateGroups.length} slates`);
   } catch (err) {
     loadState = 'error';
     loadError = resolveErrorMessage(err);
@@ -528,7 +527,6 @@ async function loadRankingsData() {
         tierStartRanks.add(rankings[i].rank);
       }
     }
-    console.log(`[BBM] Rankings loaded: ${playerRankingsMap.size} players with tier data`);
     sweepRows();
   } catch (err) {
     console.warn('[BBM] Could not load rankings data:', err.message);
@@ -1615,7 +1613,6 @@ function startOverlay() {
     targetSelector: adapter.selectors.gridSelector,
     onMutation: sweepRows,
     onReconnect: () => {
-      console.log('[BBM] Draft grid reconnected — re-sweeping rows');
       sweepRows();
     },
   });
@@ -1804,7 +1801,6 @@ function watchNavigation() {
 export function initDraftOverlay(platformAdapter, onSync = null) {
   adapter = platformAdapter;
   syncCallback = onSync;
-  console.log('[BBM] Initializing draft overlay');
 
   chrome.storage.local.get(['overlayEnabled', 'tournamentFilter'], (result) => {
     enabled = result.overlayEnabled !== false; // default to true

@@ -129,7 +129,6 @@ const draftkingsAdapter = {
       try {
         const html = await myContestsResp.text();
         contestMap = parseMyContestsHtml(html);
-        console.log(`[BBM] DK mycontests: found ${contestMap.size} NFL contest mappings`);
       } catch (e) {
         console.warn('[BBM] DK mycontests parse failed, using fallback:', e.message);
       }
@@ -177,7 +176,6 @@ const draftkingsAdapter = {
         )
           .then(r => {
             if (r.status === 404) {
-              console.log(`[BBM] DK draftStatus: lineup ${lid} not available (draft may be in progress)`);
               return null;
             }
             return r.ok ? r.json() : null;
@@ -199,13 +197,11 @@ const draftkingsAdapter = {
               });
             }
             draftStatusMap.set(lid, pickMap);
-            console.log(`[BBM] DK draftStatus: got ${pickMap.size} picks for lineup ${lid}`);
           })
           .catch(e => console.warn(`[BBM] DK draftStatus failed for lineup ${lid}:`, e.message));
       });
 
     await Promise.allSettled(statusFetches);
-    console.log(`[BBM] DK sync: ${draftStatusMap.size}/${nflLineups.length} entries have draft pick data`);
 
     // Step 5: Build entries with best available data
     return nflLineups.map(lineup => {
@@ -279,7 +275,6 @@ const draftkingsAdapter = {
    */
   postInjectRow(row, expEl, corrEl) {
     const left = parseInt(row.dataset.bbmLeft, 10) || 635;
-    console.log(`[BBM] postInjectRow: left=${left}, row width=${row.style.width}`);
     row.style.setProperty('overflow', 'visible', 'important');
 
     expEl.setAttribute('style', `position: absolute; left: ${left}px; top: 0; width: 50px; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; opacity: 0.7; z-index: 100; pointer-events: auto;`);

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Best Ball Exposures</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #060E1F;
+      color: #C8D0DC;
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #E8BF4A;
+      font-size: 1.75rem;
+      margin-bottom: 0.25rem;
+    }
+    .updated {
+      color: #6B7A90;
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+    h2 {
+      color: #E0E6EE;
+      font-size: 1.15rem;
+      margin-top: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    p, li {
+      margin-bottom: 0.75rem;
+    }
+    ul {
+      padding-left: 1.25rem;
+    }
+    a {
+      color: #E8BF4A;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: April 7, 2026</p>
+
+    <p>Best Ball Exposures ("we", "our", "us") operates the Best Ball Exposures web application at <a href="https://bestballexposures.com">bestballexposures.com</a> and the Best Ball Exposures Chrome extension. This policy explains what data we access and how it is handled.</p>
+
+    <h2>What the Chrome Extension Does</h2>
+    <p>The Best Ball Exposures Chrome extension enhances your drafting experience on supported platforms (Underdog Fantasy, DraftKings) by displaying your portfolio exposure data alongside the draft board. It reads publicly visible draft-room information from these sites to provide real-time context.</p>
+
+    <h2>Data Collection</h2>
+    <p>We do not sell your personal data to third parties.</p>
+
+    <h3>Chrome Extension</h3>
+    <p>The Chrome extension does not collect, transmit, or store any data externally. Specifically:</p>
+    <ul>
+      <li><strong>No personal information</strong> is collected — no names, emails, or account credentials.</li>
+      <li><strong>No browsing history</strong> is tracked or recorded.</li>
+      <li><strong>No data is sent to external servers.</strong> All processing happens locally in your browser.</li>
+    </ul>
+
+    <h3>Web Application</h3>
+    <p>If you create an account on the web app at bestballexposures.com, we collect:</p>
+    <ul>
+      <li><strong>Email address</strong> — for authentication purposes.</li>
+      <li><strong>Portfolio data</strong> — rosters and settings you choose to sync to the cloud via Supabase.</li>
+    </ul>
+    <p>This data is stored securely in Supabase and is used solely to provide the service. Without an account, all data remains local to your browser via IndexedDB.</p>
+
+    <h2>Local Storage</h2>
+    <p>The extension uses Chrome's local storage API (<code>chrome.storage.local</code>) to save your preferences and cached portfolio data on your device. This data never leaves your browser.</p>
+
+    <h2>Host Permissions</h2>
+    <p>The extension requests access to the following domains solely to read draft-room data and provide portfolio context:</p>
+    <ul>
+      <li><code>app.underdogfantasy.com</code></li>
+      <li><code>api.underdogfantasy.com</code></li>
+      <li><code>stats.underdogfantasy.com</code></li>
+      <li><code>www.draftkings.com</code></li>
+      <li><code>api.draftkings.com</code></li>
+    </ul>
+    <p>No data from these sites is collected, stored remotely, or shared with third parties.</p>
+
+    <h2>Third-Party Services</h2>
+    <ul>
+      <li><strong>Supabase</strong> — authentication and cloud storage (optional)</li>
+      <li><strong>Vercel Analytics</strong> — anonymous, cookie-free page-view metrics (no personal data)</li>
+    </ul>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this policy as the product evolves. Changes will be posted on this page with an updated date.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy? Reach us at <a href="mailto:bestballexposures@gmail.com">bestballexposures@gmail.com</a>.</p>
+  </div>
+</body>
+</html>

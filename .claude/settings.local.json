@@ -78,7 +78,8 @@
       "WebFetch(domain:www.legendaryupside.com)",
       "WebFetch(domain:rotogrinders.com)",
       "WebFetch(domain:www.runthesims.com)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "WebFetch(domain:www.reddit.com)"
     ]
   },
   "enabledPlugins": {

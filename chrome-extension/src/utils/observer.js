@@ -52,7 +52,6 @@ export function createReconnectingObserver({
       } else if (++retries >= maxRetries) {
         clearInterval(pollTimer);
         pollTimer = null;
-        console.warn(`[BBM] Observer gave up reconnecting to "${targetSelector}" after ${maxRetries} attempts`);
       }
     }, pollInterval);
   }
@@ -64,7 +63,6 @@ export function createReconnectingObserver({
     if (!target && observer) {
       observer.disconnect();
       observer = null;
-      console.log(`[BBM] Target "${targetSelector}" lost — attempting reconnection`);
       tryReconnect();
     }
   });

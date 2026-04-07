@@ -303,6 +303,13 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
         <p className={styles.footerText}>
           Best Ball Exposures <span>&middot;</span> &copy; {new Date().getFullYear()} <span>&middot;</span> Built for serious best-ball drafters
         </p>
+        <p className={styles.footerLinks}>
+          <a href="/privacy.html" className={styles.footerLink}>Privacy Policy</a>
+          <span>&middot;</span>
+          <a href="/terms.html" className={styles.footerLink}>Terms of Service</a>
+          <span>&middot;</span>
+          <a href="mailto:bestballexposures@gmail.com" className={styles.footerLink}>Contact</a>
+        </p>
       </footer>
     </div>
   );

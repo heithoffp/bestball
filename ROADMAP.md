@@ -20,12 +20,12 @@
 **Status:** Not Started
 **Description:** Payment processing (Stripe or similar) with subscription tier gating and self-service subscription management. Determines which features are available to free vs paid users.
 **Depends on:** FEAT-021 — pricing and tier decisions should be made before implementing payment integration.
-**Tasks:** TASK-013, TASK-014, TASK-015, TASK-016, TASK-025, TASK-026, TASK-161, TASK-162
+**Tasks:** TASK-013, TASK-014, TASK-015, TASK-016, TASK-025, TASK-026, TASK-161, TASK-162, TASK-181
 
 ### FEAT-003: Deployment & Infrastructure Polish
 **Status:** In Progress
 **Description:** Production Vercel configuration with custom domain, Vercel Analytics and Speed Insights integration, and error monitoring. Vercel dependencies already installed; deployment pipeline needs hardening. Feature-level usage analytics beyond page views — track tab visits, CSV uploads, draft sessions started, and key user flows to validate assumptions about feature value and user retention.
-**Tasks:** TASK-008, TASK-009, TASK-010, TASK-011, TASK-012, TASK-018
+**Tasks:** TASK-008, TASK-009, TASK-010, TASK-011, TASK-012, TASK-018, TASK-183
 
 ### FEAT-021: Commercial Strategy & Positioning
 **Status:** In Progress (reopened for competitive refresh — free tools emerging on r/bestball)
@@ -77,7 +77,7 @@
 ### FEAT-009: Extension Architecture & Scaffold
 **Status:** Not Started
 **Description:** Chrome extension manifest v3, content script injection targeting Underdog draft pages, and communication bridge to web app data (via shared Supabase storage or local messaging).
-**Tasks:** TASK-042, TASK-043, TASK-048, TASK-049
+**Tasks:** TASK-042, TASK-043, TASK-048, TASK-049, TASK-182
 
 ### FEAT-010: Draft Overlay UI
 **Status:** In Progress

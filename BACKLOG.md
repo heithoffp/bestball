@@ -3,17 +3,22 @@
 ## Now
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
+| TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
+| TASK-181 | Switch Stripe to live mode — production keys in Vercel env vars | In Progress | P1 |
 
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 | [Plan](docs/plans/TASK-170.md) | No |
-| TASK-171 | Creator and streamer outreach — target list and pitch templates | Todo | P1 | [Plan](docs/plans/TASK-171.md) — Draft | No |
+| TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 | [Plan](docs/plans/TASK-171.md) | No |
+| TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P1 | [Plan](docs/plans/TASK-173.md) — Draft | No |
+| TASK-181 | Switch Stripe to live mode — production keys in Vercel env vars | In Progress | P1 | [Plan](docs/plans/TASK-181.md) | No |
+| TASK-182 | Submit Chrome extension to Chrome Web Store | Todo | P1 | [Plan](docs/plans/TASK-182.md) — Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
-| TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P2 | [Plan](docs/plans/TASK-173.md) — Draft | No |
 | TASK-180 | Retake dashboard hero screenshot manually | Todo | P2 | [Plan](docs/plans/TASK-180.md) — Draft | No |
+| TASK-183 | Configure Sentry DSN for production error monitoring | Todo | P2 | [Plan](docs/plans/TASK-183.md) — Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |

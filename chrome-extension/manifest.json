@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Best Ball Manager",
-  "version": "0.1.0",
+  "name": "Best Ball Exposures",
+  "version": "1.0.0",
   "description": "Portfolio-aware draft context for best-ball fantasy football",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
@@ -35,9 +35,14 @@
   ],
   "action": {
     "default_popup": "src/popup/popup.html",
-    "default_title": "Best Ball Manager"
+    "default_title": "Best Ball Exposures"
   },
-  "icons": {},
+  "homepage_url": "https://bestballexposures.com/privacy.html",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "web_accessible_resources": [
     {
       "matches": [
