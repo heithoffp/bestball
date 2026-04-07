@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { priceId, successUrl, cancelUrl, trialDays, promoCode } = await req.json();
+  const { priceId, successUrl, cancelUrl, promoCode } = await req.json();
 
   if (!priceId) {
     return new Response(JSON.stringify({ error: "priceId is required" }), {
@@ -89,12 +89,6 @@ Deno.serve(async (req) => {
     "metadata[user_id]": user.id,
     "subscription_data[metadata][user_id]": user.id,
   };
-
-  // Only allow trial if no prior subscription exists for this user
-  const trialEligible = !existingSub;
-  if (trialDays && trialEligible && Number.isInteger(trialDays) && trialDays > 0) {
-    params["subscription_data[trial_period_days]"] = String(trialDays);
-  }
 
   // Promo code handling: resolve code to Stripe promotion_code ID, or allow manual entry
   if (promoCode && typeof promoCode === "string") {

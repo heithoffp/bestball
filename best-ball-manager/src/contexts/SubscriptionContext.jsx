@@ -13,7 +13,6 @@ export function SubscriptionProvider({ children }) {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [trialUsed, setTrialUsed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Beta access derived state
@@ -59,7 +58,6 @@ export function SubscriptionProvider({ children }) {
       /* eslint-disable react-hooks/set-state-in-effect */
       setSubscription(null);
       setProfile(null);
-      setTrialUsed(false);
       setLoading(false);
       /* eslint-enable react-hooks/set-state-in-effect */
       return;
@@ -70,7 +68,7 @@ export function SubscriptionProvider({ children }) {
     async function fetchUserData() {
       setLoading(true);
 
-      const [subResult, profileResult, anySubResult] = await Promise.all([
+      const [subResult, profileResult] = await Promise.all([
         supabase
           .from('subscriptions')
           .select('*')
@@ -82,12 +80,6 @@ export function SubscriptionProvider({ children }) {
           .from('profiles')
           .select('beta_expires_at')
           .eq('id', user.id)
-          .maybeSingle(),
-        supabase
-          .from('subscriptions')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1)
           .maybeSingle(),
       ]);
 
@@ -105,8 +97,6 @@ export function SubscriptionProvider({ children }) {
         } else {
           setProfile(profileResult.data);
         }
-
-        setTrialUsed(anySubResult.data !== null);
 
         setLoading(false);
       }
@@ -139,7 +129,7 @@ export function SubscriptionProvider({ children }) {
     };
   }, [user]);
 
-  const redirectToCheckout = useCallback(async (priceId, { trialDays, promoCode } = {}) => {
+  const redirectToCheckout = useCallback(async (priceId, { promoCode } = {}) => {
     if (!user || !supabase || !SUPABASE_FUNCTIONS_URL) {
       console.error('Cannot create checkout session: missing auth or Supabase config');
       return;
@@ -161,7 +151,6 @@ export function SubscriptionProvider({ children }) {
       },
       body: JSON.stringify({
         priceId,
-        trialDays,
         promoCode: promoCode || undefined,
         successUrl: `${window.location.origin}?checkout=success`,
         cancelUrl: `${window.location.origin}?checkout=canceled`,
@@ -217,7 +206,6 @@ export function SubscriptionProvider({ children }) {
       isProUser,
       subscription,
       loading,
-      trialUsed,
       isBetaActive,
       isBetaExpired,
       betaDaysRemaining,

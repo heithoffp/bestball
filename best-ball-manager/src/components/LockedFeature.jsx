@@ -23,9 +23,8 @@ export default function LockedFeature({ featureName, onSignUp }) {
       <p className={styles.description}>
         Upgrade to Pro for full access to {featureName} and all advanced analytics.
       </p>
-      <p className={styles.trialHint}>Start with a 7-day free trial — no charge until day 8.</p>
       <button className={styles.upgradeBtn} onClick={handleUpgrade}>
-        {user ? 'Start Free Trial' : 'Sign Up to Unlock'}
+        {user ? 'Subscribe' : 'Sign Up to Unlock'}
       </button>
     </div>
   );

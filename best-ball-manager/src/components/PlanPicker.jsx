@@ -13,7 +13,7 @@ const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
 
 const PLANS = {
   monthly: { price: 20, label: 'Monthly', period: '/mo', priceId: MONTHLY_PRICE_ID },
-  seasonal: { price: 67, label: 'Seasonal', period: '/season', priceId: YEARLY_PRICE_ID },
+  seasonal: { price: 67, label: 'Annual', period: '/yr', priceId: YEARLY_PRICE_ID },
 };
 
 export default function PlanPicker() {
@@ -22,7 +22,6 @@ export default function PlanPicker() {
     planPickerPromoCode,
     closePlanPicker,
     redirectToCheckout,
-    trialUsed,
   } = useSubscription();
 
   if (!planPickerOpen) return null;
@@ -32,12 +31,11 @@ export default function PlanPicker() {
       initialPromoCode={planPickerPromoCode}
       closePlanPicker={closePlanPicker}
       redirectToCheckout={redirectToCheckout}
-      trialUsed={trialUsed}
     />
   );
 }
 
-function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout, trialUsed }) {
+function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout }) {
   const [interval, setInterval] = useState('seasonal');
   const [promoCode, setPromoCode] = useState(initialPromoCode);
   const [promoState, setPromoState] = useState(
@@ -126,7 +124,6 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
     if (!plan.priceId) return;
     setLoading(true);
     await redirectToCheckout(plan.priceId, {
-      trialDays: trialUsed ? undefined : 7,
       promoCode: promoState === 'valid' ? promoCode.trim() : undefined,
     });
     setLoading(false);
@@ -140,13 +137,8 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
         </button>
 
         <h3 style={{ margin: '0 0 0.25rem', fontSize: '1.25rem' }}>Choose Your Plan</h3>
-        <p style={{ color: 'var(--text-muted)', margin: '0 0 0.25rem', fontSize: '0.875rem' }}>
-          Full access to all Pro analytics features.
-        </p>
-        <p style={{ color: trialUsed ? 'var(--text-muted)' : 'var(--accent)', margin: '0 0 1.5rem', fontSize: '0.82rem', fontWeight: 500 }}>
-          {trialUsed
-            ? 'Trial already used — subscribe to get full access.'
-            : 'Start with a 7-day free trial — no charge until day 8.'}
+        <p style={{ color: 'var(--text-muted)', margin: '0 0 1.5rem', fontSize: '0.875rem' }}>
+          Subscribe to unlock all Pro analytics features.
         </p>
 
         {/* Plan toggle cards */}
@@ -160,9 +152,9 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
             onClick={() => setInterval('monthly')}
           />
           <PlanCard
-            label="Seasonal"
+            label="Annual"
             price="$67"
-            period="/season"
+            period="/yr"
             badge="Save 44%"
             discountedPrice={promoState === 'valid' ? getDiscountedPrice(67) : null}
             active={interval === 'seasonal'}
@@ -264,7 +256,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
             opacity: loading || !plan.priceId ? 0.6 : 1,
           }}
         >
-          {loading ? 'Redirecting...' : trialUsed ? 'Subscribe' : 'Start Free Trial'}
+          {loading ? 'Redirecting...' : 'Subscribe'}
         </button>
       </div>
     </div>

@@ -50,10 +50,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
     setLoading(false);
     if (!error) {
       trackEvent('auth_signup');
-      setSuccessMessage('Check your email to confirm your account.');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
+      onClose();
     }
   }
 

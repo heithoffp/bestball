@@ -2,14 +2,15 @@
 
 ## Now
 
+| TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
+
 ## Active Tasks
 
 | ID | Title | Status | Priority | Plan | Verified |
 |----|-------|--------|----------|------|----------|
-| TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | Todo | P1 | [Plan](docs/plans/TASK-170.md) — Draft | No |
+| TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 | [Plan](docs/plans/TASK-170.md) | No |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | Todo | P1 | [Plan](docs/plans/TASK-171.md) — Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
-| TASK-162 | Remove Stripe 7-day free trial — convert to direct subscribe flow | Todo | P2 | [Plan](docs/plans/TASK-162.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
 | TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P2 | [Plan](docs/plans/TASK-173.md) — Draft | No |
 | TASK-180 | Retake dashboard hero screenshot manually | Todo | P2 | [Plan](docs/plans/TASK-180.md) — Draft | No |
@@ -36,6 +37,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-162 | Remove Stripe 7-day free trial — convert to direct subscribe flow | 2026-04-07 | [Plan](docs/archive/plans/TASK-162.md) |
 | TASK-169 | First-run experience — sample data load button and empty state guidance | 2026-04-07 | [Plan](docs/archive/plans/TASK-169.md) |
 | TASK-179 | Fix visual issues noticed during screenshot review | 2026-04-07 | [Plan](docs/archive/plans/TASK-179.md) |
 | TASK-168 | Sample data bundle — demo portfolio CSVs for first-run experience | 2026-04-07 | [Plan](docs/archive/plans/TASK-168.md) |
