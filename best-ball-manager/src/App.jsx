@@ -41,9 +41,11 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 // DISABLED for performance — keep source file intact
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
 
 // Bundled assets (developer-controlled) — all use glob so missing files don't break the build
 const rosterModules = import.meta.glob('./assets/rosters.csv', { as: 'raw', eager: true });
+const demoRosterModules = import.meta.glob('./assets/demo-rosters.csv', { as: 'raw', eager: true });
 const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
 const projectionsModules = import.meta.glob('./assets/projections.csv', { as: 'raw', eager: true });
 const rankingsModules = import.meta.glob('./assets/rankings.csv', { as: 'raw', eager: true });
@@ -166,8 +168,14 @@ export default function App() {
         await loadPerPlatformRankings(user.id);
         setStatus({ type: '', msg: '' });
       } else {
-        // Unauthenticated: read-only demo preview
-        await loadFromAssets();
+        // Unauthenticated: don't auto-load — show landing page instead.
+        // Demo data is loaded on demand via loadDemoData(), or auto-loaded via ?demo=true.
+        const autoDemo = new URLSearchParams(window.location.search).get('demo') === 'true';
+        if (autoDemo) {
+          await loadFromAssets();
+        } else {
+          setStatus({ type: '', msg: '' });
+        }
       }
     } catch (err) {
       console.error('Load failed', err);
@@ -175,8 +183,12 @@ export default function App() {
     }
   }
 
-  async function loadFromAssets() {
-    const rosterRaw = Object.values(rosterModules)[0];
+  async function loadFromAssets({ forceDemo = false } = {}) {
+    // Use demo rosters when ?demo=true is in the URL or when explicitly requested
+    const useDemo = forceDemo || new URLSearchParams(window.location.search).get('demo') === 'true';
+    const rosterRaw = useDemo
+      ? Object.values(demoRosterModules)[0]
+      : Object.values(rosterModules)[0];
     const adpFiles = await loadBundledAdp();
     const rankingsRaw = Object.values(rankingsModules)[0];
     const projectionsRaw = Object.values(projectionsModules)[0];
@@ -233,6 +245,24 @@ export default function App() {
     openAuthModal('Sign in or create an account to upload custom rankings.');
     return false;
   }, [user, openAuthModal]);
+
+  // Load bundled demo data on demand (triggered from landing page "Try Demo")
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadDemoData = useCallback(() => { loadFromAssets({ forceDemo: true }); }, []);
+
+  // Show landing page for unauthenticated guests with no data
+  const showLanding = tier === 'guest' && rosterData.length === 0 && !isUsingDemoData && !authLoading && !subLoading;
+
+  if (showLanding) {
+    return (
+      <Suspense fallback={null}>
+        <LandingPage onSignUp={() => setShowAuthModal(true)} onTryDemo={loadDemoData} />
+        <AuthModal isOpen={showAuthModal} onClose={() => { setShowAuthModal(false); setAuthModalMessage(''); }} message={authModalMessage} />
+        <Analytics />
+        <SpeedInsights />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -332,18 +362,24 @@ export default function App() {
                 : <LockedFeature featureName="Player Rankings" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'timeseries' && (
-              <AdpTimeSeries
-                adpSnapshots={adpSnapshots}
-                adpByPlatform={adpByPlatform}
-                masterPlayers={masterPlayers}
-                teams={12}
-                rosterData={rosterData}
-                onNavigateToRosters={navigateToRosters}
-                helpOpen={helpOpen}
-                onHelpToggle={toggleHelp}
-              />
+              canAccessFeature(tier, 'timeseries') || subLoading
+                ? <AdpTimeSeries
+                    adpSnapshots={adpSnapshots}
+                    adpByPlatform={adpByPlatform}
+                    masterPlayers={masterPlayers}
+                    teams={12}
+                    rosterData={rosterData}
+                    onNavigateToRosters={navigateToRosters}
+                    helpOpen={helpOpen}
+                    onHelpToggle={toggleHelp}
+                  />
+                : <LockedFeature featureName="ADP Tracker" onSignUp={() => setShowAuthModal(true)} />
             )}
-            {activeTab === 'combo' && <ComboAnalysis rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
+            {activeTab === 'combo' && (
+              canAccessFeature(tier, 'combo') || subLoading
+                ? <ComboAnalysis rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
+                : <LockedFeature featureName="Combo Analysis" onSignUp={() => setShowAuthModal(true)} />
+            )}
           </Suspense>
         </div>
       </div>

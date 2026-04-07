@@ -140,8 +140,8 @@
 }
 
 .colName { width: 22%; }
-.colPos { width: 5%; }
-.colTeam { width: 15%; }
+.colPos { width: 7%; }
+.colTeam { width: 13%; }
 .colExposure { width: 12%; }
 .colCount { width: 7%; }
 .colAdp { width: 7%; }
@@ -337,8 +337,8 @@
   }
 
   .colName { width: 28%; }
-  .colPos { width: 8%; }
-  .colTeam { width: 12%; }
+  .colPos { width: 9%; }
+  .colTeam { width: 11%; }
   .colExposure { width: 20%; }
   .colCount { width: 15%; }
   .colAdp { width: 17%; }

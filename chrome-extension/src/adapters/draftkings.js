@@ -12,16 +12,71 @@
  * @type {import('./interface.js').PlatformAdapter}
  */
 
+/** Maps teamPositionId from the draftStatus API to standard position abbreviations. */
+const TEAM_POS_MAP = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE' };
+
 /**
- * Manual draft-group-ID → metadata map.
- * DK doesn't expose historical contest names via any public API,
- * so known contest metadata is maintained here by hand.
- *   name  — tournament/contest name (falls back to "DraftKings #<id>")
- *   slate — slate grouping label   (falls back to "DraftKings")
+ * Parse the /contest/mycontests HTML page to extract contest-entry mappings.
+ * The page embeds JSON objects containing ContestId, UserContestId, and
+ * ActiveLineupId which map lineup data to draftStatus URL parameters.
+ *
+ * Uses brace-counting to extract each complete JSON object around a
+ * UserContestId field, avoiding cross-match between adjacent entries.
+ *
+ * @param {string} html
+ * @returns {Map<string, {contestId: string, userContestId: string, contestName: string}>}
+ *   Map keyed by LineupId (as string)
  */
-const DRAFT_GROUP_META = {
-  141336: { name: 'Pre-Draft Best Ball', slate: 'DraftKings' },
-};
+function parseMyContestsHtml(html) {
+  const map = new Map();
+  const re = /"UserContestId":(\d+)/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    // Walk backwards to find the opening { of this JSON object
+    let depth = 0;
+    let objStart = -1;
+    for (let i = m.index - 1; i >= 0; i--) {
+      if (html[i] === '}') depth++;
+      if (html[i] === '{') {
+        if (depth === 0) { objStart = i; break; }
+        depth--;
+      }
+    }
+    if (objStart === -1) continue;
+
+    // Walk forward to find the matching closing }
+    depth = 0;
+    let objEnd = -1;
+    for (let i = objStart; i < html.length; i++) {
+      if (html[i] === '{') depth++;
+      if (html[i] === '}') {
+        depth--;
+        if (depth === 0) { objEnd = i + 1; break; }
+      }
+    }
+    if (objEnd === -1) continue;
+
+    try {
+      const entry = JSON.parse(html.slice(objStart, objEnd));
+      const contestId = String(entry.ActiveContestId ?? entry.ContestId ?? '');
+      const lineupId = String(entry.ActiveLineupId ?? entry.LineupId ?? '');
+      const sport = entry.Sport;
+      if (contestId && lineupId && sport === 1) {
+        map.set(lineupId, {
+          contestId,
+          userContestId: String(entry.UserContestId),
+          contestName: entry.ContestName ?? 'DraftKings',
+        });
+      }
+    } catch {
+      // Not valid standalone JSON — skip
+    }
+
+    // Advance past this object to avoid re-matching nested occurrences
+    if (objEnd > 0) re.lastIndex = objEnd;
+  }
+  return map;
+}
 
 const draftkingsAdapter = {
   isMatch(url) {
@@ -38,11 +93,15 @@ const draftkingsAdapter = {
 
   /**
    * Scrapes all completed NFL best-ball entries for the signed-in user.
-   * Calls the same-origin DraftKings lineup API directly.
    *
-   * Pick numbers are set to roster-slot index (1-based) because the API
-   * returns players in slot order, not draft-pick order. Round is 0.
-   * This is acceptable for exposure analysis which relies on player presence.
+   * Fetches three data sources in parallel:
+   *   1. Lineup API — player lists per entry (same-origin)
+   *   2. /contest/mycontests — maps LineupId → ContestId + UserContestId
+   *   3. Draftables API — real positions and team abbreviations (public)
+   *
+   * Then fetches draftStatus per entry for real pick order and positions.
+   * Falls back gracefully: if draftStatus fails, uses draftables positions
+   * with slot-order picks.
    *
    * @returns {Promise<import('./interface.js').Entry[]>}
    */
@@ -51,21 +110,32 @@ const draftkingsAdapter = {
       throw new Error(draftkingsAdapter.syncPageErrorMessage);
     }
 
-    const resp = await fetch(
-      'https://www.draftkings.com/lineup/getlineupswithplayersforuser',
-      { credentials: 'include' }
-    );
+    // Step 1: Fetch lineup data and mycontests mapping in parallel
+    const [lineupResp, myContestsResp] = await Promise.all([
+      fetch('https://www.draftkings.com/lineup/getlineupswithplayersforuser', { credentials: 'include' }),
+      fetch('https://www.draftkings.com/contest/mycontests', { credentials: 'include' }).catch(() => null),
+    ]);
 
-    if (!resp.ok) {
-      throw new Error(`DraftKings API error: ${resp.status}`);
+    if (!lineupResp.ok) {
+      throw new Error(`DraftKings API error: ${lineupResp.status}`);
     }
 
-    const lineups = await resp.json();
-    const nflLineups = lineups.filter(lineup => lineup.SportId === 1); // NFL only
+    const lineups = await lineupResp.json();
+    const nflLineups = lineups.filter(lineup => lineup.SportId === 1);
 
-    // Batch-fetch draftables per unique draft group ID for team abbreviation mapping.
-    // DK's lineup API only provides numeric team IDs (tid); the draftables endpoint
-    // has the corresponding teamAbbreviation strings.
+    // Step 2: Parse mycontests HTML for contest → entry ID mapping
+    let contestMap = new Map();
+    if (myContestsResp?.ok) {
+      try {
+        const html = await myContestsResp.text();
+        contestMap = parseMyContestsHtml(html);
+        console.log(`[BBM] DK mycontests: found ${contestMap.size} NFL contest mappings`);
+      } catch (e) {
+        console.warn('[BBM] DK mycontests parse failed, using fallback:', e.message);
+      }
+    }
+
+    // Step 3: Fetch draftables for team abbreviations and real positions
     const uniqueDraftGroupIds = [...new Set(nflLineups.map(l => l.ContestDraftGroupId))];
     const draftableResults = await Promise.allSettled(
       uniqueDraftGroupIds.map(id =>
@@ -75,36 +145,95 @@ const draftkingsAdapter = {
       )
     );
 
-    // Build teamId → teamAbbreviation from draftables responses.
+    // Build lookup maps from draftables: teamId → abbreviation, draftableId → info
     const tidToTeam = {};
+    const didToInfo = {};
     draftableResults.forEach((result) => {
       if (result.status !== 'fulfilled') return;
       (result.value?.draftables ?? []).forEach(d => {
         if (d.teamAbbreviation && d.teamId != null) {
           tidToTeam[d.teamId] = d.teamAbbreviation;
         }
+        if (d.draftableId != null) {
+          didToInfo[d.draftableId] = {
+            position: d.position ?? null,
+            team: d.teamAbbreviation ?? null,
+          };
+        }
       });
     });
 
-    return nflLineups.map(lineup => ({
-      entryId: String(lineup.LineupId),
-      slateTitle:
-        DRAFT_GROUP_META[lineup.ContestDraftGroupId]?.slate ?? 'DraftKings',
-      tournamentTitle:
-        DRAFT_GROUP_META[lineup.ContestDraftGroupId]?.name ??
-        `DraftKings #${lineup.ContestDraftGroupId}`,
-      draftDate: new Date(
-        parseInt(lineup.LastModified.match(/\d+/)[0], 10)
-      ).toISOString(),
-      players: lineup.Players.map((p, idx) => ({
-        name: `${p.fn} ${p.ln}`,
-        position: p.pn,
-        // pick/round reflect roster-slot order, not draft-pick order — DK API limitation
-        team: tidToTeam[p.tid] ?? p.tid?.toString() ?? '',
-        pick: idx + 1,
-        round: 0,
-      })),
-    }));
+    // Step 4: Fetch draftStatus for entries with contest mapping (real pick order)
+    // draftableId → { pick, round, position } per lineup
+    const draftStatusMap = new Map();
+    const statusFetches = nflLineups
+      .filter(lineup => contestMap.has(String(lineup.LineupId)))
+      .map(lineup => {
+        const lid = String(lineup.LineupId);
+        const { contestId, userContestId } = contestMap.get(lid);
+        return fetch(
+          `https://api.draftkings.com/drafts/v1/${contestId}/entries/${userContestId}/draftStatus?format=json`,
+          { credentials: 'include' }
+        )
+          .then(r => {
+            if (r.status === 404) {
+              console.log(`[BBM] DK draftStatus: lineup ${lid} not available (draft may be in progress)`);
+              return null;
+            }
+            return r.ok ? r.json() : null;
+          })
+          .then(ds => {
+            if (!ds?.draftBoard) return;
+            // Identify user's picks by matching draftableIds from the lineup
+            const lineupDids = new Set(lineup.Players.map(p => p.did));
+            const userKey = ds.draftBoard.find(pick => lineupDids.has(pick.draftableId))?.userKey;
+            if (!userKey) return;
+
+            const pickMap = new Map();
+            for (const pick of ds.draftBoard) {
+              if (pick.userKey !== userKey) continue;
+              pickMap.set(pick.draftableId, {
+                pick: pick.overallSelectionNumber,
+                round: pick.roundNumber,
+                position: TEAM_POS_MAP[pick.teamPositionId] ?? null,
+              });
+            }
+            draftStatusMap.set(lid, pickMap);
+            console.log(`[BBM] DK draftStatus: got ${pickMap.size} picks for lineup ${lid}`);
+          })
+          .catch(e => console.warn(`[BBM] DK draftStatus failed for lineup ${lid}:`, e.message));
+      });
+
+    await Promise.allSettled(statusFetches);
+    console.log(`[BBM] DK sync: ${draftStatusMap.size}/${nflLineups.length} entries have draft pick data`);
+
+    // Step 5: Build entries with best available data
+    return nflLineups.map(lineup => {
+      const lid = String(lineup.LineupId);
+      const contest = contestMap.get(lid);
+      const pickMap = draftStatusMap.get(lid);
+
+      return {
+        entryId: lid,
+        slateTitle: 'DK Pre-Draft',
+        tournamentTitle: contest?.contestName
+          ?? `DraftKings #${lineup.ContestDraftGroupId}`,
+        draftDate: new Date(
+          parseInt(lineup.LastModified.match(/\d+/)[0], 10)
+        ).toISOString(),
+        players: lineup.Players.map((p, idx) => {
+          const dInfo = didToInfo[p.did];   // from draftables (position + team)
+          const sInfo = pickMap?.get(p.did); // from draftStatus (pick + round + position)
+          return {
+            name: `${p.fn} ${p.ln}`,
+            position: sInfo?.position ?? dInfo?.position ?? p.pn,
+            team: tidToTeam[p.tid] ?? dInfo?.team ?? p.tid?.toString() ?? '',
+            pick: sInfo?.pick ?? (idx + 1),
+            round: sInfo?.round ?? 0,
+          };
+        }),
+      };
+    });
   },
 
   isDraftPage() {

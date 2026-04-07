@@ -1,6 +1,7 @@
+<!-- Completed: 2026-04-07 | Commit: e669b5f -->
 # TASK-169: First-run experience — sample data load button and empty state guidance
 
-**Status:** Draft
+**Status:** Done
 **Priority:** P1
 
 ---
@@ -11,7 +12,5 @@ Add a "Try with sample data" button visible to new users who haven't uploaded an
 ## Dependencies
 TASK-168 (sample data bundle must exist)
 
-## Open Questions
-- Persist sample data to IndexedDB or keep in-memory only?
-- Show a visual indicator distinguishing sample data from real data?
-- Where to place the "Try sample data" button — Dashboard empty state, header, or modal?
+## Implementation Notes
+The "Try Demo" button was already wired in LandingPage.jsx (onTryDemo prop) and App.jsx (loadDemoData callback). Fixed a routing bug where loadFromAssets() checked ?demo=true URL param instead of using the forceDemo flag, causing it to fall back to the empty rosters.csv instead of demo-rosters.csv. Fix: pass { forceDemo: true } from loadDemoData.

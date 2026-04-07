@@ -1,7 +1,7 @@
 // src/components/RosterViewer.jsx
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { loadSimData, buildComboKey, lookupTier1 } from '../utils/uniquenessEngine';
-import { canonicalName } from '../utils/helpers';
+import { canonicalName, compactTournamentName } from '../utils/helpers';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import useMediaQuery from '../hooks/useMediaQuery';
@@ -853,10 +853,10 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
                         }}>✦ {p.name} ({p.team})</span>
                       ))}
                       {roster.tournamentTitle && (
-                        <span style={{
-                          fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-                          color: '#666', whiteSpace: 'nowrap',
-                        }}>{roster.tournamentTitle}</span>
+                        <span
+                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}
+                          title={roster.tournamentTitle}
+                        >{compactTournamentName(roster.tournamentTitle)}</span>
                       )}
                     </div>
                   </td>

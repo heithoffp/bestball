@@ -1,6 +1,7 @@
+<!-- Completed: 2026-04-07 | Commit: e669b5f -->
 # TASK-168: Sample data bundle — demo portfolio CSVs for first-run experience
 
-**Status:** Draft
+**Status:** Done
 **Priority:** P1
 
 ---

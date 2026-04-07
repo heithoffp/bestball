@@ -226,3 +226,19 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
 
   return final;
 }
+
+/**
+ * Shorten a long tournament name for display.
+ * - Strips a leading "DraftKings " prefix
+ * - Strips a trailing " Presented by ..." suffix
+ * - Truncates to 40 chars with ellipsis if still long
+ * Underdog and other non-DK names pass through unchanged (no "DraftKings" prefix).
+ */
+export function compactTournamentName(name) {
+  if (!name) return name;
+  let compact = name
+    .replace(/^DraftKings\s+/i, '')
+    .replace(/\s+Presented by\b.*/i, '');
+  if (compact.length > 40) compact = compact.slice(0, 38) + '\u2026';
+  return compact;
+}

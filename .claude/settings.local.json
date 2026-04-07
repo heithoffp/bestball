@@ -65,7 +65,20 @@
       "WebFetch(domain:gacolitti.github.io)",
       "Bash(npx vite:*)",
       "Bash(d2 docs/systems-model/feedback.d2 docs/systems-model/feedback.svg --layout elk)",
-      "Bash(curl -s -L -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.reddit.com/r/BestBall/comments/1sda3k2/i_built_a_free_chrome_extension_for_tracking_best/.json\")"
+      "Bash(curl -s -L -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.reddit.com/r/BestBall/comments/1sda3k2/i_built_a_free_chrome_extension_for_tracking_best/.json\")",
+      "Bash(curl -s -L -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.reddit.com/r/BestBall/comments/1l2c3ga/if_you_draft_best_ball_on_underdog_i_built_a_free/.json\")",
+      "WebFetch(domain:bestballoverlay.com)",
+      "WebFetch(domain:thesolver.com)",
+      "WebFetch(domain:www.fantasylife.com)",
+      "WebFetch(domain:chromewebstore.google.com)",
+      "WebFetch(domain:spikeweek.com)",
+      "WebFetch(domain:www.bestballteambuilder.com)",
+      "WebFetch(domain:endgamesyndicate.com)",
+      "Bash(curl -s -L -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.reddit.com/r/BestBall/comments/1kwpcj5/i_built_an_nfl_best_ball_team_stacking_assistant/.json\")",
+      "WebFetch(domain:www.legendaryupside.com)",
+      "WebFetch(domain:rotogrinders.com)",
+      "WebFetch(domain:www.runthesims.com)",
+      "Bash(npx playwright:*)"
     ]
   },
   "enabledPlugins": {

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>OG Card — Best Ball Exposures</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background: #060E1F;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      width: 1200px;
+      height: 630px;
+      background: linear-gradient(135deg, #0C1A30 0%, #060E1F 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle radial glow behind content */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 700px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(212, 168, 67, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Grid line texture */
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232, 191, 74, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232, 191, 74, 0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-name {
+      font-size: 42px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #F0CC5B 0%, #D4A843 50%, #E8BF4A 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 26px;
+      font-weight: 400;
+      color: #8BA3C7;
+      letter-spacing: 0.01em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .url {
+      font-size: 18px;
+      color: rgba(212, 168, 67, 0.6);
+      letter-spacing: 0.05em;
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+    }
+
+    /* Corner border accents */
+    .corner {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-color: rgba(232, 191, 74, 0.25);
+      border-style: solid;
+      z-index: 1;
+    }
+    .corner-tl { top: 32px; left: 32px; border-width: 2px 0 0 2px; }
+    .corner-tr { top: 32px; right: 32px; border-width: 2px 2px 0 0; }
+    .corner-bl { bottom: 32px; left: 32px; border-width: 0 0 2px 2px; }
+    .corner-br { bottom: 32px; right: 32px; border-width: 0 2px 2px 0; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="card">
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+
+    <div class="brand-row">
+      <!-- BrandLogo inline SVG -->
+      <svg width="80" height="80" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="og-gold" x1="10" y1="10" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#F0CC5B"/>
+            <stop offset="50%"  stop-color="#D4A843"/>
+            <stop offset="100%" stop-color="#E8BF4A"/>
+          </linearGradient>
+          <linearGradient id="og-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"   stop-color="#0C1A30"/>
+            <stop offset="100%" stop-color="#060E1F"/>
+          </linearGradient>
+        </defs>
+        <circle cx="24" cy="24" r="24" fill="url(#og-bg)"/>
+        <circle cx="24" cy="24" r="22.5" fill="none" stroke="url(#og-gold)" stroke-width="2"/>
+        <circle cx="24" cy="24" r="14" fill="none" stroke="#E8BF4A" stroke-width="0.5" opacity="0.18"/>
+        <circle cx="24" cy="24" r="14" fill="none" stroke="url(#og-gold)" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="18 7 10 7 23 7 8 7.96" transform="rotate(-90 24 24)"/>
+        <circle cx="24" cy="24" r="2.5" fill="url(#og-gold)"/>
+      </svg>
+      <span class="brand-name">Best Ball Exposures</span>
+    </div>
+
+    <div class="tagline">Your whole portfolio. One screen.</div>
+    <div class="url">bestballexposures.com</div>
+  </div>
+</body>
+</html>

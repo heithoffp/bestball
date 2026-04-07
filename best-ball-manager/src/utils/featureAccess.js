@@ -6,7 +6,7 @@ const FEATURE_ACCESS = {
   timeseries:   'pro',
   help:         'guest',
   draftflow:    'pro',
-  rosters:      'pro',
+  rosters:      'guest',
   rankings:     'pro',
   combo:        'pro',
   construction: 'pro',

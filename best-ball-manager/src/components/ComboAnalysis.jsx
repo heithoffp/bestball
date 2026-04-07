@@ -443,7 +443,7 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
                   );
                   return (
                     <tr>
-                      <SortHeader label="QB" colKey="name" width={180} helpId="qb-col" />
+                      <SortHeader label="QB" colKey="name" width={220} helpId="qb-col" />
                       <th data-help-id="diversity-col" style={{ padding: '12px 20px', textAlign: 'left' }}>STACK DIVERSITY</th>
                       <SortHeader label="STACK %" colKey="stackPct" align="center" width={80} helpId="stack-pct-col" />
                       <SortHeader label="DRAFTS" colKey="totalDrafts" align="center" width={80} />

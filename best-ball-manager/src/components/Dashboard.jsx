@@ -347,7 +347,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                     {r.blindSpots.length > 0 ? (
                       r.blindSpots.map(p => (
                         <div key={p.name} className={styles.blindSpotEntry}>
-                          <span className={styles.blindSpotName} style={{ color: '#6b7280' }}>{p.name}</span>
+                          <span className={styles.blindSpotName} style={{ color: POS_COLORS[p.position] || 'var(--text-primary)' }}>{p.name}</span>
                           <span className={styles.blindSpotAdp}>{fmtAdp(p.adp)}</span>
                           <span className={styles.exposurePct} style={{ color: '#6b7280', textAlign: 'right' }}>0%</span>
                         </div>
