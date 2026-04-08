@@ -1,6 +1,7 @@
+<!-- Completed: 2026-04-07 | Commit: b7a8d45 (config-only, no code changes) -->
 # TASK-181: Switch Stripe to live mode — production keys in Vercel env vars
 
-**Status:** Pending Approval
+**Status:** Done
 **Priority:** P1
 
 ---
@@ -97,4 +98,4 @@ None — Stripe code is already wired up, just needs live keys.
 - **Resolved:** Supabase Edge Functions use `STRIPE_SECRET_KEY` from secrets — setting the live key there makes all four Edge Functions (checkout, webhook, promo validation, portal) use live mode automatically.
 
 ---
-*Approved by: <!-- developer name/initials and date once approved -->*
+*Approved by: PH — 2026-04-07*

@@ -1,19 +1,28 @@
-# TASK-175: Block doubleclick.net ad interruptions on DraftKings pages
+# TASK-175: Block DraftKings keyboard shortcuts from hijacking extension sign-in inputs
 
-**Status:** Draft
+**Status:** Approved
 **Priority:** P3
 
 ---
 
 ## Objective
-DraftKings pages trigger intrusive ad popups from doubleclick.net that interrupt critical user flows like login and account settings. When the extension is active on DraftKings, these ad overlays hijack focus and close the login/settings screen, preventing users from completing authentication — which blocks the sync flow entirely.
+Prevent DraftKings page-level keyboard shortcuts (e.g. "e" → Entrants) from firing when the user types in the extension's sign-in email/password fields. The keypress events bubble from the extension's injected inputs up to DK's document-level handlers, opening panels that close the extension's sign-in UI.
 
-The extension should suppress these ad-related interruptions on DraftKings pages so users can complete login, account settings, and sync without being kicked out of modal dialogs. This could be achieved via the Chrome extension's `declarativeNetRequest` API to block doubleclick.net requests on DK pages, or via content script DOM manipulation to dismiss/prevent the ad overlays.
+## Verification Criteria
+1. Typing in the email and password fields of the extension's confidence panel on a DraftKings page does not trigger DK keyboard shortcuts.
+2. Extension builds successfully.
+3. Enter key in the password field still triggers sign-in.
+
+## Files to Change
+| File | Action | Description |
+|------|--------|-------------|
+| `chrome-extension/src/content/draft-overlay.js` | Modify | Add `stopPropagation()` on keydown/keypress/keyup for `.bbm-auth-input` elements |
+
+## Implementation Approach
+After the auth input elements are created in `renderAuthSection()`, attach `stopPropagation()` listeners for `keydown`, `keypress`, and `keyup` events on all `.bbm-auth-input` elements. This prevents keyboard events from bubbling to DraftKings' document-level shortcut handlers while preserving normal input behavior and the Enter-to-submit handler.
 
 ## Dependencies
 None
 
-## Open Questions
-- Is `declarativeNetRequest` the right approach, or would a content script that removes/hides the ad overlay DOM elements be simpler and less likely to break DK functionality?
-- Does blocking doubleclick.net have any side effects on DraftKings functionality (e.g., does DK use it for anything beyond ads)?
-- Should this only activate on specific DK pages (login, account settings, mycontests) or globally on all DK pages the extension targets?
+---
+*Approved by: PH — 2026-04-08*

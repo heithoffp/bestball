@@ -9,6 +9,8 @@ import { NFL_TEAMS } from '../utils/nflTeams';
 import { canonicalName } from '../utils/helpers';
 import TournamentMultiSelect from './TournamentMultiSelect';
 import styles from './ExposureTable.module.css';
+import { FolderSync } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 // --- Shared Utilities ---
 const COLORS = {
@@ -469,11 +471,13 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
         style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}
       >
         {filteredAndSorted.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            {masterPlayers.length === 0
-              ? 'No data loaded. Sync your portfolio from the Chrome extension to see exposure data.'
-              : 'No players match.'}
-          </div>
+          masterPlayers.length === 0
+            ? <EmptyState icon={FolderSync} title="No exposure data">
+                Sync your rosters from the Chrome extension or upload a CSV to see exposure data.
+              </EmptyState>
+            : <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                No players match.
+              </div>
         ) : (
           <div
             className={styles.cardList}
@@ -526,13 +530,19 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
 
           <tbody>
             {filteredAndSorted.length === 0 ? (
-              <tr>
-                <td colSpan={onNavigateToRosters ? 8 : 7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                  {masterPlayers.length === 0
-                    ? 'No data loaded. Sync your portfolio from the Chrome extension to see exposure data.'
-                    : 'No players match.'}
-                </td>
-              </tr>
+              masterPlayers.length === 0
+                ? <tr>
+                    <td colSpan={onNavigateToRosters ? 8 : 7} style={{ padding: 0, border: 'none' }}>
+                      <EmptyState icon={FolderSync} title="No exposure data">
+                        Sync your rosters from the Chrome extension or upload a CSV to see exposure data.
+                      </EmptyState>
+                    </td>
+                  </tr>
+                : <tr>
+                    <td colSpan={onNavigateToRosters ? 8 : 7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      No players match.
+                    </td>
+                  </tr>
             ) : (
               <>
                 {virtualizer.getVirtualItems().length > 0 && (
@@ -620,7 +630,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
       )}
       {showInfoBanner && (
         <div className={styles.infoBanner}>
-          Showing all ADP players. Sync your portfolio from the Chrome extension to see exposure data.
+          Showing all ADP players. Sync your rosters to see exposure data.
         </div>
       )}
     </>

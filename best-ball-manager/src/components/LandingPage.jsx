@@ -308,7 +308,7 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
           <span>&middot;</span>
           <a href="/terms.html" className={styles.footerLink}>Terms of Service</a>
           <span>&middot;</span>
-          <a href="mailto:bestballexposures@gmail.com" className={styles.footerLink}>Contact</a>
+          <a href="mailto:bestballexposures@outlook.com" className={styles.footerLink}>Contact</a>
         </p>
       </footer>
     </div>

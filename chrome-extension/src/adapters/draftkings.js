@@ -81,11 +81,8 @@ function parseMyContestsHtml(html) {
 const draftkingsAdapter = {
   isMatch(url) {
     try {
-      const { hostname, pathname } = new URL(url);
-      return (
-        hostname === 'www.draftkings.com' &&
-        (pathname.startsWith('/mycontests') || pathname.startsWith('/draft/snake/'))
-      );
+      const { hostname } = new URL(url);
+      return hostname === 'www.draftkings.com';
     } catch {
       return false;
     }

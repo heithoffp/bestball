@@ -129,13 +129,26 @@ async function updatePanelStatus() {
     return;
   }
 
-  chrome.storage.local.get(['lastSync', 'entryCount'], (result) => {
-    if (result.lastSync) {
-      syncLine.textContent = `${result.entryCount ?? 0} entries \u00b7 synced ${formatRelativeTime(result.lastSync)}`;
-    } else {
-      syncLine.textContent = 'Not yet synced';
+  chrome.storage.local.get(
+    ['lastSync', 'entryCount', 'underdog_lastSync', 'underdog_entryCount', 'draftkings_lastSync', 'draftkings_entryCount'],
+    (result) => {
+      const parts = [];
+      if (result.underdog_lastSync) {
+        parts.push(`UD: ${result.underdog_entryCount ?? 0} \u00b7 ${formatRelativeTime(result.underdog_lastSync)}`);
+      }
+      if (result.draftkings_lastSync) {
+        parts.push(`DK: ${result.draftkings_entryCount ?? 0} \u00b7 ${formatRelativeTime(result.draftkings_lastSync)}`);
+      }
+      if (parts.length > 0) {
+        syncLine.textContent = parts.join('  |  ');
+      } else if (result.lastSync) {
+        // Legacy fallback: no per-platform data yet
+        syncLine.textContent = `${result.entryCount ?? 0} entries \u00b7 synced ${formatRelativeTime(result.lastSync)}`;
+      } else {
+        syncLine.textContent = 'Not yet synced';
+      }
     }
-  });
+  );
 }
 
 // --- Tournament filter helpers (TASK-107) ---
@@ -323,6 +336,12 @@ async function renderAuthSection() {
     `;
     container.querySelector('#bbm-account-toggle').addEventListener('click', toggleAccountSection);
     container.querySelector('#bbm-sign-in-btn').addEventListener('click', handleSignIn);
+    // Stop keyboard events from bubbling to the host page (e.g. DK interprets "e" as "Entrants" shortcut)
+    for (const input of container.querySelectorAll('.bbm-auth-input')) {
+      for (const evt of ['keydown', 'keypress', 'keyup']) {
+        input.addEventListener(evt, (e) => e.stopPropagation());
+      }
+    }
     container.querySelector('#bbm-auth-password').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleSignIn();
     });
@@ -820,17 +839,17 @@ function analyzeStackOverlay(playerName) {
   const tes = teammates.filter(p => p.position === 'TE');
   const rbs = teammates.filter(p => p.position === 'RB');
 
-  if (pos === 'QB' && (wrs.length > 0 || tes.length > 0)) {
-    return { type: (wrs.length + tes.length) >= 2 ? 'QB MULTI' : 'QB STACK', color: '#BF44EF' };
+  if (pos === 'QB' && (wrs.length > 0 || tes.length > 0 || rbs.length > 0)) {
+    return { type: (wrs.length + tes.length + rbs.length) >= 2 ? 'QB MULTI' : 'QB STACK', color: '#BF44EF' };
   }
-  if ((pos === 'WR' || pos === 'TE') && qbs.length > 0) {
-    return { type: (wrs.length + tes.length) >= 1 ? 'QB MULTI' : 'QB STACK', color: '#BF44EF' };
+  if ((pos === 'WR' || pos === 'TE' || pos === 'RB') && qbs.length > 0) {
+    return { type: (wrs.length + tes.length + rbs.length) >= 1 ? 'QB MULTI' : 'QB STACK', color: '#BF44EF' };
   }
   if (pos === 'WR' && wrs.length >= 1) return { type: `WR \u00D7${wrs.length + 1}`, color: '#F59E0B' };
   if (pos === 'TE' && tes.length >= 1) return { type: `TE \u00D7${tes.length + 1}`, color: '#3B82F6' };
   if (pos === 'RB' && rbs.length >= 1) return { type: `RB \u00D7${rbs.length + 1}`, color: '#10B981' };
-  if (pos === 'RB' && (wrs.length > 0 || tes.length > 0)) return { type: 'GAME', color: '#8A9BB5' };
-  if ((pos === 'WR' || pos === 'TE') && rbs.length > 0) return { type: 'GAME', color: '#8A9BB5' };
+  if (pos === 'RB' && (wrs.length > 0 || tes.length > 0)) return { type: 'TEAM', color: '#8A9BB5' };
+  if ((pos === 'WR' || pos === 'TE') && rbs.length > 0) return { type: 'TEAM', color: '#8A9BB5' };
 
   return null;
 }

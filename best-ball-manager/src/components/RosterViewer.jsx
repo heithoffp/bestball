@@ -11,6 +11,8 @@ import TournamentMultiSelect from './TournamentMultiSelect';
 import TabLayout from './TabLayout';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
+import { FolderSync } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 const HELP_ANNOTATIONS = [
   { id: 'filter-search',     label: 'Player / Team Search',  description: 'Search by player or team name to filter to rosters containing that pick.' },
@@ -462,10 +464,9 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
 
   if (!rosterData.length) {
     return (
-      <div className={css.empty}>
-        <span style={{ fontSize: 50 }}>📋</span>
-        <p>No roster data loaded. Sync your portfolio from the Chrome extension to get started.</p>
-      </div>
+      <EmptyState icon={FolderSync} title="No roster data">
+        Sync your rosters from the Chrome extension or upload a CSV to get started.
+      </EmptyState>
     );
   }
 

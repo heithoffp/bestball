@@ -1,0 +1,36 @@
+/* EmptyState.module.css — shared empty state for all tabs */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: var(--space-md);
+  text-align: center;
+  padding: 60px 20px;
+  animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.icon {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.title {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  max-width: 400px;
+  line-height: 1.5;
+}

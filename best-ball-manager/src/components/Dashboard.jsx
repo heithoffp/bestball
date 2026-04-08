@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Legend } from 'recharts';
-import { Chrome, BarChart3, Users, TrendingUp, ListOrdered, Crosshair } from 'lucide-react';
+import { BarChart3, Users, TrendingUp, ListOrdered, Crosshair, FolderSync } from 'lucide-react';
+import EmptyState from './EmptyState';
 import { analyzePortfolioTree, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import useMediaQuery from '../hooks/useMediaQuery';
 import TabLayout from './TabLayout';
@@ -243,13 +244,9 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
   // ── Empty State ──
   if (rosterData.length === 0) {
     return (
-      <div className={styles.emptyState}>
-        <Chrome size={48} className={styles.emptyIcon} />
-        <div className={styles.emptyTitle}>Connect the Chrome extension</div>
-        <div className={styles.emptyDesc}>
-          Install the Best Ball Exposures Chrome extension, visit your Underdog completed entries, and sync your portfolio. Your analysis loads here automatically.
-        </div>
-      </div>
+      <EmptyState icon={FolderSync} title="No portfolio data">
+        Sync your rosters from the Chrome extension or upload a CSV to get started.
+      </EmptyState>
     );
   }
 

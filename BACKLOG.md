@@ -4,7 +4,7 @@
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
-| TASK-181 | Switch Stripe to live mode — production keys in Vercel env vars | In Progress | P1 |
+| TASK-175 | Block doubleclick.net ad interruptions on DraftKings pages | In Progress | P3 |
 
 ## Active Tasks
 
@@ -13,7 +13,6 @@
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 | [Plan](docs/plans/TASK-170.md) | No |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 | [Plan](docs/plans/TASK-171.md) | No |
 | TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P1 | [Plan](docs/plans/TASK-173.md) — Draft | No |
-| TASK-181 | Switch Stripe to live mode — production keys in Vercel env vars | In Progress | P1 | [Plan](docs/plans/TASK-181.md) | No |
 | TASK-182 | Submit Chrome extension to Chrome Web Store | Todo | P1 | [Plan](docs/plans/TASK-182.md) — Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
@@ -33,7 +32,7 @@
 | TASK-108 | Overlay confidence panel — setup verification and settings | Todo | P3 | [Plan](docs/plans/TASK-108.md) — Draft | No |
 | TASK-136 | ADR — per-platform scoped entry sync strategy | Todo | P3 | [Plan](docs/plans/TASK-136.md) — Draft | No |
 | TASK-158 | Contextual Help — remove Help tab and migrate Getting Started content | Todo | P3 | [Plan](docs/plans/TASK-158.md) — Draft | No |
-| TASK-175 | Block doubleclick.net ad interruptions on DraftKings pages | Todo | P3 | [Plan](docs/plans/TASK-175.md) — Draft | No |
+| TASK-175 | Block doubleclick.net ad interruptions on DraftKings pages | In Progress | P3 | [Plan](docs/plans/TASK-175.md) | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 
 ## Recently Completed
@@ -42,6 +41,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-181 | Switch Stripe to live mode — production keys in Vercel env vars | 2026-04-07 | [Plan](docs/archive/plans/TASK-181.md) |
 | TASK-162 | Remove Stripe 7-day free trial — convert to direct subscribe flow | 2026-04-07 | [Plan](docs/archive/plans/TASK-162.md) |
 | TASK-169 | First-run experience — sample data load button and empty state guidance | 2026-04-07 | [Plan](docs/archive/plans/TASK-169.md) |
 | TASK-179 | Fix visual issues noticed during screenshot review | 2026-04-07 | [Plan](docs/archive/plans/TASK-179.md) |

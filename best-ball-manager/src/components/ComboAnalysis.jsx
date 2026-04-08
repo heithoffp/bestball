@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useRef } from 'react';
 import TabLayout from './TabLayout';
+import { FolderSync } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 // Position palette — shared across all views
 const POS_COLORS = {
@@ -292,9 +294,9 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
 
   if (totalRosters === 0) {
     return (
-      <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
-        No roster data available. Sync your portfolio to view combo analysis.
-      </div>
+      <EmptyState icon={FolderSync} title="No roster data">
+        Sync your rosters from the Chrome extension or upload a CSV to view combo analysis.
+      </EmptyState>
     );
   }
 

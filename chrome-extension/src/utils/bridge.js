@@ -173,7 +173,12 @@ export async function writeEntries(entries, { platform } = {}) {
   }
 
   if (entries.length === 0) {
-    await chrome.storage.local.set({ lastSync: Date.now(), entryCount: 0 });
+    const emptyUpdate = { lastSync: Date.now(), entryCount: 0 };
+    if (platform) {
+      emptyUpdate[`${platform}_lastSync`] = Date.now();
+      emptyUpdate[`${platform}_entryCount`] = 0;
+    }
+    await chrome.storage.local.set(emptyUpdate);
     return { count: 0 };
   }
 
@@ -193,7 +198,11 @@ export async function writeEntries(entries, { platform } = {}) {
   if (insertError) throw insertError;
 
   const update = { lastSync: Date.now(), entryCount: entries.length };
-  if (platform) update[`${platform}_entry_ids`] = entries.map(e => e.entryId);
+  if (platform) {
+    update[`${platform}_entry_ids`] = entries.map(e => e.entryId);
+    update[`${platform}_lastSync`] = Date.now();
+    update[`${platform}_entryCount`] = entries.length;
+  }
   await chrome.storage.local.set(update);
   return { count: count ?? entries.length };
 }
