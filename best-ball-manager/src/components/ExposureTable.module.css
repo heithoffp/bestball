@@ -109,6 +109,7 @@
   text-overflow: ellipsis;
   vertical-align: middle;
   border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
 }
 
 .headerCell {
@@ -118,7 +119,7 @@
   text-overflow: ellipsis;
   vertical-align: middle;
   border-bottom: 1px solid var(--border-subtle);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   cursor: pointer;

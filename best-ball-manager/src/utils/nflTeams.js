@@ -33,3 +33,7 @@ export const NFL_TEAMS = {
   TEN: 'Tennessee Titans',
   WAS: 'Washington Commanders',
 };
+
+export const NFL_TEAMS_ABBREV = Object.fromEntries(
+  Object.entries(NFL_TEAMS).map(([abbr, full]) => [full, abbr])
+);

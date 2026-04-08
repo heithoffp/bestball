@@ -3,6 +3,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Legend } from 'rech
 import { BarChart3, Users, TrendingUp, ListOrdered, Crosshair, FolderSync } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { analyzePortfolioTree, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
+import { NFL_TEAMS_ABBREV } from '../utils/nflTeams';
 import useMediaQuery from '../hooks/useMediaQuery';
 import TabLayout from './TabLayout';
 import styles from './Dashboard.module.css';
@@ -376,7 +377,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {topTeamStacks.map(({ team, count, pct }) => (
                     <div key={team} className={styles.teamStackRow}>
-                      <span className={styles.teamStackName}>{team}</span>
+                      <span className={styles.teamStackName}>{NFL_TEAMS_ABBREV[team] || team}</span>
                       <div className={styles.exposureBarWrap}>
                         <div
                           className={styles.exposureBarFill}
