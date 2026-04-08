@@ -377,7 +377,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {topTeamStacks.map(({ team, count, pct }) => (
                     <div key={team} className={styles.teamStackRow}>
-                      <span className={styles.teamStackName}>{NFL_TEAMS_ABBREV[team] || team}</span>
+                      <span className={styles.teamStackName}>{NFL_TEAMS_ABBREV[team.toUpperCase()] || team}</span>
                       <div className={styles.exposureBarWrap}>
                         <div
                           className={styles.exposureBarFill}

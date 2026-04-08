@@ -35,5 +35,5 @@ export const NFL_TEAMS = {
 };
 
 export const NFL_TEAMS_ABBREV = Object.fromEntries(
-  Object.entries(NFL_TEAMS).map(([abbr, full]) => [full, abbr])
+  Object.entries(NFL_TEAMS).map(([abbr, full]) => [full.toUpperCase(), abbr])
 );
