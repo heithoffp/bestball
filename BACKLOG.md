@@ -5,6 +5,7 @@
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
 | TASK-175 | Block doubleclick.net ad interruptions on DraftKings pages | In Progress | P3 |
+| TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 |
 
 ## Active Tasks
 
@@ -16,6 +17,7 @@
 | TASK-182 | Submit Chrome extension to Chrome Web Store | Todo | P1 | [Plan](docs/plans/TASK-182.md) — Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
+| TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No |
 | TASK-180 | Retake dashboard hero screenshot manually | Todo | P2 | [Plan](docs/plans/TASK-180.md) — Draft | No |
 | TASK-183 | Configure Sentry DSN for production error monitoring | Todo | P2 | [Plan](docs/plans/TASK-183.md) — Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |

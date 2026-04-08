@@ -354,6 +354,46 @@
   text-align: right;
 }
 
+/* ── Draft Position Filter ── */
+.draftPosFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.draftPosLabel {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.draftPosBtn {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.draftPosBtn:hover {
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.draftPosBtnActive {
+  background: var(--surface-3);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
 /* ── Capital Legend ── */
 .capitalLegend {
   display: flex;

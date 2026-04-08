@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { BarChart3, Users, TrendingUp, ListOrdered, Crosshair, FolderSync } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { analyzePortfolioTree, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
@@ -37,6 +37,7 @@ const HELP_ANNOTATIONS = [
 export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnapshots = [], onNavigate, onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
   const [hoveredSeg, setHoveredSeg] = useState(null);
+  const [selectedPositions, setSelectedPositions] = useState(null); // null = All
 
   // ── Headline Metrics ──
   const metrics = useMemo(() => {
@@ -181,10 +182,43 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       .slice(0, 15);
   }, [rosterData]);
 
+  // ── Draft Position per Entry (min pick = round-1 slot) ──
+  const draftPositionByEntry = useMemo(() => {
+    const map = {};
+    rosterData.forEach(p => {
+      const pick = Number(p.pick);
+      if (!pick) return;
+      if (map[p.entry_id] === undefined || pick < map[p.entry_id]) {
+        map[p.entry_id] = pick;
+      }
+    });
+    return map;
+  }, [rosterData]);
+
+  function togglePosition(pos) {
+    if (pos === 'all') { setSelectedPositions(null); return; }
+    setSelectedPositions(prev => {
+      // If All is active, isolate to just this position
+      if (prev === null) return new Set([pos]);
+      const next = new Set(prev);
+      if (next.has(pos)) {
+        next.delete(pos);
+        if (next.size === 0 || next.size === 12) return null;
+      } else {
+        next.add(pos);
+        if (next.size === 12) return null;
+      }
+      return next;
+    });
+  }
+
   // ── Draft Capital by Round (user vs market) ──
   const draftCapitalShape = useMemo(() => {
+    const filtered = selectedPositions
+      ? rosterData.filter(p => selectedPositions.has(draftPositionByEntry[p.entry_id]))
+      : rosterData;
     const roundCounts = {};
-    rosterData.forEach(p => {
+    filtered.forEach(p => {
       const r = p.round ? Number(p.round) : Math.ceil(Number(p.pick) / 12);
       if (r >= 1 && r <= 18) {
         if (!roundCounts[r]) roundCounts[r] = { QB: 0, RB: 0, WR: 0, TE: 0 };
@@ -226,7 +260,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         mQB: mc.QB, mRB: mc.RB, mWR: mc.WR, mTE: mc.TE,
       };
     });
-  }, [rosterData, masterPlayers]);
+  }, [rosterData, masterPlayers, selectedPositions, draftPositionByEntry]);
 
   // ── Drill-down stat lines ──
   const drillStats = useMemo(() => {
@@ -457,8 +491,25 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         {/* Draft Capital by Round — You vs Market */}
         <div className={styles.shapeCard} data-help-id="draft-capital">
           <div className={styles.sectionTitle}>Draft Capital by Round</div>
+          <div className={styles.draftPosFilters}>
+            <span className={styles.draftPosLabel}>Draft Position:</span>
+            {['All',1,2,3,4,5,6,7,8,9,10,11,12].map(p => {
+              const isAll = p === 'All';
+              const active = isAll ? !selectedPositions : selectedPositions?.has(p);
+              return (
+                <button
+                  key={p}
+                  className={`${styles.draftPosBtn}${active ? ` ${styles.draftPosBtnActive}` : ''}`}
+                  onClick={() => togglePosition(isAll ? 'all' : p)}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
           <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
             <BarChart data={draftCapitalShape} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+              <YAxis domain={[0, 100]} hide />
               <XAxis
                 dataKey="round"
                 tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}

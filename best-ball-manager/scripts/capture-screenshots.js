@@ -19,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.resolve(__dirname, '../public/screenshots');
 const BASE_URL = 'http://localhost:5173?demo=true';
 
-const VIEWPORT = { width: 1280, height: 800 };
+const VIEWPORT = { width: 1440, height: 900 };
 const DEVICE_SCALE = 2;
 
 async function waitForApp(page) {

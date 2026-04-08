@@ -48,14 +48,14 @@ const FEATURES = [
     title: 'Draft Overlay',
     desc: 'Live exposure and combo analysis seamlessly integrated into your draft screen. No second window, no alt-tabbing.',
     unique: false,
-    screenshot: '/screenshots/draft-assistant.png',
+    screenshot: '/screenshots/draft-overlay.png',
   },
   {
     icon: Globe,
     title: 'Multi-Platform Support',
     desc: 'Sync from Underdog and DraftKings. See your whole portfolio, not half of it.',
     unique: false,
-    screenshot: '/screenshots/exposures.png',
+    screenshot: '/screenshots/multi-platform.png',
   },
   {
     icon: Network,

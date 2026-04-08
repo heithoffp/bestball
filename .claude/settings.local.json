@@ -79,7 +79,14 @@
       "WebFetch(domain:rotogrinders.com)",
       "WebFetch(domain:www.runthesims.com)",
       "Bash(npx playwright:*)",
-      "WebFetch(domain:www.reddit.com)"
+      "WebFetch(domain:www.reddit.com)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "WebFetch(domain:brandfetch.com)",
+      "WebFetch(domain:companieslogo.com)",
+      "WebFetch(domain:seeklogo.com)",
+      "WebFetch(domain:images.seeklogo.com)",
+      "WebFetch(domain:logowik.com)",
+      "WebFetch(domain:underdogfantasy.com)"
     ]
   },
   "enabledPlugins": {
