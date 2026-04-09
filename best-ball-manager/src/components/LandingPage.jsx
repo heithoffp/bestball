@@ -1,10 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import {
   LayoutDashboard, Users, TrendingUp, BarChart3, Network, Crosshair,
-  Check, Minus, ChevronRight, Shield, Zap, Globe, X,
+  Check, Minus, ChevronRight, Shield, Zap, Globe, X, Chrome,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import styles from './LandingPage.module.css';
+
+const EXTENSION_URL = 'https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj';
 
 /* ── Scroll-triggered fade-in ── */
 function useFadeIn() {
@@ -163,6 +165,14 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
               Try Demo
             </button>
           )}
+          <a
+            href={EXTENSION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${styles.btnExtension} ${styles.btnLarge}`}
+          >
+            <Chrome size={16} /> Add to Chrome
+          </a>
         </div>
         <div className={styles.heroScreenshot}>
           <img
@@ -191,6 +201,13 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
           <div className={styles.trustItem}>
             <Shield size={16} className={styles.trustIcon} />
             <span>Free tier available</span>
+          </div>
+          <div className={styles.trustDivider} />
+          <div className={styles.trustItem}>
+            <Chrome size={16} className={styles.trustIcon} />
+            <a href={EXTENSION_URL} target="_blank" rel="noopener noreferrer" className={styles.trustLink}>
+              Chrome Extension — auto-sync your drafts
+            </a>
           </div>
         </div>
       </FadeSection>
@@ -296,6 +313,14 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
         <button className={`${styles.btnPrimary} ${styles.btnLarge}`} onClick={onSignUp}>
           Get Started Free <ChevronRight size={16} />
         </button>
+        <a
+          href={EXTENSION_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.extensionCta}
+        >
+          <Chrome size={14} /> or install the Chrome extension first
+        </a>
       </FadeSection>
 
       {/* ── Footer ── */}
@@ -308,7 +333,7 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
           <span>&middot;</span>
           <a href="/terms.html" className={styles.footerLink}>Terms of Service</a>
           <span>&middot;</span>
-          <a href="mailto:bestballexposures@outlook.com" className={styles.footerLink}>Contact</a>
+          <a href="mailto:bestballexposures@gmail.com" className={styles.footerLink}>Contact</a>
         </p>
       </footer>
     </div>

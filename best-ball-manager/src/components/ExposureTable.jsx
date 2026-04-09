@@ -473,7 +473,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
         {filteredAndSorted.length === 0 ? (
           masterPlayers.length === 0
             ? <EmptyState icon={FolderSync} title="No exposure data">
-                Sync your rosters from the Chrome extension or upload a CSV to see exposure data.
+                Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> or upload a CSV to see exposure data.
               </EmptyState>
             : <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 No players match.
@@ -534,7 +534,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
                 ? <tr>
                     <td colSpan={onNavigateToRosters ? 8 : 7} style={{ padding: 0, border: 'none' }}>
                       <EmptyState icon={FolderSync} title="No exposure data">
-                        Sync your rosters from the Chrome extension or upload a CSV to see exposure data.
+                        Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> or upload a CSV to see exposure data.
                       </EmptyState>
                     </td>
                   </tr>

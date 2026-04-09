@@ -338,7 +338,7 @@ export default function App() {
         {isUsingDemoData && rosterData.length > 0 && (
           <div className="demo-banner">
             <Info size={16} />
-            <span>You're viewing sample data. Sign in and connect the Chrome extension to load your portfolio.</span>
+            <span>You're viewing sample data. Sign in and connect the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> to load your portfolio.</span>
           </div>
         )}
 
