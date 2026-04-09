@@ -34,6 +34,7 @@ let abbreviatedNameMap = new Map(); // "j. jefferson" -> "justin jefferson" (for
 let totalRosters = 0;
 let currentPicks = [];           // [{name, position, round}, ...]
 let picksObserver = null;
+let picksRafId = null; // RAF debounce for picks observer
 
 // Rankings data for tier break injection
 let playerRankingsMap = new Map(); // lowerCasedName -> {rank, tierNum}
@@ -593,11 +594,25 @@ function resolveCurrentPicks() {
 }
 
 /**
+ * Debounced wrapper for resolveCurrentPicks. The picks MutationObserver fires
+ * on every body mutation (timer ticks, animations, chat, pick events).
+ * RAF-debouncing coalesces rapid-fire mutations into a single DOM query per
+ * frame, preventing cumulative CPU overhead as the draft progresses.
+ */
+function schedulePicksResolve() {
+  if (picksRafId) return;
+  picksRafId = requestAnimationFrame(() => {
+    picksRafId = null;
+    resolveCurrentPicks();
+  });
+}
+
+/**
  * Start a MutationObserver that watches for new picks in the draft board.
  */
 function startPicksObserver() {
   if (picksObserver) return;
-  picksObserver = new MutationObserver(resolveCurrentPicks);
+  picksObserver = new MutationObserver(schedulePicksResolve);
   picksObserver.observe(document.body, { childList: true, subtree: true });
   resolveCurrentPicks();
 }
@@ -606,6 +621,10 @@ function startPicksObserver() {
  * Stop the picks observer and clear current picks state.
  */
 function stopPicksObserver() {
+  if (picksRafId) {
+    cancelAnimationFrame(picksRafId);
+    picksRafId = null;
+  }
   if (picksObserver) {
     picksObserver.disconnect();
     picksObserver = null;

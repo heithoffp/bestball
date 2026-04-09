@@ -21,6 +21,7 @@ export function createReconnectingObserver({
   maxRetries = 20,
 }) {
   let observer = null;
+  let currentTarget = null; // track observed element for replacement detection
   let pollTimer = null;
   let disconnected = false;
 
@@ -33,9 +34,11 @@ export function createReconnectingObserver({
     if (observer) observer.disconnect();
     observer = new MutationObserver(onMutation);
     observer.observe(target, observerOptions);
+    currentTarget = target;
   }
 
   function tryReconnect() {
+    if (pollTimer) clearInterval(pollTimer); // prevent leaked intervals
     let retries = 0;
     pollTimer = setInterval(() => {
       if (disconnected) {
@@ -56,14 +59,20 @@ export function createReconnectingObserver({
     }, pollInterval);
   }
 
-  // Watch for target removal by observing the document body
+  // Watch for target removal OR replacement by observing the document body
   const bodyObserver = new MutationObserver(() => {
     if (disconnected) return;
     const target = document.querySelector(targetSelector);
     if (!target && observer) {
+      // Target removed — start reconnect polling
       observer.disconnect();
       observer = null;
+      currentTarget = null;
       tryReconnect();
+    } else if (target && observer && target !== currentTarget) {
+      // Target replaced (React re-rendered the grid element) — re-attach
+      attach(target);
+      onReconnect?.();
     }
   });
 
