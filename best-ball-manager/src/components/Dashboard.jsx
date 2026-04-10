@@ -278,9 +278,30 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
 
   // ── Empty State ──
   if (rosterData.length === 0) {
+    const linkStyle = { color: 'var(--accent)', textDecoration: 'underline' };
     return (
-      <EmptyState icon={FolderSync} title="No portfolio data">
-        <span>Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> to get started.</span>
+      <EmptyState icon={FolderSync} title="Getting started">
+        <ol style={{ textAlign: 'left', margin: '0.5rem 0 0', padding: '0 0 0 1.4rem', lineHeight: 1.8, fontSize: '0.88rem' }}>
+          <li>
+            Install the{' '}
+            <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+              Chrome extension
+            </a>
+          </li>
+          <li>
+            Go to your entries page —{' '}
+            <a href="https://app.underdogfantasy.com/completed" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+              Underdog Completed Entries
+            </a>
+            {' or '}
+            <a href="https://www.draftkings.com/mycontests" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+              DraftKings My Contests
+            </a>
+          </li>
+          <li>Click the gold logo button in the bottom-left corner</li>
+          <li>Sign in with your account and click <strong>Sync Now</strong></li>
+          <li>Come back here — your portfolio loads automatically</li>
+        </ol>
         <a
           href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj"
           target="_blank"
@@ -289,7 +310,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
             display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
             background: '#4285f4', color: '#fff', padding: '0.6rem 1.4rem',
             borderRadius: 'var(--radius-sm)', fontWeight: 600, fontSize: '0.85rem',
-            textDecoration: 'none', marginTop: '0.5rem',
+            textDecoration: 'none', marginTop: '0.75rem',
           }}
         >
           Add to Chrome

@@ -2,8 +2,12 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "type": "command",
-        "command": "bash .claude/skills/hus-work/scripts/remind-rules.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/skills/hus-work/scripts/remind-rules.sh"
+          }
+        ]
       }
     ]
   }
