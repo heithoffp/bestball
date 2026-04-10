@@ -25,8 +25,8 @@ Every channel needs a reason someone stops scrolling. These are the core angles,
 | # | Hook | One-Liner | Best For |
 |---|------|-----------|----------|
 | 1 | **Price** | "Full portfolio analytics for $15/mo — BBO charges $40." | Reddit posts, creator reads |
-| 2 | **Honest free tier** | "Actually free. No bait-and-switch. Upload your rosters and see your exposure — no credit card." | Reddit posts, landing page |
-| 3 | **Zero-config** | "No target-setting homework. Upload CSVs, get insights." | Differentiating vs. Spike Week |
+| 2 | **Honest free tier** | "Actually free. No bait-and-switch. Sync your rosters and see your exposure — no credit card." | Reddit posts, landing page |
+| 3 | **Zero-config** | "No target-setting homework. Sync your rosters, get insights." | Differentiating vs. Spike Week |
 | 4 | **Roster archetypes** | "See which of your rosters are RB Hero, RB Zero, or Hyper Fragile — no other tool classifies your strategy." | YouTube demos, Reddit |
 | 5 | **Web-first** | "Review your portfolio anytime — not just during drafts." | Differentiating vs. both competitors (extension-only) |
 
@@ -71,7 +71,7 @@ Channels ranked by ROI (reach x conversion likelihood / effort + cost):
 
 **Approach:**
 1. **Weeks before launch (now through mid-April):** Start participating in best-ball threads — answer questions, share general analysis. Build a posting history so the account isn't flagged as spam.
-2. **Launch week:** Post a "I built a free best-ball portfolio tool" thread on r/bestball and r/UnderdogFantasy. Frame as a community project, not an ad. Lead with the free tier — "upload your rosters and see your exposure, no account required." Include screenshots.
+2. **Launch week:** Post a "I built a free best-ball portfolio tool" thread on r/bestball and r/UnderdogFantasy. Frame as a community project, not an ad. Lead with the free tier — "sync your rosters via the Chrome extension and see your exposure, no account required." Include screenshots.
 3. **Ongoing:** Share portfolio analysis insights generated from the tool (anonymized). "Here's what the exposure distribution looks like across 50 rosters" — content that demonstrates value and naturally links back to the tool.
 
 **Key rule:** Never hard-sell. Reddit communities punish overt promotion. The free tier IS the marketing — let people try it and decide for themselves.

@@ -30,16 +30,16 @@ The opportunity is a purpose-built tool that does one thing well: show a best-ba
 | Objective | Success Metric |
 |-----------|---------------|
 | Community adoption beyond the developer | Active users other than the author |
-| Retention across draft season | Users return and re-upload after new drafts |
+| Retention across draft season | Users return and re-sync after new drafts |
 | Word-of-mouth growth | Organic sharing in best-ball communities (Twitter, Discord, podcasts) |
-| Low friction onboarding | A new user can upload data and understand their portfolio within 60 seconds |
+| Low friction onboarding | A new user can sync data and understand their portfolio within 60 seconds |
 
 ### 1.4 Customer or Market Needs
 
 The target user is a **serious best-ball drafter** — someone entering 10+ drafts per season who cares about portfolio construction, not just individual rosters. Their needs:
 
 - **See portfolio shape at a glance.** "Am I too concentrated on one player? Are my archetypes balanced? Am I overpaying or getting value?" — answered in seconds, not minutes of spreadsheet work.
-- **Zero setup overhead.** No targets to configure, no preferences to set, no accounts required to start. Upload a CSV, see results. Every feature that requires user configuration is a feature that will be underutilized.
+- **Zero setup overhead.** No targets to configure, no preferences to set, no accounts required to start. Sync your rosters via the Chrome extension, see results. Every feature that requires user configuration is a feature that will be underutilized.
 - **Mobile-friendly.** Drafters check portfolios on their phones between drafts, on the couch, in line. The experience must work on small screens without compromise.
 - **Speed during live drafts.** When actively drafting, decisions happen in 30-second windows. The draft assistant must surface recommendations fast enough to be useful in real time.
 - **Trust through transparency.** Show the data, not a black-box score. Users will trust (and share) a tool where they can see exactly what's being calculated and verify it against their own knowledge.
@@ -102,7 +102,7 @@ These principles govern all product decisions. When in doubt, refer back here.
 The app describes portfolio state. It does not prescribe actions or judge whether your portfolio is "good" or "bad." Show facts and let the user draw conclusions. Avoid computed opinions (health scores, letter grades, red/green good/bad indicators) on portfolio-level views. The moment you show a "B+" you're implying you know what "A" looks like — and you're asking the user to trust your model over their own judgment.
 
 #### 2. Zero-Config Insights
-Every feature must be useful immediately after CSV upload with no additional setup. No personal targets, no preference wizards, no required accounts, no watchlists to maintain. Features that require user configuration will be underutilized. If a feature can't deliver value without setup, redesign it until it can.
+Every feature must be useful immediately after syncing rosters with no additional setup. No personal targets, no preference wizards, no required accounts, no watchlists to maintain. Features that require user configuration will be underutilized. If a feature can't deliver value without setup, redesign it until it can.
 
 #### 3. Shape Over Spreadsheet
 Use visual representations — charts, distributions, sparklines, small multiples — that create instant pattern recognition. A pie chart of archetype distribution tells you "I'm top-heavy in RB_HERO" faster than a column of percentages. The user should *see* their portfolio shape before they read a number.

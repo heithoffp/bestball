@@ -8,11 +8,9 @@ Active
 
 ## User-Facing Behavior
 
-### CSV Upload
-- File-picker button (`<input type="file" accept=".csv">`) — not drag-and-drop
-- "Loading..." state shown while file is read
-- Resets input after upload completes
-- Upload locations: Exposures tab (roster CSV), Rankings tab (custom rankings CSV)
+### Roster Data Ingestion
+- Roster data is synced from the Chrome extension — no manual CSV upload
+- Rankings tab still supports CSV upload for custom rankings files
 
 ### Loading Feedback
 - App-level status messages: "Loading data..." → "Processing exposure data..." → "Processing rankings..."
@@ -72,22 +70,21 @@ Joins rosters + ADP snapshots into canonical player objects:
 - Computes `adpDiff` (ADP - pick position) per roster entry
 - Resolves rankings preference chain: user rankings → latest ADP → projections
 
-### Upload Replacement Semantics
-- `syncSaveFile()` uses `put()` with fixed key `'roster'` — **each upload completely replaces previous data**
+### Sync Replacement Semantics
+- `syncSaveFile()` uses `put()` with fixed key `'roster'` — **each sync completely replaces previous data**
 - No confirmation dialog, no preview, no undo mechanism
-- No backup of previous file
+- No backup of previous data
 
 ## Known Limitations
 - **No CSV format validation** — non-Underdog CSVs parse silently and produce empty results
-- **No upload confirmation** — destructive replacement with no undo
-- **No drag-and-drop** upload
+- **No sync confirmation** — destructive replacement with no undo
 - **No progress bar** during processing (only text status messages)
 - **No error boundaries** — errors surface as raw `String(err)` in status banner
 - Column fallbacks only cover Underdog naming variations, not other platforms
 - ADP snapshots are static (bundled at build time); users cannot add their own
 
 ## Key Files
-- `src/components/FileUploadButton.jsx` — upload UI component
+- `src/components/FileUploadButton.jsx` — upload UI component (used by Rankings tab)
 - `src/utils/csv.js` — `parseCSVFile()`, `parseCSVText()`
 - `src/utils/dataLoader.js` — `processLoadedData()`, column mapping
 - `src/utils/helpers.js` — `stableId()`, `parseAdpString()`, `processMasterList()`

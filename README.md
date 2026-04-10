@@ -1,7 +1,7 @@
 # Best Ball Portfolio Dashboard
 
 A web-based dashboard for analyzing and managing Underdog Fantasy Best Ball portfolios.  
-The tool focuses on **exposure management**, **ADP trends**, and **portfolio risk** using uploaded CSV data.
+The tool focuses on **exposure management**, **ADP trends**, and **portfolio risk** using roster data synced via the Chrome extension.
 
 This project is designed to support both **early-season drafts (Big Board)** and **late-season drafts (Best Ball Mania)** by adapting analysis depth to the available information.
 
@@ -38,8 +38,8 @@ Expected fields:
 
 ## MVP Features (Phase 1)
 
-### CSV Upload & Parsing
-- Upload portfolio and ADP CSVs
+### Data Ingestion
+- Roster data synced via Chrome extension
 
 
 ### Canonical Player Table
@@ -139,7 +139,7 @@ Expected fields:
 
 ## UX Principles
 
-- Fast time-to-insight (<30 seconds from upload to dashboard)
+- Fast time-to-insight (<30 seconds from sync to dashboard)
 - Drill-down friendly (portfolio → player → correlation)
 - Explicit uncertainty (confidence indicators, timestamps)
 - Manual overrides everywhere (expert-in-the-loop)

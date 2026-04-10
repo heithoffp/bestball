@@ -21,8 +21,8 @@ Active
 - Row height: 50px (vs 51px desktop)
 
 ### Empty States
-- No rosters uploaded: *"No data loaded. Use the Upload button above to import your Underdog Exposure CSV."*
-- ADP data but no rosters: Info banner — *"No roster uploaded — showing all ADP players. Upload your Underdog Exposure CSV for exposure data."*
+- No rosters synced: *"No exposure data. Sync your rosters from the Chrome extension to see exposure data."*
+- ADP data but no rosters: Info banner — *"No roster data — showing all ADP players. Sync your rosters from the Chrome extension for exposure data."*
 - No players match filters: *"No players match"*
 
 ## Key Controls & Interactions

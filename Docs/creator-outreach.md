@@ -73,9 +73,9 @@ Keep it under 150 words. Lead with the problem, not the product. Personalize eve
 
 Hey [CREATOR_NAME], I've been watching your [SPECIFIC_CONTENT — e.g., "live best ball drafts on YouTube" / "best ball strategy breakdowns" / "portfolio recaps"]. Good stuff.
 
-I built a portfolio analytics tool for best-ball drafters — upload your rosters from [PLATFORM_THEY_USE] and see your full portfolio on one screen: exposures, archetypes, stacking patterns, draft tendencies across all your entries. Zero setup, just upload and explore.
+I built a portfolio analytics tool for best-ball drafters — sync your rosters from [PLATFORM_THEY_USE] via the Chrome extension and see your full portfolio on one screen: exposures, archetypes, stacking patterns, draft tendencies across all your entries. Zero setup, just sync and explore.
 
-It's at bestballexposures.com — there's sample data you can poke around with without uploading anything.
+It's at bestballexposures.com — there's sample data you can poke around with without syncing anything.
 
 I'd love to give you permanent free Pro access if you want to try it out. No strings — just thought it'd be useful for someone drafting as many teams as you do. If you end up liking it and want to pull it up on stream sometime, that'd be awesome, but no pressure.
 

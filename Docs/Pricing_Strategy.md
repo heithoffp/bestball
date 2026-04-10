@@ -16,12 +16,12 @@ The "real" target price is the promo price. The nominal price exists to create p
 
 ### Guest Mode (No Account)
 - **Price:** Free, no signup required
-- **Access:** Full app with bundled sample data. Cannot upload own CSVs.
+- **Access:** Full app with bundled sample data. Cannot sync own rosters.
 - **Purpose:** Zero-friction try-before-you-sign-up. Proves the tool works.
 
 ### Free Tier (Account Required)
 - **Price:** $0
-- **Access:** Dashboard, Exposure Table, ADP Tracker, Help Guide. Own CSV upload (25 roster limit, 1 ADP snapshot). IndexedDB local storage.
+- **Access:** Dashboard, Exposure Table, ADP Tracker, Help Guide. Own roster sync (25 roster limit, 1 ADP snapshot). IndexedDB local storage.
 - **Purpose:** Honest free tier that delivers real value. Users hit the ceiling naturally.
 
 ### Pro Tier (Paid)
@@ -92,7 +92,7 @@ Each promo code needs:
 | Exposure Table | Sample data | Own data | Own data |
 | ADP Tracker | Sample data | Own data | Own data |
 | Help Guide | Yes | Yes | Yes |
-| CSV Upload | No | 25 roster limit | Unlimited |
+| Roster Sync | No | 25 roster limit | Unlimited |
 | Draft Assistant | Sample data | Locked | Yes |
 | Roster Viewer | Sample data | Locked | Yes |
 | Player Rankings | Sample data | Locked | Yes |

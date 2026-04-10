@@ -41,7 +41,7 @@ Every screen must deliver value the moment data is loaded. No setup wizards, no 
 
 - **Do:** Ship smart defaults. Auto-select the most useful view. Pre-filter to the most relevant data.
 - **Don't:** Show empty states that require configuration. Never add a "Set your target exposure" input.
-- **Test:** If a first-time user uploads a CSV, can they understand their portfolio in 60 seconds without clicking a single settings button?
+- **Test:** If a first-time user syncs their rosters, can they understand their portfolio in 60 seconds without clicking a single settings button?
 
 ### Shape Over Spreadsheet
 Visual patterns communicate faster than numbers. Prioritize charts, sparklines, distributions, and small multiples over raw tables.

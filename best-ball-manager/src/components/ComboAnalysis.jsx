@@ -295,7 +295,7 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
   if (totalRosters === 0) {
     return (
       <EmptyState icon={FolderSync} title="No roster data">
-        Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> or upload a CSV to view combo analysis.
+        Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> to view combo analysis.
       </EmptyState>
     );
   }

@@ -19,7 +19,7 @@ Active
 - Same data, vertical stacking
 
 ### Empty States
-- No rosters: prompts user to upload CSV
+- No rosters: prompts user to sync via Chrome extension
 
 ## Key Controls & Interactions
 

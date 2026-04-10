@@ -28,7 +28,7 @@ Five vertical sections, scrollable:
 
 ### Empty State
 When no roster data is loaded:
-- Centered upload icon, heading "Upload your roster CSV", description text, and a `FileUploadButton` to upload rosters directly from the dashboard.
+- Centered sync icon, heading "No portfolio data", description text prompting the user to sync rosters via the Chrome extension, and an "Add to Chrome" link to the extension.
 
 ## Key Controls & Interactions
 
@@ -40,7 +40,7 @@ When no roster data is loaded:
 
 ## Computations & Data Dependencies
 
-**Props received:** `rosterData`, `masterPlayers`, `adpSnapshots`, `onNavigate`, `onRosterUpload`
+**Props received:** `rosterData`, `masterPlayers`, `adpSnapshots`, `onNavigate`
 
 **Key computations (all via `useMemo`):**
 
@@ -56,7 +56,7 @@ When no roster data is loaded:
 ## Design Principle Alignment
 
 - **Mirror, Not Advisor** — all metrics are neutral facts (counts, percentages, distributions). No grades, health scores, or good/bad color coding.
-- **Zero-Config** — works immediately after CSV upload with no setup.
+- **Zero-Config** — works immediately after syncing rosters with no setup.
 - **Shape Over Spreadsheet** — archetype stacked bar and draft capital chart provide instant pattern recognition.
 - **Layered Depth** — headline metrics for quick glance; shape visualizations and exposure details for deeper inspection; drill-down cards for full analysis.
 - **Dashboard-First Navigation** — serves as the app's home base with explicit entry points to every detail tab.
@@ -70,4 +70,3 @@ When no roster data is loaded:
 - `src/components/Dashboard.jsx` — main component
 - `src/components/Dashboard.module.css` — scoped styles
 - `src/utils/rosterArchetypes.js` — `analyzePortfolioTree()`, `PROTOCOL_TREE`, `ARCHETYPE_METADATA`
-- `src/components/FileUploadButton.jsx` — reused for empty state upload

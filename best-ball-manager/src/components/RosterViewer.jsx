@@ -460,7 +460,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   if (!rosterData.length) {
     return (
       <EmptyState icon={FolderSync} title="No roster data">
-        Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> or upload a CSV to get started.
+        Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> to get started.
       </EmptyState>
     );
   }

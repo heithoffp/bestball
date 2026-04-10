@@ -28,13 +28,13 @@ All commands must be run from the `best-ball-manager/` subdirectory.
 | `npm run preview` | Preview production build | No |
 
 ## Read-Only Paths
-- `best-ball-manager/src/assets/` — CSV data files (rosters and ADP snapshots). Never modify these.
+- `best-ball-manager/src/assets/` — CSV data files (demo rosters, ADP snapshots, projections, rankings). Never modify these.
 
 ## Architecture
 
 ### Data Flow
 
-CSV assets (`src/assets/rosters.csv` + `src/assets/adp/*.csv` date-stamped snapshots) are loaded in `App.jsx` on mount, parsed via PapaParse (`utils/csv.js`), then processed through `utils/helpers.js` which normalizes player names, computes exposure percentages, and builds a master player list with historical ADP timelines. Enriched data flows into tab components.
+Roster data is synced from the Chrome extension (stored in IndexedDB or Supabase cloud storage). ADP snapshots (`src/assets/adp/*.csv` date-stamped) are bundled at build time. Both are loaded in `App.jsx` on mount, parsed via PapaParse (`utils/csv.js`), then processed through `utils/helpers.js` which normalizes player names, computes exposure percentages, and builds a master player list with historical ADP timelines. Enriched data flows into tab components.
 
 ### Key Utilities
 

@@ -33,12 +33,11 @@ Gaps identified through user journey analysis. Not prioritized — sequence TBD 
 
 | Item | Status | Notes |
 |------|--------|-------|
-| CSV format validation with user feedback | To build | Non-Underdog CSVs silently produce empty results. Need column validation + actionable error messages. |
-| First-run / empty state onboarding | Partial | Dashboard has empty state with upload prompt. Other tabs still need empty states. |
-| Upload confirmation dialog with undo | To build | Upload silently replaces all data. Need diff summary + one-level undo via backup key. |
+| CSV format validation with user feedback | To build | Non-Underdog data silently produces empty results. Need column validation + actionable error messages. |
+| First-run / empty state onboarding | Partial | Dashboard has empty state with Chrome extension prompt. Other tabs still need empty states. |
+| Sync confirmation dialog with undo | To build | Sync silently replaces all data. Need diff summary + one-level undo via backup key. |
 | Draft Assistant quick-setup mode | To build | No way to catch up to a live draft in progress. Need bulk pick import or rapid-entry UI. |
 | ADP freshness indicator | To build | No "last updated" date shown anywhere. Users can't assess data staleness. |
-| Drag-and-drop file upload | To build | Currently file-picker button only. |
 | Re-enable Combo Analysis | To build | Disabled for performance. Needs optimization. See `Feature_Specs/Combo_Analysis.md`. |
 | Re-enable Roster Construction | To build | Disabled for performance. Needs optimization. See `Feature_Specs/Roster_Construction.md`. |
 | Replace Help tab with per-tab Help widget | To build | Remove standalone Help tab. Add a Help icon/widget within each tab that highlights key features and important elements contextually. |

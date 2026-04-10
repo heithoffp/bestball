@@ -24,7 +24,7 @@
 
 ### FEAT-003: Deployment & Infrastructure Polish
 **Status:** In Progress
-**Description:** Production Vercel configuration with custom domain, Vercel Analytics and Speed Insights integration, and error monitoring. Vercel dependencies already installed; deployment pipeline needs hardening. Feature-level usage analytics beyond page views — track tab visits, CSV uploads, draft sessions started, and key user flows to validate assumptions about feature value and user retention.
+**Description:** Production Vercel configuration with custom domain, Vercel Analytics and Speed Insights integration, and error monitoring. Vercel dependencies already installed; deployment pipeline needs hardening. Feature-level usage analytics beyond page views — track tab visits, roster syncs, draft sessions started, and key user flows to validate assumptions about feature value and user retention.
 **Tasks:** TASK-008, TASK-009, TASK-010, TASK-011, TASK-012, TASK-018, TASK-183
 
 ### FEAT-021: Commercial Strategy & Positioning
@@ -59,7 +59,7 @@
 
 ### FEAT-008: Data Validation & Upload UX
 **Status:** Not Started
-**Description:** CSV format validation with actionable error messages for non-Underdog formats, upload confirmation dialog with one-level undo via backup key, ADP freshness indicator showing last-updated date, and drag-and-drop file upload support.
+**Description:** CSV format validation with actionable error messages for non-Underdog formats, sync confirmation dialog with one-level undo via backup key, and ADP freshness indicator showing last-updated date.
 
 ### FEAT-023: Cross-Module Roster Navigation
 **Status:** Not Started

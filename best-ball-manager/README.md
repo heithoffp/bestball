@@ -4,7 +4,7 @@ Your best-ball portfolio, analyzed. One place to track exposures, grade rosters,
 
 ## What it does
 
-Best Ball Exposures is a portfolio-level analytics tool for best-ball fantasy football. Upload your roster CSVs, and it surfaces the data that matters — exposure concentrations, roster archetypes, value picks, and draft strategy guidance — so you can manage your portfolio with clarity instead of spreadsheets.
+Best Ball Exposures is a portfolio-level analytics tool for best-ball fantasy football. Sync your rosters via the Chrome extension, and it surfaces the data that matters — exposure concentrations, roster archetypes, value picks, and draft strategy guidance — so you can manage your portfolio with clarity instead of spreadsheets.
 
 ## Features
 

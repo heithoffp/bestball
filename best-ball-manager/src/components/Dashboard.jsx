@@ -280,7 +280,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
   if (rosterData.length === 0) {
     return (
       <EmptyState icon={FolderSync} title="No portfolio data">
-        <span>Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> or upload a CSV to get started.</span>
+        <span>Sync your rosters from the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> to get started.</span>
         <a
           href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj"
           target="_blank"

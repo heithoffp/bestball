@@ -22,12 +22,12 @@
 ### Option A — Clarity angle
 > **Your Entire Best-Ball Portfolio. One Clear Picture.**
 >
-> Upload your rosters from Underdog or DraftKings and instantly see what 50+ drafts look like as a portfolio — exposures, archetypes, stacking patterns, and market value. No setup, no configuration, no guesswork.
+> Sync your rosters from Underdog or DraftKings and instantly see what 50+ drafts look like as a portfolio — exposures, archetypes, stacking patterns, and market value. No setup, no configuration, no guesswork.
 
 ### Option B — One-stop-shop angle
 > **Stop Juggling Five Tools to Understand One Portfolio.**
 >
-> Exposure trackers. ADP charts. Stacking analyzers. Roster graders. You've been stitching together your portfolio picture from a dozen tabs. Best Ball Portfolio Manager puts it all in one place — upload your CSVs and see everything.
+> Exposure trackers. ADP charts. Stacking analyzers. Roster graders. You've been stitching together your portfolio picture from a dozen tabs. Best Ball Portfolio Manager puts it all in one place — sync your rosters and see everything.
 
 ### Option C — Portfolio-first angle
 > **You Draft Portfolios. Your Tools Should Analyze Them.**
@@ -55,7 +55,7 @@
 
 ### 4. Multi-Platform Support
 **Headline:** Underdog and DraftKings in one place
-**Copy:** Upload rosters from both platforms and see your combined portfolio. Most tools only support Underdog — if you draft on DraftKings too, you've been flying blind on half your portfolio.
+**Copy:** Sync rosters from both platforms and see your combined portfolio. Most tools only support Underdog — if you draft on DraftKings too, you've been flying blind on half your portfolio.
 **Differentiator:** Free portfolio tools are overwhelmingly Underdog-only. We support both major platforms.
 
 ### 5. Combo & Stacking Analysis

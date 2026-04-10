@@ -269,7 +269,7 @@ Nobody else classifies rosters into strategic archetypes (RB_HERO, RB_ZERO, RB_H
 No competitor offers round-by-round draft flow visualization across a portfolio.
 
 ### 5. Zero-config simplicity
-Every paid tool requires meaningful setup, account creation, or configuration. Our "just upload CSVs and go" philosophy is differentiated.
+Every paid tool requires meaningful setup, account creation, or configuration. Our "just sync via the Chrome extension and go" philosophy is differentiated.
 
 ### 6. DraftKings support is sparse
 Most polished tools are Underdog-first. DK users have fewer quality options.
@@ -296,7 +296,7 @@ Most polished tools are Underdog-first. DK users have fewer quality options.
 - Draft flow analysis
 - Portfolio-level combo analysis (BBO charges $25/mo for this)
 - Cross-module roster navigation
-- Zero-config design (no targets, no setup — just upload and explore)
+- Zero-config design (no targets, no setup — just sync and explore)
 
 **Weakness to address:**
 - No Chrome extension overlay yet (The Bag Manager, BBO have this free)

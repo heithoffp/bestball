@@ -35,12 +35,14 @@ I'm a huge data nerd and I draft way too many best ball teams every year. I got 
 
 **Best Ball Exposures** (bestballexposures.com) — sync your rosters from Underdog or DraftKings and see your whole portfolio on one screen.
 
+I see the question "did I draft the same team twice?" come up a lot. Your rosters are almost always unique at the player level — with 300+ draftable players and 18 picks, the odds are tiny. The real redundancy risk is structural: falling into the same archetype over and over, stacking the same QB-WR pairs, or pairing the same two QBs without realizing it. That's what this tool actually surfaces.
+
 What it does:
 
 - **Exposure tracking** across all your entries with closing line value vs current ADP
 - **Auto-classifies every roster** into strategy archetypes (Hero RB, Zero RB, Hyper Fragile, etc.) so you can see your strategy mix at a glance
+- **Combo & stacking analysis** — which QB-WR stacks and QB pairs keep showing up across your entries, and how concentrated you are on specific combos
 - **Draft overlay** — see your exposure and correlations live while you're drafting, right on the Underdog/DraftKings page
-- **Combo & stacking analysis** — which QB-WR pairs keep showing up across your entries
 - **ADP tracker** and **player rankings** for both platforms
 - **Exportable roster images** — download a snapshot of any roster to share
 
@@ -66,13 +68,16 @@ If you're deep into best ball drafts and have no real way to see what your overa
 
 So I built **Best Ball Exposures** (bestballexposures.com) — sync your rosters from Underdog or DraftKings and get the full picture.
 
+One thing I've learned: worrying about drafting the "same team twice" is the wrong frame. Your rosters will always be unique at the player level. The real blind spot is structural — are you running the same strategy every draft? Stacking the same QB-WR pair without noticing? This tool is built to surface exactly that.
+
 What you get:
 
 - **Portfolio dashboard** — your entire portfolio on one screen
 - **Exposure analysis** — see what % of your entries each player appears in, with ADP trend data
-- **Roster viewer** — every roster auto-classified into a strategy archetype (Hero RB, Zero RB, Hyper Fragile, etc.)
+- **Roster viewer** — every roster auto-classified into a strategy archetype (Hero RB, Zero RB, Hyper Fragile, etc.) so you can see if you're lopsided
+- **Combo analysis** — which QB stacks and QB pairs keep recurring across your entries
 - **Draft overlay** for live drafting context on Underdog/DraftKings
-- **Combo analysis, ADP tracking, and player rankings** across both platforms
+- **ADP tracking and player rankings** across both platforms
 
 Pre-draft tournaments are closing up soon — now's a good time to go through your entries and see what you've actually built.
 
