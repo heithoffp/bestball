@@ -155,7 +155,7 @@ function PlanPickerInner({ initialPromoCode, closePlanPicker, redirectToCheckout
             label="Annual"
             price="$67"
             period="/yr"
-            badge="Save 44%"
+            badge="Save 72%"
             discountedPrice={promoState === 'valid' ? getDiscountedPrice(67) : null}
             active={interval === 'seasonal'}
             onClick={() => setInterval('seasonal')}
