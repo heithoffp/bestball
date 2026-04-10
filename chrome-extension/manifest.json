@@ -43,6 +43,13 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
+  "externally_connectable": {
+    "matches": [
+      "https://bestballexposures.com/*",
+      "https://www.bestballexposures.com/*",
+      "http://localhost:*/*"
+    ]
+  },
   "web_accessible_resources": [
     {
       "matches": [

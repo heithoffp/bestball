@@ -1,7 +1,9 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import TabLayout from './TabLayout';
 import { FolderSync } from 'lucide-react';
 import EmptyState from './EmptyState';
+import CombinedSearchInput from './filters/CombinedSearchInput';
+import { NFL_TEAMS } from '../utils/nflTeams';
 
 // Position palette — shared across all views
 const POS_COLORS = {
@@ -113,6 +115,11 @@ const QBPAIRS_HELP_ANNOTATIONS = [
   { id: 'qbpairs-row', label: 'Frequency Bar', anchor: 'below', description: 'The background fill shows frequency relative to your most common pairing. The #1 pair is highlighted in gold.' },
 ];
 
+const SIMILARITY_HELP_ANNOTATIONS = [
+  { id: 'similarity-desc', label: 'Roster Similarity', anchor: 'below', description: 'Finds the most overlapping roster pairs in your portfolio. High overlap means you\'re drafting the same team repeatedly — concentrating risk.' },
+  { id: 'similarity-row', label: 'Overlap Bar', anchor: 'below', description: 'The background fill shows overlap relative to your most similar pair. Click any row to see the shared players. The #1 pair is highlighted in gold.' },
+];
+
 export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const [activeTab, setActiveTab] = useState('stacks');
   const [expandedQBs, setExpandedQBs] = useState(new Set());
@@ -124,6 +131,13 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
   const [excludeRB, setExcludeRB] = useState(false);
   const [sortKey, setSortKey] = useState('stackPct');
   const [sortDir, setSortDir] = useState('desc');
+  // Similarity filters — include/exclude player+team multi-select
+  const [includePlayers, setIncludePlayers] = useState([]);
+  const [includeTeams, setIncludeTeams] = useState([]);
+  const [includeSearch, setIncludeSearch] = useState('');
+  const [excludePlayers, setExcludePlayers] = useState([]);
+  const [excludeTeams, setExcludeTeams] = useState([]);
+  const [excludeSearch, setExcludeSearch] = useState('');
   const blurTimeout = useRef(null);
 
   // Group flat player rows into per-roster arrays
@@ -138,6 +152,56 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
   }, [rosterData]);
 
   const totalRosters = rosters.length;
+
+  // ─── Similarity filter: player/team name lists & suggestions ──────────────
+  const allPlayerNames = useMemo(() => {
+    const names = new Set();
+    rosterData.forEach(p => { if (p.name) names.add(p.name); });
+    return [...names].sort();
+  }, [rosterData]);
+
+  const allTeamNames = useMemo(() => {
+    const teams = new Set();
+    rosterData.forEach(p => { if (p.team && p.team !== 'FA' && p.team !== 'N/A') teams.add(p.team); });
+    return [...teams].sort();
+  }, [rosterData]);
+
+  const includeQuery = includeSearch.trim().toLowerCase();
+  const includePlayerSuggestions = useMemo(() => {
+    if (!includeQuery) return [];
+    return allPlayerNames.filter(n => n.toLowerCase().includes(includeQuery) && !includePlayers.includes(n)).slice(0, 6);
+  }, [includeQuery, allPlayerNames, includePlayers]);
+  const includeTeamSuggestions = useMemo(() => {
+    if (!includeQuery) return allTeamNames.filter(t => !includeTeams.includes(t));
+    return allTeamNames.filter(t => {
+      if (includeTeams.includes(t)) return false;
+      const fullName = (NFL_TEAMS[t] || '').toLowerCase();
+      return t.toLowerCase().includes(includeQuery) || fullName.includes(includeQuery);
+    }).slice(0, 4);
+  }, [includeQuery, allTeamNames, includeTeams]);
+
+  const excludeQuery = excludeSearch.trim().toLowerCase();
+  const excludePlayerSuggestions = useMemo(() => {
+    if (!excludeQuery) return [];
+    return allPlayerNames.filter(n => n.toLowerCase().includes(excludeQuery) && !excludePlayers.includes(n)).slice(0, 6);
+  }, [excludeQuery, allPlayerNames, excludePlayers]);
+  const excludeTeamSuggestions = useMemo(() => {
+    if (!excludeQuery) return allTeamNames.filter(t => !excludeTeams.includes(t));
+    return allTeamNames.filter(t => {
+      if (excludeTeams.includes(t)) return false;
+      const fullName = (NFL_TEAMS[t] || '').toLowerCase();
+      return t.toLowerCase().includes(excludeQuery) || fullName.includes(excludeQuery);
+    }).slice(0, 4);
+  }, [excludeQuery, allTeamNames, excludeTeams]);
+
+  const addIncludePlayer = useCallback((name) => { if (name && !includePlayers.includes(name)) setIncludePlayers(prev => [...prev, name]); setIncludeSearch(''); }, [includePlayers]);
+  const addIncludeTeam = useCallback((team) => { if (team && !includeTeams.includes(team)) setIncludeTeams(prev => [...prev, team]); setIncludeSearch(''); }, [includeTeams]);
+  const removeIncludePlayer = useCallback((name) => setIncludePlayers(prev => prev.filter(n => n !== name)), []);
+  const removeIncludeTeam = useCallback((team) => setIncludeTeams(prev => prev.filter(t => t !== team)), []);
+  const addExcludePlayer = useCallback((name) => { if (name && !excludePlayers.includes(name)) setExcludePlayers(prev => [...prev, name]); setExcludeSearch(''); }, [excludePlayers]);
+  const addExcludeTeam = useCallback((team) => { if (team && !excludeTeams.includes(team)) setExcludeTeams(prev => [...prev, team]); setExcludeSearch(''); }, [excludeTeams]);
+  const removeExcludePlayer = useCallback((name) => setExcludePlayers(prev => prev.filter(n => n !== name)), []);
+  const removeExcludeTeam = useCallback((team) => setExcludeTeams(prev => prev.filter(t => t !== team)), []);
 
   // ─── View 1: Stack Profiles ────────────────────────────────────────────────
   const stackProfilesData = useMemo(() => {
@@ -250,6 +314,77 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
       }));
   }, [rosters, activeTab, totalRosters]);
 
+  // ─── View 3: Roster Similarity ─────────────────────────────────────────
+  const similarityData = useMemo(() => {
+    if (activeTab !== 'similarity') return null;
+
+    const includePlayerSet = new Set(includePlayers);
+    const includeTeamSet = new Set(includeTeams);
+    const excludePlayerSet = new Set(excludePlayers);
+    const excludeTeamSet = new Set(excludeTeams);
+    const hasInclude = includePlayerSet.size > 0 || includeTeamSet.size > 0;
+    const hasExclude = excludePlayerSet.size > 0 || excludeTeamSet.size > 0;
+
+    // Build roster summaries, pre-filter by include/exclude
+    const summaries = [];
+    for (const roster of rosters) {
+      const entryId = roster[0]?.entry_id || 'unknown';
+      const tournamentTitle = roster[0]?.tournamentTitle || null;
+      const playerSet = new Set(roster.map(p => p.name));
+      const teamSet = new Set(roster.map(p => p.team));
+
+      // Include filter: roster must contain ALL included players and teams
+      if (hasInclude) {
+        let pass = true;
+        for (const p of includePlayerSet) { if (!playerSet.has(p)) { pass = false; break; } }
+        if (pass) for (const t of includeTeamSet) { if (!teamSet.has(t)) { pass = false; break; } }
+        if (!pass) continue;
+      }
+
+      // Exclude filter: roster must NOT contain ANY excluded players or teams
+      if (hasExclude) {
+        let skip = false;
+        for (const p of excludePlayerSet) { if (playerSet.has(p)) { skip = true; break; } }
+        if (!skip) for (const t of excludeTeamSet) { if (teamSet.has(t)) { skip = true; break; } }
+        if (skip) continue;
+      }
+
+      const playerMap = new Map(roster.map(p => [p.name, p.position]));
+      summaries.push({ entryId, tournamentTitle, playerSet, playerMap, size: roster.length });
+    }
+
+    // Pairwise comparison
+    const pairs = [];
+    for (let i = 0; i < summaries.length; i++) {
+      for (let j = i + 1; j < summaries.length; j++) {
+        const a = summaries[i];
+        const b = summaries[j];
+        const [smaller, larger] = a.playerSet.size <= b.playerSet.size ? [a, b] : [b, a];
+        const shared = [];
+        for (const name of smaller.playerSet) {
+          if (larger.playerSet.has(name)) {
+            shared.push({ name, position: smaller.playerMap.get(name) || larger.playerMap.get(name) });
+          }
+        }
+        if (shared.length >= minCount) {
+          pairs.push({
+            roster1: { entryId: a.entryId, tournamentTitle: a.tournamentTitle },
+            roster2: { entryId: b.entryId, tournamentTitle: b.tournamentTitle },
+            overlapCount: shared.length,
+            overlapPct: (shared.length / Math.min(a.size, b.size)) * 100,
+            sharedPlayers: shared.sort((x, y) => {
+              const posOrder = { QB: 0, RB: 1, WR: 2, TE: 3 };
+              return (posOrder[x.position] ?? 4) - (posOrder[y.position] ?? 4) || x.name.localeCompare(y.name);
+            }),
+          });
+        }
+      }
+    }
+
+    pairs.sort((a, b) => b.overlapCount - a.overlapCount || a.roster1.entryId.localeCompare(b.roster1.entryId));
+    return pairs.slice(0, 50).map((p, i) => ({ ...p, rank: i + 1 }));
+  }, [rosters, activeTab, minCount, includePlayers, includeTeams, excludePlayers, excludeTeams]);
+
   const toggleQB = (name) => {
     setExpandedQBs(prev => {
       const next = new Set(prev);
@@ -261,12 +396,15 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
   const handleTabClick = (tab) => {
     setActiveTab(tab);
     setExpandedQBs(new Set());
+
     setPlayerSearch('');
     setSelectedPlayer('');
     setExcludeTE(false);
     setExcludeRB(false);
     setSortKey('stackPct');
     setSortDir('desc');
+    setIncludePlayers([]); setIncludeTeams([]); setIncludeSearch('');
+    setExcludePlayers([]); setExcludeTeams([]); setExcludeSearch('');
   };
 
   const handleSort = (key) => {
@@ -306,6 +444,7 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
         {[
           { key: 'stacks', label: 'Stack Profiles' },
           { key: 'qbpairs', label: 'QB Pairs' },
+          { key: 'similarity', label: 'Roster Similarity' },
         ].map(t => (
           <button
             key={t.key}
@@ -318,7 +457,9 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <label className="filter-select-label" style={{ marginBottom: 0 }}>Min stacks</label>
+        <label className="filter-select-label" style={{ marginBottom: 0 }}>
+          {activeTab === 'stacks' ? 'Min stacks' : activeTab === 'similarity' ? 'Min overlap' : 'Min count'}
+        </label>
         <input
           type="number"
           value={minCount}
@@ -332,7 +473,7 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
   );
 
   return (
-    <TabLayout toolbar={toolbarControls} helpAnnotations={activeTab === 'stacks' ? STACK_HELP_ANNOTATIONS : QBPAIRS_HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
+    <TabLayout toolbar={toolbarControls} helpAnnotations={activeTab === 'stacks' ? STACK_HELP_ANNOTATIONS : activeTab === 'qbpairs' ? QBPAIRS_HELP_ANNOTATIONS : SIMILARITY_HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
 
       {/* ── Stack Profiles ─────────────────────────────────────────────────── */}
       {activeTab === 'stacks' && (
@@ -702,6 +843,177 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
             );
           })()}
         </div>
+      )}
+
+      {/* ── Roster Similarity — Most Overlapping Pairs ─────────────────── */}
+      {activeTab === 'similarity' && (
+        <>
+        {/* Include / Exclude filters */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 280px', minWidth: 200 }}>
+            <CombinedSearchInput
+              selectedPlayers={includePlayers}
+              selectedTeams={includeTeams}
+              onAddPlayer={addIncludePlayer}
+              onAddTeam={addIncludeTeam}
+              onRemovePlayer={removeIncludePlayer}
+              onRemoveTeam={removeIncludeTeam}
+              onClear={() => { setIncludePlayers([]); setIncludeTeams([]); setIncludeSearch(''); }}
+              playerSuggestions={includePlayerSuggestions}
+              teamSuggestions={includeTeamSuggestions}
+              teamNames={NFL_TEAMS}
+              searchValue={includeSearch}
+              onSearchChange={setIncludeSearch}
+              placeholder="Include players & teams..."
+              label="Include Player / Team"
+            />
+          </div>
+          <div style={{ flex: '1 1 280px', minWidth: 200 }}>
+            <CombinedSearchInput
+              selectedPlayers={excludePlayers}
+              selectedTeams={excludeTeams}
+              onAddPlayer={addExcludePlayer}
+              onAddTeam={addExcludeTeam}
+              onRemovePlayer={removeExcludePlayer}
+              onRemoveTeam={removeExcludeTeam}
+              onClear={() => { setExcludePlayers([]); setExcludeTeams([]); setExcludeSearch(''); }}
+              playerSuggestions={excludePlayerSuggestions}
+              teamSuggestions={excludeTeamSuggestions}
+              teamNames={NFL_TEAMS}
+              searchValue={excludeSearch}
+              onSearchChange={setExcludeSearch}
+              placeholder="Exclude players & teams..."
+              label="Exclude Player / Team"
+            />
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '16px 24px', overflow: 'auto' }}>
+          <div data-help-id="similarity-desc" style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+            Most overlapping roster pairs in your portfolio — high overlap means concentrated risk.
+          </div>
+          {(similarityData ?? []).length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', padding: '20px 0' }}>
+              No roster pairs found with {minCount}+ shared players.
+            </div>
+          ) : (() => {
+            const maxOverlap = similarityData[0]?.overlapCount || 1;
+            const shortId = (id) => id.slice(0, 8);
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {similarityData.map(pair => {
+                  const isTop = pair.rank === 1;
+                  const fillPct = (pair.overlapCount / maxOverlap) * 100;
+                  const pairKey = `${pair.roster1.entryId}||${pair.roster2.entryId}`;
+                  return (
+                    <div
+                      key={pairKey}
+                      data-help-id={pair.rank === 1 ? 'similarity-row' : undefined}
+                      style={{
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: 6,
+                        border: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.25)' : 'var(--border-subtle)'}`,
+                        background: 'var(--surface-1)',
+                      }}
+                    >
+                      {/* Frequency fill bar */}
+                      <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, bottom: 0,
+                        width: `${fillPct}%`,
+                        background: isTop
+                          ? 'rgba(232, 191, 74, 0.07)'
+                          : 'rgba(139, 148, 176, 0.05)',
+                        borderRight: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.2)' : 'rgba(139, 148, 176, 0.1)'}`,
+                        pointerEvents: 'none',
+                      }} />
+
+                      {/* Row content */}
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 14, padding: '11px 18px' }}>
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: isTop ? 'var(--accent)' : 'var(--text-muted)',
+                          minWidth: 28,
+                          textAlign: 'right',
+                          letterSpacing: '0.02em',
+                          alignSelf: 'flex-start',
+                          paddingTop: 2,
+                        }}>
+                          #{pair.rank}
+                        </span>
+
+                        {/* Roster IDs + shared players */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                          {/* Roster pair header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              <span style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {shortId(pair.roster1.entryId)}
+                              </span>
+                              {pair.roster1.tournamentTitle && (
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
+                                  {pair.roster1.tournamentTitle}
+                                </span>
+                              )}
+                            </div>
+
+                            <span style={{
+                              color: 'var(--text-muted)',
+                              fontSize: 14,
+                              fontWeight: 300,
+                              fontFamily: 'var(--font-mono)',
+                              lineHeight: 1,
+                            }}>×</span>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              <span style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {shortId(pair.roster2.entryId)}
+                              </span>
+                              {pair.roster2.tournamentTitle && (
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
+                                  {pair.roster2.tournamentTitle}
+                                </span>
+                              )}
+                            </div>
+                            <NavBtn players={pair.sharedPlayers.map(p => p.name)} onNavigateToRosters={onNavigateToRosters} />
+                          </div>
+
+                          {/* Shared players — always visible */}
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {pair.sharedPlayers.map((p, i) => (
+                              <PlayerBadge key={i} name={p.name} position={p.position} />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, textAlign: 'right', flexShrink: 0, alignSelf: 'flex-start', paddingTop: 2 }}>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            fontSize: 15,
+                            color: isTop ? 'var(--accent)' : 'var(--text-primary)',
+                          }}>
+                            {pair.overlapCount}
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>
+                            shared
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 7 }}>
+                            {pair.overlapPct.toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+        </>
       )}
 
     </TabLayout>

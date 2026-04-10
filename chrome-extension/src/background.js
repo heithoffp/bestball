@@ -9,6 +9,7 @@
  */
 
 import { getAdapterForUrl } from './adapters/registry.js';
+import { supabase } from './utils/supabase.js';
 
 // Track which tabs have an active adapter
 const activeTabs = new Map();
@@ -42,6 +43,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GOOGLE_OAUTH') {
     handleGoogleOAuth().then(sendResponse);
     return true; // keep channel open for async response
+  }
+
+  return false;
+});
+
+// Allow the website to push auth session to the extension
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (message.type === 'SET_SESSION' && message.access_token && message.refresh_token) {
+    if (!supabase) { sendResponse({ error: 'Supabase not configured' }); return false; }
+    supabase.auth.setSession({
+      access_token: message.access_token,
+      refresh_token: message.refresh_token,
+    }).then(({ error }) => {
+      sendResponse(error ? { error: error.message } : { ok: true });
+    });
+    return true; // keep channel open for async response
+  }
+
+  if (message.type === 'SIGN_OUT') {
+    if (!supabase) { sendResponse({ ok: true }); return false; }
+    supabase.auth.signOut().then(() => sendResponse({ ok: true }));
+    return true;
   }
 
   return false;

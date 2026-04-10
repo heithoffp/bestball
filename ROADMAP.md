@@ -14,7 +14,7 @@
 ### FEAT-001: User Authentication & Accounts
 **Status:** In Progress
 **Description:** Supabase auth with signup/login flow, cloud data persistence for authenticated users, and guest mode fallback via IndexedDB. Auth scaffolding partially exists (AuthButton component, Supabase dependency).
-**Tasks:** TASK-004, TASK-005, TASK-006, TASK-007, TASK-017, TASK-019, TASK-022, TASK-032, TASK-186
+**Tasks:** TASK-004, TASK-005, TASK-006, TASK-007, TASK-017, TASK-019, TASK-022, TASK-032, TASK-186, TASK-192
 
 ### FEAT-002: Subscription & Payment Integration
 **Status:** Not Started

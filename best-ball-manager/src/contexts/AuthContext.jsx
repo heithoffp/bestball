@@ -4,6 +4,25 @@ import { clearAllData } from '../utils/storage';
 
 const AuthContext = createContext(null);
 
+// Chrome Web Store extension ID — used to push auth session to the extension
+const EXTENSION_ID = 'cnljeadelfnabalcdongglhfhiceakaj';
+
+function pushSessionToExtension(session) {
+  try {
+    chrome.runtime.sendMessage(EXTENSION_ID, {
+      type: 'SET_SESSION',
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
+  } catch { /* extension not installed — ignore */ }
+}
+
+function signOutExtension() {
+  try {
+    chrome.runtime.sendMessage(EXTENSION_ID, { type: 'SIGN_OUT' });
+  } catch { /* extension not installed — ignore */ }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +46,9 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+        pushSessionToExtension(session);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -80,6 +102,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    signOutExtension();
     await clearAllData();
     if (!supabase) return;
     await supabase.auth.signOut();

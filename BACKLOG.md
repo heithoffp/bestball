@@ -5,6 +5,7 @@
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
 | TASK-175 | Block doubleclick.net ad interruptions on DraftKings pages | In Progress | P3 |
+| TASK-185 | Auto-connect Chrome extension auth from website login | In Progress | P2 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 |
 
 
@@ -21,16 +22,17 @@
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No |
 | TASK-180 | Retake dashboard hero screenshot manually | Todo | P2 | [Plan](docs/plans/TASK-180.md) — Draft | No |
 | TASK-183 | Configure Sentry DSN for production error monitoring | Todo | P2 | [Plan](docs/plans/TASK-183.md) — Draft | No |
-| TASK-185 | Auto-connect Chrome extension auth from website login | Todo | P2 | [Plan](docs/plans/TASK-185.md) — Draft | No |
+| TASK-185 | Auto-connect Chrome extension auth from website login | In Progress | P2 | [Plan](docs/plans/TASK-185.md) | No |
 | TASK-187 | Welcome email for new signups | Todo | P2 | [Plan](docs/plans/TASK-187.md) — Draft | No |
 | TASK-188 | Weekly portfolio digest email — retention loop | Todo | P2 | [Plan](docs/plans/TASK-188.md) — Draft | No |
 | TASK-189 | Landing page messaging refinements | Todo | P2 | [Plan](docs/plans/TASK-189.md) — Draft | No |
+| TASK-192 | Restore Google OAuth buttons on website AuthModal | Todo | P2 | [Plan](docs/plans/TASK-192.md) — Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
 | TASK-147 | Regenerate sim with consistent player_id format | Todo | P3 | [Plan](docs/plans/TASK-147.md) — Draft | No |
 | TASK-052 | Portfolio-wide pick quality summary — value/reach histogram by ADP round | Todo | P3 | [Plan](docs/plans/TASK-052.md) — Draft | No |
-| TASK-053 | Inter-roster similarity score — portfolio diversity metric | Todo | P3 | [Plan](docs/plans/TASK-053.md) — Draft | No |
+| TASK-053 | Inter-roster similarity score — portfolio diversity metric | In Progress | P3 | [Plan](docs/plans/TASK-053.md) -- Pending Approval | No |
 | TASK-069 | Migrate hardcoded font-size values to typography tokens | Todo | P3 | [Plan](docs/plans/TASK-069.md) — Draft | No |
 | TASK-075 | Migrate ComboAnalysis inline styles to CSS module | Todo | P3 | [Plan](docs/plans/TASK-075.md) — Draft | No |
 | TASK-087 | PlayerRankings: Add "Reset to ADP order" button | Todo | P3 | [Plan](docs/plans/TASK-087.md) — Draft | No |
