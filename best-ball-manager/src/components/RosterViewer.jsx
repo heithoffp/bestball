@@ -6,12 +6,14 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { CombinedSearchInput } from './filters';
-import { NFL_TEAMS } from '../utils/nflTeams';
+import { NFL_TEAMS, NFL_TEAMS_ABBREV } from '../utils/nflTeams';
 import TournamentMultiSelect from './TournamentMultiSelect';
 import TabLayout from './TabLayout';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
-import { FolderSync } from 'lucide-react';
+import { calcCLV, clvLabel } from '../utils/clvHelpers';
+import { renderRosterImage } from '../utils/rosterImageRenderer';
+import { FolderSync, Download } from 'lucide-react';
 import EmptyState from './EmptyState';
 
 const HELP_ANNOTATIONS = [
@@ -24,30 +26,7 @@ const HELP_ANNOTATIONS = [
   { id: 'col-clv',           label: 'Avg CLV%',              description: "Average Closing Line Value across all picks. Positive means the player's ADP rose after your draft." },
 ];
 
-// ── CLV helpers ───────────────────────────────────────────────────────────────
-
-/**
- * Power-law value curve CLV
- * V(pick) = 1 / pick^α  —  CLV% = (vNow - vDraft) / vDraft * 100
- * Positive = ADP moved earlier after draft = you got a bargain.
- */
-function calcCLV(pick, latestADP, alpha = 0.5) {
-  if (!pick || !latestADP || isNaN(pick) || isNaN(latestADP)) return null;
-  const vDraft = 1 / Math.pow(pick, alpha);
-  const vNow   = 1 / Math.pow(latestADP, alpha);
-  return ((vNow - vDraft) / vDraft) * 100;
-}
-
-function clvLabel(pct) {
-  if (pct === null) return { text: 'N/A', color: '#d6d6d6' };
-  const sign = pct >= 0 ? '+' : '';
-  const color = pct > 5 ? '#00f700'
-              : pct > 2.5  ? '#bcfc45'
-              : pct > 0  ? '#fcff55'
-              : pct > -2.5 ? '#ff9f43'
-              :             '#ff4d6d';
-  return { text: `${sign}${pct.toFixed(2)}%`, color };
-}
+// CLV helpers imported from ../utils/clvHelpers.js
 
 // ── Uniqueness display helper ────────────────────────────────────────────────��
 
@@ -462,6 +441,22 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
     return pills;
   }, [selectedPlayers, selectedTeams, rbFilter, qbFilter, teFilter, clvFilter, selectedTournaments]);
 
+  const handleDownloadImage = useCallback(async (roster, e) => {
+    e.stopPropagation();
+    trackEvent('roster_image_downloaded');
+    try {
+      const blob = await renderRosterImage(roster, alpha);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `roster-${roster.entry_id.slice(0, 8)}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Image generation failed:', err);
+    }
+  }, [alpha]);
+
   if (!rosterData.length) {
     return (
       <EmptyState icon={FolderSync} title="No roster data">
@@ -532,6 +527,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
         {/* Expanded detail */}
         {isOpen && (
           <div className={css.rosterCardExpanded} onClick={e => e.stopPropagation()}>
+            <div className={css.downloadBar}>
+              <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
+                <Download size={14} /> Share Image
+              </button>
+            </div>
             <DraftCapitalMap players={roster.players} isMobile={true} />
             <div className={css.playerListScroll}>
               <PlayerDetail players={roster.players} alpha={alpha} isMobile={true} />
@@ -851,7 +851,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
                           background: '#3b82f610', color: '#60a5fa',
                           border: '1px solid #3b82f630', borderRadius: 3,
                           padding: '2px 6px', whiteSpace: 'nowrap',
-                        }}>✦ {p.name} ({p.team})</span>
+                        }}>✦ {p.name} ({NFL_TEAMS_ABBREV[p.team?.toUpperCase()] || p.team})</span>
                       ))}
                       {roster.tournamentTitle && (
                         <span
@@ -904,6 +904,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
                 {isOpen && (
                   <tr>
                     <td colSpan={10} style={{ padding: 0 }}>
+                      <div className={css.downloadBar} style={{ justifyContent: 'flex-end' }}>
+                        <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
+                          <Download size={14} /> Share Image
+                        </button>
+                      </div>
                       <PlayerDetail players={roster.players} alpha={alpha} isMobile={false} />
                     </td>
                   </tr>
@@ -917,7 +922,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   );
 
   return (
-    <TabLayout title="Rosters" helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle} flush>
+    <TabLayout helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle} flush>
     <div className={css.root}>
       {navBannerArchetype ? (
         <div className={css.navBanner}>
@@ -1181,7 +1186,7 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false }) {
                     {p.position}
                   </span>
                 </td>
-                <td className={css.dtd} style={{ textAlign: 'center', color: '#e0e0e0', fontFamily: "'JetBrains Mono', monospace", fontSize: 14 }}>{p.team}</td>
+                <td className={css.dtd} style={{ textAlign: 'center', color: '#e0e0e0', fontFamily: "'JetBrains Mono', monospace", fontSize: 14 }}>{NFL_TEAMS_ABBREV[p.team?.toUpperCase()] || p.team}</td>
                 <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
                 <td className={css.dtd} style={{ textAlign: 'center', color: '#ececec', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
                 <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
