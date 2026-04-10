@@ -36,7 +36,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       active:   activeTabs.has(tabId),
       tabCount: activeTabs.size,
     });
+    return false;
   }
+
+  if (message.type === 'GOOGLE_OAUTH') {
+    handleGoogleOAuth().then(sendResponse);
+    return true; // keep channel open for async response
+  }
+
   return false;
 });
+
+async function handleGoogleOAuth() {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) return { error: 'Supabase not configured' };
+
+  const redirectUrl = chrome.identity.getRedirectURL();
+  const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+
+  try {
+    const responseUrl = await chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true,
+    });
+
+    // Supabase returns tokens in the URL hash fragment
+    const hash = new URL(responseUrl).hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+
+    if (!access_token || !refresh_token) {
+      return { error: 'No tokens received from Google sign-in' };
+    }
+    return { access_token, refresh_token };
+  } catch (err) {
+    if (err.message?.includes('canceled')) {
+      return { error: 'Sign-in was cancelled' };
+    }
+    return { error: err.message ?? 'Google sign-in failed' };
+  }
+}
 

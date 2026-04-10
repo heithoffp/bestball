@@ -11,7 +11,7 @@
  */
 
 import { createReconnectingObserver } from '../utils/observer.js';
-import { readEntries, readRankings, getAuthSession, signIn, signOut, fetchTier } from '../utils/bridge.js';
+import { readEntries, readRankings, getAuthSession, signIn, signInWithGoogle, signOut, fetchTier } from '../utils/bridge.js';
 
 const INJECTED_ATTR = 'data-bbm-injected';
 const PLAYER_ID_ATTR = 'data-bbm-player-id';
@@ -329,6 +329,11 @@ async function renderAuthSection() {
         <span class="bbm-account-chevron">&#9660;</span>
       </div>
       <div class="bbm-account-body" id="bbm-account-body" style="display:none">
+        <button id="bbm-google-btn" class="bbm-btn bbm-btn-google">
+          <svg width="16" height="16" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15 15.6 19.1 12 24 12c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.3 6.3 14.7z"/><path fill="#FBBC05" d="M24 46c5.4 0 10.3-1.8 14.1-5l-6.9-5.7C29.1 37 26.7 38 24 38c-6 0-10.6-3.9-12.3-9.2l-7 5.4C8.1 41 15.4 46 24 46z"/><path fill="#EA4335" d="M46 24c0-1.3-.2-2.7-.5-4H24v8.5h11.8c-1 3-3 5.4-5.8 7l6.9 5.7C41 37.5 46 31.5 46 24z"/></svg>
+          Sign in with Google
+        </button>
+        <div class="bbm-auth-divider"><span>or</span></div>
         <input type="email" id="bbm-auth-email" class="bbm-auth-input" placeholder="Email" autocomplete="email" />
         <input type="password" id="bbm-auth-password" class="bbm-auth-input" placeholder="Password" autocomplete="current-password" />
         <button id="bbm-sign-in-btn" class="bbm-btn">Sign In</button>
@@ -336,6 +341,7 @@ async function renderAuthSection() {
       </div>
     `;
     container.querySelector('#bbm-account-toggle').addEventListener('click', toggleAccountSection);
+    container.querySelector('#bbm-google-btn').addEventListener('click', handleGoogleSignIn);
     container.querySelector('#bbm-sign-in-btn').addEventListener('click', handleSignIn);
     // Stop keyboard events from bubbling to the host page (e.g. DK interprets "e" as "Entrants" shortcut)
     for (const input of container.querySelectorAll('.bbm-auth-input')) {
@@ -381,6 +387,27 @@ function toggleAccountSection() {
   const isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+async function handleGoogleSignIn() {
+  const btn = document.getElementById('bbm-google-btn');
+  const errorEl = document.getElementById('bbm-auth-error');
+  if (!btn) return;
+
+  btn.disabled = true;
+  if (errorEl) errorEl.style.display = 'none';
+
+  try {
+    await signInWithGoogle();
+    await renderAuthSection();
+    loadPortfolioData();
+  } catch (err) {
+    if (errorEl) {
+      errorEl.textContent = err.message ?? 'Google sign-in failed';
+      errorEl.style.display = 'block';
+    }
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function handleSignIn() {
@@ -1391,6 +1418,35 @@ function injectStyles() {
       border: 1px solid #243A5C;
     }
     .bbm-btn-secondary:hover { color: #E8E8E8; border-color: #8A9BB5; }
+
+    .bbm-btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #fff;
+      color: #3c4043;
+      font-weight: 600;
+    }
+    .bbm-btn-google:hover { background: #f1f3f4; }
+
+    .bbm-auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+      font-size: 9px;
+      color: #5A6E8A;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .bbm-auth-divider::before,
+    .bbm-auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #243A5C;
+    }
 
     .bbm-auth-user {
       font-size: 11px;

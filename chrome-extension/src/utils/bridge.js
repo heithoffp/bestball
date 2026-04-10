@@ -26,6 +26,26 @@ export async function signIn(email, password) {
 }
 
 /**
+ * Signs in with Google via chrome.identity OAuth flow.
+ * Delegates to the background service worker for the popup, then sets the
+ * Supabase session in this context with the returned tokens.
+ *
+ * @returns {Promise<import('@supabase/supabase-js').Session>}
+ */
+export async function signInWithGoogle() {
+  if (!supabase) throw new Error('[BBM] Supabase not configured');
+  const result = await chrome.runtime.sendMessage({ type: 'GOOGLE_OAUTH' });
+  if (result.error) throw new Error(result.error);
+
+  const { data, error } = await supabase.auth.setSession({
+    access_token: result.access_token,
+    refresh_token: result.refresh_token,
+  });
+  if (error) throw error;
+  return data.session;
+}
+
+/**
  * Signs out the current user.
  *
  * @returns {Promise<void>}

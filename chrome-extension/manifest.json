@@ -3,7 +3,7 @@
   "name": "Best Ball Exposures",
   "version": "1.0.1",
   "description": "Portfolio-aware draft context for best-ball fantasy football",
-  "permissions": ["storage"],
+  "permissions": ["storage", "identity"],
   "host_permissions": [
     "https://app.underdogfantasy.com/*",
     "https://api.underdogfantasy.com/*",
