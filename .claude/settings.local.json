@@ -89,7 +89,8 @@
       "WebFetch(domain:underdogfantasy.com)",
       "Bash(wait btglvb02j:*)",
       "Read(//c/Users/patrickh/AppData/Local/Temp/claude/C--Software-Personal-BestBall/67731c71-de83-420f-8a22-a9d6cebeafbd/tasks/**)",
-      "Skill(hus-lifecycle)"
+      "Skill(hus-lifecycle)",
+      "Bash(ls:*)"
     ]
   },
   "enabledPlugins": {

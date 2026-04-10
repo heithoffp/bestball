@@ -276,25 +276,29 @@
 }
 
 /* 7b. Share Image Button */
-.downloadBar {
+.capitalMapSummaryRow {
   display: flex;
-  padding: 8px 18px 0;
-  background: var(--surface-0);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .downloadBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.5px;
   color: var(--accent);
   background: rgba(232, 191, 74, 0.1);
   border: 1px solid rgba(232, 191, 74, 0.3);
   border-radius: var(--radius-sm);
-  padding: 6px 14px;
+  padding: 5px 10px;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background var(--duration-fast), border-color var(--duration-fast);
 }
 
@@ -412,7 +416,6 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 8px;
   letter-spacing: 0.3px;
 }
 
@@ -720,10 +723,8 @@
 /* --- Mobile (max-width: 599px) --- */
 @media (max-width: 599px) {
   .downloadBtn {
-    width: 100%;
-    justify-content: center;
-    padding: 10px 14px;
-    min-height: 44px;
+    padding: 6px 10px;
+    font-size: 10px;
   }
 
   .header {

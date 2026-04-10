@@ -527,12 +527,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
         {/* Expanded detail */}
         {isOpen && (
           <div className={css.rosterCardExpanded} onClick={e => e.stopPropagation()}>
-            <div className={css.downloadBar}>
+            <DraftCapitalMap players={roster.players} isMobile={true} actions={
               <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
                 <Download size={14} /> Share Image
               </button>
-            </div>
-            <DraftCapitalMap players={roster.players} isMobile={true} />
+            } />
             <div className={css.playerListScroll}>
               <PlayerDetail players={roster.players} alpha={alpha} isMobile={true} />
             </div>
@@ -904,12 +903,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
                 {isOpen && (
                   <tr>
                     <td colSpan={10} style={{ padding: 0 }}>
-                      <div className={css.downloadBar} style={{ justifyContent: 'flex-end' }}>
+                      <PlayerDetail players={roster.players} alpha={alpha} isMobile={false} shareAction={
                         <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
                           <Download size={14} /> Share Image
                         </button>
-                      </div>
-                      <PlayerDetail players={roster.players} alpha={alpha} isMobile={false} />
+                      } />
                     </td>
                   </tr>
                 )}
@@ -1014,7 +1012,7 @@ function FilterGroup({ label, options, value, onChange, counts = {} }) {
 
 // ── Draft Capital Map ────────────────────────────────────────────────────────
 
-function DraftCapitalMap({ players, isMobile = false }) {
+function DraftCapitalMap({ players, isMobile = false, actions }) {
   const maxRound = 18;
   const byRound = {};
   players.forEach(p => {
@@ -1041,8 +1039,11 @@ function DraftCapitalMap({ players, isMobile = false }) {
   if (isMobile) {
     return (
       <div className={css.capitalMapWrap}>
-        <div className={css.capitalMapSummary}>
-          {summaryParts.join(' | ')}
+        <div className={css.capitalMapSummaryRow}>
+          <div className={css.capitalMapSummary}>
+            {summaryParts.join(' | ')}
+          </div>
+          {actions}
         </div>
       </div>
     );
@@ -1073,8 +1074,11 @@ function DraftCapitalMap({ players, isMobile = false }) {
           );
         })}
       </div>
-      <div className={css.capitalMapSummary}>
-        {summaryParts.join(' | ')}
+      <div className={css.capitalMapSummaryRow}>
+        <div className={css.capitalMapSummary}>
+          {summaryParts.join(' | ')}
+        </div>
+        {actions}
       </div>
     </div>
   );
@@ -1082,7 +1086,7 @@ function DraftCapitalMap({ players, isMobile = false }) {
 
 // ── Expanded player detail ────────────────────────────────────────────────────
 
-function PlayerDetail({ players, alpha = 0.5, isMobile = false }) {
+function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
   const [pSort, setPSort] = useState('pick');
   const [pDir,  setPDir]  = useState('asc');
 
@@ -1157,7 +1161,7 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false }) {
 
   return (
     <div className={css.detail}>
-      <DraftCapitalMap players={players} isMobile={false} />
+      <DraftCapitalMap players={players} isMobile={false} actions={shareAction} />
       <table className={css.table}>
         <thead>
           <tr className={css.thead} style={{ background: '#080808' }}>

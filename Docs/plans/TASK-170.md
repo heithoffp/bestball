@@ -6,7 +6,7 @@
 ---
 
 ## Objective
-Draft launch posts for r/bestball and r/fantasyfootball that sound like a community member sharing something they built — not a product launch. Voice should match the landing page: direct, specific, problem-first, no fluff.
+Draft launch posts for r/bestball and r/fantasyfootball that sound like a community member sharing something they built — not a product launch. Voice should match the landing page: direct, specific, problem-first, no fluff. End each post with an exported roster image and a "roast my team" engagement hook to invite comments and boost Reddit ranking.
 
 ## Dependencies
 - TASK-164 (messaging/value prop) — Complete
@@ -17,6 +17,7 @@ Draft launch posts for r/bestball and r/fantasyfootball that sound like a commun
 - Confirm r/bestball allows self-promotion posts (check sidebar rules)
 - Confirm r/fantasyfootball rules — may require a megathread or mod approval
 - Include screenshots inline? Reddit image posts get more engagement but can't include a clickable link in the body — may need to post as text with imgur links instead
+- Select a conversation-worthy roster for the image export — pick the weirdest/most controversial build, not the best one (e.g. a hyper-fragile stack, a bold zero RB, a team with a player people love to argue about)
 
 ---
 
@@ -24,48 +25,81 @@ Draft launch posts for r/bestball and r/fantasyfootball that sound like a commun
 
 ### r/bestball
 
-**Title:** I built a portfolio analytics tool for people managing 50+ best ball entries
+**Title:** Best ball degen sharing the tool I built to manage my portfolio
+
 **Body:**
 
-I draft way too many best ball teams every year and got tired of stitching together spreadsheets to figure out what my portfolio actually looks like. So I built something.
+Pre-draft best ball tournaments are starting to close up — now's the perfect time to go back through your entries and find those hidden gem rosters before the season kicks off.
 
-**Best Ball Exposures**: automatically sync your rosters from Underdog and/or DraftKings, see your whole portfolio on one screen.
+I'm a huge data nerd and I draft way too many best ball teams every year. I got tired of having zero visibility into what my portfolio actually looks like across 30+ entries, so I built a tool to fix it.
+
+**Best Ball Exposures** (bestballexposures.com) — sync your rosters from Underdog or DraftKings and see your whole portfolio on one screen.
 
 What it does:
 
-- **Exposure table** across all your entries with CLV vs current ADP
-- Auto-classifies every roster into an **archetypes** (Hero RB, Hyper-Fragile, Elite QB, etc.) so you can see your strategy mix
-- **Draft overlay** to see correlations and exposures live while drafting.
-- **Combo/stacking analysis** — which QB-WR pairs keep showing up in your entries
-- **ADP tracker and player rankings** for both Underdog and Draft Kings
+- **Exposure tracking** across all your entries with closing line value vs current ADP
+- **Auto-classifies every roster** into strategy archetypes (Hero RB, Zero RB, Hyper Fragile, etc.) so you can see your strategy mix at a glance
+- **Draft overlay** — see your exposure and correlations live while you're drafting, right on the Underdog/DraftKings page
+- **Combo & stacking analysis** — which QB-WR pairs keep showing up across your entries
+- **ADP tracker** and **player rankings** for both platforms
+- **Exportable roster images** — download a snapshot of any roster to share
 
-Works with both Underdog and DraftKings. Most tools out there only do Underdog.
+Works with both Underdog and DraftKings. Most tools only do one.
 
-No account needed to try it. There's a "Load Sample Data" button on the site if you want to poke around before uploading your own stuff. Free tier covers the dashboard, exposures, and roster viewer with archetypes. Pro is $20/mo for the full suite but it's **free through May 4**.
+No account needed to try it — there's a "Load Sample Data" button if you want to poke around first. Free tier covers the dashboard, exposures, and roster viewer with archetypes. Pro is $20/mo for the full suite but everything is **free through May 4**.
 
-bestballexposures.com
+Built this for myself originally. Still adding stuff every day based on feedback.
 
-Built this for myself originally. Figured other people drafting 30-40+ entries are dealing with the same thing. Open to feedback, still adding stuff every day.
+Speaking of which — here's one of my more interesting builds from this off-season. Roast my team:
+
+[ROSTER IMAGE HERE]
 
 ---
 
 ### r/fantasyfootball
 
-**Title:** Built a free tool for tracking your best ball portfolio across Underdog and DraftKings
+**Title:** Built a free tool for analyzing your best ball portfolio — roast one of my teams
 
 **Body:**
 
-If you do a lot of best ball drafts and have no idea what your overall portfolio looks like — I was in the same spot. Built a web app to fix it.
+If you're deep into best ball drafts and have no real way to see what your overall portfolio looks like — I was in the same spot. I'm a data nerd who drafts way too many best ball teams, and I wanted a way to actually inspect the interesting parts of my portfolio without stitching together spreadsheets.
 
-**Best Ball Exposures** — automatically sync your rosters from Underdog or DraftKings and see exposure, strategy breakdown, stacking patterns, and draft tendencies across all your entries.
+So I built **Best Ball Exposures** (bestballexposures.com) — sync your rosters from Underdog or DraftKings and get the full picture.
 
-The free tier gives you a portfolio dashboard, exposure analysis, and a roster viewer that auto-classifies each roster into a strategy archetype (Hero RB, Zero RB, etc). Pro ($20/mo) adds draft flow analysis, combo analysis, ADP tracking, and rankings — but it's all free through May 4 while I'm in beta.
+What you get:
 
-Supports both platforms. No account required to try it, there's sample data you can load to see it in action.
+- **Portfolio dashboard** — your entire portfolio on one screen
+- **Exposure analysis** — see what % of your entries each player appears in, with ADP trend data
+- **Roster viewer** — every roster auto-classified into a strategy archetype (Hero RB, Zero RB, Hyper Fragile, etc.)
+- **Draft overlay** for live drafting context on Underdog/DraftKings
+- **Combo analysis, ADP tracking, and player rankings** across both platforms
+
+Pre-draft tournaments are closing up soon — now's a good time to go through your entries and see what you've actually built.
+
+No account required to try it. Free tier covers the dashboard, exposures, and roster viewer. Pro ($20/mo) adds the full analytics suite — but it's all **free through May 4** while I'm in beta.
 
 bestballexposures.com
 
-If you're only doing a few entries this probably isn't for you. But if you're 30+ deep and losing track of what you've built, this is what I made it for.
+Now — here's one of my weirder best ball builds from this off-season. Let me know how cooked I am:
+
+[ROSTER IMAGE HERE]
+
+---
+
+## Key Differences Between Posts
+
+| | r/bestball | r/fantasyfootball |
+|---|---|---|
+| Title tone | "degen" — matches the sub culture | More neutral — "analyzing" + "roast" hook in title |
+| Feature depth | More detailed (audience knows best ball) | Slightly higher-level (mixed audience) |
+| CTA language | "Roast my team" | "Let me know how cooked I am" (lighter) |
+| Urgency hook | Pre-draft tournaments closing (opener) | Same but briefer (mid-post) |
+
+---
+
+## Roster Image Selection
+
+Pick a team that's conversation-worthy — not your best roster, but your most *interesting* one. A hyper-fragile stack, a controversial zero RB build, a team with a player people love to argue about. The goal is comments, not admiration.
 
 ---
 
@@ -74,7 +108,7 @@ If you're only doing a few entries this probably isn't for you. But if you're 30
 1. **Check subreddit rules before posting.** r/bestball is generally welcoming of community-built tools (Bag Manager and Best Ball Team Builder both posted successfully). r/fantasyfootball has stricter self-promo rules — verify before posting.
 2. **Post r/bestball first** — smaller, more targeted, higher signal. Use it as a test run.
 3. **Post during peak hours:** Tuesday–Thursday, 10am–2pm ET.
-4. **Respond to every comment in the first hour.** Early engagement matters for Reddit ranking.
+4. **Respond to every comment in the first hour.** Early engagement matters for Reddit ranking. The "roast my team" hook should generate comments — lean into the discussion, reply to roster critiques, engage authentically.
 5. **Stagger r/fantasyfootball** by at least a few hours, ideally the next day.
 6. **Optional follow-ups:** r/underdogfantasy, r/DraftKingsFantasy — smaller but highly targeted.
 7. **Do not cross-post.** Write native posts for each sub.
