@@ -6,7 +6,7 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, beta_expires_at)
-  values (NEW.id, '2026-04-25T23:59:59Z')
+  values (NEW.id, '2026-05-04T23:59:59Z')
   on conflict (id) do nothing;
   return NEW;
 end;

@@ -24,7 +24,7 @@ export default function BetaBanner() {
       <div className={`${styles.banner} ${styles.info}`}>
         <Clock size={16} />
         <span>
-          Your free beta access ends after the NFL Draft (April 25) — <strong>{betaDaysRemaining} day{betaDaysRemaining !== 1 ? 's' : ''} left</strong>.
+          Your free beta access ends after Best Ball Mania opens (May 4) — <strong>{betaDaysRemaining} day{betaDaysRemaining !== 1 ? 's' : ''} left</strong>.
           Subscribe now to keep Pro features.
         </span>
         <button className={styles.action} onClick={() => openPlanPicker()}>

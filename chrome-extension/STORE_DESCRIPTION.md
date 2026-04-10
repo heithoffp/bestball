@@ -23,4 +23,4 @@ Your synced data powers a full analytics dashboard:
 
 Free tier includes the dashboard, exposure analysis, roster viewer with archetypes, and multi-platform sync. Pro tier adds the draft overlay, combo analysis, ADP tracker, player rankings, and roster construction tools.
 
-Free through the NFL Draft. No credit card required.
+Free through May 4. No credit card required.

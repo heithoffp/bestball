@@ -16,5 +16,5 @@ create policy "Users can read own profile"
 
 -- Admin: grant beta access to a user
 -- insert into profiles (id, beta_expires_at)
--- values ('<user-uuid>', '2026-04-25T23:59:59Z')
+-- values ('<user-uuid>', '2026-05-04T23:59:59Z')
 -- on conflict (id) do update set beta_expires_at = excluded.beta_expires_at;

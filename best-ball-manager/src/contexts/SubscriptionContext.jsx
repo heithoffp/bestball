@@ -25,16 +25,12 @@ export function SubscriptionProvider({ children }) {
 
   // Derive tier from auth state + subscription status + beta flag
   // Subscription takes precedence over beta
-  // ?demo=true unlocks pro features for demo/screenshot mode
-  const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
   const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing';
-  const tier = isDemoMode
-    ? 'pro'
-    : !user
-      ? 'guest'
-      : hasActiveSubscription || isBetaActive
-        ? 'pro'
-        : 'free';
+  const tier = !user
+    ? 'guest'
+    : hasActiveSubscription || isBetaActive
+      ? 'pro'
+      : 'free';
 
   const isProUser = tier === 'pro';
 

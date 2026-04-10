@@ -14,7 +14,7 @@
 ### FEAT-001: User Authentication & Accounts
 **Status:** In Progress
 **Description:** Supabase auth with signup/login flow, cloud data persistence for authenticated users, and guest mode fallback via IndexedDB. Auth scaffolding partially exists (AuthButton component, Supabase dependency).
-**Tasks:** TASK-004, TASK-005, TASK-006, TASK-007, TASK-017, TASK-019, TASK-022, TASK-032
+**Tasks:** TASK-004, TASK-005, TASK-006, TASK-007, TASK-017, TASK-019, TASK-022, TASK-032, TASK-186
 
 ### FEAT-002: Subscription & Payment Integration
 **Status:** Not Started
@@ -30,7 +30,7 @@
 ### FEAT-021: Commercial Strategy & Positioning
 **Status:** In Progress (reopened for competitive refresh — free tools emerging on r/bestball)
 **Description:** Competitive analysis (pricing, features, positioning vs. Best Ball Overlay and emerging free tools), pricing model and tier definition, channel strategy for reaching serious best-ball drafters, and launch planning. Reopened April 2026 to refresh competitive landscape — free tools appearing on r/bestball weren't in original analysis. Outputs inform FEAT-002 (tier gating) and FEAT-014 (landing page messaging).
-**Tasks:** TASK-001, TASK-002, TASK-003, TASK-020, TASK-021, TASK-024, TASK-163, TASK-164
+**Tasks:** TASK-001, TASK-002, TASK-003, TASK-020, TASK-021, TASK-024, TASK-163, TASK-164, TASK-190
 
 ---
 
@@ -77,7 +77,7 @@
 ### FEAT-009: Extension Architecture & Scaffold
 **Status:** Not Started
 **Description:** Chrome extension manifest v3, content script injection targeting Underdog draft pages, and communication bridge to web app data (via shared Supabase storage or local messaging).
-**Tasks:** TASK-042, TASK-043, TASK-048, TASK-049, TASK-182
+**Tasks:** TASK-042, TASK-043, TASK-048, TASK-049, TASK-182, TASK-185
 
 ### FEAT-010: Draft Overlay UI
 **Status:** In Progress
@@ -106,7 +106,7 @@
 ### FEAT-012: First-Run Experience
 **Status:** Not Started
 **Description:** Empty state guidance on all tabs (Dashboard has partial empty state; other tabs need it). Sample data button that loads bundled demo CSVs so users can explore without their own data. Feature gating evaluation for guest conversion path.
-**Tasks:** TASK-023, TASK-168, TASK-169, TASK-172, TASK-173
+**Tasks:** TASK-023, TASK-168, TASK-169, TASK-172, TASK-173, TASK-187
 
 ### FEAT-013: Contextual Help
 **Status:** Not Started
@@ -116,7 +116,7 @@
 ### FEAT-014: Landing Page
 **Status:** Not Started
 **Description:** Marketing site with clear value proposition, product screenshots, pricing tiers, competitor comparison, and signup CTA. First touchpoint for potential subscribers. Must look polished (not "AI slop"), load fast, and have compelling Open Graph previews for Reddit/social sharing.
-**Tasks:** TASK-165, TASK-166, TASK-167
+**Tasks:** TASK-165, TASK-166, TASK-167, TASK-189
 
 ---
 

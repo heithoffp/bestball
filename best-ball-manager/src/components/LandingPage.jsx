@@ -260,7 +260,7 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
 
           {/* Pro tier */}
           <div className={styles.pricingCardPro}>
-            <div className={styles.pricingPopular}>Free through April 25</div>
+            <div className={styles.pricingPopular}>Free through May 4</div>
             <div className={styles.pricingTier}>Pro</div>
             <div className={styles.pricingPrice}>$20 <span>/ month</span></div>
             <p className={styles.pricingPromo}>$15/mo with a creator promo code</p>

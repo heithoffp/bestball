@@ -90,7 +90,7 @@
 **Why not $25-50 like competitors?** We don't charge more because we don't need to. No content studio to fund, no podcast to produce, no team of four. Just a focused tool that does one thing well, priced to be a no-brainer for anyone drafting 10+ best-ball teams.
 
 ### Beta pricing hook
-> Free through the NFL Draft (April 25). No credit card required. After that, $20/mo — or $15/mo with a promo code from your favorite content creator.
+> Free through Best Ball Mania opening week (May 4). No credit card required. After that, $20/mo — or $15/mo with a promo code from your favorite content creator.
 
 ---
 

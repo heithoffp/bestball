@@ -41,7 +41,7 @@ What it does:
 
 Works with both Underdog and DraftKings. Most tools out there only do Underdog.
 
-No account needed to try it. There's a "Load Sample Data" button on the site if you want to poke around before uploading your own stuff. Free tier covers the dashboard, exposures, and roster viewer with archetypes. Pro is $20/mo for the full suite but it's **free up to the NFL draft**.
+No account needed to try it. There's a "Load Sample Data" button on the site if you want to poke around before uploading your own stuff. Free tier covers the dashboard, exposures, and roster viewer with archetypes. Pro is $20/mo for the full suite but it's **free through May 4**.
 
 bestballexposures.com
 
@@ -59,7 +59,7 @@ If you do a lot of best ball drafts and have no idea what your overall portfolio
 
 **Best Ball Exposures** — automatically sync your rosters from Underdog or DraftKings and see exposure, strategy breakdown, stacking patterns, and draft tendencies across all your entries.
 
-The free tier gives you a portfolio dashboard, exposure analysis, and a roster viewer that auto-classifies each roster into a strategy archetype (Hero RB, Zero RB, etc). Pro ($20/mo) adds draft flow analysis, combo analysis, ADP tracking, and rankings — but it's all free through April 25 while I'm in beta.
+The free tier gives you a portfolio dashboard, exposure analysis, and a roster viewer that auto-classifies each roster into a strategy archetype (Hero RB, Zero RB, etc). Pro ($20/mo) adds draft flow analysis, combo analysis, ADP tracking, and rankings — but it's all free through May 4 while I'm in beta.
 
 Supports both platforms. No account required to try it, there's sample data you can load to see it in action.
 
@@ -85,14 +85,14 @@ If you're only doing a few entries this probably isn't for you. But if you're 30
 - [ ] Post is live on r/bestball
 - [ ] Post is live on r/fantasyfootball (or confirmed megathread approach)
 - [ ] Both posts include bestballexposures.com
-- [ ] Both posts mention free through April 25
+- [ ] Both posts mention free through May 4
 - [ ] Developer has monitored first-hour comments and responded
 - [ ] Post URLs are saved for reference
 
 ## Verification Approach
 1. Confirm both posts are publicly accessible at their Reddit URLs
 2. Verify each post contains the landing page URL
-3. Verify each post mentions the April 25 free beta deadline
+3. Verify each post mentions the May 4 free beta deadline
 4. Developer confirms comment monitoring is complete
 
 ## Files to Change

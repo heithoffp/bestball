@@ -250,7 +250,7 @@
 | THE SOLVER Draft Asst. | ~$25-45/mo | No | UD, DK |
 | Draft Caddy | $29.99/mo | No | UD, DK, Drafters |
 | LegUp Sidekick | ~$50/mo ($499/yr) | No | UD, DK |
-| **Us (target)** | **$20/mo ($15 w/ promo)** | **Beta free through NFL Draft** | **UD, DK** |
+| **Us (target)** | **$20/mo ($15 w/ promo)** | **Beta free through May 4** | **UD, DK** |
 
 ---
 

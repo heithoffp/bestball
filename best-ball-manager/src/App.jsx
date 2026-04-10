@@ -169,13 +169,8 @@ export default function App() {
         setStatus({ type: '', msg: '' });
       } else {
         // Unauthenticated: don't auto-load — show landing page instead.
-        // Demo data is loaded on demand via loadDemoData(), or auto-loaded via ?demo=true.
-        const autoDemo = new URLSearchParams(window.location.search).get('demo') === 'true';
-        if (autoDemo) {
-          await loadFromAssets();
-        } else {
-          setStatus({ type: '', msg: '' });
-        }
+        // Demo data is loaded on demand via loadDemoData() (Try Demo button).
+        setStatus({ type: '', msg: '' });
       }
     } catch (err) {
       console.error('Load failed', err);
@@ -184,8 +179,8 @@ export default function App() {
   }
 
   async function loadFromAssets({ forceDemo = false } = {}) {
-    // Use demo rosters when ?demo=true is in the URL or when explicitly requested
-    const useDemo = forceDemo || new URLSearchParams(window.location.search).get('demo') === 'true';
+    // Use demo rosters when explicitly requested (Try Demo button)
+    const useDemo = forceDemo;
     const rosterRaw = useDemo
       ? Object.values(demoRosterModules)[0]
       : Object.values(rosterModules)[0];
