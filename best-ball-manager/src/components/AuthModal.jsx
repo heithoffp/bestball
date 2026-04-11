@@ -188,10 +188,12 @@ export default function AuthModal({ isOpen, onClose, message }) {
             <button type="submit" className="toolbar-btn modal-submit-btn" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign In'}
             </button>
+            {/* Google OAuth disabled until Chrome extension update is published
             <div className="modal-divider">or</div>
             <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
               Continue with Google
             </button>
+            */}
           </form>
         )}
 
@@ -270,10 +272,12 @@ export default function AuthModal({ isOpen, onClose, message }) {
             >
               {loading ? 'Creating account…' : 'Create Account'}
             </button>
+            {/* Google OAuth disabled until Chrome extension update is published
             <div className="modal-divider">or</div>
             <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
               Continue with Google
             </button>
+            */}
           </form>
         )}
 
