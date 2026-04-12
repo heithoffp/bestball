@@ -149,7 +149,7 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
 
       {/* ── Hero ── */}
       <section className={`${styles.section} ${styles.hero}`}>
-        <div className={styles.heroBadge}>Free through the NFL Draft. No credit card required.</div>
+        <div className={styles.heroBadge}>No credit card required.</div>
         <h1 className={styles.heroHeadline}>
           You Draft Portfolios. Your Tools Should Analyze Them.
         </h1>
