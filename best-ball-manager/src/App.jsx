@@ -372,7 +372,7 @@ export default function App() {
             )}
             {activeTab === 'combo' && (
               canAccessFeature(tier, 'combo') || subLoading
-                ? <ComboAnalysis rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
+                ? <ComboAnalysis rosterData={rosterData} masterPlayers={masterPlayers} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Combo Analysis" onSignUp={() => setShowAuthModal(true)} />
             )}
           </Suspense>

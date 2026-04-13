@@ -19,7 +19,7 @@ from collections import defaultdict
 
 from models import load_players, load_epoch_snapshots
 from engine import load_calibration, run_simulation
-from output_gen import generate_tier1, generate_tier2, save_outputs, generate_pilot_report
+from output_gen import generate_tier1, generate_tier2, generate_tier3, save_outputs, generate_pilot_report
 
 
 def main():
@@ -38,12 +38,14 @@ def main():
                         help="Random seed (default: 42)")
     parser.add_argument("--teams", type=int, default=12,
                         help="Number of teams per draft (default: 12)")
-    parser.add_argument("--rounds", type=int, default=6,
-                        help="Number of rounds to simulate (default: 6)")
+    parser.add_argument("--rounds", type=int, default=4,
+                        help="Number of rounds to simulate (default: 4)")
     parser.add_argument("--output-dir", type=str, default=None,
                         help="Output directory (default: simulation/output/)")
     parser.add_argument("--multi-epoch", action="store_true",
                         help="Run simulation across one epoch per ISO week (equal weight)")
+    parser.add_argument("--pos-dampen", type=float, default=1.0,
+                        help="Dampen position modifiers toward 1.0 (0.0=off, 0.5=half, 1.0=full, default: 1.0)")
 
     args = parser.parse_args()
 
@@ -77,6 +79,7 @@ def main():
     else:
         print(f"  Calibration: NOT FOUND — sigma={args.sigma_slope} * ADP + {args.sigma_intercept} (hardcoded)")
     print(f"  ADP cutoff: {args.adp_cutoff}")
+    print(f"  Position modifier dampen: {args.pos_dampen}")
     print(f"  Seed: {args.seed}")
     print()
 
@@ -96,6 +99,8 @@ def main():
         merged_combo_counts = defaultdict(int)
         merged_combo_players = {}
         merged_pick_events = []
+        merged_pick_sequences = defaultdict(int)
+        all_player_ids = None
 
         for epoch_idx, (adp_date, players) in enumerate(epochs):
             epoch_sims = base_sims + (remainder if epoch_idx == n_epochs - 1 else 0)
@@ -103,7 +108,7 @@ def main():
             print(f"  Epoch {epoch_idx + 1}/{n_epochs}: {adp_date}  "
                   f"({epoch_sims:,} sims, seed={epoch_seed}, "
                   f"{len(players)} players)")
-            cc, cp, pe = run_simulation(
+            cc, cp, pe, ps, pids = run_simulation(
                 players,
                 num_simulations=epoch_sims,
                 sigma_slope=args.sigma_slope,
@@ -113,16 +118,25 @@ def main():
                 seed=epoch_seed,
                 progress_interval=max(1, epoch_sims // 5),
                 calibration=cal,
+                pos_dampen=args.pos_dampen,
             )
             for k, v in cc.items():
                 merged_combo_counts[k] += v
                 if k not in merged_combo_players:
                     merged_combo_players[k] = cp[k]
             merged_pick_events.extend(pe)
+            # Merge pick sequences — convert local indices to player_ids, then re-key
+            for (i1, i2, i3, i4), count in ps.items():
+                key = (pids[i1], pids[i2], pids[i3], pids[i4])
+                merged_pick_sequences[key] += count
+            all_player_ids = pids  # keep latest for reference
 
         combo_counts = dict(merged_combo_counts)
         combo_players = merged_combo_players
         pick_events = merged_pick_events
+        # Convert merged sequences back to a format generate_tier3 expects
+        # (keys are already player_id strings, so we pass them directly)
+        pick_sequences_by_name = dict(merged_pick_sequences)
         adp_date = epochs[-1][0]
         multi_epoch_meta = {
             "multi_epoch": True,
@@ -136,7 +150,7 @@ def main():
         print(f"  ADP range: {players[0].adp:.1f} - {players[-1].adp:.1f}")
         print(f"  Positions: {', '.join(sorted(set(p.position for p in players)))}")
         print()
-        combo_counts, combo_players, pick_events = run_simulation(
+        combo_counts, combo_players, pick_events, pick_sequences, sim_player_ids = run_simulation(
             players,
             num_simulations=num_sims,
             sigma_slope=args.sigma_slope,
@@ -146,7 +160,13 @@ def main():
             seed=args.seed,
             progress_interval=max(1, num_sims // 10),
             calibration=cal,
+            pos_dampen=args.pos_dampen,
         )
+        # Convert index-keyed sequences to player_id-keyed for generate_tier3
+        pick_sequences_by_name = {}
+        for (i1, i2, i3, i4), count in pick_sequences.items():
+            key = (sim_player_ids[i1], sim_player_ids[i2], sim_player_ids[i3], sim_player_ids[i4])
+            pick_sequences_by_name[key] = count
         multi_epoch_meta = {}
 
     elapsed = time.time() - start_time
@@ -169,15 +189,17 @@ def main():
         "num_teams": args.teams,
         "num_rounds": args.rounds,
         "seed": args.seed,
+        "pos_dampen": args.pos_dampen,
         "generated": datetime.now(timezone.utc).isoformat(),
         **multi_epoch_meta,
     }
 
     tier1_data = generate_tier1(combo_counts, combo_players)
     tier2_data = generate_tier2(pick_events)
-    tier1_path, tier2_path = save_outputs(tier1_data, tier2_data, metadata, output_dir)
-    print(f"  Tier 1: {tier1_path}")
-    print(f"  Tier 2: {tier2_path}")
+    tier3_data = generate_tier3(pick_sequences_by_name)
+    output_paths = save_outputs(tier1_data, tier2_data, metadata, output_dir, tier3_data=tier3_data)
+    for p in output_paths:
+        print(f"  {os.path.basename(p)}: {p}")
     print()
 
     # Step 3: Pilot report
@@ -185,7 +207,7 @@ def main():
         print("Generating pilot report...")
         report = generate_pilot_report(
             combo_counts, combo_players, tier2_data, metadata,
-            tier1_path, tier2_path, output_dir
+            output_paths[0], output_paths[1], output_dir
         )
         print()
         print("=== Pilot Report ===")

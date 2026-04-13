@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 
-def generate_tier1(combo_counts: dict, combo_players: dict, min_count: int = 2) -> dict:
+def generate_tier1(combo_counts: dict, combo_players: dict, min_count: int = 1) -> dict:
     """Build the Tier 1 frequency table — combos observed min_count or more times.
 
     Stores only the count as an integer value — the combo key itself encodes the player IDs
@@ -54,12 +54,62 @@ def generate_tier2(pick_events: list) -> dict:
     return {"rounds": dict(rounds)}
 
 
-def save_outputs(tier1_data: dict, tier2_data: dict, metadata: dict,
-                 output_dir: str) -> tuple[str, str]:
-    """Save Tier 1 and Tier 2 outputs as JSON files.
+def generate_tier3(pick_sequences_by_name: dict, min_count: int = 1) -> dict:
+    """Build Tier 3 per-player conditional probability tables for Draft Explorer.
+
+    Unpacks 4-pick sequences into nested conditionals:
+      R1: unconditional counts
+      R2: counts given specific R1 player
+      R3: counts given specific R1+R2 players
+      R4: counts given specific R1+R2+R3 players
+
+    Uses player_id strings as keys for direct client-side lookup.
+    Stores counts — client normalizes to probabilities.
+
+    Args:
+        pick_sequences_by_name: dict mapping (p1_id, p2_id, p3_id, p4_id) -> count
+        min_count: minimum count to include an entry (prunes rare paths)
 
     Returns:
-        Tuple of (tier1_path, tier2_path).
+        Dict with "r1"/"r2"/"r3"/"r4" nested count dicts.
+    """
+    r1_counts = defaultdict(int)
+    r2_counts = defaultdict(lambda: defaultdict(int))
+    r3_counts = defaultdict(lambda: defaultdict(int))
+    r4_counts = defaultdict(lambda: defaultdict(int))
+
+    for (p1, p2, p3, p4), count in pick_sequences_by_name.items():
+        r1_counts[p1] += count
+        r2_counts[p1][p2] += count
+        r3_counts[f"{p1}|{p2}"][p3] += count
+        r4_counts[f"{p1}|{p2}|{p3}"][p4] += count
+
+    # Prune entries below min_count
+    def prune(d, threshold):
+        result = {}
+        for key, sub in d.items():
+            if isinstance(sub, dict):
+                filtered = {k: v for k, v in sub.items() if v >= threshold}
+                if filtered:
+                    result[key] = filtered
+            elif sub >= threshold:
+                result[key] = sub
+        return result
+
+    return {
+        "r1": {k: v for k, v in r1_counts.items() if v >= min_count},
+        "r2": prune(r2_counts, min_count),
+        "r3": prune(r3_counts, min_count),
+        "r4": prune(r4_counts, min_count),
+    }
+
+
+def save_outputs(tier1_data: dict, tier2_data: dict, metadata: dict,
+                 output_dir: str, tier3_data: dict = None) -> tuple:
+    """Save Tier 1, Tier 2, and optionally Tier 3 outputs as JSON files.
+
+    Returns:
+        Tuple of output paths.
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -75,7 +125,18 @@ def save_outputs(tier1_data: dict, tier2_data: dict, metadata: dict,
     with open(tier2_path, "w", encoding="utf-8") as f:
         json.dump(tier2_data, f, separators=(",", ":"))
 
-    return tier1_path, tier2_path
+    paths = [tier1_path, tier2_path]
+
+    if tier3_data is not None:
+        # Split tier3 into per-round files for progressive loading
+        for rnd in ("r1", "r2", "r3", "r4"):
+            rnd_data = {"metadata": metadata, rnd: tier3_data[rnd]}
+            rnd_path = os.path.join(output_dir, f"tier3_{rnd}.json")
+            with open(rnd_path, "w", encoding="utf-8") as f:
+                json.dump(rnd_data, f, separators=(",", ":"))
+            paths.append(rnd_path)
+
+    return tuple(paths)
 
 
 def generate_pilot_report(combo_counts: dict, combo_players: dict,

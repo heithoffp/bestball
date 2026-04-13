@@ -37,10 +37,10 @@ def load_calibration(path=None):
 def calibrated_sigma(adp, cal, rnd=None, position=None):
     """Compute calibrated sigma(ADP) with all refinement caps applied.
 
-    Replicates fitted_sigma() from validate_model.py:
-      base = max(sigma_min, slope * ADP + intercept)
-      If ADP > sigma_max_adp_limit: return base (uncapped beyond plateau region)
-      Otherwise: apply global, round, and position-specific caps.
+    base = max(sigma_min, slope * ADP + intercept)
+    Then apply global, position, and round caps. Round caps ALWAYS apply
+    (even beyond sigma_max_adp_limit) to prevent late-ADP players from
+    having unreasonably large sigma in early rounds.
 
     Args:
         adp: Player ADP value.
@@ -52,18 +52,23 @@ def calibrated_sigma(adp, cal, rnd=None, position=None):
         Calibrated sigma value (float > 0).
     """
     base = max(cal["sigma_min"], cal["sigma_slope"] * adp + cal["sigma_intercept"])
-    if adp > cal.get("sigma_max_adp_limit", float("inf")):
-        return base
     sigma_max = cal.get("sigma_max", float("inf"))
-    pos_cap = cal.get("position_sigma_max", {}).get(position, sigma_max) if position else sigma_max
     rnd_cap = float(cal.get("round_sigma_max", {}).get(str(rnd), sigma_max)) if rnd else sigma_max
+
+    if adp > cal.get("sigma_max_adp_limit", float("inf")):
+        # Beyond the plateau region: skip position cap but still apply round cap
+        return min(base, rnd_cap)
+
+    pos_cap = cal.get("position_sigma_max", {}).get(position, sigma_max) if position else sigma_max
     return min(base, sigma_max, pos_cap, rnd_cap)
 
 
 def mu_shift(adp, cal):
     """Mean-shift correction for high-ADP systematic bias.
 
-    Replicates fitted_mu() from validate_model.py.
+    Shifts high-ADP players earlier to match observed drafting patterns.
+    Clamped so the effective ADP never drops below half the original ADP,
+    preventing the linear extrapolation from overcorrecting at extreme ADPs.
 
     Args:
         adp: Player ADP value.
@@ -73,7 +78,12 @@ def mu_shift(adp, cal):
         Mean shift to add to effective ADP (float).
     """
     if adp >= cal.get("mu_adp_threshold", float("inf")):
-        return cal.get("mu_slope", 0.0) * adp + cal.get("mu_intercept", 0.0)
+        raw_shift = cal.get("mu_slope", 0.0) * adp + cal.get("mu_intercept", 0.0)
+        # Clamp: effective ADP must stay >= 75% of original ADP.
+        # Prevents linear extrapolation from overcorrecting at high ADPs
+        # (e.g., ADP 118 was shifting to effADP 31 without this).
+        min_shift = -(adp * 0.25)
+        return max(raw_shift, min_shift)
     return 0.0
 
 
@@ -82,11 +92,13 @@ def mu_shift(adp, cal):
 # ---------------------------------------------------------------------------
 
 def base_utility(adp: float, pick: int, sigma_slope: float, sigma_intercept: float) -> float:
-    """Gaussian base utility for a player at a given pick.
+    """Asymmetric utility for a player at a given pick.
 
-    sigma(ADP) = sigma_slope * ADP + sigma_intercept
-    U(ADP, pick) = exp(-0.5 * ((pick - ADP) / sigma(ADP))^2)
+    Reaches (pick < ADP): Gaussian penalty — reaching costs utility.
+    Falls (pick >= ADP): utility = 1.0 — fallers are always attractive.
     """
+    if pick >= adp:
+        return 1.0
     sigma = sigma_slope * adp + sigma_intercept
     z = (pick - adp) / sigma
     return np.exp(-0.5 * z * z)
@@ -94,11 +106,12 @@ def base_utility(adp: float, pick: int, sigma_slope: float, sigma_intercept: flo
 
 def compute_utilities(players: list[Player], pick: int,
                       sigma_slope: float, sigma_intercept: float) -> np.ndarray:
-    """Vectorized utility computation for all available players at a pick."""
+    """Vectorized asymmetric utility computation for all available players at a pick."""
     adps = np.array([p.adp for p in players])
     sigmas = sigma_slope * adps + sigma_intercept
     z = (pick - adps) / sigmas
-    return np.exp(-0.5 * z * z)
+    reach_mask = pick < adps  # True where player hasn't reached their ADP yet
+    return np.where(reach_mask, np.exp(-0.5 * z * z), 1.0)
 
 
 def simulate_draft(players: list[Player], rng: np.random.Generator,
@@ -187,7 +200,7 @@ def run_simulation(players: list[Player], num_simulations: int,
                    sigma_slope: float = 0.1, sigma_intercept: float = 1.5,
                    num_teams: int = 12, num_rounds: int = 6,
                    seed: int = 42, progress_interval: int = 10000,
-                   calibration: dict = None):
+                   calibration: dict = None, pos_dampen: float = 1.0):
     """Run multiple draft simulations, collecting combo counts and pick events.
 
     Uses pre-computed utility matrix (as Python lists for zero-overhead access)
@@ -253,7 +266,12 @@ def run_simulation(players: list[Player], num_simulations: int,
 
     pick_numbers = np.array([p for p, _ in pick_order])
     z_matrix = (pick_numbers[:, None] - eff_adps[None, :]) / sigma_matrix
-    utility_matrix = np.exp(-0.5 * z_matrix * z_matrix)
+
+    # Asymmetric utility: Gaussian penalty for reaches (pick < ADP), but players
+    # who fall past their ADP are maximally attractive (utility = 1.0).
+    # In real drafts, a faller is a value grab — no one passes on Bijan at pick 5.
+    reach_mask = pick_numbers[:, None] < eff_adps[None, :]  # True where reaching
+    utility_matrix = np.where(reach_mask, np.exp(-0.5 * z_matrix * z_matrix), 1.0)
     # Convert to nested Python lists — eliminates numpy indexing overhead
     util_rows = utility_matrix.tolist()  # list[list[float]]
 
@@ -278,6 +296,7 @@ def run_simulation(players: list[Player], num_simulations: int,
 
     # Position modifier table: {(qb_capped, rb_capped, wr_capped, te_capped): [4 floats]}
     # Pre-populate all 3×4×4×3 = 144 possible capped states so the inner loop never misses.
+    # When pos_dampen < 1.0, pull modifiers toward 1.0: dampened = 1.0 + (raw - 1.0) * pos_dampen
     _default_mods = [1.0, 1.0, 1.0, 1.0]
     raw_pm = calibration.get("position_modifiers", {}) if calibration else {}
     position_modifiers_table = {}
@@ -288,12 +307,15 @@ def run_simulation(players: list[Player], num_simulations: int,
                     sk = f"QB{qb}RB{rb}WR{wr}TE{te}"
                     pm = raw_pm.get(sk)
                     if pm:
-                        position_modifiers_table[(qb, rb, wr, te)] = [
+                        raw_vals = [
                             float(pm.get("QB", 1.0)),
                             float(pm.get("RB", 1.0)),
                             float(pm.get("WR", 1.0)),
                             float(pm.get("TE", 1.0)),
                         ]
+                        if pos_dampen < 1.0:
+                            raw_vals = [1.0 + (v - 1.0) * pos_dampen for v in raw_vals]
+                        position_modifiers_table[(qb, rb, wr, te)] = raw_vals
                     else:
                         position_modifiers_table[(qb, rb, wr, te)] = _default_mods
 
@@ -304,6 +326,9 @@ def run_simulation(players: list[Player], num_simulations: int,
     combo_players = {}
     all_pick_events = []
     all_pick_events_append = all_pick_events.append  # avoid attribute lookup in loop
+
+    # Per-player pick sequences for tier 3 (Draft Explorer)
+    pick_sequences = defaultdict(int)
 
     for sim in range(num_simulations):
         if progress_interval and (sim + 1) % progress_interval == 0:
@@ -408,4 +433,11 @@ def run_simulation(players: list[Player], num_simulations: int,
             if combo_key not in combo_players:
                 combo_players[combo_key] = ids
 
-    return dict(combo_counts), combo_players, all_pick_events
+            # Record per-player pick sequence (in draft order) for tier 3
+            # team_roster_indices preserves pick order: [0]=R1, [1]=R2, ...
+            if len(indices) >= 4:
+                # Use global player indices as compact ints — mapped to player_ids in output
+                r1, r2, r3, r4 = indices[0], indices[1], indices[2], indices[3]
+                pick_sequences[(r1, r2, r3, r4)] += 1
+
+    return dict(combo_counts), combo_players, all_pick_events, dict(pick_sequences), player_ids

@@ -4,6 +4,7 @@ import { FolderSync } from 'lucide-react';
 import EmptyState from './EmptyState';
 import CombinedSearchInput from './filters/CombinedSearchInput';
 import { NFL_TEAMS } from '../utils/nflTeams';
+import DraftExplorer from './DraftExplorer';
 
 // Position palette — shared across all views
 const POS_COLORS = {
@@ -120,7 +121,12 @@ const SIMILARITY_HELP_ANNOTATIONS = [
   { id: 'similarity-row', label: 'Overlap Bar', anchor: 'below', description: 'The background fill shows overlap relative to your most similar pair. Click any row to see the shared players. The #1 pair is highlighted in gold.' },
 ];
 
-export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
+const EXPLORER_HELP_ANNOTATIONS = [
+  { id: 'draft-grid', label: 'Draft Board', anchor: 'above', description: 'Players arranged by ADP in snake draft order. Color intensity shows how often each player was drafted in that round across 10M simulated drafts. Click a player to see the next round\'s distribution.' },
+  { id: 'combo-results', label: 'Combo Results', anchor: 'below', description: 'After selecting 4 players, see how often this combo appeared in 10M simulated drafts and which of your actual rosters have it.' },
+];
+
+export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const [activeTab, setActiveTab] = useState('stacks');
   const [expandedQBs, setExpandedQBs] = useState(new Set());
   const [minCount, setMinCount] = useState(1);
@@ -445,6 +451,7 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
           { key: 'stacks', label: 'Stack Profiles' },
           { key: 'qbpairs', label: 'QB Pairs' },
           { key: 'similarity', label: 'Roster Similarity' },
+          { key: 'explorer', label: 'Draft Explorer' },
         ].map(t => (
           <button
             key={t.key}
@@ -456,24 +463,26 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <label className="filter-select-label" style={{ marginBottom: 0 }}>
-          {activeTab === 'stacks' ? 'Min stacks' : activeTab === 'similarity' ? 'Min overlap' : 'Min count'}
-        </label>
-        <input
-          type="number"
-          value={minCount}
-          min={1}
-          onChange={e => setMinCount(Math.max(1, Number(e.target.value) || 1))}
-          className="filter-select"
-          style={{ width: 52 }}
-        />
-      </div>
+      {activeTab !== 'explorer' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label className="filter-select-label" style={{ marginBottom: 0 }}>
+            {activeTab === 'stacks' ? 'Min stacks' : activeTab === 'similarity' ? 'Min overlap' : 'Min count'}
+          </label>
+          <input
+            type="number"
+            value={minCount}
+            min={1}
+            onChange={e => setMinCount(Math.max(1, Number(e.target.value) || 1))}
+            className="filter-select"
+            style={{ width: 52 }}
+          />
+        </div>
+      )}
     </div>
   );
 
   return (
-    <TabLayout toolbar={toolbarControls} helpAnnotations={activeTab === 'stacks' ? STACK_HELP_ANNOTATIONS : activeTab === 'qbpairs' ? QBPAIRS_HELP_ANNOTATIONS : SIMILARITY_HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
+    <TabLayout toolbar={toolbarControls} helpAnnotations={activeTab === 'stacks' ? STACK_HELP_ANNOTATIONS : activeTab === 'qbpairs' ? QBPAIRS_HELP_ANNOTATIONS : activeTab === 'explorer' ? EXPLORER_HELP_ANNOTATIONS : SIMILARITY_HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
 
       {/* ── Stack Profiles ─────────────────────────────────────────────────── */}
       {activeTab === 'stacks' && (
@@ -1014,6 +1023,11 @@ export default function ComboAnalysis({ rosterData = [], onNavigateToRosters = n
           })()}
         </div>
         </>
+      )}
+
+      {/* ── Draft Explorer ───────────────────────────────────────────────── */}
+      {activeTab === 'explorer' && (
+        <DraftExplorer masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={onNavigateToRosters} />
       )}
 
     </TabLayout>

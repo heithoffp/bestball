@@ -1,0 +1,461 @@
+/* DraftExplorer — interactive draft board with probability heatmap */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Slot Selector ──────────────────────────────────────────────── */
+
+.slotSection {
+  text-align: center;
+}
+
+.slotLabel {
+  font-family: var(--font-body);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.slotRow {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.slotBtn {
+  width: 36px;
+  height: 32px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default),
+              border-color var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.slotBtn:hover {
+  background: var(--surface-2);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.slotBtnActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 700;
+}
+
+/* ── Path Breadcrumb ────────────────────────────────────────────── */
+
+.pathBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  flex-wrap: wrap;
+}
+
+.pathStep {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pathRound {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.pathPlayer {
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pathPending {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.pathArrow {
+  color: var(--text-muted);
+  margin: 0 2px;
+  font-size: 10px;
+}
+
+.pathActions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.pathActionBtn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+.pathActionBtn:hover {
+  color: var(--text-primary);
+}
+
+/* ── Position Badge ─────────────────────────────────────────────── */
+
+.posBadge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  color: var(--text-inverse);
+}
+
+/* ── Draft Board Grid ───────────────────────────────────────────── */
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: 36px repeat(12, 1fr);
+  gap: 2px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.roundLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-0);
+  min-height: 56px;
+}
+
+.roundLabelActive {
+  color: var(--accent);
+}
+
+/* ── Grid Cells ─────────────────────────────────────────────────── */
+
+.cell {
+  position: relative;
+  padding: 4px 3px;
+  text-align: center;
+  border-radius: 3px;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--surface-1);
+  transition: transform var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+  cursor: default;
+  overflow: hidden;
+}
+
+/* Fill bar — rises from the bottom, height set via inline style */
+.cellFill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 0 0 3px 3px;
+  opacity: 0.35;
+  pointer-events: none;
+  transition: height var(--duration-normal) var(--ease-default);
+}
+
+/* Content sits above the fill bar */
+.cellContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cellName {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cellAdp {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.cellSelectable {
+  cursor: pointer;
+}
+
+.cellDepleted.cellSelectable {
+  opacity: 0.35;
+}
+
+.cellSelectable:hover {
+  transform: scale(1.06);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  z-index: 3;
+}
+
+.cellSelected {
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 10px rgba(232, 191, 74, 0.35);
+  z-index: 2;
+}
+
+.cellDepleted {
+  opacity: 0.2;
+}
+
+.cellDepleted .cellName,
+.cellDepleted .cellAdp,
+.cellDepleted .posBadge {
+  filter: grayscale(1);
+}
+
+/* ── Unseen Combo — user has it but sim never produced it ────────── */
+
+.cellUnseen {
+  opacity: 0.6;
+  border: 1px dashed var(--negative);
+}
+
+.rosterBadge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(232, 191, 74, 0.15);
+  border-radius: 3px;
+  padding: 1px 3px;
+  line-height: 1;
+}
+
+.unseenBadge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--negative);
+  background: rgba(231, 76, 60, 0.15);
+  border-radius: 3px;
+  padding: 1px 3px;
+  line-height: 1;
+}
+
+/* ── Cell Percentage ─────────────────────────────────────────────── */
+
+.cellPct {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+/* ── Combo Results ──────────────────────────────────────────────── */
+
+.comboResults {
+  padding: 14px 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.comboTitle {
+  font-family: var(--font-body);
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.comboFrequency {
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.comboRosterCount {
+  font-family: var(--font-body);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.comboRosterList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.comboRosterItem {
+  font-family: var(--font-body);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  padding: 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comboRosterItem::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.progressiveMatch {
+  font-family: var(--font-body);
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.seeRostersBtn {
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-xs);
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-default),
+              border-color var(--duration-fast) var(--ease-default);
+}
+
+.seeRostersBtn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Explainer ──────────────────────────────────────────────────── */
+
+.explainer {
+  font-family: var(--font-body);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding: 8px 0;
+}
+
+/* ── Loading / Empty ────────────────────────────────────────────── */
+
+.loading {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+
+.emptyPrompt {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .gridContainer {
+    grid-template-columns: 28px repeat(12, 1fr);
+    gap: 1px;
+  }
+
+  .cell {
+    min-height: 48px;
+    padding: 3px 2px;
+  }
+
+  .cellName {
+    font-size: 9px;
+  }
+
+  .cellAdp {
+    font-size: 8px;
+  }
+
+  .roundLabel {
+    font-size: 10px;
+    min-height: 48px;
+  }
+
+  .slotBtn {
+    width: 30px;
+    height: 28px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .gridContainer {
+    overflow-x: auto;
+    grid-template-columns: 24px repeat(12, minmax(52px, 1fr));
+  }
+
+  .pathBar {
+    font-size: 11px;
+    gap: 4px;
+  }
+}
