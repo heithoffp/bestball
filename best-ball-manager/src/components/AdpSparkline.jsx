@@ -11,11 +11,12 @@ const MAX_POINTS = 10;
 function AdpSparkline({ history }) {
   if (!history || history.length === 0) return null;
 
-  const data = history
-    .filter(h => h.adpPick !== null)
-    .slice(-MAX_POINTS);
+  const allValid = history.filter(h => h.adpPick !== null);
+  if (allValid.length < 2) return null;
 
-  if (data.length < 2) return null;
+  // Always prefer Underdog — mixing platforms causes zigzag ("humps") since ADP differs per platform.
+  const underdog = allValid.filter(h => h.platform === 'underdog');
+  const data = (underdog.length >= 2 ? underdog : allValid).slice(-MAX_POINTS);
 
   const first = data[0].adpPick;
   const last = data[data.length - 1].adpPick;
