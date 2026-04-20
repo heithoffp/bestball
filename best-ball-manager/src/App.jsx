@@ -1,5 +1,6 @@
 // src/App.jsx
 import React, { useEffect, useState, Suspense, lazy, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
@@ -19,6 +20,18 @@ import { trackEvent } from './utils/analytics';
 import BrandLogo from './components/BrandLogo';
 import FeedbackButton from './components/FeedbackButton';
 import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network } from 'lucide-react';
+
+const TAB_PATHS = {
+  dashboard: '/',
+  exposures: '/exposures',
+  rosters: '/rosters',
+  timeseries: '/adp-tracker',
+  combo: '/combos',
+  rankings: '/rankings',
+  draftflow: '/draft-assistant',
+};
+
+const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_PATHS).map(([k, v]) => [v, k]));
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -73,8 +86,10 @@ export default function App() {
   const [masterPlayers, setMasterPlayers] = useState([]);
   const [adpSnapshots, setAdpSnapshots] = useState([]);
   const [adpByPlatform, setAdpByPlatform] = useState({});
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = PATH_TO_TAB[location.pathname] ?? 'dashboard';
   const [status, setStatus] = useState({ type: '', msg: '' });
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [rankingsByPlatform, setRankingsByPlatform] = useState({});
   const { isMobile } = useMediaQuery();
   const { user, loading: authLoading, recoveryMode } = useAuth();
@@ -93,9 +108,9 @@ export default function App() {
 
   const navigateToRosters = useCallback((context) => {
     setRosterNavContext(context);
-    setActiveTab('rosters');
+    navigate(TAB_PATHS.rosters);
     trackEvent('tab_viewed', { tab: 'rosters' });
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -297,7 +312,7 @@ export default function App() {
               <button
                 key={key}
                 className={`tab-button${activeTab === key ? ' active' : ''}${locked ? ' locked' : ''}`}
-                onClick={() => { if (key === 'rosters') setRosterNavContext(null); setActiveTab(key); setHelpOpen(false); trackEvent('tab_viewed', { tab: key }); }}
+                onClick={() => { if (key === 'rosters') setRosterNavContext(null); navigate(TAB_PATHS[key]); setHelpOpen(false); trackEvent('tab_viewed', { tab: key }); }}
               >
                 {isMobile ? (
                   <>
@@ -339,7 +354,7 @@ export default function App() {
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
-            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={setActiveTab} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
+            {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={(key) => navigate(TAB_PATHS[key])} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
             {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
             {activeTab === 'draftflow' && (
               canAccessFeature(tier, 'draftflow') || subLoading
