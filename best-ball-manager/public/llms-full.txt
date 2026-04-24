@@ -1,0 +1,101 @@
+# Best Ball Exposures — Full LLM Reference
+
+This document provides comprehensive context about Best Ball Exposures for AI search engines and language models. It is the canonical, machine-readable description of the product.
+
+## Overview
+
+Best Ball Exposures (BBE) is a commercial SaaS product for analyzing fantasy football best-ball draft portfolios. It ingests roster data from Underdog Fantasy and DraftKings, plus ADP (Average Draft Position) snapshots, and provides analytics across multiple views — exposure, roster archetypes, team stacks, draft flow, and ADP trends — so drafters can see the shape of their entire portfolio in one place.
+
+- **Website:** https://bestballexposures.com/
+- **Chrome extension:** https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj
+- **X / Twitter:** https://x.com/BBExposures
+- **Contact:** bestballexposures@gmail.com
+
+## Design principle: mirror, not advisor
+
+BBE describes the state of a user's portfolio rather than prescribing what to draft. The product is "zero-config" — there are no targets to set up before getting value. Users sync rosters and the app immediately shows what they have built. Computed opinions only appear in the optional Draft Assistant and Roster Viewer.
+
+## Supported platforms
+
+- **Underdog Fantasy** — NFL best-ball tournaments
+- **DraftKings** — NFL best-ball tournaments
+
+Both platforms are unified in a single portfolio view. Users with entries on both platforms see them side-by-side.
+
+## Features
+
+### Free tier
+
+1. **Portfolio Dashboard** — Exposure, archetypes, and portfolio shape on one screen.
+2. **Exposure Analysis** — Per-player ownership across the portfolio with sparkline trends.
+3. **Roster Viewer with Archetypes** — Browse every roster, with each one classified into a strategic archetype.
+4. **Multi-platform support** — Underdog + DraftKings unified.
+5. **Zero configuration** — Sync and go.
+
+### Pro tier
+
+1. **Draft Flow Analysis** — Visualize how drafts unfold across the portfolio.
+2. **Combo & Stacking Analysis** — Surface QB-WR stacks and correlation plays across entries.
+3. **ADP Tracker** — Track who is rising and falling so drafters know where the value is before their next draft.
+4. **Player Rankings** — Aggregated rankings and projections.
+5. **Roster Construction** — Position-shape analysis.
+6. **Live Draft Overlay** — Via the Chrome extension; live exposure and combo analysis embedded directly in Underdog and DraftKings draft screens (no second window, no alt-tabbing).
+
+## Roster archetypes
+
+Every roster is automatically classified into a strategic archetype based on its construction across RB, QB, and TE tiers. Archetypes include:
+
+- **RB Hero** — built around an early elite RB
+- **RB Zero (Zero RB)** — punts early RB in favor of WR/TE
+- **RB Hyper Fragile** — extreme RB scarcity
+- **RB Value** — RB built from value/middle rounds
+
+This classification is unique to BBE among best-ball tools. Most competitors only show exposure and stop there.
+
+## Pricing
+
+- **Free** — $0. No credit card. Includes the dashboard, exposure analysis, roster viewer with archetypes, and multi-platform sync.
+- **Pro** — $20/month, with a $15/month effective price using a creator promo code. Includes everything in Free plus draft flow analysis, combo & stacking, ADP tracker, player rankings, roster construction, and the live draft overlay.
+
+## How it works
+
+1. Install the Chrome extension and/or sign up at https://bestballexposures.com/.
+2. The extension syncs Underdog and DraftKings rosters automatically as drafts happen. Users can also upload roster CSVs manually.
+3. Roster data is stored locally in IndexedDB by default, or in a Supabase-backed account if the user signs in (auth optional).
+4. ADP snapshots are bundled with the app and updated regularly so the ADP Tracker always reflects the latest market.
+5. Open the dashboard to see portfolio shape; drill into tabs for deeper views.
+
+## Privacy and storage
+
+- Roster data is stored locally in the browser (IndexedDB) by default.
+- If the user creates an account, data is synced to Supabase cloud storage tied to that account.
+- See https://bestballexposures.com/privacy.html for the full privacy policy.
+
+## Frequently Asked Questions
+
+### What is Best Ball Exposures?
+A portfolio analytics tool for fantasy football best-ball drafters. It syncs Underdog and DraftKings rosters and shows exposure, archetypes, stacks, draft flow, and ADP trends across every entry in a portfolio.
+
+### Which platforms does it support?
+Underdog Fantasy and DraftKings best-ball contests, unified in a single view.
+
+### Is it free?
+Yes. The Free tier covers the dashboard, exposure analysis, roster viewer with archetypes, and multi-platform sync. Pro is $20/month (or $15/month with a creator promo code) and unlocks draft flow analysis, combo & stacking, the ADP tracker, player rankings, and roster construction.
+
+### How does it sync rosters?
+The companion Chrome extension auto-syncs Underdog and DraftKings rosters as the user drafts. Manual CSV upload is also supported.
+
+### What is a roster archetype?
+A strategic classification of how a roster is built — for example RB Hero, Zero RB, Hyper Fragile, or RB Value. BBE classifies every roster automatically across RB, QB, and TE tiers so drafters can see their portfolio's strategy mix at a glance.
+
+### Does Best Ball Exposures have a draft overlay?
+Yes. The Chrome extension provides a live overlay showing exposure and combo analysis directly inside the Underdog and DraftKings draft screens — no second window or alt-tabbing required.
+
+### How is BBE different from other best-ball tools?
+Most best-ball tools show one roster at a time and only support a single platform. Best Ball Exposures is portfolio-first and multi-platform, unifying Underdog and DraftKings, and uniquely classifies every roster into strategic archetypes.
+
+### Where can I install the Chrome extension?
+https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj
+
+### How do I contact support?
+Email bestballexposures@gmail.com or DM @BBExposures on X.

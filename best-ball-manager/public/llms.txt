@@ -1,0 +1,39 @@
+# Best Ball Exposures
+
+> Best Ball Exposures (BBE) is a portfolio analytics SaaS for fantasy football best-ball drafters. It syncs Underdog Fantasy and DraftKings rosters and shows exposure, roster archetypes, team stacks, draft flow, and ADP trends across every entry in a user's portfolio.
+
+Best Ball Exposures is a browser-based application at https://bestballexposures.com/ with a companion Chrome extension. It supports both Underdog Fantasy and DraftKings best-ball contests in a unified portfolio view. The product is built around the principle of "mirror, not advisor" — it describes the state of a user's portfolio rather than prescribing what to draft.
+
+## Key facts
+
+- **Name:** Best Ball Exposures (BBE)
+- **Domain:** https://bestballexposures.com/
+- **X / Twitter:** @BBExposures
+- **Platforms supported:** Underdog Fantasy, DraftKings (NFL best-ball)
+- **Pricing:** Free tier available; Pro tier is $20/month ($15 with a creator promo code)
+- **Chrome extension:** https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj
+
+## Documentation
+
+- [Landing page](https://bestballexposures.com/): Product overview, features, pricing
+- [Privacy policy](https://bestballexposures.com/privacy.html)
+- [Terms of service](https://bestballexposures.com/terms.html)
+- [Full LLM context](https://bestballexposures.com/llms-full.txt): Detailed feature and FAQ content for AI search
+
+## Free tier features
+
+- Portfolio Dashboard
+- Exposure Analysis
+- Roster Viewer with Archetypes
+- Multi-platform support (Underdog + DraftKings)
+- Zero configuration — upload and go
+
+## Pro tier features
+
+- Everything in Free, plus:
+- Draft Flow Analysis
+- Combo & Stacking Analysis
+- ADP Tracker
+- Player Rankings
+- Roster Construction
+- Live draft overlay (via Chrome extension)

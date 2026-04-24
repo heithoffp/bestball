@@ -43,9 +43,10 @@
 | TASK-158 | Contextual Help — remove Help tab and migrate Getting Started content | Todo | P3 | [Plan](docs/plans/TASK-158.md) — Draft | No |
 | TASK-190 | Update stale business plan artifacts to match current product reality | Todo | P3 | [Plan](docs/plans/TASK-190.md) — Draft | No |
 | TASK-175 | Block doubleclick.net ad interruptions on DraftKings pages | In Progress | P3 | [Plan](docs/plans/TASK-175.md) | No |
+| TASK-193 | SEO — Long-tail content + crawler-visible content for SPA deep routes | Todo | P3 | [Plan](docs/plans/TASK-193.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 
-## Recently Completed
+## Completed Tasks
 
 _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BACKLOG_COMPLETED.md)_
 
