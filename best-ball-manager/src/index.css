@@ -38,6 +38,12 @@
   --pos-wr-bg: rgba(245, 158, 11, 0.15);
   --pos-te-bg: rgba(59, 130, 246, 0.15);
 
+  /* ── Platform Colors (Compare Mode) ── */
+  --platform-ud: #bf44ef;
+  --platform-dk: #53d337;
+  --platform-ud-bg: rgba(191, 68, 239, 0.15);
+  --platform-dk-bg: rgba(83, 211, 55, 0.15);
+
   /* ── Typography ── */
   --font-body: 'DM Sans', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { GripVertical, Download, Save, X } from 'lucide-react';
+import { GripVertical, Download, Save, X, RotateCcw } from 'lucide-react';
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDndMonitor, useDroppable, useDraggable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { exportRankingsCSV, saveRankingsToAssets } from '../utils/rankingsExport';
@@ -10,6 +10,7 @@ import FileUploadButton from './FileUploadButton';
 import { SearchInput } from './filters';
 import useMediaQuery from '../hooks/useMediaQuery';
 import TabLayout from './TabLayout';
+import CompareView from './PlayerRankings/CompareView';
 import s from './PlayerRankings.module.css';
 
 const POS_COLORS = {
@@ -95,6 +96,57 @@ function getTierLabel(tierNum) {
 
 function getTierColor(tierNum) {
   return TIER_COLORS[getTierLabel(tierNum)] || TIER_COLORS['F'];
+}
+
+/* Build the displayed-player array from a row source (saved rankings or ADP rows).
+   Sorts by ADP and drops rows without a parseable ADP. Shared by the initial-seed
+   effect and the "Reset to ADP" handler. */
+function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adpLookup = new Map() } = {}) {
+  const players = source.map(row => {
+    const firstName = row.firstName || row.first_name || row['First Name'] || '';
+    const lastName = row.lastName || row.last_name || row['Last Name'] || '';
+    const name = `${firstName} ${lastName}`.trim() || row['Player Name'] || row.player_name || row.Name || row.name || 'Unknown';
+    const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
+    const nameKey = canonicalName(name);
+    const projRaw = row.projectedPoints || row.projected_points || '';
+    const proj = projRaw || (projMap[nameKey] != null ? String(projMap[nameKey]) : '');
+    const rawId = row.id || row.ID || '';
+    const id = (!rawId || String(rawId).startsWith('gen_'))
+      ? (nameToAdpId.get(nameKey) || `gen_${name.replace(/\s+/g, '_')}`)
+      : String(rawId);
+    return {
+      id,
+      firstName,
+      lastName,
+      name,
+      adp: isNaN(adpVal) ? 9999 : adpVal,
+      originalAdp: isNaN(adpVal) ? '-' : String(adpVal),
+      latestAdp: adpLookup.get(nameKey) || null,
+      projectedPoints: proj,
+      positionRank: row.positionRank || '',
+      slotName: row.slotName || row.position || row.Position || row.pos || 'N/A',
+      teamName: expandTeam(row.teamName || row.team || row.Team || ''),
+      lineupStatus: row.lineupStatus || '',
+      byeWeek: row.byeWeek || '',
+      _csvTier: row.tier || '',
+      _csvTierNum: row.tierNum || '',
+    };
+  });
+  players.sort((a, b) => a.adp - b.adp);
+  return players.filter(p => p.adp !== 9999);
+}
+
+function buildNameToAdpId(adpRows) {
+  const map = new Map();
+  adpRows.forEach(r => {
+    const n = canonicalName(
+      (`${r.firstName || r.first_name || ''} ${r.lastName || r.last_name || ''}`).trim()
+      || r.Name || r.name || ''
+    );
+    const id = r.id || r.ID;
+    if (n && id) map.set(n, String(id));
+  });
+  return map;
 }
 
 /* ── Tier Divider (shared logic, renders differently for table vs cards) ── */
@@ -461,6 +513,15 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     }
   }, [availablePlatforms]);
 
+  /* Compare mode is desktop-only — force back to a single platform on mobile. */
+  useEffect(() => {
+    if (isMobile && selectedPlatform === 'compare') {
+      const fallback = availablePlatforms.includes('underdog') ? 'underdog'
+        : (availablePlatforms[0] || 'underdog');
+      setSelectedPlatform(fallback);
+    }
+  }, [isMobile, selectedPlatform, availablePlatforms]);
+
   /* --- dnd-kit sensors --- */
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 2 } });
   const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } });
@@ -505,48 +566,8 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     // Build name→id lookup from the platform's ADP rows so saved rankings with stale
     // gen_ IDs get resolved to the real platform ID (e.g. DraftKings numeric IDs).
     const adpRows = adpByPlatform?.[selectedPlatform]?.latestRows ?? [];
-    const nameToAdpId = new Map();
-    adpRows.forEach(r => {
-      const n = canonicalName(
-        (`${r.firstName || r.first_name || ''} ${r.lastName || r.last_name || ''}`).trim()
-        || r.Name || r.name || ''
-      );
-      const id = r.id || r.ID;
-      if (n && id) nameToAdpId.set(n, String(id));
-    });
-    let players = activeSource.map(row => {
-      const firstName = row.firstName || row.first_name || row['First Name'] || '';
-      const lastName = row.lastName || row.last_name || row['Last Name'] || '';
-      const name = `${firstName} ${lastName}`.trim() || row['Player Name'] || row.player_name || row.Name || row.name || 'Unknown';
-      const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
-      const nameKey = canonicalName(name);
-      const projRaw = row.projectedPoints || row.projected_points || '';
-      const proj = projRaw || (projMap[nameKey] != null ? String(projMap[nameKey]) : '');
-      const rawId = row.id || row.ID || '';
-      const id = (!rawId || rawId.startsWith('gen_'))
-        ? (nameToAdpId.get(nameKey) || `gen_${name.replace(/\s+/g, '_')}`)
-        : rawId;
-      return {
-        id,
-        firstName,
-        lastName,
-        name,
-        adp: isNaN(adpVal) ? 9999 : adpVal,
-        originalAdp: isNaN(adpVal) ? '-' : String(adpVal),
-        latestAdp: adpLookup.get(nameKey) || null,
-        projectedPoints: proj,
-        positionRank: row.positionRank || '',
-        slotName: row.slotName || row.position || row.Position || row.pos || 'N/A',
-        teamName: expandTeam(row.teamName || row.team || row.Team || ''),
-        lineupStatus: row.lineupStatus || '',
-        byeWeek: row.byeWeek || '',
-        _csvTier: row.tier || '',
-        _csvTierNum: row.tierNum || '',
-      };
-    });
-    players.sort((a, b) => a.adp - b.adp);
-    // Only include players that have real ADP data
-    players = players.filter(p => p.adp !== 9999);
+    const nameToAdpId = buildNameToAdpId(adpRows);
+    const players = buildRankedPlayers(activeSource, { projMap, nameToAdpId, adpLookup });
     setRankedPlayers(players);
 
     // Restore tier breaks and labels from CSV
@@ -948,6 +969,18 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     exportRankingsCSV(rankedPlayers, fullTierMap, tierLabels, selectedPlatform || 'underdog');
   }, [rankedPlayers, fullTierMap, tierLabels]);
 
+  /* --- reset to ADP order (local only — Save persists) --- */
+  const handleReset = useCallback(() => {
+    const adpRows = adpByPlatform?.[selectedPlatform]?.latestRows ?? [];
+    if (adpRows.length === 0) return;
+    const projMap = adpByPlatform?.[selectedPlatform]?.projPointsMap ?? {};
+    const nameToAdpId = buildNameToAdpId(adpRows);
+    const players = buildRankedPlayers(adpRows, { projMap, nameToAdpId, adpLookup });
+    setRankedPlayers(players);
+    setOverallTierBreaks(new Set());
+    setTierLabels({});
+  }, [adpByPlatform, selectedPlatform, adpLookup]);
+
   /* --- save to assets --- */
   const [saveStatus, setSaveStatus] = useState(null);
   const handleSave = useCallback(async () => {
@@ -1176,7 +1209,8 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
   return (
     <TabLayout flush helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
     <div className={s.root}>
-      {/* Header row */}
+      {/* Header row — hidden in Compare mode (CompareView has its own controls) */}
+      {selectedPlatform !== 'compare' && (
       <div className={s.headerRow} data-help-id="search-controls">
         <div className={s.headerRight}>
           {/* Search */}
@@ -1186,6 +1220,16 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
             placeholder="Search player or team..."
             delay={150}
           />
+          {/* Reset to ADP — local only; Save persists */}
+          <button
+            onClick={handleReset}
+            className={s.exportBtn}
+            title="Restore current platform's ADP order and clear tier breaks. Click Save to persist."
+            disabled={!availablePlatforms.includes(selectedPlatform)}
+          >
+            <RotateCcw size={14} />
+            {!isMobile && 'Reset to ADP'}
+          </button>
           {/* Save — always visible */}
           <button
             onClick={handleSave}
@@ -1215,13 +1259,15 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
           )}
         </div>
       </div>
+      )}
 
-      {/* Platform toggle — only when multiple platforms have ADP data */}
-      {availablePlatforms.length > 1 && (
+      {/* Platform toggle — always render on desktop (Compare button); single-platform on mobile */}
+      {(!isMobile || availablePlatforms.length > 1) && (
         <div className="filter-btn-group" style={{ padding: '0 0 8px' }} data-help-id="platform-toggle">
-          {['underdog', 'draftkings']
-            .filter(p => availablePlatforms.includes(p))
-            .map(p => (
+          {['underdog', 'draftkings'].map(p => {
+            const enabled = availablePlatforms.includes(p) || !isMobile;
+            if (!enabled) return null;
+            return (
               <button
                 key={p}
                 className={`filter-btn-group__item ${selectedPlatform === p ? 'filter-btn-group__item--active' : ''}`}
@@ -1229,55 +1275,75 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
               >
                 {p === 'underdog' ? 'Underdog Rankings' : 'DraftKings Rankings'}
               </button>
-            ))}
-        </div>
-      )}
-
-      {/* Position toggle */}
-      <div className="filter-chip-group" style={{ padding: '0 0 8px' }} data-help-id="position-filter">
-        {VIEWS.map(v => {
-          const isActive = viewMode === v;
-          const posClass = v !== 'overall' ? `filter-chip--pos-${v.toLowerCase()}` : '';
-          return (
+            );
+          })}
+          {!isMobile && (
             <button
-              key={v}
-              onClick={() => { setViewMode(v); setSearchTerm(''); }}
-              className={`filter-chip ${isActive ? `filter-chip--active ${posClass}` : ''}`}
+              className={`filter-btn-group__item ${selectedPlatform === 'compare' ? 'filter-btn-group__item--active' : ''}`}
+              onClick={() => setSelectedPlatform('compare')}
+              title="Edit Underdog and DraftKings rankings side-by-side"
             >
-              {v === 'overall' ? 'Overall' : v}
+              Both
             </button>
-          );
-        })}
-        <span className="filter-count">
-          {displayedPlayers.length} players
-        </span>
-      </div>
-
-      {/* Search notice */}
-      {isSearching && (
-        <div className={s.searchNotice}>
-          Drag disabled while searching. Clear search to reorder.
+          )}
         </div>
       )}
 
-      {/* DnD context wraps both table and card rendering */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerInsertionPoint}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={displayedPlayers.map(p => p.id)}
-          strategy={verticalListSortingStrategy}
-          disabled={!canDrag}
-        >
-          {isMobile ? renderMobileCards() : renderDesktopTable()}
-        </SortableContext>
+      {selectedPlatform === 'compare' ? (
+        <CompareView
+          rankingsByPlatform={rankingsByPlatform}
+          adpByPlatform={adpByPlatform}
+          masterPlayers={masterPlayers}
+        />
+      ) : (
+        <>
+          {/* Position toggle */}
+          <div className="filter-chip-group" style={{ padding: '0 0 8px' }} data-help-id="position-filter">
+            {VIEWS.map(v => {
+              const isActive = viewMode === v;
+              const posClass = v !== 'overall' ? `filter-chip--pos-${v.toLowerCase()}` : '';
+              return (
+                <button
+                  key={v}
+                  onClick={() => { setViewMode(v); setSearchTerm(''); }}
+                  className={`filter-chip ${isActive ? `filter-chip--active ${posClass}` : ''}`}
+                >
+                  {v === 'overall' ? 'Overall' : v}
+                </button>
+              );
+            })}
+            <span className="filter-count">
+              {displayedPlayers.length} players
+            </span>
+          </div>
 
-        {/* Drag overlay — portal-based, tracks pointer directly to avoid virtualizer offset */}
-        <PointerTrackingOverlay activePlayer={activePlayer} activeTierDrag={activeTierDrag} displayedPlayers={displayedPlayers} />
-      </DndContext>
+          {/* Search notice */}
+          {isSearching && (
+            <div className={s.searchNotice}>
+              Drag disabled while searching. Clear search to reorder.
+            </div>
+          )}
+
+          {/* DnD context wraps both table and card rendering */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerInsertionPoint}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={displayedPlayers.map(p => p.id)}
+              strategy={verticalListSortingStrategy}
+              disabled={!canDrag}
+            >
+              {isMobile ? renderMobileCards() : renderDesktopTable()}
+            </SortableContext>
+
+            {/* Drag overlay — portal-based, tracks pointer directly to avoid virtualizer offset */}
+            <PointerTrackingOverlay activePlayer={activePlayer} activeTierDrag={activeTierDrag} displayedPlayers={displayedPlayers} />
+          </DndContext>
+        </>
+      )}
     </div>
     </TabLayout>
   );

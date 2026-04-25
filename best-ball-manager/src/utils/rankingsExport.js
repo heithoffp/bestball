@@ -86,7 +86,7 @@ export function exportRankingsCSV(rankedPlayers, tierMap, tierLabels = {}, platf
 }
 
 export async function saveRankingsToAssets(rankedPlayers, tierMap, tierLabels = {}, platform = 'underdog') {
-  const csv = buildRankingsCSV(rankedPlayers, tierMap, tierLabels);
+  const csv = buildRankingsCSV(rankedPlayers, tierMap, tierLabels, platform);
   const storageId = `rankings_${platform}`;
 
   // Persist to Supabase storage + IndexedDB so rankings restore on next load

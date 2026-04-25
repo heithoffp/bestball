@@ -157,4 +157,4 @@
 ### FEAT-020: Multi-Platform CSV Support
 **Status:** In Progress
 **Description:** Auto-detect and parse Sleeper and DraftKings CSV export formats alongside Underdog. No user selection required — format detection is automatic per the Zero-Config Insights principle.
-**Tasks:** TASK-141, TASK-142, TASK-143, TASK-144, TASK-145, TASK-160, TASK-174, TASK-176, TASK-177
+**Tasks:** TASK-141, TASK-142, TASK-143, TASK-144, TASK-145, TASK-160, TASK-174, TASK-176, TASK-177, TASK-195

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0F3D2E"/>
+      <stop offset="100%" stop-color="#05120D"/>
+    </linearGradient>
+    <linearGradient id="bars" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#A7F3D0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg2)"/>
+
+  <!-- Ascending bar chart (centered, within safe area) -->
+  <g>
+    <rect x="230" y="620" width="90" height="220" rx="14" fill="url(#bars)" opacity="0.55"/>
+    <rect x="340" y="540" width="90" height="300" rx="14" fill="url(#bars)" opacity="0.70"/>
+    <rect x="450" y="460" width="90" height="380" rx="14" fill="url(#bars)" opacity="0.85"/>
+    <rect x="560" y="380" width="90" height="460" rx="14" fill="url(#bars)"/>
+    <rect x="670" y="300" width="90" height="540" rx="14" fill="url(#bars)"/>
+  </g>
+
+  <!-- BBE wordmark centered on top -->
+  <g font-family="Inter, 'Segoe UI', Arial, sans-serif" font-weight="900"
+     text-anchor="middle" fill="#FFFFFF">
+    <text x="512" y="200" font-size="180" letter-spacing="-8">BBE</text>
+  </g>
+
+  <!-- Underline accent -->
+  <rect x="340" y="230" width="344" height="8" rx="4" fill="#34D399"/>
+
+  <circle cx="512" cy="512" r="504" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="4"/>
+</svg>

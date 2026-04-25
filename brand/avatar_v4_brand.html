@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&display=block" rel="stylesheet">
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    width: 1024px; height: 1024px;
+    background: #060E1F;
+    overflow: hidden;
+  }
+  .canvas {
+    width: 1024px; height: 1024px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    /* subtle radial vignette for depth */
+    background:
+      radial-gradient(circle at 50% 35%, #0C1A30 0%, #060E1F 70%),
+      #060E1F;
+  }
+  .wordmark {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-weight: 800;
+    font-size: 320px;
+    line-height: 1;
+    letter-spacing: -6px;
+    background: linear-gradient(135deg, #F0CC5B 0%, #D4A843 50%, #E8BF4A 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    margin: 0;
+    /* slight drop shadow for separation on small renders */
+    filter: drop-shadow(0 4px 12px rgba(232, 191, 74, 0.15));
+  }
+  .icon-wrap {
+    width: 440px; height: 440px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-wrap img {
+    width: 100%; height: 100%;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  /* Faint inner ring for avatar-safe framing */
+  .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 4px rgba(232, 191, 74, 0.08);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="wordmark">BBE</div>
+    <div class="icon-wrap">
+      <img src="../chrome-extension/icons/icon-128.png" alt="">
+    </div>
+    <div class="ring"></div>
+  </div>
+</body>
+</html>

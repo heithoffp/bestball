@@ -1,320 +1,331 @@
-id,name,firstName,lastName,adp,projectedPoints,positionRank,slotName,teamName,lineupStatus,byeWeek,tier,tierNum
-gen_Bijan_Robinson,Bijan Robinson,,,1,,RB1,RB,ATL,,,S,1
-gen_Jahmyr_Gibbs,Jahmyr Gibbs,,,2,,RB2,RB,DET,,,S,1
-gen_Ja'Marr_Chase,Ja'Marr Chase,,,3,,WR1,WR,CIN,,,S,1
-gen_Puka_Nacua,Puka Nacua,,,4,,WR2,WR,LAR,,,S,1
-gen_Jaxon_Smith-Njigba,Jaxon Smith-Njigba,,,5,,WR3,WR,SEA,,,S,1
-gen_Jonathan_Taylor,Jonathan Taylor,,,6,,RB3,RB,IND,,,A+,2
-gen_Christian_McCaffrey,Christian McCaffrey,,,7,,RB4,RB,SF,,,A+,2
-gen_Amon-Ra_St._Brown,Amon-Ra St. Brown,,,8,,WR4,WR,DET,,,A+,2
-gen_Justin_Jefferson,Justin Jefferson,,,9,,WR5,WR,MIN,,,A+,2
-gen_CeeDee_Lamb,CeeDee Lamb,,,10,,WR6,WR,DAL,,,A+,2
-gen_James_Cook_III,James Cook III,,,11,,RB5,RB,BUF,,,A+,2
-gen_Ashton_Jeanty,Ashton Jeanty,,,12,,RB6,RB,LV,,,A+,2
-gen_De'Von_Achane,De'Von Achane,,,13,,RB7,RB,MIA,,,A+,2
-gen_Kenneth_Walker_III,Kenneth Walker III,,,14,,RB8,RB,KC,,,A+,2
-gen_Saquon_Barkley,Saquon Barkley,,,15,,RB9,RB,PHI,,,A+,2
-gen_Trey_McBride,Trey McBride,,,16,,TE1,TE,ARI,,,A+,2
-gen_Omarion_Hampton,Omarion Hampton,,,17,,RB10,RB,LAC,,,A+,2
-gen_Drake_London,Drake London,,,18,,WR7,WR,ATL,,,A+,2
-gen_Jeremiyah_Love,Jeremiyah Love,,,19,,RB11,RB,FA,,,A+,2
-gen_Malik_Nabers,Malik Nabers,,,20,,WR8,WR,NYG,,,A+,2
-gen_Chase_Brown,Chase Brown,,,21,,RB12,RB,CIN,,,A+,2
-gen_Derrick_Henry,Derrick Henry,,,22,,RB13,RB,BAL,,,A+,2
-gen_Brock_Bowers,Brock Bowers,,,23,,TE2,TE,LV,,,A+,2
-gen_George_Pickens,George Pickens,,,24,,WR9,WR,DAL,,,A+,2
-gen_Josh_Allen,Josh Allen,,,25,,QB1,QB,BUF,,,A+,2
-gen_Rashee_Rice,Rashee Rice,,,26,,WR10,WR,KC,,,A+,2
-gen_Nico_Collins,Nico Collins,,,27,,WR11,WR,HOU,,,A+,2
-gen_Chris_Olave,Chris Olave,,,28,,WR12,WR,NO,,,A+,2
-gen_Josh_Jacobs,Josh Jacobs,,,29,,RB14,RB,GB,,,A+,2
-gen_Travis_Etienne_Jr.,Travis Etienne Jr.,,,30,,RB15,RB,NO,,,A+,2
-gen_A.J._Brown,A.J. Brown,,,31,,WR13,WR,PHI,,,A+,2
-gen_Kyren_Williams,Kyren Williams,,,32,,RB16,RB,LAR,,,A+,2
-gen_Tee_Higgins,Tee Higgins,,,33,,WR14,WR,CIN,,,A+,2
-gen_Tetairoa_McMillan,Tetairoa McMillan,,,34,,WR15,WR,CAR,,,A+,2
-gen_Emeka_Egbuka,Emeka Egbuka,,,35,,WR16,WR,TB,,,A+,2
-gen_Garrett_Wilson,Garrett Wilson,,,36,,WR17,WR,NYJ,,,A+,2
-gen_Breece_Hall,Breece Hall,,,37,,RB17,RB,NYJ,,,A+,2
-gen_Javonte_Williams,Javonte Williams,,,38,,RB18,RB,DAL,,,A+,2
-gen_DJ_Moore,DJ Moore,,,39,,WR18,WR,BUF,,,A+,2
-gen_Colston_Loveland,Colston Loveland,,,40,,TE3,TE,CHI,,,A+,2
-gen_Zay_Flowers,Zay Flowers,,,41,,WR19,WR,BAL,,,A+,2
-gen_Bucky_Irving,Bucky Irving,,,42,,RB19,RB,TB,,,A+,2
-gen_Ladd_McConkey,Ladd McConkey,,,43,,WR20,WR,LAC,,,A+,2
-gen_Luther_Burden_III,Luther Burden III,,,44,,WR21,WR,CHI,,,A+,2
-gen_Mike_Evans,Mike Evans,,,45,,WR22,WR,SF,,,A+,2
-gen_DeVonta_Smith,DeVonta Smith,,,46,,WR23,WR,PHI,,,A+,2
-gen_Davante_Adams,Davante Adams,,,47,,WR24,WR,LAR,,,A+,2
-gen_Quinshon_Judkins,Quinshon Judkins,,,48,,RB20,RB,CLE,,,A+,2
-gen_Jaylen_Waddle,Jaylen Waddle,,,49,,WR25,WR,DEN,,,A+,2
-gen_David_Montgomery,David Montgomery,,,50,,RB21,RB,HOU,,,A+,2
-gen_Jameson_Williams,Jameson Williams,,,51,,WR26,WR,DET,,,A+,2
-gen_Lamar_Jackson,Lamar Jackson,,,52,,QB2,QB,BAL,,,A+,2
-gen_TreVeyon_Henderson,TreVeyon Henderson,,,53,,RB22,RB,NE,,,A+,2
-gen_Terry_McLaurin,Terry McLaurin,,,54,,WR27,WR,WAS,,,A+,2
-gen_Rome_Odunze,Rome Odunze,,,55,,WR28,WR,CHI,,,A+,2
-gen_Bhayshul_Tuten,Bhayshul Tuten,,,56,,RB23,RB,JAX,,,A+,2
-gen_Joe_Burrow,Joe Burrow,,,57,,QB3,QB,CIN,,,A+,2
-gen_Cam_Skattebo,Cam Skattebo,,,58,,RB24,RB,NYG,,,A+,2
-gen_Christian_Watson,Christian Watson,,,59,,WR29,WR,GB,,,A+,2
-gen_D'Andre_Swift,D'Andre Swift,,,60,,RB25,RB,CHI,,,A+,2
-gen_Parker_Washington,Parker Washington,,,61,,WR30,WR,JAX,,,A+,2
-gen_Tyler_Warren,Tyler Warren,,,62,,TE4,TE,IND,,,A+,2
-gen_Carnell_Tate,Carnell Tate,,,63,,WR31,WR,FA,,,A+,2
-gen_Alec_Pierce,Alec Pierce,,,64,,WR32,WR,IND,,,A+,2
-gen_Marvin_Harrison_Jr.,Marvin Harrison Jr.,,,65,,WR33,WR,ARI,,,A+,2
-gen_Caleb_Williams,Caleb Williams,,,66,,QB4,QB,CHI,,,A+,2
-gen_RJ_Harvey,RJ Harvey,,,67,,RB26,RB,DEN,,,A+,2
-gen_Jayden_Daniels,Jayden Daniels,,,68,,QB5,QB,WAS,,,A+,2
-gen_Drake_Maye,Drake Maye,,,69,,QB6,QB,NE,,,A+,2
-gen_Michael_Wilson,Michael Wilson,,,70,,WR34,WR,ARI,,,A+,2
-gen_Chuba_Hubbard,Chuba Hubbard,,,71,,RB27,RB,CAR,,,A+,2
-gen_Jalen_Hurts,Jalen Hurts,,,72,,QB7,QB,PHI,,,A+,2
-gen_Makai_Lemon,Makai Lemon,,,73,,WR35,WR,FA,,,A+,2
-gen_Brian_Thomas_Jr.,Brian Thomas Jr.,,,74,,WR36,WR,JAX,,,A+,2
-gen_Rhamondre_Stevenson,Rhamondre Stevenson,,,75,,RB28,RB,NE,,,A+,2
-gen_Harold_Fannin_Jr.,Harold Fannin Jr.,,,76,,TE5,TE,CLE,,,A+,2
-gen_Dak_Prescott,Dak Prescott,,,77,,QB8,QB,DAL,,,A+,2
-gen_Courtland_Sutton,Courtland Sutton,,,78,,WR37,WR,DEN,,,A+,2
-gen_Tucker_Kraft,Tucker Kraft,,,79,,TE6,TE,GB,,,A+,2
-gen_Trevor_Lawrence,Trevor Lawrence,,,80,,QB9,QB,JAX,,,A+,2
-gen_Chris_Godwin_Jr.,Chris Godwin Jr.,,,81,,WR38,WR,TB,,,A+,2
-gen_DK_Metcalf,DK Metcalf,,,82,,WR39,WR,PIT,,,A+,2
-gen_Jaylen_Warren,Jaylen Warren,,,83,,RB29,RB,PIT,,,A+,2
-gen_Jordyn_Tyson,Jordyn Tyson,,,84,,WR40,WR,FA,,,A+,2
-gen_Justin_Herbert,Justin Herbert,,,85,,QB10,QB,LAC,,,A+,2
-gen_Wan'Dale_Robinson,Wan'Dale Robinson,,,86,,WR41,WR,TEN,,,A+,2
-gen_Jaxson_Dart,Jaxson Dart,,,87,,QB11,QB,NYG,,,A+,2
-gen_Rico_Dowdle,Rico Dowdle,,,88,,RB30,RB,PIT,,,A+,2
-gen_Romeo_Doubs,Romeo Doubs,,,89,,WR42,WR,NE,,,A+,2
-gen_Matthew_Stafford,Matthew Stafford,,,90,,QB12,QB,LAR,,,A+,2
-gen_Patrick_Mahomes,Patrick Mahomes,,,91,,QB13,QB,KC,,,A+,2
-gen_Tyler_Allgeier,Tyler Allgeier,,,92,,RB31,RB,ARI,,,A+,2
-gen_Kyle_Pitts_Sr.,Kyle Pitts Sr.,,,93,,TE7,TE,ATL,,,A+,2
-gen_Ricky_Pearsall,Ricky Pearsall,,,94,,WR43,WR,SF,,,A+,2
-gen_Sam_LaPorta,Sam LaPorta,,,95,,TE8,TE,DET,,,A+,2
-gen_Jakobi_Meyers,Jakobi Meyers,,,96,,WR44,WR,JAX,,,A+,2
-gen_Brock_Purdy,Brock Purdy,,,97,,QB14,QB,SF,,,A+,2
-gen_Jordan_Addison,Jordan Addison,,,98,,WR45,WR,MIN,,,A+,2
-gen_Bo_Nix,Bo Nix,,,99,,QB15,QB,DEN,,,A+,2
-gen_Kyle_Monangai,Kyle Monangai,,,100,,RB32,RB,CHI,,,A+,2
-gen_J.K._Dobbins,J.K. Dobbins,,,101,,RB33,RB,DEN,,,A+,2
-gen_Jared_Goff,Jared Goff,,,102,,QB16,QB,DET,,,A+,2
-gen_Quentin_Johnston,Quentin Johnston,,,103,,WR46,WR,LAC,,,A+,2
-gen_Blake_Corum,Blake Corum,,,104,,RB34,RB,LAR,,,A+,2
-gen_Kyler_Murray,Kyler Murray,,,105,,QB17,QB,MIN,,,A+,2
-gen_Michael_Pittman_Jr.,Michael Pittman Jr.,,,106,,WR47,WR,PIT,,,A+,2
-gen_Jordan_Love,Jordan Love,,,107,,QB18,QB,GB,,,A+,2
-gen_George_Kittle,George Kittle,,,108,,TE9,TE,SF,,,A+,2
-gen_Tony_Pollard,Tony Pollard,,,109,,RB35,RB,TEN,,,A+,2
-gen_Baker_Mayfield,Baker Mayfield,,,110,,QB19,QB,TB,,,A+,2
-gen_Jayden_Reed,Jayden Reed,,,111,,WR48,WR,GB,,,A+,2
-gen_Dalton_Kincaid,Dalton Kincaid,,,112,,TE10,TE,BUF,,,A+,2
-gen_Jadarian_Price,Jadarian Price,,,113,,RB36,RB,FA,,,A+,2
-gen_Kenneth_Gainwell,Kenneth Gainwell,,,114,,RB37,RB,TB,,,A+,2
-gen_Oronde_Gadsden_II,Oronde Gadsden II,,,115,,TE11,TE,LAC,,,A+,2
-gen_Xavier_Worthy,Xavier Worthy,,,116,,WR49,WR,KC,,,A+,2
-gen_Zach_Charbonnet,Zach Charbonnet,,,117,,RB38,RB,SEA,,,A+,2
-gen_Tyler_Shough,Tyler Shough,,,118,,QB20,QB,NO,,,A+,2
-gen_Khalil_Shakir,Khalil Shakir,,,119,,WR50,WR,BUF,,,A+,2
-gen_Dallas_Goedert,Dallas Goedert,,,120,,TE12,TE,PHI,,,A+,2
-gen_Josh_Downs,Josh Downs,,,121,,WR51,WR,IND,,,A+,2
-gen_Jalen_Coker,Jalen Coker,,,122,,WR52,WR,CAR,,,A+,2
-gen_Jordan_Mason,Jordan Mason,,,123,,RB39,RB,MIN,,,A+,2
-gen_Malik_Willis,Malik Willis,,,124,,QB21,QB,MIA,,,A+,2
-gen_KC_Concepcion,KC Concepcion,,,125,,WR53,WR,FA,,,A+,2
-gen_Jake_Ferguson,Jake Ferguson,,,126,,TE13,TE,DAL,,,A+,2
-gen_Travis_Kelce,Travis Kelce,,,127,,TE14,TE,KC,,,A+,2
-gen_Sam_Darnold,Sam Darnold,,,128,,QB22,QB,SEA,,,A+,2
-gen_Matthew_Golden,Matthew Golden,,,129,,WR54,WR,GB,,,A+,2
-gen_Rachaad_White,Rachaad White,,,130,,RB40,RB,WAS,,,A+,2
-gen_Kenyon_Sadiq,Kenyon Sadiq,,,131,,TE15,TE,FA,,,A+,2
-gen_Jayden_Higgins,Jayden Higgins,,,132,,WR55,WR,HOU,,,A+,2
-gen_Chris_Rodriguez_Jr.,Chris Rodriguez Jr.,,,133,,RB41,RB,JAX,,,A+,2
-gen_Jalen_McMillan,Jalen McMillan,,,134,,WR56,WR,TB,,,A+,2
-gen_Isaiah_Likely,Isaiah Likely,,,135,,TE16,TE,NYG,,,A+,2
-gen_C.J._Stroud,C.J. Stroud,,,136,,QB23,QB,HOU,,,A+,2
-gen_Daniel_Jones,Daniel Jones,,,137,,QB24,QB,IND,,,A+,2
-gen_Jacory_Croskey-Merritt,Jacory Croskey-Merritt,,,138,,RB42,RB,WAS,,,A+,2
-gen_Aaron_Jones_Sr.,Aaron Jones Sr.,,,139,,RB43,RB,MIN,,,A+,2
-gen_Bryce_Young,Bryce Young,,,140,,QB25,QB,CAR,,,A+,2
-gen_Mike_Washington_Jr.,Mike Washington Jr.,,,141,,RB44,RB,FA,,,A+,2
-gen_Brenton_Strange,Brenton Strange,,,142,,TE17,TE,JAX,,,A+,2
-gen_Juwan_Johnson,Juwan Johnson,,,143,,TE18,TE,NO,,,A+,2
-gen_Cam_Ward,Cam Ward,,,144,,QB26,QB,TEN,,,A+,2
-gen_Rashid_Shaheed,Rashid Shaheed,,,145,,WR57,WR,SEA,,,A+,2
-gen_Jauan_Jennings,Jauan Jennings,,,146,,WR58,WR,FA,,,A+,2
-gen_Jacoby_Brissett,Jacoby Brissett,,,147,,QB27,QB,ARI,,,A+,2
-gen_Mark_Andrews,Mark Andrews,,,148,,TE19,TE,BAL,,,A+,2
-gen_Omar_Cooper_Jr.,Omar Cooper Jr.,,,149,,WR59,WR,FA,,,A+,2
-gen_Jonah_Coleman,Jonah Coleman,,,150,,RB45,RB,FA,,,A+,2
-gen_Jonathon_Brooks,Jonathon Brooks,,,151,,RB46,RB,CAR,,,A+,2
-gen_Stefon_Diggs,Stefon Diggs,,,152,,WR60,WR,FA,,,A+,2
-gen_Fernando_Mendoza,Fernando Mendoza,,,153,,QB28,QB,FA,,,A+,2
-gen_Woody_Marks,Woody Marks,,,154,,RB47,RB,HOU,,,A+,2
-gen_Tyrone_Tracy_Jr.,Tyrone Tracy Jr.,,,155,,RB48,RB,NYG,,,A+,2
-gen_Tyreek_Hill,Tyreek Hill,,,156,,WR61,WR,FA,,,A+,2
-gen_Hunter_Henry,Hunter Henry,,,157,,TE20,TE,NE,,,A+,2
-gen_James_Conner,James Conner,,,158,,RB49,RB,ARI,,,A+,2
-gen_Travis_Hunter,Travis Hunter,,,159,,WR62,WR,JAX,,,A+,2
-gen_Chig_Okonkwo,Chig Okonkwo,,,160,,TE21,TE,WAS,,,A+,2
-gen_Denzel_Boston,Denzel Boston,,,161,,WR63,WR,FA,,,A+,2
-gen_Emanuel_Wilson,Emanuel Wilson,,,162,,RB50,RB,SEA,,,A+,2
-gen_Brandon_Aiyuk,Brandon Aiyuk,,,163,,WR64,WR,SF,,,A+,2
-gen_Keaton_Mitchell,Keaton Mitchell,,,164,,RB51,RB,LAC,,,A+,2
-gen_Isiah_Pacheco,Isiah Pacheco,,,165,,RB52,RB,DET,,,A+,2
-gen_Kayshon_Boutte,Kayshon Boutte,,,166,,WR65,WR,NE,,,A+,2
-gen_Jerry_Jeudy,Jerry Jeudy,,,167,,WR66,WR,CLE,,,A+,2
-gen_T.J._Hockenson,T.J. Hockenson,,,168,,TE22,TE,MIN,,,A+,2
-gen_Geno_Smith,Geno Smith,,,169,,QB29,QB,NYJ,,,A+,2
-gen_Deebo_Samuel_Sr.,Deebo Samuel Sr.,,,170,,WR67,WR,FA,,,A+,2
-gen_AJ_Barner,AJ Barner,,,171,,TE23,TE,SEA,,,A+,2
-gen_Dalton_Schultz,Dalton Schultz,,,172,,TE24,TE,HOU,,,A+,2
-gen_Jalen_Nailor,Jalen Nailor,,,173,,WR68,WR,LV,,,A+,2
-gen_Isaac_TeSlaa,Isaac TeSlaa,,,174,,WR69,WR,DET,,,A+,2
-gen_Tank_Dell,Tank Dell,,,175,,WR70,WR,HOU,,,A+,2
-gen_Emmett_Johnson,Emmett Johnson,,,176,,RB53,RB,FA,,,A+,2
-gen_Tyjae_Spears,Tyjae Spears,,,177,,RB54,RB,TEN,,,A+,2
-gen_Dylan_Sampson,Dylan Sampson,,,178,,RB55,RB,CLE,,,A+,2
-gen_Calvin_Ridley,Calvin Ridley,,,179,,WR71,WR,TEN,,,A+,2
-gen_Alvin_Kamara,Alvin Kamara,,,180,,RB56,RB,NO,,,A+,2
-gen_Adonai_Mitchell,Adonai Mitchell,,,181,,WR72,WR,NYJ,,,A+,2
-gen_Brian_Robinson_Jr.,Brian Robinson Jr.,,,182,,RB57,RB,ATL,,,A+,2
-gen_Christian_Kirk,Christian Kirk,,,183,,WR73,WR,SF,,,A+,2
-gen_Eli_Stowers,Eli Stowers,,,184,,TE25,TE,FA,,,A+,2
-gen_Tre'_Harris,Tre' Harris,,,185,,WR74,WR,LAC,,,A+,2
-gen_Tua_Tagovailoa,Tua Tagovailoa,,,186,,QB30,QB,ATL,,,A+,2
-gen_Colby_Parkinson,Colby Parkinson,,,187,,TE26,TE,LAR,,,A+,2
-gen_Tank_Bigsby,Tank Bigsby,,,188,,RB58,RB,PHI,,,A+,2
-gen_Kimani_Vidal,Kimani Vidal,,,189,,RB59,RB,LAC,,,A+,2
-gen_Chimere_Dike,Chimere Dike,,,190,,WR75,WR,TEN,,,A+,2
-gen_Malik_Washington,Malik Washington,,,191,,WR76,WR,MIA,,,A+,2
-gen_David_Njoku,David Njoku,,,192,,TE27,TE,FA,,,A+,2
-gen_Tre_Tucker,Tre Tucker,,,193,,WR77,WR,LV,,,A+,2
-gen_Mason_Taylor,Mason Taylor,,,194,,TE28,TE,NYJ,,,A+,2
-gen_Cade_Otton,Cade Otton,,,195,,TE29,TE,TB,,,A+,2
-gen_Darnell_Mooney,Darnell Mooney,,,196,,WR78,WR,NYG,,,A+,2
-gen_Trey_Benson,Trey Benson,,,197,,RB60,RB,ARI,,,A+,2
-gen_Troy_Franklin,Troy Franklin,,,198,,WR79,WR,DEN,,,A+,2
-gen_Nicholas_Singleton,Nicholas Singleton,,,199,,RB61,RB,FA,,,A+,2
-gen_Shedeur_Sanders,Shedeur Sanders,,,200,,QB31,QB,CLE,,,A+,2
-gen_Gunnar_Helm,Gunnar Helm,,,201,,TE30,TE,TEN,,,A+,2
-gen_Braelon_Allen,Braelon Allen,,,202,,RB62,RB,NYJ,,,A+,2
-gen_Kirk_Cousins,Kirk Cousins,,,203,,QB32,QB,LV,,,A+,2
-gen_Tory_Horton,Tory Horton,,,204,,WR80,WR,SEA,,,A+,2
-gen_Aaron_Rodgers,Aaron Rodgers,,,205,,QB33,QB,FA,,,A+,2
-gen_Pat_Bryant,Pat Bryant,,,206,,WR81,WR,DEN,,,A+,2
-gen_Jordan_James,Jordan James,,,207,,RB63,RB,SF,,,A+,2
-gen_Ryan_Flournoy,Ryan Flournoy,,,208,,WR82,WR,DAL,,,A+,2
-gen_Michael_Penix_Jr.,Michael Penix Jr.,,,209,,QB34,QB,ATL,,,A+,2
-gen_Ray_Davis,Ray Davis,,,210,,RB64,RB,BUF,,,A+,2
-gen_Sean_Tucker,Sean Tucker,,,211,,RB65,RB,TB,,,A+,2
-gen_Hollywood_Brown,Hollywood Brown,,,212,,WR83,WR,PHI,,,A+,2
-gen_Terrance_Ferguson,Terrance Ferguson,,,213,,TE31,TE,LAR,,,A+,2
-gen_Chris_Brazzell_II,Chris Brazzell II,,,214,,WR84,WR,FA,,,A+,2
-gen_Elijah_Sarratt,Elijah Sarratt,,,215,,WR85,WR,FA,,,A+,2
-gen_Cooper_Kupp,Cooper Kupp,,,216,,WR86,WR,SEA,,,A+,2
-gen_Jake_Tonges,Jake Tonges,,,217,,TE32,TE,SF,,,A+,2
-gen_Pat_Freiermuth,Pat Freiermuth,,,218,,TE33,TE,PIT,,,A+,2
-gen_Theo_Johnson,Theo Johnson,,,219,,TE34,TE,NYG,,,A+,2
-gen_Germie_Bernard,Germie Bernard,,,220,,WR87,WR,FA,,,A+,2
-gen_Ty_Simpson,Ty Simpson,,,221,,QB35,QB,FA,,,A+,2
-gen_Najee_Harris,Najee Harris,,,222,,RB66,RB,FA,,,A+,2
-gen_Kaytron_Allen,Kaytron Allen,,,223,,RB67,RB,FA,,,A+,2
-gen_Devaughn_Vele,Devaughn Vele,,,224,,WR88,WR,NO,,,A+,2
-gen_Justin_Fields,Justin Fields,,,225,,QB36,QB,KC,,,A+,2
-gen_George_Holani,George Holani,,,226,,RB68,RB,SEA,,,A+,2
-gen_Zachariah_Branch,Zachariah Branch,,,227,,WR89,WR,FA,,,A+,2
-gen_Joe_Flacco,Joe Flacco,,,228,,QB37,QB,CIN,,,A+,2
-gen_Deshaun_Watson,Deshaun Watson,,,229,,QB38,QB,CLE,,,A+,2
-gen_J.J._McCarthy,J.J. McCarthy,,,230,,QB39,QB,MIN,,,A+,2
-gen_Mack_Hollins,Mack Hollins,,,231,,WR90,WR,NE,,,A+,2
-gen_Elic_Ayomanor,Elic Ayomanor,,,232,,WR91,WR,TEN,,,A+,2
-gen_Ollie_Gordon_II,Ollie Gordon II,,,233,,RB69,RB,MIA,,,A+,2
-gen_Kareem_Hunt,Kareem Hunt,,,234,,RB70,RB,FA,,,A+,2
-gen_Jaydon_Blue,Jaydon Blue,,,235,,RB71,RB,DAL,,,A+,2
-gen_Riley_Leonard,Riley Leonard,,,236,,QB40,QB,IND,,,A+,2
-gen_Greg_Dulcich,Greg Dulcich,,,237,,TE35,TE,MIA,,,A+,2
-gen_Trevor_Etienne,Trevor Etienne,,,238,,RB72,RB,CAR,,,A+,2
-gen_Joe_Mixon,Joe Mixon,,,239,,RB73,RB,FA,,,A+,2
-gen_Brashard_Smith,Brashard Smith,,,240,,RB74,RB,KC,,,A+,2
-gen_Jerome_Ford,Jerome Ford,,,241,,RB75,RB,WAS,,,A+,2
-gen_Emari_Demercado,Emari Demercado,,,242,,RB76,RB,KC,,,A+,2
-gen_Isaac_Guerendo,Isaac Guerendo,,,243,,RB77,RB,SF,,,A+,2
-gen_Cole_Kmet,Cole Kmet,,,244,,TE36,TE,CHI,,,A+,2
-gen_Jalen_Tolbert,Jalen Tolbert,,,245,,WR92,WR,MIA,,,A+,2
-gen_Will_Howard,Will Howard,,,246,,QB41,QB,PIT,,,A+,2
-gen_Justice_Hill,Justice Hill,,,247,,RB78,RB,BAL,,,A+,2
-gen_Tahj_Brooks,Tahj Brooks,,,248,,RB79,RB,CIN,,,A+,2
-gen_Mike_Gesicki,Mike Gesicki,,,249,,TE37,TE,CIN,,,A+,2
-gen_Kaleb_Johnson,Kaleb Johnson,,,250,,RB80,RB,PIT,,,A+,2
-gen_Jahdae_Walker,Jahdae Walker,,,251,,WR93,WR,CHI,,,A+,2
-gen_Kalif_Raymond,Kalif Raymond,,,252,,WR94,WR,CHI,,,A+,2
-gen_Keon_Coleman,Keon Coleman,,,253,,WR95,WR,BUF,,,A+,2
-gen_Dont'e_Thornton_Jr.,Dont'e Thornton Jr.,,,254,,WR96,WR,LV,,,A+,2
-gen_Malachi_Fields,Malachi Fields,,,255,,WR97,WR,FA,,,A+,2
-gen_Ted_Hurst,Ted Hurst,,,256,,WR98,WR,FA,,,A+,2
-gen_Demarcus_Robinson,Demarcus Robinson,,,257,,WR99,WR,SF,,,A+,2
-gen_Luke_McCaffrey,Luke McCaffrey,,,258,,WR100,WR,WAS,,,A+,2
-gen_Dontayvion_Wicks,Dontayvion Wicks,,,259,,WR101,WR,GB,,,A+,2
-gen_Max_Klare,Max Klare,,,260,,TE38,TE,FA,,,A+,2
-gen_Marvin_Mims_Jr.,Marvin Mims Jr.,,,261,,WR102,WR,DEN,,,A+,2
-gen_Tyquan_Thornton,Tyquan Thornton,,,262,,WR103,WR,KC,,,A+,2
-gen_Calvin_Austin_III,Calvin Austin III,,,263,,WR104,WR,NYG,,,A+,2
-gen_Jaylin_Noel,Jaylin Noel,,,264,,WR105,WR,HOU,,,A+,2
-gen_Mac_Jones,Mac Jones,,,265,,QB42,QB,SF,,,A+,2
-gen_Darius_Slayton,Darius Slayton,,,266,,WR106,WR,NYG,,,A+,2
-gen_Chris_Brooks,Chris Brooks,,,267,,RB81,RB,GB,,,A+,2
-gen_Noah_Gray,Noah Gray,,,268,,TE39,TE,KC,,,A+,2
-gen_Skyler_Bell,Skyler Bell,,,269,,WR107,WR,FA,,,A+,2
-gen_Michael_Mayer,Michael Mayer,,,270,,TE40,TE,LV,,,A+,2
-gen_Kaelon_Black,Kaelon Black,,,271,,RB82,RB,FA,,,A+,2
-gen_Keenan_Allen,Keenan Allen,,,272,,WR108,WR,FA,,,A+,2
-gen_Devontez_Walker,Devontez Walker,,,273,,WR109,WR,BAL,,,A+,2
-gen_Kenny_McIntosh,Kenny McIntosh,,,274,,RB83,RB,SEA,,,A+,2
-gen_KaVontae_Turpin,KaVontae Turpin,,,275,,WR110,WR,DAL,,,A+,2
-gen_Darren_Waller,Darren Waller,,,276,,TE41,TE,FA,,,A+,2
-gen_Evan_Engram,Evan Engram,,,277,,TE42,TE,DEN,,,A+,2
-gen_Malik_Davis,Malik Davis,,,278,,RB84,RB,DAL,,,A+,2
-gen_Demond_Claiborne,Demond Claiborne,,,279,,RB85,RB,FA,,,A+,2
-gen_Isaiah_Bond,Isaiah Bond,,,280,,WR111,WR,CLE,,,A+,2
-gen_Tez_Johnson,Tez Johnson,,,281,,WR112,WR,TB,,,A+,2
-gen_Bryce_Lance,Bryce Lance,,,282,,WR113,WR,FA,,,A+,2
-gen_Rashod_Bateman,Rashod Bateman,,,283,,WR114,WR,BAL,,,A+,2
-gen_Samaje_Perine,Samaje Perine,,,284,,RB86,RB,CIN,,,A+,2
-gen_MarShawn_Lloyd,MarShawn Lloyd,,,285,,RB87,RB,GB,,,A+,2
-gen_Darnell_Washington,Darnell Washington,,,286,,TE43,TE,PIT,,,A+,2
-gen_Chris_Bell,Chris Bell,,,287,,WR115,WR,FA,,,A+,2
-gen_Xavier_Legette,Xavier Legette,,,288,,WR116,WR,CAR,,,A+,2
-gen_DJ_Giddens,DJ Giddens,,,289,,RB88,RB,IND,,,A+,2
-gen_Adam_Randall,Adam Randall,,,290,,RB89,RB,FA,,,A+,2
-gen_Ty_Johnson,Ty Johnson,,,291,,RB90,RB,BUF,,,A+,2
-gen_LeQuint_Allen_Jr.,LeQuint Allen Jr.,,,292,,RB91,RB,JAX,,,A+,2
-gen_Devin_Neal,Devin Neal,,,293,,RB92,RB,NO,,,A+,2
-gen_Ja'Tavion_Sanders,Ja'Tavion Sanders,,,294,,TE44,TE,CAR,,,A+,2
-gen_Sam_Roush,Sam Roush,,,295,,TE45,TE,FA,,,A+,2
-gen_Anthony_Richardson_Sr.,Anthony Richardson Sr.,,,296,,QB43,QB,IND,,,A+,2
-gen_Cedric_Tillman,Cedric Tillman,,,297,,WR117,WR,CLE,,,A+,2
-gen_Kyle_Williams,Kyle Williams,,,298,,WR118,WR,NE,,,A+,2
-gen_Brenen_Thompson,Brenen Thompson,,,299,,WR119,WR,FA,,,A+,2
-gen_DeMario_Douglas,DeMario Douglas,,,300,,WR120,WR,NE,,,A+,2
-gen_Roman_Hemby,Roman Hemby,,,301,,RB93,RB,FA,,,A+,2
-gen_Tutu_Atwell,Tutu Atwell,,,302,,WR121,WR,MIA,,,A+,2
-gen_Andrei_Iosivas,Andrei Iosivas,,,303,,WR122,WR,CIN,,,A+,2
-gen_Kendrick_Bourne,Kendrick Bourne,,,304,,WR123,WR,ARI,,,A+,2
-gen_Ja'Kobi_Lane,Ja'Kobi Lane,,,305,,WR124,WR,FA,,,A+,2
-gen_Treylon_Burks,Treylon Burks,,,306,,WR125,WR,WAS,,,A+,2
-gen_Dawson_Knox,Dawson Knox,,,307,,TE46,TE,BUF,,,A+,2
-gen_Antonio_Williams,Antonio Williams,,,308,,WR126,WR,FA,,,A+,2
-gen_Tyler_Higbee,Tyler Higbee,,,309,,TE47,TE,LAR,,,A+,2
-gen_Oscar_Delp,Oscar Delp,,,310,,TE48,TE,FA,,,A+,2
-gen_Jack_Bech,Jack Bech,,,311,,WR127,WR,LV,,,A+,2
-gen_Jaylen_Wright,Jaylen Wright,,,312,,RB94,RB,MIA,,,A+,2
-gen_Zach_Ertz,Zach Ertz,,,313,,TE49,TE,FA,,,A+,2
-gen_Jahan_Dotson,Jahan Dotson,,,314,,WR128,WR,ATL,,,A+,2
-gen_Elijah_Arroyo,Elijah Arroyo,,,315,,TE50,TE,SEA,,,A+,2
-gen_John_Metchie_III,John Metchie III,,,316,,WR129,WR,CAR,,,A+,2
-gen_Seth_McGowan,Seth McGowan,,,317,,RB95,RB,FA,,,A+,2
-gen_Justin_Joly,Justin Joly,,,318,,TE51,TE,FA,,,A+,2
-gen_Olamide_Zaccheaus,Olamide Zaccheaus,,,319,,WR130,WR,ATL,,,A+,2
+ID,Name,Position,ADP,Team,tier,tierNum
+bijan robinson,Bijan Robinson,RB,1,Atlanta Falcons,S,1
+jahmyr gibbs,Jahmyr Gibbs,RB,2,Detroit Lions,S,1
+ja'marr chase,Ja'Marr Chase,WR,3,Cincinnati Bengals,S,1
+puka nacua,Puka Nacua,WR,4,Los Angeles Rams,S,1
+jaxon smith-njigba,Jaxon Smith-Njigba,WR,5,Seattle Seahawks,S,1
+christian mccaffrey,Christian McCaffrey,RB,6,San Francisco 49ers,A+,2
+jonathan taylor,Jonathan Taylor,RB,7,Indianapolis Colts,A+,2
+amon-ra st brown,Amon-Ra St. Brown,WR,8,Detroit Lions,A+,2
+justin jefferson,Justin Jefferson,WR,9,Minnesota Vikings,A+,2
+ceedee lamb,CeeDee Lamb,WR,10,Dallas Cowboys,A+,2
+james cook,James Cook III,RB,11,Buffalo Bills,A+,2
+ashton jeanty,Ashton Jeanty,RB,12,Las Vegas Raiders,A+,2
+de'von achane,De'Von Achane,RB,13,Miami Dolphins,A+,2
+kenneth walker,Kenneth Walker III,RB,14,Kansas City Chiefs,A+,2
+saquon barkley,Saquon Barkley,RB,15,Philadelphia Eagles,A+,2
+trey mcbride,Trey McBride,TE,16,Arizona Cardinals,A,3
+jeremiyah love,Jeremiyah Love,RB,17,,A,3
+omarion hampton,Omarion Hampton,RB,18,Los Angeles Chargers,A,3
+drake london,Drake London,WR,19,Atlanta Falcons,A,3
+malik nabers,Malik Nabers,WR,20,New York Giants,A,3
+rashee rice,Rashee Rice,WR,21,Kansas City Chiefs,A,3
+chase brown,Chase Brown,RB,22,Cincinnati Bengals,A,3
+derrick henry,Derrick Henry,RB,23,Baltimore Ravens,A,3
+brock bowers,Brock Bowers,TE,24,Las Vegas Raiders,A,3
+josh allen,Josh Allen,QB,25,Buffalo Bills,A,3
+george pickens,George Pickens,WR,26,Dallas Cowboys,A,3
+nico collins,Nico Collins,WR,27,Houston Texans,A,3
+chris olave,Chris Olave,WR,28,New Orleans Saints,A-,4
+josh jacobs,Josh Jacobs,RB,29,Green Bay Packers,A-,4
+aj brown,A.J. Brown,WR,30,Philadelphia Eagles,A-,4
+travis etienne,Travis Etienne Jr.,RB,31,New Orleans Saints,A-,4
+kyren williams,Kyren Williams,RB,32,Los Angeles Rams,A-,4
+tee higgins,Tee Higgins,WR,33,Cincinnati Bengals,A-,4
+tetairoa mcmillan,Tetairoa McMillan,WR,34,Carolina Panthers,A-,4
+emeka egbuka,Emeka Egbuka,WR,35,Tampa Bay Buccaneers,A-,4
+garrett wilson,Garrett Wilson,WR,36,New York Jets,A-,4
+breece hall,Breece Hall,RB,37,New York Jets,A-,4
+devonta smith,DeVonta Smith,WR,38,Philadelphia Eagles,A-,4
+javonte williams,Javonte Williams,RB,39,Dallas Cowboys,A-,4
+colston loveland,Colston Loveland,TE,40,Chicago Bears,A-,4
+zay flowers,Zay Flowers,WR,41,Baltimore Ravens,A-,4
+dj moore,DJ Moore,WR,42,Buffalo Bills,A-,4
+bucky irving,Bucky Irving,RB,43,Tampa Bay Buccaneers,A-,4
+ladd mcconkey,Ladd McConkey,WR,44,Los Angeles Chargers,A-,4
+luther burden,Luther Burden III,WR,45,Chicago Bears,A-,4
+davante adams,Davante Adams,WR,46,Los Angeles Rams,A-,4
+mike evans,Mike Evans,WR,47,San Francisco 49ers,A-,4
+quinshon judkins,Quinshon Judkins,RB,48,Cleveland Browns,A-,4
+jaylen waddle,Jaylen Waddle,WR,49,Denver Broncos,A-,4
+jameson williams,Jameson Williams,WR,50,Detroit Lions,A-,4
+david montgomery,David Montgomery,RB,51,Houston Texans,A-,4
+lamar jackson,Lamar Jackson,QB,52,Baltimore Ravens,A-,4
+treveyon henderson,TreVeyon Henderson,RB,53,New England Patriots,A-,4
+terry mclaurin,Terry McLaurin,WR,54,Washington Commanders,A-,4
+cam skattebo,Cam Skattebo,RB,55,New York Giants,A-,4
+joe burrow,Joe Burrow,QB,56,Cincinnati Bengals,A-,4
+rome odunze,Rome Odunze,WR,57,Chicago Bears,A-,4
+christian watson,Christian Watson,WR,58,Green Bay Packers,A-,4
+bhayshul tuten,Bhayshul Tuten,RB,59,Jacksonville Jaguars,A-,4
+d'andre swift,D'Andre Swift,RB,60,Chicago Bears,A-,4
+parker washington,Parker Washington,WR,61,Jacksonville Jaguars,A-,4
+tyler warren,Tyler Warren,TE,62,Indianapolis Colts,A-,4
+carnell tate,Carnell Tate,WR,63,,A-,4
+alec pierce,Alec Pierce,WR,64,Indianapolis Colts,A-,4
+marvin harrison,Marvin Harrison Jr.,WR,65,Arizona Cardinals,A-,4
+caleb williams,Caleb Williams,QB,66,Chicago Bears,A-,4
+rj harvey,RJ Harvey,RB,67,Denver Broncos,A-,4
+drake maye,Drake Maye,QB,68,New England Patriots,A-,4
+jayden daniels,Jayden Daniels,QB,69,Washington Commanders,A-,4
+michael wilson,Michael Wilson,WR,70,Arizona Cardinals,A-,4
+makai lemon,Makai Lemon,WR,71,,A-,4
+chuba hubbard,Chuba Hubbard,RB,72,Carolina Panthers,A-,4
+jalen hurts,Jalen Hurts,QB,73,Philadelphia Eagles,A-,4
+brian thomas,Brian Thomas Jr.,WR,74,Jacksonville Jaguars,A-,4
+rhamondre stevenson,Rhamondre Stevenson,RB,75,New England Patriots,A-,4
+harold fannin,Harold Fannin Jr.,TE,76,Cleveland Browns,A-,4
+dak prescott,Dak Prescott,QB,77,Dallas Cowboys,A-,4
+courtland sutton,Courtland Sutton,WR,78,Denver Broncos,A-,4
+jordyn tyson,Jordyn Tyson,WR,79,,A-,4
+tucker kraft,Tucker Kraft,TE,80,Green Bay Packers,A-,4
+trevor lawrence,Trevor Lawrence,QB,81,Jacksonville Jaguars,A-,4
+chris godwin,Chris Godwin Jr.,WR,82,Tampa Bay Buccaneers,A-,4
+dk metcalf,DK Metcalf,WR,83,Pittsburgh Steelers,A-,4
+jaylen warren,Jaylen Warren,RB,84,Pittsburgh Steelers,A-,4
+justin herbert,Justin Herbert,QB,85,Los Angeles Chargers,A-,4
+jaxson dart,Jaxson Dart,QB,86,New York Giants,A-,4
+rico dowdle,Rico Dowdle,RB,87,Pittsburgh Steelers,A-,4
+patrick mahomes,Patrick Mahomes,QB,88,Kansas City Chiefs,A-,4
+wan'dale robinson,Wan'Dale Robinson,WR,89,Tennessee Titans,A-,4
+romeo doubs,Romeo Doubs,WR,90,New England Patriots,A-,4
+matthew stafford,Matthew Stafford,QB,91,Los Angeles Rams,A-,4
+kyle pitts,Kyle Pitts Sr.,TE,92,Atlanta Falcons,A-,4
+sam laporta,Sam LaPorta,TE,93,Detroit Lions,A-,4
+tyler allgeier,Tyler Allgeier,RB,94,Arizona Cardinals,A-,4
+ricky pearsall,Ricky Pearsall,WR,95,San Francisco 49ers,A-,4
+jordan addison,Jordan Addison,WR,96,Minnesota Vikings,A-,4
+jk dobbins,J.K. Dobbins,RB,97,Denver Broncos,A-,4
+bo nix,Bo Nix,QB,98,Denver Broncos,A-,4
+brock purdy,Brock Purdy,QB,99,San Francisco 49ers,A-,4
+jakobi meyers,Jakobi Meyers,WR,100,Jacksonville Jaguars,A-,4
+kyle monangai,Kyle Monangai,RB,101,Chicago Bears,A-,4
+jared goff,Jared Goff,QB,102,Detroit Lions,A-,4
+george kittle,George Kittle,TE,103,San Francisco 49ers,A-,4
+quentin johnston,Quentin Johnston,WR,104,Los Angeles Chargers,A-,4
+jadarian price,Jadarian Price,RB,105,,A-,4
+blake corum,Blake Corum,RB,106,Los Angeles Rams,A-,4
+kyler murray,Kyler Murray,QB,107,Minnesota Vikings,A-,4
+jordan love,Jordan Love,QB,108,Green Bay Packers,A-,4
+jayden reed,Jayden Reed,WR,109,Green Bay Packers,A-,4
+michael pittman,Michael Pittman Jr.,WR,110,Pittsburgh Steelers,A-,4
+baker mayfield,Baker Mayfield,QB,111,Tampa Bay Buccaneers,A-,4
+tony pollard,Tony Pollard,RB,112,Tennessee Titans,A-,4
+zach charbonnet,Zach Charbonnet,RB,113,Seattle Seahawks,A-,4
+dalton kincaid,Dalton Kincaid,TE,114,Buffalo Bills,A-,4
+kenneth gainwell,Kenneth Gainwell,RB,115,Tampa Bay Buccaneers,A-,4
+tyler shough,Tyler Shough,QB,116,New Orleans Saints,A-,4
+oronde gadsden,Oronde Gadsden II,TE,117,Los Angeles Chargers,A-,4
+josh downs,Josh Downs,WR,118,Indianapolis Colts,A-,4
+matthew golden,Matthew Golden,WR,119,Green Bay Packers,A-,4
+kc concepcion,KC Concepcion,WR,120,,A-,4
+xavier worthy,Xavier Worthy,WR,121,Kansas City Chiefs,A-,4
+dallas goedert,Dallas Goedert,TE,122,Philadelphia Eagles,A-,4
+khalil shakir,Khalil Shakir,WR,123,Buffalo Bills,A-,4
+malik willis,Malik Willis,QB,124,Miami Dolphins,A-,4
+jalen coker,Jalen Coker,WR,125,Carolina Panthers,A-,4
+jake ferguson,Jake Ferguson,TE,126,Dallas Cowboys,A-,4
+jordan mason,Jordan Mason,RB,127,Minnesota Vikings,A-,4
+travis kelce,Travis Kelce,TE,128,Kansas City Chiefs,A-,4
+sam darnold,Sam Darnold,QB,129,Seattle Seahawks,A-,4
+kenyon sadiq,Kenyon Sadiq,TE,130,,A-,4
+jayden higgins,Jayden Higgins,WR,131,Houston Texans,A-,4
+rachaad white,Rachaad White,RB,132,Washington Commanders,A-,4
+chris rodriguez,Chris Rodriguez Jr.,RB,133,Jacksonville Jaguars,A-,4
+isaiah likely,Isaiah Likely,TE,134,New York Giants,A-,4
+cj stroud,C.J. Stroud,QB,135,Houston Texans,A-,4
+daniel jones,Daniel Jones,QB,136,Indianapolis Colts,A-,4
+jalen mcmillan,Jalen McMillan,WR,137,Tampa Bay Buccaneers,A-,4
+aaron jones,Aaron Jones Sr.,RB,138,Minnesota Vikings,A-,4
+omar cooper,Omar Cooper Jr.,WR,139,,A-,4
+jacory croskey-merritt,Jacory Croskey-Merritt,RB,140,Washington Commanders,A-,4
+bryce young,Bryce Young,QB,141,Carolina Panthers,A-,4
+brenton strange,Brenton Strange,TE,142,Jacksonville Jaguars,A-,4
+jonathon brooks,Jonathon Brooks,RB,143,Carolina Panthers,A-,4
+cam ward,Cam Ward,QB,144,Tennessee Titans,A-,4
+mike washington,Mike Washington Jr.,RB,145,,A-,4
+rashid shaheed,Rashid Shaheed,WR,146,Seattle Seahawks,A-,4
+juwan johnson,Juwan Johnson,TE,147,New Orleans Saints,A-,4
+jacoby brissett,Jacoby Brissett,QB,148,Arizona Cardinals,A-,4
+mark andrews,Mark Andrews,TE,149,Baltimore Ravens,A-,4
+tyrone tracy,Tyrone Tracy Jr.,RB,150,New York Giants,A-,4
+jauan jennings,Jauan Jennings,WR,151,,A-,4
+stefon diggs,Stefon Diggs,WR,152,,A-,4
+denzel boston,Denzel Boston,WR,153,,A-,4
+hunter henry,Hunter Henry,TE,154,New England Patriots,A-,4
+jonah coleman,Jonah Coleman,RB,155,,A-,4
+woody marks,Woody Marks,RB,156,Houston Texans,A-,4
+tyreek hill,Tyreek Hill,WR,157,,A-,4
+chig okonkwo,Chig Okonkwo,TE,158,Washington Commanders,A-,4
+james conner,James Conner,RB,159,Arizona Cardinals,A-,4
+fernando mendoza,Fernando Mendoza,QB,160,,A-,4
+brandon aiyuk,Brandon Aiyuk,WR,161,San Francisco 49ers,A-,4
+emanuel wilson,Emanuel Wilson,RB,162,Seattle Seahawks,A-,4
+travis hunter,Travis Hunter,WR,163,Jacksonville Jaguars,A-,4
+isiah pacheco,Isiah Pacheco,RB,164,Detroit Lions,A-,4
+keaton mitchell,Keaton Mitchell,RB,165,Los Angeles Chargers,A-,4
+tj hockenson,T.J. Hockenson,TE,166,Minnesota Vikings,A-,4
+jerry jeudy,Jerry Jeudy,WR,167,Cleveland Browns,A-,4
+geno smith,Geno Smith,QB,168,New York Jets,A-,4
+kayshon boutte,Kayshon Boutte,WR,169,New England Patriots,A-,4
+deebo samuel,Deebo Samuel Sr.,WR,170,,A-,4
+aj barner,AJ Barner,TE,171,Seattle Seahawks,A-,4
+jalen nailor,Jalen Nailor,WR,172,Las Vegas Raiders,A-,4
+isaac teslaa,Isaac TeSlaa,WR,173,Detroit Lions,A-,4
+dalton schultz,Dalton Schultz,TE,174,Houston Texans,A-,4
+calvin ridley,Calvin Ridley,WR,175,Tennessee Titans,A-,4
+dylan sampson,Dylan Sampson,RB,176,Cleveland Browns,A-,4
+tyjae spears,Tyjae Spears,RB,177,Tennessee Titans,A-,4
+emmett johnson,Emmett Johnson,RB,178,,A-,4
+eli stowers,Eli Stowers,TE,179,,A-,4
+tank dell,Tank Dell,WR,180,Houston Texans,A-,4
+brian robinson,Brian Robinson Jr.,RB,181,Atlanta Falcons,A-,4
+alvin kamara,Alvin Kamara,RB,182,New Orleans Saints,A-,4
+christian kirk,Christian Kirk,WR,183,San Francisco 49ers,A-,4
+tre' harris,Tre' Harris,WR,184,Los Angeles Chargers,A-,4
+adonai mitchell,Adonai Mitchell,WR,185,New York Jets,A-,4
+tua tagovailoa,Tua Tagovailoa,QB,186,Atlanta Falcons,A-,4
+mason taylor,Mason Taylor,TE,187,New York Jets,A-,4
+dontayvion wicks,Dontayvion Wicks,WR,188,Philadelphia Eagles,A-,4
+malik washington,Malik Washington,WR,189,Miami Dolphins,A-,4
+tank bigsby,Tank Bigsby,RB,190,Philadelphia Eagles,A-,4
+colby parkinson,Colby Parkinson,TE,191,Los Angeles Rams,A-,4
+tre tucker,Tre Tucker,WR,192,Las Vegas Raiders,A-,4
+kimani vidal,Kimani Vidal,RB,193,Los Angeles Chargers,A-,4
+nicholas singleton,Nicholas Singleton,RB,194,,A-,4
+chimere dike,Chimere Dike,WR,195,Tennessee Titans,A-,4
+david njoku,David Njoku,TE,196,,A-,4
+cade otton,Cade Otton,TE,197,Tampa Bay Buccaneers,A-,4
+darnell mooney,Darnell Mooney,WR,198,New York Giants,A-,4
+gunnar helm,Gunnar Helm,TE,199,Tennessee Titans,A-,4
+braelon allen,Braelon Allen,RB,200,New York Jets,A-,4
+shedeur sanders,Shedeur Sanders,QB,201,Cleveland Browns,A-,4
+jordan james,Jordan James,RB,202,San Francisco 49ers,A-,4
+troy franklin,Troy Franklin,WR,203,Denver Broncos,A-,4
+tory horton,Tory Horton,WR,204,Seattle Seahawks,A-,4
+aaron rodgers,Aaron Rodgers,QB,205,,A-,4
+trey benson,Trey Benson,RB,206,Arizona Cardinals,A-,4
+ryan flournoy,Ryan Flournoy,WR,207,Dallas Cowboys,A-,4
+kirk cousins,Kirk Cousins,QB,208,Las Vegas Raiders,A-,4
+chris brazzell,Chris Brazzell II,WR,209,,A-,4
+ray davis,Ray Davis,RB,210,Buffalo Bills,A-,4
+terrance ferguson,Terrance Ferguson,TE,211,Los Angeles Rams,A-,4
+michael penix,Michael Penix Jr.,QB,212,Atlanta Falcons,A-,4
+cooper kupp,Cooper Kupp,WR,213,Seattle Seahawks,A-,4
+pat bryant,Pat Bryant,WR,214,Denver Broncos,A-,4
+sean tucker,Sean Tucker,RB,215,Tampa Bay Buccaneers,A-,4
+pat freiermuth,Pat Freiermuth,TE,216,Pittsburgh Steelers,A-,4
+elijah sarratt,Elijah Sarratt,WR,217,,A-,4
+kaytron allen,Kaytron Allen,RB,218,,A-,4
+germie bernard,Germie Bernard,WR,219,,A-,4
+devaughn vele,Devaughn Vele,WR,220,New Orleans Saints,A-,4
+jake tonges,Jake Tonges,TE,221,San Francisco 49ers,A-,4
+ty simpson,Ty Simpson,QB,222,,A-,4
+jj mccarthy,J.J. McCarthy,QB,223,Minnesota Vikings,A-,4
+hollywood brown,Hollywood Brown,WR,224,Philadelphia Eagles,A-,4
+ollie gordon,Ollie Gordon II,RB,225,Miami Dolphins,A-,4
+theo johnson,Theo Johnson,TE,226,New York Giants,A-,4
+deshaun watson,Deshaun Watson,QB,227,Cleveland Browns,A-,4
+justin fields,Justin Fields,QB,228,Kansas City Chiefs,A-,4
+mack hollins,Mack Hollins,WR,229,New England Patriots,A-,4
+anthony richardson,Anthony Richardson Sr.,QB,230,Indianapolis Colts,A-,4
+justice hill,Justice Hill,RB,231,Baltimore Ravens,A-,4
+greg dulcich,Greg Dulcich,TE,232,Miami Dolphins,A-,4
+najee harris,Najee Harris,RB,233,,A-,4
+george holani,George Holani,RB,234,Seattle Seahawks,A-,4
+zachariah branch,Zachariah Branch,WR,235,,A-,4
+joe flacco,Joe Flacco,QB,236,Cincinnati Bengals,A-,4
+keon coleman,Keon Coleman,WR,237,Buffalo Bills,A-,4
+riley leonard,Riley Leonard,QB,238,Indianapolis Colts,A-,4
+elic ayomanor,Elic Ayomanor,WR,239,Tennessee Titans,A-,4
+trevor etienne,Trevor Etienne,RB,240,Carolina Panthers,A-,4
+ty johnson,Ty Johnson,RB,241,Buffalo Bills,A-,4
+marvin mims,Marvin Mims Jr.,WR,242,Denver Broncos,A-,4
+ted hurst,Ted Hurst,WR,243,,A-,4
+will howard,Will Howard,QB,244,Pittsburgh Steelers,A-,4
+calvin austin,Calvin Austin III,WR,245,New York Giants,A-,4
+joe mixon,Joe Mixon,RB,246,,A-,4
+evan engram,Evan Engram,TE,247,Denver Broncos,A-,4
+samaje perine,Samaje Perine,RB,248,Cincinnati Bengals,A-,4
+jaydon blue,Jaydon Blue,RB,249,Dallas Cowboys,A-,4
+marcus mariota,Marcus Mariota,QB,250,Washington Commanders,A-,4
+mike gesicki,Mike Gesicki,TE,251,Cincinnati Bengals,A-,4
+eli heidenreich,Eli Heidenreich,WR,252,,A-,4
+audric estime,Audric Estime,RB,253,New Orleans Saints,A-,4
+marshawn lloyd,MarShawn Lloyd,RB,254,Green Bay Packers,A-,4
+rashod bateman,Rashod Bateman,WR,255,Baltimore Ravens,A-,4
+bryce lance,Bryce Lance,WR,256,,A-,4
+demond claiborne,Demond Claiborne,RB,257,,A-,4
+dawson knox,Dawson Knox,TE,258,Buffalo Bills,A-,4
+de'zhaun stribling,De'Zhaun Stribling,WR,259,,A-,4
+cole kmet,Cole Kmet,TE,260,Chicago Bears,A-,4
+isaac guerendo,Isaac Guerendo,RB,261,San Francisco 49ers,A-,4
+roman hemby,Roman Hemby,RB,262,,A-,4
+tyquan thornton,Tyquan Thornton,WR,263,Kansas City Chiefs,A-,4
+kalif raymond,Kalif Raymond,WR,264,Chicago Bears,A-,4
+ja'tavion sanders,Ja'Tavion Sanders,TE,265,Carolina Panthers,A-,4
+kareem hunt,Kareem Hunt,RB,266,,A-,4
+gardner minshew,Gardner Minshew II,QB,267,Arizona Cardinals,A-,4
+elijah arroyo,Elijah Arroyo,TE,268,Seattle Seahawks,A-,4
+luke mccaffrey,Luke McCaffrey,WR,269,Washington Commanders,A-,4
+justin joly,Justin Joly,TE,270,,A-,4
+emari demercado,Emari Demercado,RB,271,Kansas City Chiefs,A-,4
+keenan allen,Keenan Allen,WR,272,,A-,4
+isaiah bond,Isaiah Bond,WR,273,Cleveland Browns,A-,4
+kendrick bourne,Kendrick Bourne,WR,274,Arizona Cardinals,A-,4
+malachi fields,Malachi Fields,WR,275,,A-,4
+darnell washington,Darnell Washington,TE,276,Pittsburgh Steelers,A-,4
+erick all,Erick All Jr.,TE,277,Cincinnati Bengals,A-,4
+chris brooks,Chris Brooks,RB,278,Green Bay Packers,A-,4
+tez johnson,Tez Johnson,WR,279,Tampa Bay Buccaneers,A-,4
+treylon burks,Treylon Burks,WR,280,Washington Commanders,A-,4
+isaiah davis,Isaiah Davis,RB,281,New York Jets,A-,4
+kyle williams,Kyle Williams,WR,282,New England Patriots,A-,4
+jaylen wright,Jaylen Wright,RB,283,Miami Dolphins,A-,4
+olamide zaccheaus,Olamide Zaccheaus,WR,284,Atlanta Falcons,A-,4
+sam roush,Sam Roush,TE,285,,A-,4
+jahdae walker,Jahdae Walker,WR,286,Chicago Bears,A-,4
+xavier legette,Xavier Legette,WR,287,Carolina Panthers,A-,4
+ja'kobi lane,Ja'Kobi Lane,WR,288,,A-,4
+chris bell,Chris Bell,WR,289,,A-,4
+oscar delp,Oscar Delp,TE,290,,A-,4
+kaleb johnson,Kaleb Johnson,RB,291,Pittsburgh Steelers,A-,4
+mac jones,Mac Jones,QB,292,San Francisco 49ers,A-,4
+adam randall,Adam Randall,RB,293,,A-,4
+jalen tolbert,Jalen Tolbert,WR,294,Miami Dolphins,A-,4
+lequint allen,LeQuint Allen Jr.,RB,295,Jacksonville Jaguars,A-,4
+skyler bell,Skyler Bell,WR,296,,A-,4
+malik davis,Malik Davis,RB,297,Dallas Cowboys,A-,4
+zach ertz,Zach Ertz,TE,298,,A-,4
+devin neal,Devin Neal,RB,299,New Orleans Saints,A-,4
+brashard smith,Brashard Smith,RB,300,Kansas City Chiefs,A-,4
+tyler higbee,Tyler Higbee,TE,301,Los Angeles Rams,A-,4
+devontez walker,Devontez Walker,WR,302,Baltimore Ravens,A-,4
+dont'e thornton,Dont'e Thornton Jr.,WR,303,Las Vegas Raiders,A-,4
+kaelon black,Kaelon Black,RB,304,,A-,4
+jack bech,Jack Bech,WR,305,Las Vegas Raiders,A-,4
+jahan dotson,Jahan Dotson,WR,306,Atlanta Falcons,A-,4
+darius slayton,Darius Slayton,WR,307,New York Giants,A-,4
+seth mcgowan,Seth McGowan,RB,308,,A-,4
+michael mayer,Michael Mayer,TE,309,Las Vegas Raiders,A-,4
+savion williams,Savion Williams,WR,310,Green Bay Packers,A-,4
+jaylin noel,Jaylin Noel,WR,311,Houston Texans,A-,4
+max klare,Max Klare,TE,312,,A-,4
+eli raridon,Eli Raridon,TE,313,,A-,4
+andrei iosivas,Andrei Iosivas,WR,314,Cincinnati Bengals,A-,4
+jameis winston,Jameis Winston,QB,315,New York Giants,A-,4
+jaydn ott,Jaydn Ott,RB,316,,A-,4
+antonio williams,Antonio Williams,WR,317,,A-,4
+brenen thompson,Brenen Thompson,WR,318,,A-,4
+demario douglas,DeMario Douglas,WR,319,New England Patriots,A-,4
+cedric tillman,Cedric Tillman,WR,320,Cleveland Browns,A-,4
+kavontae turpin,KaVontae Turpin,WR,321,Dallas Cowboys,A-,4
+tahj brooks,Tahj Brooks,RB,322,Cincinnati Bengals,A-,4
+eric mcalister,Eric McAlister,WR,323,,A-,4
+noah gray,Noah Gray,TE,324,Kansas City Chiefs,A-,4
+john metchie,John Metchie III,WR,325,Carolina Panthers,A-,4
+tutu atwell,Tutu Atwell,WR,326,Miami Dolphins,A-,4
+dj giddens,DJ Giddens,RB,327,Indianapolis Colts,A-,4
+jerome ford,Jerome Ford,RB,328,Washington Commanders,A-,4
+darren waller,Darren Waller,TE,329,,A-,4
+xavier hutchinson,Xavier Hutchinson,WR,330,Houston Texans,A-,4

@@ -1,6 +1,8 @@
 # Backlog
 
 ## Now
+- TASK-195: Player Rankings — Compare Mode (UD vs DK side-by-side)
+- TASK-196: PlayerRankings Compare View — full tier-break editing parity with single-platform views
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -27,6 +29,7 @@
 | TASK-188 | Weekly portfolio digest email — retention loop | Todo | P2 | [Plan](docs/plans/TASK-188.md) — Draft | No |
 | TASK-189 | Landing page messaging refinements | Todo | P2 | [Plan](docs/plans/TASK-189.md) — Draft | No |
 | TASK-192 | Restore Google OAuth buttons on website AuthModal | Todo | P2 | [Plan](docs/plans/TASK-192.md) — Draft | No |
+| TASK-194 | Search Console — add Domain property and unify URL variants via Vercel redirects | Todo | P2 | [Plan](docs/plans/TASK-194.md) -- Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
@@ -44,6 +47,8 @@
 | TASK-190 | Update stale business plan artifacts to match current product reality | Todo | P3 | [Plan](docs/plans/TASK-190.md) — Draft | No |
 | TASK-175 | Block doubleclick.net ad interruptions on DraftKings pages | In Progress | P3 | [Plan](docs/plans/TASK-175.md) | No |
 | TASK-193 | SEO — Long-tail content + crawler-visible content for SPA deep routes | Todo | P3 | [Plan](docs/plans/TASK-193.md) -- Draft | No |
+| TASK-195 | Player Rankings — Compare Mode (UD vs DK side-by-side) | In Progress | P3 | [Plan](docs/plans/TASK-195.md) | No |
+| TASK-196 | PlayerRankings Compare View — full tier-break editing parity with single-platform views | In Progress | P3 | [Plan](docs/plans/TASK-196.md) | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 
 ## Completed Tasks

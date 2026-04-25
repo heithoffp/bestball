@@ -1,0 +1,509 @@
+/* === CompareView CSS Module === */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.controlsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  padding: 0 0 8px;
+}
+
+.sliderLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.slider {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.sliderValue {
+  display: inline-block;
+  min-width: 22px;
+  text-align: right;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.lockToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.lockToggle:hover {
+  border-color: var(--accent);
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--surface-0);
+}
+
+/* ── Column header strip ─────────────────────────────────────── */
+.columnHeaders {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr;
+  gap: 0;
+  align-items: stretch;
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border-default);
+  background: var(--surface-1);
+  border-radius: 6px 6px 0 0;
+}
+
+.gutterHeader {
+  border-bottom: 1px dashed var(--border-subtle);
+}
+
+.platformLabel {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.sourcePillSaved,
+.sourcePillAdp,
+.sourcePillEmpty {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sourcePillSaved {
+  color: var(--positive);
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.sourcePillAdp {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+}
+
+.sourcePillEmpty {
+  color: var(--text-muted);
+}
+
+.countLabel {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Columns area ────────────────────────────────────────────── */
+.columnsArea {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border-subtle);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  background: var(--surface-1);
+  position: relative;
+}
+
+.scrollContainer {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── Gutter (curve canvas + mirror pill) ─────────────────────── */
+.gutter {
+  position: relative;
+  background: var(--surface-0);
+  border-top: none;
+  overflow: visible;
+}
+
+.curveCanvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+
+.curveActive {
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.tickLabel text {
+  font-family: var(--font-mono);
+}
+
+/* ── Tier divider ────────────────────────────────────────────── */
+.tierDivider {
+  position: relative;
+  border: none;
+  user-select: none;
+}
+
+.tierLabel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.tierLabelInput {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: none;
+  border-radius: 0;
+  padding: 0 8px;
+  box-sizing: border-box;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  font-family: inherit;
+  outline: none;
+}
+
+.tierDragHandle {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: grab;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transition: color var(--duration-fast);
+  z-index: 1;
+}
+
+.tierDragHandle:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.tierDeleteBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transition: color var(--duration-fast), background var(--duration-fast);
+  z-index: 1;
+}
+
+.tierDeleteBtn:hover {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.6);
+}
+
+/* ── Tier insert zone (between same-tier players) ─────────────── */
+.tierInsertZone {
+  cursor: pointer;
+}
+
+.tierInsertIndicator {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+  pointer-events: none;
+}
+
+.tierInsertZone:hover .tierInsertIndicator {
+  opacity: 1;
+}
+
+.tierInsertIndicatorLine {
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.tierInsertIndicatorBtn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Drag overlay (portal-based, fixed positioning) ──────────── */
+.dragOverlayPortal {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0.95;
+  white-space: nowrap;
+}
+
+.dragOverlayRank {
+  color: var(--text-secondary);
+  min-width: 24px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.dragOverlayName {
+  font-weight: 600;
+  flex: 1;
+}
+
+.dragOverlayTier {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0.95;
+  white-space: nowrap;
+}
+
+.dragOverlayTierLabel {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  padding: 2px 10px;
+}
+
+/* ── Compare row ─────────────────────────────────────────────── */
+.compareRow {
+  display: grid;
+  grid-template-columns: 24px 36px 1fr auto 50px;
+  align-items: center;
+  height: 40px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-base);
+  gap: 8px;
+  transition: background var(--duration-fast);
+}
+
+.compareRow:hover,
+.rowHovered {
+  background: var(--surface-2);
+}
+
+.rowSearchMatch {
+  background: rgba(232, 191, 74, 0.08);
+}
+
+.gripCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: grab;
+}
+
+.rankCell {
+  text-align: center;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.nameCell {
+  padding: 0 6px 0 8px;
+  overflow: hidden;
+  font-weight: 500;
+}
+
+.nameText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.posBadgeCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.adpCell {
+  text-align: right;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+}
+
+/* ── Mirror proposal: ghost target row ──────────────────────── */
+.ghostTarget {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(90deg, var(--accent-muted) 0%, transparent 100%);
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Mirror pill ─────────────────────────────────────────────── */
+.mirrorPill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-1);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 4px 4px 4px 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.mirrorPillApply {
+  background: var(--gradient-accent);
+  color: var(--surface-0);
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mirrorPillDismiss {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.mirrorPillDismiss:hover {
+  color: var(--text-primary);
+}
+
+/* ── Empty / search states ───────────────────────────────────── */
+.emptyState {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.searchEmpty {
+  padding: var(--space-md);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
