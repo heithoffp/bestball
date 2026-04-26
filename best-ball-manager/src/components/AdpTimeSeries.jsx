@@ -305,12 +305,23 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     const numericKeys = ['lastAdp', 'udAdp', 'dkAdp', 'deltaAdp', 'udTrend', 'dkTrend', 'value', 'myAvg', 'exposure', 'change'];
     return list.sort((a, b) => {
       if (sortConfig.key === 'myPickMedian') {
-        const vA = a.pickStats?.median ?? 9999, vB = b.pickStats?.median ?? 9999;
+        const vA = a.pickStats?.median ?? null;
+        const vB = b.pickStats?.median ?? null;
+        if (vA == null && vB == null) return 0;
+        if (vA == null) return 1;
+        if (vB == null) return -1;
         return sortConfig.direction === 'asc' ? vA - vB : vB - vA;
       }
       let vA = a[sortConfig.key], vB = b[sortConfig.key];
-      if (sortConfig.key === 'name') { vA = (vA || '').toLowerCase(); vB = (vB || '').toLowerCase(); }
-      else if (numericKeys.includes(sortConfig.key)) { vA = vA ?? 9999; vB = vB ?? 9999; }
+      if (sortConfig.key === 'name') {
+        vA = (vA || '').toLowerCase();
+        vB = (vB || '').toLowerCase();
+      } else if (numericKeys.includes(sortConfig.key)) {
+        // Push nulls (rendered as "-") to the bottom regardless of sort direction
+        if (vA == null && vB == null) return 0;
+        if (vA == null) return 1;
+        if (vB == null) return -1;
+      }
       if (vA < vB) return sortConfig.direction === 'asc' ? -1 : 1;
       if (vA > vB) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
