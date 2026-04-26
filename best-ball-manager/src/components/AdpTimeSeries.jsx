@@ -281,21 +281,22 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
 
   // 4. Filter, enrich with platStats, and sort
   const filteredAndSortedList = useMemo(() => {
-    // Max UD ADP across all players — used as fallback for players absent from DK data
-    const maxUdAdp = Object.values(platStats).reduce((max, ps) => {
-      const v = ps.underdog?.adp ?? 0;
-      return v > max ? v : max;
-    }, 0) || null;
+    // Max ADP per platform — used as sort fallback for players missing on one platform
+    const allPs = Object.values(platStats);
+    const maxUdAdp = allPs.reduce((m, ps) => Math.max(m, ps.underdog?.adp ?? 0), 0) || null;
+    const maxDkAdp = allPs.reduce((m, ps) => Math.max(m, ps.draftkings?.adp ?? 0), 0) || null;
 
     let list = timeFilteredPlayers
-      .filter(p => p.lastAdp !== null && (platStats[canonicalName(p.name)]?.underdog?.adp ?? null) !== null)
+      .filter(p => p.lastAdp !== null)
       .map(p => {
         const ps = platStats[canonicalName(p.name)] ?? {};
-        const udAdp   = ps.underdog?.adp   ?? null;
-        const dkAdp   = ps.draftkings?.adp  ?? maxUdAdp;
+        const rawUd = ps.underdog?.adp ?? null;
+        const rawDk = ps.draftkings?.adp ?? null;
+        const udAdp   = rawUd ?? maxDkAdp;
+        const dkAdp   = rawDk ?? maxUdAdp;
         const udTrend = ps.underdog?.trend  ?? null;
         const dkTrend = ps.draftkings?.trend ?? null;
-        return { ...p, udAdp, dkAdp, deltaAdp: udAdp !== null && dkAdp !== null ? udAdp - dkAdp : null, udTrend, dkTrend };
+        return { ...p, udAdp, dkAdp, deltaAdp: rawUd !== null && rawDk !== null ? rawUd - rawDk : null, udTrend, dkTrend };
       });
 
     const q = (query || '').toLowerCase().trim();
