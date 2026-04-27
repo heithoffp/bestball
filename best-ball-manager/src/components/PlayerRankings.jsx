@@ -101,7 +101,7 @@ function getTierColor(tierNum) {
 /* Build the displayed-player array from a row source (saved rankings or ADP rows).
    Sorts by ADP and drops rows without a parseable ADP. Shared by the initial-seed
    effect and the "Reset to ADP" handler. */
-function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adpLookup = new Map() } = {}) {
+function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adpLookup = new Map(), teamLookup = new Map() } = {}) {
   const players = source.map(row => {
     const firstName = row.firstName || row.first_name || row['First Name'] || '';
     const lastName = row.lastName || row.last_name || row['Last Name'] || '';
@@ -114,6 +114,7 @@ function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adp
     const id = (!rawId || String(rawId).startsWith('gen_'))
       ? (nameToAdpId.get(nameKey) || `gen_${name.replace(/\s+/g, '_')}`)
       : String(rawId);
+    const teamFromSource = expandTeam(row.teamName || row.team || row.Team || '');
     return {
       id,
       firstName,
@@ -125,7 +126,7 @@ function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adp
       projectedPoints: proj,
       positionRank: row.positionRank || '',
       slotName: row.slotName || row.position || row.Position || row.pos || 'N/A',
-      teamName: expandTeam(row.teamName || row.team || row.Team || ''),
+      teamName: teamLookup.get(nameKey) || teamFromSource,
       lineupStatus: row.lineupStatus || '',
       byeWeek: row.byeWeek || '',
       _csvTier: row.tier || '',
@@ -134,6 +135,19 @@ function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adp
   });
   players.sort((a, b) => a.adp - b.adp);
   return players.filter(p => p.adp !== 9999);
+}
+
+function buildTeamLookup(adpRows) {
+  const map = new Map();
+  adpRows.forEach(r => {
+    const n = canonicalName(
+      (`${r.firstName || r.first_name || ''} ${r.lastName || r.last_name || ''}`).trim()
+      || r.Name || r.name || ''
+    );
+    const team = r.teamName || r.team || r.Team || '';
+    if (n && team) map.set(n, team);
+  });
+  return map;
 }
 
 function buildNameToAdpId(adpRows) {
@@ -534,6 +548,12 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     return adpByPlatform?.[selectedPlatform]?.latestRows ?? [];
   }, [rankingsByPlatform, selectedPlatform, adpByPlatform]);
 
+  /* --- Team lookup from latest Underdog ADP rows --- */
+  const teamLookup = useMemo(
+    () => buildTeamLookup(adpByPlatform?.underdog?.latestRows ?? []),
+    [adpByPlatform]
+  );
+
   /* --- ADP lookup from masterPlayers --- */
   const adpLookup = useMemo(() => {
     if (!masterPlayers || masterPlayers.length === 0) return new Map();
@@ -567,7 +587,7 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     // gen_ IDs get resolved to the real platform ID (e.g. DraftKings numeric IDs).
     const adpRows = adpByPlatform?.[selectedPlatform]?.latestRows ?? [];
     const nameToAdpId = buildNameToAdpId(adpRows);
-    const players = buildRankedPlayers(activeSource, { projMap, nameToAdpId, adpLookup });
+    const players = buildRankedPlayers(activeSource, { projMap, nameToAdpId, adpLookup, teamLookup });
     setRankedPlayers(players);
 
     // Restore tier breaks and labels from CSV
@@ -975,11 +995,11 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     if (adpRows.length === 0) return;
     const projMap = adpByPlatform?.[selectedPlatform]?.projPointsMap ?? {};
     const nameToAdpId = buildNameToAdpId(adpRows);
-    const players = buildRankedPlayers(adpRows, { projMap, nameToAdpId, adpLookup });
+    const players = buildRankedPlayers(adpRows, { projMap, nameToAdpId, adpLookup, teamLookup });
     setRankedPlayers(players);
     setOverallTierBreaks(new Set());
     setTierLabels({});
-  }, [adpByPlatform, selectedPlatform, adpLookup]);
+  }, [adpByPlatform, selectedPlatform, adpLookup, teamLookup]);
 
   /* --- save to assets --- */
   const [saveStatus, setSaveStatus] = useState(null);
