@@ -1141,7 +1141,7 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
                 </div>
                 <div className={css.cardStat}>
                   <span className={css.cardStatLabel}>ADP</span>
-                  <span className={css.cardStatValue}>{p.latestADPDisplay || '—'}</span>
+                  <span className={css.cardStatValue}>{(!p.latestADPDisplay || p.latestADPDisplay === 'N/A') ? '240' : p.latestADPDisplay}</span>
                 </div>
                 <div className={css.cardStat}>
                   <span className={css.cardStatLabel}>Proj</span>
@@ -1193,7 +1193,7 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
                 <td className={css.dtd} style={{ textAlign: 'center', color: '#e0e0e0', fontFamily: "'JetBrains Mono', monospace", fontSize: 14 }}>{NFL_TEAMS_ABBREV[p.team?.toUpperCase()] || p.team}</td>
                 <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
                 <td className={css.dtd} style={{ textAlign: 'center', color: '#ececec', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
-                <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{p.latestADPDisplay || '—'}</td>
+                <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{(!p.latestADPDisplay || p.latestADPDisplay === 'N/A') ? '240' : p.latestADPDisplay}</td>
                 <td className={css.dtd} style={{ textAlign: 'center' }}>
                   {clvPct !== null ? (
                     <div className={css.clvBar}>
