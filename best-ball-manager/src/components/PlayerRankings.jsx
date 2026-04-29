@@ -108,8 +108,9 @@ function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adp
     const name = `${firstName} ${lastName}`.trim() || row['Player Name'] || row.player_name || row.Name || row.name || 'Unknown';
     const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
     const nameKey = canonicalName(name);
+    const projFromMap = projMap[nameKey] != null ? String(projMap[nameKey]) : '';
     const projRaw = row.projectedPoints || row.projected_points || '';
-    const proj = projRaw || (projMap[nameKey] != null ? String(projMap[nameKey]) : '');
+    const proj = projFromMap || projRaw;
     const rawId = row.id || row.ID || '';
     const id = (!rawId || String(rawId).startsWith('gen_'))
       ? (nameToAdpId.get(nameKey) || `gen_${name.replace(/\s+/g, '_')}`)

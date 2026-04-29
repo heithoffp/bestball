@@ -3,6 +3,7 @@
 ## Now
 - TASK-195: Player Rankings — Compare Mode (UD vs DK side-by-side)
 - TASK-196: PlayerRankings Compare View — full tier-break editing parity with single-platform views
+- TASK-197: PlayerRankings — projections.csv as authoritative projection source
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -49,6 +50,7 @@
 | TASK-193 | SEO — Long-tail content + crawler-visible content for SPA deep routes | Todo | P3 | [Plan](docs/plans/TASK-193.md) -- Draft | No |
 | TASK-195 | Player Rankings — Compare Mode (UD vs DK side-by-side) | In Progress | P3 | [Plan](docs/plans/TASK-195.md) | No |
 | TASK-196 | PlayerRankings Compare View — full tier-break editing parity with single-platform views | In Progress | P3 | [Plan](docs/plans/TASK-196.md) | No |
+| TASK-197 | PlayerRankings — projections.csv as authoritative projection source | In Progress | P3 | [Plan](docs/plans/TASK-197.md) -- Pending Approval | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 
 ## Completed Tasks
