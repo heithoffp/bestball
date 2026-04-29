@@ -239,6 +239,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
 
     return Object.entries(map).map(([entry_id, players]) => {
       const clvValues = players
+        .filter(p => (parseInt(p.round) || 0) <= 18)
         .map(p => calcCLV(p.pick, p.latestADP, alpha))
         .filter(v => v !== null);
       const avgCLV = clvValues.length
