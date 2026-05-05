@@ -139,30 +139,85 @@ export async function readRankings() {
   return data.rankings ?? null;
 }
 
+function entryToRow(userId, e) {
+  return {
+    user_id: userId,
+    entry_id: e.entryId,
+    tournament: e.tournamentTitle ?? null,
+    slate_title: e.slateTitle ?? null,
+    draft_date: e.draftDate ?? null,
+    players: e.players ?? [],
+    synced_at: new Date().toISOString(),
+  };
+}
+
 /**
  * Writes portfolio entries to Supabase for the current user.
- * When `platform` is provided, only deletes that platform's previous entries
- * (tracked via chrome.storage), leaving other platforms' entries untouched.
- * When `platform` is omitted, falls back to full-replace (legacy behavior).
  *
- * Entries must match the adapter interface Entry shape:
- *   { entryId, tournamentTitle, draftDate, players: [{name, position, team, pick, round}] }
+ * Accepts two shapes:
+ *   - Legacy / full-replace: an Entry[] array. Deletes the platform's previous
+ *     rows (tracked in chrome.storage) and inserts the provided set.
+ *   - Incremental: { newEntries, currentDraftIds }. Upserts newEntries by
+ *     (user_id, entry_id), and deletes only the previously-stored ids that
+ *     are no longer present in currentDraftIds (drafts the user withdrew from).
  *
- * @param {Array} entries
+ * Entry shape: { entryId, tournamentTitle, slateTitle, draftDate, players }
+ *
+ * @param {Array | {newEntries: Array, currentDraftIds: string[]}} input
  * @param {{ platform?: string }} [options]
  * @returns {Promise<{count: number}>}
  */
-export async function writeEntries(entries, { platform } = {}) {
+export async function writeEntries(input, { platform } = {}) {
   if (!supabase) throw new Error('[BBM] Supabase not configured');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('[BBM] Not authenticated');
 
   const userId = session.user.id;
+  const isIncremental = !Array.isArray(input);
+
+  if (isIncremental) {
+    if (!platform) throw new Error('[BBM] Incremental writeEntries requires platform');
+
+    const { newEntries = [], currentDraftIds = [] } = input;
+    const storageKey = `${platform}_entry_ids`;
+    const stored = await new Promise(r => chrome.storage.local.get([storageKey], r));
+    const previousIds = stored[storageKey] ?? [];
+
+    const currentSet = new Set(currentDraftIds.map(String));
+    const staleIds   = previousIds.filter(id => !currentSet.has(String(id)));
+
+    if (staleIds.length > 0) {
+      const { error } = await supabase
+        .from('extension_entries')
+        .delete()
+        .eq('user_id', userId)
+        .in('entry_id', staleIds);
+      if (error) throw error;
+    }
+
+    if (newEntries.length > 0) {
+      const rows = newEntries.map(e => entryToRow(userId, e));
+      const { error } = await supabase
+        .from('extension_entries')
+        .upsert(rows, { onConflict: 'user_id,entry_id' });
+      if (error) throw error;
+    }
+
+    const totalCount = currentDraftIds.length;
+    await chrome.storage.local.set({
+      lastSync:                       Date.now(),
+      entryCount:                     totalCount,
+      [`${platform}_entry_ids`]:      currentDraftIds.map(String),
+      [`${platform}_lastSync`]:       Date.now(),
+      [`${platform}_entryCount`]:     totalCount,
+    });
+    return { count: totalCount };
+  }
+
+  // Legacy full-replace path
+  const entries = input;
 
   if (platform) {
-    // Per-platform scoped delete: only remove this platform's previous entries.
-    // Previous entry IDs are stored in chrome.storage so we can clean up stale entries
-    // (e.g. drafts the user left) without touching other platforms' rows.
     const storageKey = `${platform}_entry_ids`;
     const stored = await new Promise(r => chrome.storage.local.get([storageKey], r));
     const previousIds = stored[storageKey] ?? [];
@@ -175,8 +230,6 @@ export async function writeEntries(entries, { platform } = {}) {
         .in('entry_id', previousIds);
       if (deleteError) throw deleteError;
     } else if (platform === 'underdog') {
-      // Migration path: first sync under new per-platform mode for Underdog.
-      // No stored IDs yet, so fall back to full replace to avoid duplicates.
       const { error: deleteError } = await supabase
         .from('extension_entries')
         .delete()
@@ -184,7 +237,6 @@ export async function writeEntries(entries, { platform } = {}) {
       if (deleteError) throw deleteError;
     }
   } else {
-    // Legacy full-replace (no platform specified)
     const { error: deleteError } = await supabase
       .from('extension_entries')
       .delete()
@@ -202,19 +254,11 @@ export async function writeEntries(entries, { platform } = {}) {
     return { count: 0 };
   }
 
-  const rows = entries.map(e => ({
-    user_id: userId,
-    entry_id: e.entryId,
-    tournament: e.tournamentTitle ?? null,
-    slate_title: e.slateTitle ?? null,
-    draft_date: e.draftDate ?? null,
-    players: e.players ?? [],
-    synced_at: new Date().toISOString(),
-  }));
+  const rows = entries.map(e => entryToRow(userId, e));
 
   const { error: insertError, count } = await supabase
     .from('extension_entries')
-    .insert(rows, { count: 'exact' });
+    .upsert(rows, { onConflict: 'user_id,entry_id', count: 'exact' });
   if (insertError) throw insertError;
 
   const update = { lastSync: Date.now(), entryCount: entries.length };

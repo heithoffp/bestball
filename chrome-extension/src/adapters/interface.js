@@ -57,9 +57,14 @@
  * @property {(url: string) => boolean} isMatch
  *   Returns true if this adapter handles the given URL.
  *
- * @property {() => Promise<Entry[]>} getEntries
+ * @property {(knownEntryIds?: string[]) => Promise<Entry[] | {newEntries: Entry[], currentDraftIds: string[]}>} getEntries
  *   Scrapes roster/entry data from the platform's entries page.
  *   Rejects if not on an entries page or if scraping fails.
+ *   Adapters may operate in two modes:
+ *     - Full-refresh (legacy): ignore knownEntryIds and return Entry[].
+ *     - Incremental: skip detail fetch for entries in knownEntryIds and
+ *       return { newEntries, currentDraftIds } so writeEntries can upsert
+ *       and detect removals.
  *
  * @property {() => DraftState} getDraftState
  *   Reads current live draft state from the DOM.

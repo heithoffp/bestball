@@ -26,15 +26,23 @@ if (adapter) {
     });
   }
 
+  async function runSync() {
+    const storageKey = `${adapter.platform}_entry_ids`;
+    const stored     = await new Promise(r => chrome.storage.local.get([storageKey], r));
+    const knownIds   = stored[storageKey] ?? [];
+
+    const result = await adapter.getEntries(knownIds);
+    return writeEntries(result, { platform: adapter.platform });
+  }
+
   // Initialize draft overlay — pass adapter and sync callback so the overlay can trigger entry scraping
-  initDraftOverlay(adapter, () => adapter.getEntries().then(entries => writeEntries(entries, { platform: adapter.platform })));
+  initDraftOverlay(adapter, runSync);
 
   // Handle sync request from popup
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type !== 'SYNC_ENTRIES') return false;
 
-    adapter.getEntries()
-      .then(entries => writeEntries(entries, { platform: adapter.platform }))
+    runSync()
       .then(({ count }) => sendResponse({ ok: true, count }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
 

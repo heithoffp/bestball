@@ -1,7 +1,8 @@
 /**
  * Underdog Fantasy Platform Adapter
  *
- * Implements the PlatformAdapter interface for app.underdogfantasy.com.
+ * Implements the PlatformAdapter interface for Underdog (app.underdogfantasy.com
+ * and app.underdogsports.com — Underdog rebranded the domain in 2026-05).
  * The page bridge (fetch hook + sync logic) lives in
  * src/injected/underdog-bridge.js and is injected at document_start via
  * the manifest (world: MAIN), bypassing Underdog's CSP.
@@ -9,30 +10,35 @@
  * @type {import('./interface.js').PlatformAdapter}
  */
 
+const UD_HOSTS = new Set(['app.underdogfantasy.com', 'app.underdogsports.com']);
+
 const underdogAdapter = {
   isMatch(url) {
     try {
-      return new URL(url).hostname === 'app.underdogfantasy.com';
+      return UD_HOSTS.has(new URL(url).hostname);
     } catch {
       return false;
     }
   },
 
   /**
-   * Scrapes all completed best-ball entries for the signed-in user.
-   * Delegates to the page bridge (underdog-bridge.js) via postMessage.
+   * Scrapes completed best-ball entries for the signed-in user.
+   * Incremental: pass previously-synced entry ids to skip re-fetching detail
+   * for drafts already stored. The bridge still runs the cheap discovery
+   * pagination so removed drafts can be detected via currentDraftIds.
    *
-   * @returns {Promise<import('./interface.js').Entry[]>}
+   * @param {string[]} [knownEntryIds] - Previously synced entry/draft ids
+   * @returns {Promise<{ newEntries: import('./interface.js').Entry[], currentDraftIds: string[] }>}
    */
-  async getEntries() {
-    if (!window.location.href.includes('app.underdogfantasy.com/completed')) {
+  async getEntries(knownEntryIds = []) {
+    if (!UD_HOSTS.has(window.location.hostname) || !window.location.pathname.startsWith('/completed')) {
       throw new Error('Navigate to your Underdog completed entries page first');
     }
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(
         () => reject(new Error('Sync timed out — please retry')),
-        60_000
+        300_000
       );
 
       function handler(event) {
@@ -40,7 +46,10 @@ const underdogAdapter = {
         if (event.data?.type === 'BBM_SYNC_RESULT') {
           clearTimeout(timeout);
           window.removeEventListener('message', handler);
-          resolve(event.data.entries);
+          resolve({
+            newEntries:      event.data.newEntries ?? [],
+            currentDraftIds: event.data.currentDraftIds ?? [],
+          });
         } else if (event.data?.type === 'BBM_SYNC_ERROR') {
           clearTimeout(timeout);
           window.removeEventListener('message', handler);
@@ -49,7 +58,7 @@ const underdogAdapter = {
       }
 
       window.addEventListener('message', handler);
-      window.postMessage({ type: 'BBM_SYNC_REQUEST' }, '*');
+      window.postMessage({ type: 'BBM_SYNC_REQUEST', knownEntryIds }, '*');
     });
   },
 

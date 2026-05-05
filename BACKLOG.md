@@ -4,6 +4,7 @@
 - TASK-195: Player Rankings — Compare Mode (UD vs DK side-by-side)
 - TASK-196: PlayerRankings Compare View — full tier-break editing parity with single-platform views
 - TASK-197: PlayerRankings — projections.csv as authoritative projection source
+- TASK-198: Incremental Underdog sync to fix timeouts on large portfolios
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -31,6 +32,7 @@
 | TASK-189 | Landing page messaging refinements | Todo | P2 | [Plan](docs/plans/TASK-189.md) — Draft | No |
 | TASK-192 | Restore Google OAuth buttons on website AuthModal | Todo | P2 | [Plan](docs/plans/TASK-192.md) — Draft | No |
 | TASK-194 | Search Console — add Domain property and unify URL variants via Vercel redirects | Todo | P2 | [Plan](docs/plans/TASK-194.md) -- Draft | No |
+| TASK-198 | Incremental Underdog sync to fix timeouts on large portfolios | In Progress | P2 | [Plan](docs/plans/TASK-198.md) | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |

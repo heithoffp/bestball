@@ -14,12 +14,17 @@ if (!window.__BBM_initialized) {
   window.__BBM = {
     token:            null,
     userId:           null,
+    apiHost:          'api.underdogsports.com',   // overwritten on first observed XHR
+    statsHost:        'stats.underdogsports.com', // overwritten on first observed XHR
     statsParams:      '',    // query string captured from any stats XHR (e.g. "product=fantasy&...")
     nflScoringTypeId: null,  // cached from /v1/scoring_types — constant across sessions
     appearances:      {},    // appearance_id → { player_id, ... }
     players:          {},    // player_id     → { first_name, last_name, position_name, team_id }
     teams:            {},    // team_id       → { abbr, abbreviation }
   };
+
+  const UD_API_RE   = /^api\.underdog(fantasy|sports)\.com$/;
+  const UD_STATS_RE = /^stats\.underdog(fantasy|sports)\.com$/;
 
   // ── XHR interceptor ───────────────────────────────────────────────────────
   // Underdog uses XMLHttpRequest for all API calls.
@@ -47,21 +52,28 @@ if (!window.__BBM_initialized) {
     const url     = this._bbmUrl     ?? '';
     const headers = this._bbmHeaders ?? {};
 
-    // Capture auth token from first Underdog API call
-    if (!window.__BBM.token && url.includes('api.underdogfantasy.com')) {
-      const raw = headers['Authorization'] || headers['authorization'];
-      if (raw) {
-        const auth = raw.startsWith('Bearer ') ? raw : 'Bearer ' + raw;
-        window.__BBM.token = auth;
-        try {
-          const payload = JSON.parse(atob(auth.replace('Bearer ', '').split('.')[1]));
-          window.__BBM.userId = payload.sub ?? payload.user_id ?? null;
-        } catch {}
+    let urlHost = '';
+    try { urlHost = new URL(url, window.location.origin).hostname; } catch {}
+
+    // Capture auth token + api host from first Underdog API call
+    if (UD_API_RE.test(urlHost)) {
+      window.__BBM.apiHost = urlHost;
+      if (!window.__BBM.token) {
+        const raw = headers['Authorization'] || headers['authorization'];
+        if (raw) {
+          const auth = raw.startsWith('Bearer ') ? raw : 'Bearer ' + raw;
+          window.__BBM.token = auth;
+          try {
+            const payload = JSON.parse(atob(auth.replace('Bearer ', '').split('.')[1]));
+            window.__BBM.userId = payload.sub ?? payload.user_id ?? null;
+          } catch {}
+        }
       }
     }
 
     // Capture stats query params and passively cache reference data
-    if (url.includes('stats.underdogfantasy.com')) {
+    if (UD_STATS_RE.test(urlHost)) {
+      window.__BBM.statsHost = urlHost;
       // Capture query string once (same params on every stats call)
       if (!window.__BBM.statsParams) {
         try {
@@ -97,7 +109,7 @@ if (!window.__BBM_initialized) {
 
   async function statsFetch(path) {
     const q   = window.__BBM.statsParams ? '?' + window.__BBM.statsParams : '';
-    const res = await fetch('https://stats.underdogfantasy.com' + path + q);
+    const res = await fetch('https://' + window.__BBM.statsHost + path + q);
     if (!res.ok) throw new Error('Stats API ' + res.status + ': ' + path);
     return res.json();
   }
@@ -175,32 +187,34 @@ if (!window.__BBM_initialized) {
     // Fetch /v1/user to get the real UUID used in draft_entries.
     if (window.__BBM.userId && !window.__BBM.userId.startsWith('auth0|')) return;
     try {
-      const data = await apiFetch('https://api.underdogfantasy.com/v1/user');
+      const data = await apiFetch('https://' + window.__BBM.apiHost + '/v1/user');
       const id   = data.user?.id ?? data.id ?? null;
       if (id) window.__BBM.userId = id;
     } catch {}
   }
 
-  async function syncEntries() {
+  async function syncEntries(knownEntryIds = []) {
+    const knownSet = new Set(knownEntryIds.map(String));
+
     window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'discovery' }, '*');
 
     await resolveUnderdogUserId();
 
-    const { slates } = await apiFetch('https://api.underdogfantasy.com/v2/user/completed_slates');
-    if (!slates?.length) return [];
+    const { slates } = await apiFetch('https://' + window.__BBM.apiHost + '/v2/user/completed_slates');
+    if (!slates?.length) return { newEntries: [], currentDraftIds: [] };
 
     const bestBallSlates = slates.filter(s => s.best_ball);
     const draftMeta      = [];
 
     for (const slate of bestBallSlates) {
       const { tournament_rounds } = await apiFetch(
-        'https://api.underdogfantasy.com/v1/user/slates/' + slate.id + '/tournament_rounds'
+        'https://' + window.__BBM.apiHost + '/v1/user/slates/' + slate.id + '/tournament_rounds'
       );
       for (const tr of (tournament_rounds ?? [])) {
         let page = 1;
         while (page) {
           const data = await apiFetch(
-            'https://api.underdogfantasy.com/v1/user/tournament_rounds/' + tr.id + '/drafts?page=' + page
+            'https://' + window.__BBM.apiHost + '/v1/user/tournament_rounds/' + tr.id + '/drafts?page=' + page
           );
           for (const draft of (data.drafts ?? [])) {
             draftMeta.push({
@@ -215,16 +229,18 @@ if (!window.__BBM_initialized) {
       }
     }
 
-    const total   = draftMeta.length;
-    const entries = [];
+    const currentDraftIds = draftMeta.map(d => String(d.draftId));
+    const toFetch         = draftMeta.filter(d => !knownSet.has(String(d.draftId)));
+    const total           = toFetch.length;
+    const entries         = [];
 
     window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: 0, total }, '*');
 
-    for (let i = 0; i < draftMeta.length; i++) {
-      const { draftId, tournamentTitle, slateTitle, draftAt } = draftMeta[i];
+    for (let i = 0; i < toFetch.length; i++) {
+      const { draftId, tournamentTitle, slateTitle, draftAt } = toFetch[i];
       let data;
       try {
-        data = await apiFetch('https://api.underdogfantasy.com/v2/drafts/' + draftId);
+        data = await apiFetch('https://' + window.__BBM.apiHost + '/v2/drafts/' + draftId);
       } catch {
         window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: i + 1, total }, '*');
         continue;
@@ -258,7 +274,7 @@ if (!window.__BBM_initialized) {
       window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: i + 1, total }, '*');
     }
 
-    return entries;
+    return { newEntries: entries, currentDraftIds };
   }
 
   // ── Message listener ──────────────────────────────────────────────────────
@@ -275,8 +291,8 @@ if (!window.__BBM_initialized) {
     }
 
     try {
-      const entries = await syncEntries();
-      window.postMessage({ type: 'BBM_SYNC_RESULT', entries }, '*');
+      const result = await syncEntries(event.data.knownEntryIds ?? []);
+      window.postMessage({ type: 'BBM_SYNC_RESULT', ...result }, '*');
     } catch (err) {
       window.postMessage({ type: 'BBM_SYNC_ERROR', error: err.message }, '*');
     }
