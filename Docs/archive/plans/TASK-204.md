@@ -1,4 +1,4 @@
-<!-- Completed: 2026-05-06 | Commit: pending -->
+<!-- Completed: 2026-05-06 | Commit: cb27718 -->
 # TASK-204: Global Tournament filter on Combos tab
 
 **Status:** Done

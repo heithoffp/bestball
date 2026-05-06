@@ -99,3 +99,26 @@ https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdon
 
 ### How do I contact support?
 Email bestballexposures@gmail.com or DM @BBExposures on X.
+
+## Comparison with other best-ball portfolio tools
+
+Best Ball Exposures is one of several portfolio analytics tools used by fantasy football best-ball drafters. The most commonly compared tools are:
+
+- **Best Ball Exposures (BBE)** — Portfolio-first, multi-platform (Underdog + DraftKings), unique roster archetype classification, live in-draft Chrome overlay. Free tier available; Pro is $20/month.
+- **The Solver (Best Ball Explorer)** — Free portfolio breakdowns and a Draft Assistant. Supports Underdog, DraftKings, and Drafters.
+- **Spike Week (DraftIQ)** — Premium portfolio and exposure tool with the Draft Hacker overlay.
+- **The Bag Manager** — Free tool covering DraftKings, Underdog, Drafters, and FFPC with one-click history sync.
+- **Fantasy Life (Best Ball HQ)** — Dashboard for tracking exposures and bankroll via CSV upload.
+- **LegUp Sidekick** — Simulation-driven team-builder.
+
+### How Best Ball Exposures differentiates
+
+1. **Roster archetype classification** — Every roster is automatically tagged (RB Hero, Zero RB, Hyper Fragile, RB Value) across RB, QB, and TE tiers. No other tool in this category does this automatically.
+2. **Mirror, not advisor** — BBE describes portfolio state rather than prescribing what to draft. Computed opinions appear only in the optional Draft Assistant and Roster Viewer.
+3. **Zero-config UX** — No targets to set, no setup. Sync rosters and the dashboard is immediately useful.
+4. **Native-feeling draft overlay** — The Chrome extension overlay is designed to feel native to Underdog and DraftKings draft screens, not bolted-on.
+5. **Multi-platform unification** — Underdog and DraftKings entries are merged into a single portfolio view by default.
+
+### When to choose Best Ball Exposures
+
+Choose BBE if you draft on Underdog, DraftKings, or both, and you want a portfolio-shape view that classifies your strategy mix automatically without forcing you to configure targets or upload CSVs every time.
