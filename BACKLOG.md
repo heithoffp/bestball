@@ -56,6 +56,7 @@
 | TASK-199 | Clean up duplicate Supabase users created during TASK-192 Google OAuth window | Todo | P3 | [Plan](docs/plans/TASK-199.md) -- Draft | No |
 | TASK-203 | ADR: Comp access modeled separately from beta access | Todo | P3 | [Plan](docs/plans/TASK-203.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
+| TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No |
 
 ## Completed Tasks
 
@@ -63,6 +64,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-204 | Global Tournament filter on Combos tab | Done | P3 | [Plan](docs/archive/plans/TASK-204.md) | Yes | 2026-05-06 |
 | TASK-202 | Admin comp Pro script + comp_expires_at column | Done | P2 | [Plan](docs/archive/plans/TASK-202.md) | No | 2026-05-06 |
 | TASK-201 | Customer comms for Chrome review window | Done | P2 | [Plan](docs/archive/plans/TASK-201.md) | No | 2026-05-06 |
 | TASK-151 | Contextual Help — shared HelpOverlay component and infrastructure | 2026-04-06 | [Plan](docs/archive/plans/TASK-151.md) |

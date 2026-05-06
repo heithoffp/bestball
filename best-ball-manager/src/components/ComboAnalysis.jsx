@@ -3,6 +3,7 @@ import TabLayout from './TabLayout';
 import { FolderSync } from 'lucide-react';
 import EmptyState from './EmptyState';
 import CombinedSearchInput from './filters/CombinedSearchInput';
+import TournamentMultiSelect from './TournamentMultiSelect';
 import { NFL_TEAMS } from '../utils/nflTeams';
 import DraftExplorer from './DraftExplorer';
 
@@ -144,33 +145,53 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
   const [excludePlayers, setExcludePlayers] = useState([]);
   const [excludeTeams, setExcludeTeams] = useState([]);
   const [excludeSearch, setExcludeSearch] = useState('');
+  const [selectedTournaments, setSelectedTournaments] = useState([]);
   const blurTimeout = useRef(null);
+
+  const slateGroups = useMemo(() => {
+    const map = new Map();
+    rosterData.forEach(p => {
+      if (!p.tournamentTitle) return;
+      const slate = p.slateTitle || 'Other';
+      if (!map.has(slate)) map.set(slate, new Set());
+      map.get(slate).add(p.tournamentTitle);
+    });
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([slate, tourns]) => ({ slate, tournaments: [...tourns].sort() }));
+  }, [rosterData]);
+
+  const filteredRosterData = useMemo(() => {
+    if (selectedTournaments.length === 0) return rosterData;
+    const set = new Set(selectedTournaments);
+    return rosterData.filter(p => set.has(p.tournamentTitle));
+  }, [rosterData, selectedTournaments]);
 
   // Group flat player rows into per-roster arrays
   const rosters = useMemo(() => {
     const map = new Map();
-    rosterData.forEach(p => {
+    filteredRosterData.forEach(p => {
       const id = p.entry_id || 'unknown';
       if (!map.has(id)) map.set(id, []);
       map.get(id).push(p);
     });
     return Array.from(map.values());
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   const totalRosters = rosters.length;
 
   // ─── Similarity filter: player/team name lists & suggestions ──────────────
   const allPlayerNames = useMemo(() => {
     const names = new Set();
-    rosterData.forEach(p => { if (p.name) names.add(p.name); });
+    filteredRosterData.forEach(p => { if (p.name) names.add(p.name); });
     return [...names].sort();
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   const allTeamNames = useMemo(() => {
     const teams = new Set();
-    rosterData.forEach(p => { if (p.team && p.team !== 'FA' && p.team !== 'N/A') teams.add(p.team); });
+    filteredRosterData.forEach(p => { if (p.team && p.team !== 'FA' && p.team !== 'N/A') teams.add(p.team); });
     return [...teams].sort();
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   const includeQuery = includeSearch.trim().toLowerCase();
   const includePlayerSuggestions = useMemo(() => {
@@ -463,21 +484,28 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
         ))}
       </div>
 
-      {activeTab !== 'explorer' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label className="filter-select-label" style={{ marginBottom: 0 }}>
-            {activeTab === 'stacks' ? 'Min stacks' : activeTab === 'similarity' ? 'Min overlap' : 'Min count'}
-          </label>
-          <input
-            type="number"
-            value={minCount}
-            min={1}
-            onChange={e => setMinCount(Math.max(1, Number(e.target.value) || 1))}
-            className="filter-select"
-            style={{ width: 52 }}
-          />
-        </div>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <TournamentMultiSelect
+          slateGroups={slateGroups}
+          selected={selectedTournaments}
+          onChange={setSelectedTournaments}
+        />
+        {activeTab !== 'explorer' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label className="filter-select-label" style={{ marginBottom: 0 }}>
+              {activeTab === 'stacks' ? 'Min stacks' : activeTab === 'similarity' ? 'Min overlap' : 'Min count'}
+            </label>
+            <input
+              type="number"
+              value={minCount}
+              min={1}
+              onChange={e => setMinCount(Math.max(1, Number(e.target.value) || 1))}
+              className="filter-select"
+              style={{ width: 52 }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -1027,7 +1055,7 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
 
       {/* ── Draft Explorer ───────────────────────────────────────────────── */}
       {activeTab === 'explorer' && (
-        <DraftExplorer masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={onNavigateToRosters} />
+        <DraftExplorer masterPlayers={masterPlayers} rosterData={filteredRosterData} onNavigateToRosters={onNavigateToRosters} />
       )}
 
     </TabLayout>
