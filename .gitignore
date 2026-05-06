@@ -1,1 +1,8 @@
 simulation/Historical_Data/*.csv
+
+# Local env files (service role keys, secrets)
+.env.local
+.env.*.local
+
+# Script-local installs
+scripts/node_modules

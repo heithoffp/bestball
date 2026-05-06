@@ -33,7 +33,6 @@
 | TASK-192 | Restore Google OAuth buttons on website AuthModal | Todo | P2 | [Plan](docs/plans/TASK-192.md) -- Draft | No |
 | TASK-194 | Search Console — add Domain property and unify URL variants via Vercel redirects | Todo | P2 | [Plan](docs/plans/TASK-194.md) -- Draft | No |
 | TASK-198 | Incremental Underdog sync to fix timeouts on large portfolios | In Progress | P2 | [Plan](docs/plans/TASK-198.md) | No |
-| TASK-201 | Customer comms for Chrome review window | Todo | P2 | [Plan](docs/plans/TASK-201.md) -- Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
@@ -55,6 +54,7 @@
 | TASK-196 | PlayerRankings Compare View — full tier-break editing parity with single-platform views | In Progress | P3 | [Plan](docs/plans/TASK-196.md) | No |
 | TASK-197 | PlayerRankings — projections.csv as authoritative projection source | In Progress | P3 | [Plan](docs/plans/TASK-197.md) -- Pending Approval | No |
 | TASK-199 | Clean up duplicate Supabase users created during TASK-192 Google OAuth window | Todo | P3 | [Plan](docs/plans/TASK-199.md) -- Draft | No |
+| TASK-203 | ADR: Comp access modeled separately from beta access | Todo | P3 | [Plan](docs/plans/TASK-203.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 
 ## Completed Tasks
@@ -63,6 +63,8 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-202 | Admin comp Pro script + comp_expires_at column | Done | P2 | [Plan](docs/archive/plans/TASK-202.md) | No | 2026-05-06 |
+| TASK-201 | Customer comms for Chrome review window | Done | P2 | [Plan](docs/archive/plans/TASK-201.md) | No | 2026-05-06 |
 | TASK-151 | Contextual Help — shared HelpOverlay component and infrastructure | 2026-04-06 | [Plan](docs/archive/plans/TASK-151.md) |
 | TASK-150 | Gate ADP Tracker behind Pro tier | 2026-04-06 | [Plan](docs/archive/plans/TASK-150.md) |
 | TASK-149 | User Feedback Button — in-app form that emails feedback to developer via Resend | 2026-04-06 | [Plan](docs/archive/plans/TASK-149.md) |

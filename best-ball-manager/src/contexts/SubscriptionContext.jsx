@@ -23,12 +23,16 @@ export function SubscriptionProvider({ children }) {
     ? Math.ceil((betaExpiresAt - new Date()) / (1000 * 60 * 60 * 24))
     : null;
 
-  // Derive tier from auth state + subscription status + beta flag
-  // Subscription takes precedence over beta
+  // Comp access (admin-granted via scripts/grant-pro.mjs). Independent of beta.
+  const compExpiresAt = profile?.comp_expires_at ? new Date(profile.comp_expires_at) : null;
+  const isCompActive = compExpiresAt ? compExpiresAt > new Date() : false;
+
+  // Derive tier from auth state + subscription status + beta/comp flags.
+  // Subscription takes precedence; beta and comp are equivalent grants of Pro.
   const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing';
   const tier = !user
     ? 'guest'
-    : hasActiveSubscription || isBetaActive
+    : hasActiveSubscription || isBetaActive || isCompActive
       ? 'pro'
       : 'free';
 
@@ -74,7 +78,7 @@ export function SubscriptionProvider({ children }) {
           .maybeSingle(),
         supabase
           .from('profiles')
-          .select('beta_expires_at')
+          .select('beta_expires_at, comp_expires_at')
           .eq('id', user.id)
           .maybeSingle(),
       ]);
@@ -206,6 +210,8 @@ export function SubscriptionProvider({ children }) {
       isBetaExpired,
       betaDaysRemaining,
       betaExpiresAt,
+      isCompActive,
+      compExpiresAt,
       redirectToCheckout,
       redirectToPortal,
       planPickerOpen,
