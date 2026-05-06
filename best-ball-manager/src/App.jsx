@@ -19,6 +19,7 @@ import useMediaQuery from './hooks/useMediaQuery';
 import { trackEvent } from './utils/analytics';
 import BrandLogo from './components/BrandLogo';
 import FeedbackButton from './components/FeedbackButton';
+import InstallExtensionButton from './components/InstallExtensionButton';
 import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network } from 'lucide-react';
 
 const TAB_PATHS = {
@@ -301,6 +302,7 @@ export default function App() {
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </a>
+          <InstallExtensionButton showButton={!!(user && supabase)} />
           <FeedbackButton />
           {user && supabase && (
             <button
