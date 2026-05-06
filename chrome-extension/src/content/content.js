@@ -8,7 +8,7 @@
 
 import { getAdapterForUrl } from '../adapters/registry.js';
 import { createReconnectingObserver } from '../utils/observer.js';
-import { writeEntries } from '../utils/bridge.js';
+import { writeEntries, readEntryIds } from '../utils/bridge.js';
 import { initDraftOverlay } from './draft-overlay.js';
 
 const adapter = getAdapterForUrl(window.location.href);
@@ -27,9 +27,11 @@ if (adapter) {
   }
 
   async function runSync() {
-    const storageKey = `${adapter.platform}_entry_ids`;
-    const stored     = await new Promise(r => chrome.storage.local.get([storageKey], r));
-    const knownIds   = stored[storageKey] ?? [];
+    // Source knownIds from Supabase (account-scoped) so the per-user filter
+    // stays correct after the user signs in as a different account. Stale
+    // chrome.storage IDs from a previous session would otherwise cause the
+    // bridge to skip-fetch drafts that aren't actually stored for this user.
+    const knownIds = await readEntryIds();
 
     const result = await adapter.getEntries(knownIds);
     return writeEntries(result, { platform: adapter.platform });

@@ -95,6 +95,29 @@ export async function fetchTier() {
 }
 
 /**
+ * Returns the set of entry_ids already stored in Supabase for the current user.
+ * Used by incremental sync to skip re-fetching drafts already persisted.
+ * Sourcing from Supabase (not chrome.storage) keeps this account-aware — when
+ * the user switches Supabase identities, the new user's entry_ids are returned,
+ * not stale IDs left in local storage by the previous session.
+ *
+ * @returns {Promise<string[]>}
+ */
+export async function readEntryIds() {
+  if (!supabase) return [];
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return [];
+
+  const { data, error } = await supabase
+    .from('extension_entries')
+    .select('entry_id')
+    .eq('user_id', session.user.id);
+
+  if (error) return [];
+  return (data ?? []).map(r => r.entry_id);
+}
+
+/**
  * Reads portfolio entries from Supabase for the current authenticated user.
  * Returns entries in the same shape accepted by writeEntries().
  *
