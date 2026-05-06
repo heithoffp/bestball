@@ -1,6 +1,11 @@
 .container {
   position: relative;
   display: inline-block;
+  z-index: 1;
+}
+
+.container:has(.popover) {
+  z-index: 1000;
 }
 
 .trigger {
@@ -41,7 +46,7 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  z-index: 200;
+  z-index: 1000;
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);

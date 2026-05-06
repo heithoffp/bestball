@@ -30,6 +30,36 @@
   text-decoration: underline;
 }
 
+/* ── Tournament Filter Toolbar ── */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  position: relative;
+  z-index: 50;
+}
+
+.filterLabel {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.filterControl {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
 /* ── Headline Metrics ── */
 .metricsRow {
   display: grid;

@@ -64,6 +64,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-206 | Global Tournament filter on Dashboard tab | Done | P3 | [Plan](docs/archive/plans/TASK-206.md) | Yes | 2026-05-06 |
 | TASK-204 | Global Tournament filter on Combos tab | Done | P3 | [Plan](docs/archive/plans/TASK-204.md) | Yes | 2026-05-06 |
 | TASK-202 | Admin comp Pro script + comp_expires_at column | Done | P2 | [Plan](docs/archive/plans/TASK-202.md) | No | 2026-05-06 |
 | TASK-201 | Customer comms for Chrome review window | Done | P2 | [Plan](docs/archive/plans/TASK-201.md) | No | 2026-05-06 |

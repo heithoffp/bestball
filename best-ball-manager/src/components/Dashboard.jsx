@@ -4,8 +4,10 @@ import { BarChart3, Users, TrendingUp, ListOrdered, Crosshair, FolderSync } from
 import EmptyState from './EmptyState';
 import { analyzePortfolioTree, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import { NFL_TEAMS_ABBREV } from '../utils/nflTeams';
+import { canonicalName } from '../utils/helpers';
 import useMediaQuery from '../hooks/useMediaQuery';
 import TabLayout from './TabLayout';
+import TournamentMultiSelect from './TournamentMultiSelect';
 import styles from './Dashboard.module.css';
 
 const POS_COLORS = { QB: '#bf44ef', RB: '#10b981', WR: '#f59e0b', TE: '#3b82f6' };
@@ -38,21 +40,60 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
   const { isMobile } = useMediaQuery();
   const [hoveredSeg, setHoveredSeg] = useState(null);
   const [selectedPositions, setSelectedPositions] = useState(null); // null = All
+  const [selectedTournaments, setSelectedTournaments] = useState([]);
+
+  // ── Tournament filter ──
+  const slateGroups = useMemo(() => {
+    const map = new Map();
+    rosterData.forEach(p => {
+      if (!p.tournamentTitle) return;
+      const slate = p.slateTitle || 'Other';
+      if (!map.has(slate)) map.set(slate, new Set());
+      map.get(slate).add(p.tournamentTitle);
+    });
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([slate, tourns]) => ({ slate, tournaments: [...tourns].sort() }));
+  }, [rosterData]);
+
+  const filteredRosterData = useMemo(() => {
+    if (selectedTournaments.length === 0) return rosterData;
+    const set = new Set(selectedTournaments);
+    return rosterData.filter(p => set.has(p.tournamentTitle));
+  }, [rosterData, selectedTournaments]);
+
+  // Recompute per-player count/exposure from filtered roster set; preserve ADP/position/team from upstream join.
+  // Matching uses canonicalName to mirror processMasterList in utils/helpers.js.
+  const filteredMasterPlayers = useMemo(() => {
+    if (selectedTournaments.length === 0) return masterPlayers;
+    const totalEntries = new Set(filteredRosterData.map(r => r.entry_id)).size || 1;
+    const draftCounts = {};
+    filteredRosterData.forEach(r => {
+      const nm = canonicalName(r.name);
+      draftCounts[nm] = (draftCounts[nm] || 0) + 1;
+    });
+    return masterPlayers.map(mp => {
+      const nm = canonicalName(mp.name);
+      const count = draftCounts[nm] || 0;
+      const exposure = ((count / totalEntries) * 100).toFixed(1);
+      return { ...mp, count, exposure };
+    });
+  }, [masterPlayers, filteredRosterData, selectedTournaments]);
 
   // ── Headline Metrics ──
   const metrics = useMemo(() => {
-    const entryIds = new Set(rosterData.map(p => p.entry_id));
+    const entryIds = new Set(filteredRosterData.map(p => p.entry_id));
     const totalRosters = entryIds.size;
-    const uniquePlayers = masterPlayers.filter(p => p.count > 0).length;
+    const uniquePlayers = filteredMasterPlayers.filter(p => p.count > 0).length;
 
     return { totalRosters, uniquePlayers };
-  }, [rosterData, masterPlayers]);
+  }, [filteredRosterData, filteredMasterPlayers]);
 
   // ── Archetype Distributions (RB, QB, TE) ──
   const { rbDistribution, qbDistribution, teDistribution } = useMemo(() => {
     const empty = { rbDistribution: [], qbDistribution: [], teDistribution: [] };
-    if (rosterData.length === 0) return empty;
-    const { totalEntries, tree } = analyzePortfolioTree(rosterData);
+    if (filteredRosterData.length === 0) return empty;
+    const { totalEntries, tree } = analyzePortfolioTree(filteredRosterData);
     if (totalEntries === 0) return empty;
 
     const rbDist = Object.entries(tree)
@@ -96,21 +137,21 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       .filter(d => d.count > 0);
 
     return { rbDistribution: rbDist, qbDistribution: qbDist, teDistribution: teDist };
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   // ── Top Exposures by Position ──
   const topExposures = useMemo(() => {
     const positions = ['QB', 'RB', 'WR', 'TE'];
     const result = {};
     positions.forEach(pos => {
-      result[pos] = masterPlayers
+      result[pos] = filteredMasterPlayers
         .filter(p => p.position === pos && p.count > 0)
         .sort((a, b) => parseFloat(b.exposure) - parseFloat(a.exposure))
         .slice(0, 5)
         .map(p => ({ name: p.name, exposure: parseFloat(p.exposure) }));
     });
     return result;
-  }, [masterPlayers]);
+  }, [filteredMasterPlayers]);
 
   // ── Exposure by ADP Round (highest + lowest + blind spots) ──
   const exposureByRound = useMemo(() => {
@@ -120,7 +161,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
     for (let r = 1; r <= 10; r++) {
       const start = (r - 1) * 12 + 1;
       const end = r * 12;
-      const inRound = masterPlayers.filter(
+      const inRound = filteredMasterPlayers.filter(
         p => p.adpPick != null && p.adpPick >= start && p.adpPick <= end
       );
       if (inRound.length === 0) continue;
@@ -146,13 +187,13 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       });
     }
     return rounds;
-  }, [masterPlayers, metrics.totalRosters]);
+  }, [filteredMasterPlayers, metrics.totalRosters]);
 
   // ── Top Team Stacks ──
   const topTeamStacks = useMemo(() => {
-    if (rosterData.length === 0) return [];
+    if (filteredRosterData.length === 0) return [];
     const rosterMap = new Map();
-    rosterData.forEach(p => {
+    filteredRosterData.forEach(p => {
       const id = p.entry_id || 'unknown';
       if (!rosterMap.has(id)) rosterMap.set(id, []);
       rosterMap.get(id).push(p);
@@ -180,12 +221,12 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       .map(([team, count]) => ({ team, count, pct: ((count / totalRosters) * 100).toFixed(1) }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 15);
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   // ── Draft Position per Entry (min pick = round-1 slot) ──
   const draftPositionByEntry = useMemo(() => {
     const map = {};
-    rosterData.forEach(p => {
+    filteredRosterData.forEach(p => {
       const pick = Number(p.pick);
       if (!pick) return;
       if (map[p.entry_id] === undefined || pick < map[p.entry_id]) {
@@ -193,7 +234,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       }
     });
     return map;
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   function togglePosition(pos) {
     if (pos === 'all') { setSelectedPositions(null); return; }
@@ -215,8 +256,8 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
   // ── Draft Capital by Round (user vs market) ──
   const draftCapitalShape = useMemo(() => {
     const filtered = selectedPositions
-      ? rosterData.filter(p => selectedPositions.has(draftPositionByEntry[p.entry_id]))
-      : rosterData;
+      ? filteredRosterData.filter(p => selectedPositions.has(draftPositionByEntry[p.entry_id]))
+      : filteredRosterData;
     const roundCounts = {};
     filtered.forEach(p => {
       const r = p.round ? Number(p.round) : Math.ceil(Number(p.pick) / 12);
@@ -260,7 +301,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         mQB: mc.QB, mRB: mc.RB, mWR: mc.WR, mTE: mc.TE,
       };
     });
-  }, [rosterData, masterPlayers, selectedPositions, draftPositionByEntry]);
+  }, [filteredRosterData, masterPlayers, selectedPositions, draftPositionByEntry]);
 
   // ── Drill-down stat lines ──
   const drillStats = useMemo(() => {
@@ -327,6 +368,20 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
       flush
     >
     <div className={styles.root}>
+      {/* Tournament Filter — global scope for all sections below */}
+      {slateGroups.length > 0 && (
+        <div className={styles.filterBar}>
+          <span className={styles.filterLabel}>Tournament Filter</span>
+          <div className={styles.filterControl}>
+            <TournamentMultiSelect
+              slateGroups={slateGroups}
+              selected={selectedTournaments}
+              onChange={setSelectedTournaments}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Section 1: Headline Metrics */}
       <div className={styles.metricsRow} data-help-id="metrics-row">
         <div className={styles.metricCard}>
