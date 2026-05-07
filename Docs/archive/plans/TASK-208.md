@@ -1,4 +1,4 @@
-<!-- Completed: 2026-05-07 | Commit: pending -->
+<!-- Completed: 2026-05-07 | Commit: 573dbf7 -->
 # TASK-208: Documentation consolidation: refactor all in-repo documentation to match implementation reality
 
 **Status:** Done
