@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { loadTier3Initial, getTier3Cache, ensureRound, computeDraftState } from '../utils/draftModel';
-import { loadSimData, buildComboKey, lookupTier1 } from '../utils/uniquenessEngine';
+import { loadTier3Initial, getTier3Cache, computeDraftState } from '../utils/draftModel';
+import { loadSimData } from '../utils/uniquenessEngine';
 import { canonicalName } from '../utils/helpers';
 import styles from './DraftExplorer.module.css';
 
@@ -14,58 +14,111 @@ const POS_COLORS = {
 const TEAMS = 12;
 const MAX_DISPLAY_ROUNDS = 6;
 const MAX_PICK_ROUNDS = 4;
+const PRE_DRAFT_ADP_DATE = '2026-04-13'; // matches pre sim metadata.adp_date
+
+/** Look up a player's ADP at a specific snapshot date, averaging across platforms.
+ *  Falls back to the nearest earlier snapshot if the exact date isn't available. */
+function adpAtDate(player, targetDate) {
+  const hist = Array.isArray(player.history) ? player.history : [];
+  if (hist.length === 0) return { adpPick: player.adpPick ?? null, adpDisplay: player.adpDisplay ?? '-' };
+
+  const exact = hist.filter(h => h.date === targetDate && Number.isFinite(h.adpPick));
+  if (exact.length > 0) {
+    const avg = exact.reduce((s, h) => s + h.adpPick, 0) / exact.length;
+    return { adpPick: avg, adpDisplay: avg.toFixed(1) };
+  }
+
+  const earlier = hist
+    .filter(h => h.date <= targetDate && Number.isFinite(h.adpPick))
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  if (earlier.length === 0) return { adpPick: null, adpDisplay: '-' };
+  const latestDate = earlier[0].date;
+  const sameDate = earlier.filter(h => h.date === latestDate);
+  const avg = sameDate.reduce((s, h) => s + h.adpPick, 0) / sameDate.length;
+  return { adpPick: avg, adpDisplay: avg.toFixed(1) };
+}
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function DraftExplorer({ masterPlayers = [], rosterData = [], onNavigateToRosters = null }) {
+export default function DraftExplorer({ masterPlayers = [], rosterData = [], tournamentStatuses = {}, onNavigateToRosters = null, defaultMode = 'pre' }) {
   const [selections, setSelections] = useState([]); // [{gridIndex}]
   const [tier3Ready, setTier3Ready] = useState(false);
   const [tier3Version, setTier3Version] = useState(0); // bumped when new round data arrives
-  const [tier1, setTier1] = useState(null);
+  const [mode, setMode] = useState(defaultMode === 'post' ? 'post' : 'pre');
+  const [postUnavailable, setPostUnavailable] = useState(false);
 
-  // Load R1 immediately + tier1, then background-load R2-R4
+  const source = mode === 'post' ? 'post' : 'pre';
+
+  // Load R1 + tier1 for the active source, then background-load R2-R4.
+  // Re-runs when `source` flips so the post cache loads on first toggle.
+  // tier3Ready/tier1 stay sticky across source changes — the per-source caches
+  // in draftModel/uniquenessEngine guarantee getTier3Cache(source) returns the
+  // right data, and the useMemo guards on cache.r1 being non-null.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([loadTier3Initial(), loadSimData()])
-      .then(([, t1]) => {
-        if (!cancelled) {
-          setTier3Ready(true);
-          setTier1(t1);
-        }
+    Promise.all([loadTier3Initial(source), loadSimData(source)])
+      .then(() => {
+        if (cancelled) return;
+        setTier3Ready(true);
+        // Bump version so useMemo recomputes — setTier3Ready(true) is a no-op
+        // when toggling between sources after the first load.
+        setTier3Version(v => v + 1);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        if (source === 'post') setPostUnavailable(true);
       });
-    // Bump version as each background round finishes loading
+
     const checkLoaded = setInterval(() => {
-      const cache = getTier3Cache();
+      const cache = getTier3Cache(source);
       const loaded = [cache.r1, cache.r2, cache.r3, cache.r4].filter(Boolean).length;
       setTier3Version(loaded);
       if (loaded === 4) clearInterval(checkLoaded);
     }, 500);
     return () => { cancelled = true; clearInterval(checkLoaded); };
-  }, []);
+  }, [source]);
 
   // ── Grid players sorted by ADP ───────────────────────────────────────────
+  // Pre-Draft: snap to the pre sim's ADP date so grid order matches the sim.
+  // Post-Draft: use the player's latest ADP (which is what the post sim consumed).
   const gridPlayers = useMemo(() => {
     if (!masterPlayers.length) return [];
-    return masterPlayers
-      .filter(p => p.adpPick != null && Number.isFinite(p.adpPick) && p.adpPick <= 120)
-      .sort((a, b) => a.adpPick - b.adpPick)
-      .slice(0, TEAMS * MAX_DISPLAY_ROUNDS)
-      .map(p => ({
+    const annotated = masterPlayers.map(p => {
+      const adp = mode === 'pre'
+        ? adpAtDate(p, PRE_DRAFT_ADP_DATE)
+        : { adpPick: p.adpPick ?? null, adpDisplay: p.adpDisplay ?? '-' };
+      return {
         player_id: p.player_id,
         name: p.name,
         position: p.position,
         team: p.team,
-        adp: p.adpPick,
-        adpDisplay: p.adpDisplay,
-      }));
-  }, [masterPlayers]);
+        adp: adp.adpPick,
+        adpDisplay: adp.adpDisplay,
+      };
+    });
+    return annotated
+      .filter(p => p.adp != null && Number.isFinite(p.adp) && p.adp <= 120)
+      .sort((a, b) => a.adp - b.adp)
+      .slice(0, TEAMS * MAX_DISPLAY_ROUNDS);
+  }, [masterPlayers, mode]);
 
   // ── Player ID → grid index lookup ────────────────────────────────────────
+  // The pre sim was generated when several rookies had no NFL team yet, so its
+  // player_ids carry an empty team segment (e.g., id-JeremiyahLove-RB-).
+  // Current masterPlayers carry a populated team segment. To bridge the two,
+  // we register both the exact player_id AND a team-stripped variant as keys
+  // pointing at the same grid index.
   const playerIdToGrid = useMemo(() => {
     const map = new Map();
-    gridPlayers.forEach((p, i) => map.set(p.player_id, i));
+    gridPlayers.forEach((p, i) => {
+      map.set(p.player_id, i);
+      const teamStripped = p.player_id.replace(/^(id-[^-]+-[^-]+-).*$/, '$1');
+      if (teamStripped !== p.player_id && !map.has(teamStripped)) {
+        map.set(teamStripped, i);
+      }
+    });
     return map;
   }, [gridPlayers]);
 
@@ -79,33 +132,35 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
       for (let i = start; i < end; i++) {
         row.push({ ...gridPlayers[i], _gridIndex: i });
       }
-      // Even-index rounds (0, 2, 4 → R1, R3, R5) = left-to-right
-      // Odd-index rounds (1, 3, 5 → R2, R4, R6) = reversed (snake)
       board.push(r % 2 === 0 ? row : row.reverse());
     }
     return board;
   }, [gridPlayers]);
 
-  // ── Probability computation from tier3 per-player sim data ────────────────
-  const { probMap, selectedSet, currentRound } = useMemo(() => {
-    if (!tier3Ready || gridPlayers.length === 0) {
-      return { probMap: new Map(), selectedSet: new Set(), currentRound: 1 };
-    }
-    const cache = getTier3Cache();
-    return computeDraftState(selections, gridPlayers, playerIdToGrid, cache);
-    // tier3Version dependency triggers recompute when background data arrives
-  }, [selections, tier3Ready, tier3Version, gridPlayers, playerIdToGrid]);
-
   // ── Roster matching (progressive) ────────────────────────────────────────
+  // Mode-scoped: in Post-Draft mode count post-draft rosters; in Pre-Draft mode
+  // count pre-draft rosters. Drives "matching rosters" and the next-round badges.
   const rostersByEntry = useMemo(() => {
     const map = new Map();
     rosterData.forEach(p => {
+      const tStatus = tournamentStatuses[p.tournamentTitle];
+      if (tStatus && tStatus !== mode) return;
       const id = p.entry_id || 'unknown';
       if (!map.has(id)) map.set(id, []);
       map.get(id).push(p);
     });
     return map;
-  }, [rosterData]);
+  }, [rosterData, tournamentStatuses, mode]);
+
+  // ── Probability computation ──────────────────────────────────────────────
+  const { probMap, selectedSet, currentRound } = useMemo(() => {
+    if (gridPlayers.length === 0 || !tier3Ready) {
+      return { probMap: new Map(), selectedSet: new Set(), currentRound: 1 };
+    }
+    const cache = getTier3Cache(source);
+    return computeDraftState(selections, gridPlayers, playerIdToGrid, cache);
+    // tier3Version dependency triggers recompute when background data arrives
+  }, [source, selections, tier3Ready, tier3Version, gridPlayers, playerIdToGrid]);
 
   const matchingRosters = useMemo(() => {
     if (selections.length < 1) return [];
@@ -120,17 +175,14 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
     return matches;
   }, [selections, gridPlayers, rostersByEntry]);
 
-  // ── Roster extensions — round-aware: "of rosters where I drafted player X in R1,
-  // player Y in R2, etc., which players appear in the NEXT round?"
+  // ── Roster extensions: which next-round pick did the path-matching rosters take?
   const rosterExtensions = useMemo(() => {
     if (selections.length === 0 || currentRound > MAX_PICK_ROUNDS) return new Map();
     const gridCanonical = gridPlayers.map(p => canonicalName(p.name));
 
-    // Build a round → canonicalName lookup for each roster
-    const extensions = new Map(); // gridIndex → roster count
+    const extensions = new Map();
 
     for (const [, roster] of rostersByEntry) {
-      // Build round → canonical name map for this roster
       const byRound = {};
       for (const p of roster) {
         const r = Number(p.round);
@@ -139,7 +191,6 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
         }
       }
 
-      // Check if this roster matches all selections by round
       let matches = true;
       for (let i = 0; i < selections.length; i++) {
         const selectedName = canonicalName(gridPlayers[selections[i].gridIndex]?.name);
@@ -150,7 +201,6 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
       }
       if (!matches) continue;
 
-      // Find what this roster has in the next round
       const nextRoundName = byRound[currentRound];
       if (!nextRoundName) continue;
 
@@ -165,10 +215,10 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
     return extensions;
   }, [selections, gridPlayers, rostersByEntry, selectedSet, currentRound]);
 
-  // ── Selection frequency — how often this exact path appeared in the sim
+  // ── Selection frequency — how often this exact path appeared in the sim ──
   const selectionFrequency = useMemo(() => {
     if (selections.length === 0 || !tier3Ready) return null;
-    const cache = getTier3Cache();
+    const cache = getTier3Cache(source);
     const pids = selections.map(s => gridPlayers[s.gridIndex].player_id);
     const totalRosters = cache.metadata?.total_rosters || 1;
     let count = 0;
@@ -184,20 +234,7 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
     }
 
     return { count, totalRosters };
-  }, [selections, gridPlayers, tier3Ready, tier3Version]);
-
-  // ── Combo result (after 4 picks) — tier1 exact frequency ────────────────
-  const comboResult = useMemo(() => {
-    if (selections.length < MAX_PICK_ROUNDS || !tier1) return null;
-    const players = selections.map(s => {
-      const p = gridPlayers[s.gridIndex];
-      return { player_id: p.player_id, latestADP: p.adp };
-    });
-    const key = buildComboKey(players);
-    if (!key) return null;
-    const lookup = lookupTier1(key, tier1);
-    return { key, lookup };
-  }, [selections, gridPlayers, tier1]);
+  }, [source, selections, gridPlayers, tier3Ready, tier3Version]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleCellClick = useCallback((gridIndex) => {
@@ -213,7 +250,15 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
     setSelections([]);
   }, []);
 
-  // ── Loading state ────────────────────────────────────────────────────────
+  // ── Loading / error states ───────────────────────────────────────────────
+  if (postUnavailable) {
+    return (
+      <div className={styles.emptyPrompt}>
+        Post-draft simulation data is not available on this build. Toggle Pre-Draft to use the existing cache.
+      </div>
+    );
+  }
+
   if (!tier3Ready) {
     return <div className={styles.loading}>Loading simulation data...</div>;
   }
@@ -225,18 +270,42 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
   // ── Helpers for rendering ────────────────────────────────────────────────
   const maxProb = Math.max(0.01, ...probMap.values());
 
-  /** Fill height as percentage (0-100), normalized to max observed probability. */
   function fillPct(gridIndex) {
     const prob = probMap.get(gridIndex);
     if (prob == null || prob <= 0) return 0;
     return Math.round((prob / maxProb) * 100);
   }
 
+  const cache = getTier3Cache(source);
+  const totalRostersLabel = cache.metadata?.total_rosters
+    ? `${(cache.metadata.total_rosters / 1e6).toFixed(0)}M`
+    : 'millions of';
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className={styles.root}>
-      {/* Path Breadcrumb */}
+      {/* Mode Toggle + Path Breadcrumb */}
       <div className={styles.pathBar}>
+        <div className={styles.modeToggle} role="tablist" aria-label="Draft data source">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'pre'}
+            className={`${styles.modeToggleBtn} ${mode === 'pre' ? styles.modeToggleBtnActive : ''}`}
+            onClick={() => setMode('pre')}
+          >
+            Pre-Draft
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'post'}
+            className={`${styles.modeToggleBtn} ${mode === 'post' ? styles.modeToggleBtnActive : ''}`}
+            onClick={() => setMode('post')}
+          >
+            Post-Draft
+          </button>
+        </div>
         {Array.from({ length: MAX_PICK_ROUNDS }, (_, i) => {
           const sel = selections[i];
           const player = sel ? gridPlayers[sel.gridIndex] : null;
@@ -280,13 +349,11 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
 
           return (
             <React.Fragment key={roundIdx}>
-              {/* Round label */}
               <div className={`${styles.roundLabel} ${isActiveRound ? styles.roundLabelActive : ''}`}>
                 R{roundIdx + 1}
               </div>
 
-              {/* Player cells */}
-              {row.map((player, colIdx) => {
+              {row.map((player) => {
                 const gridIndex = player._gridIndex;
                 const prob = probMap.get(gridIndex);
                 const isSelected = selectedSet.has(gridIndex);
@@ -311,14 +378,12 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
                     ].filter(Boolean).join(' ')}
                     onClick={isSelectable ? () => handleCellClick(gridIndex) : undefined}
                   >
-                    {/* Fill bar — rises from bottom proportional to probability */}
                     {fill > 0 && (
                       <div
                         className={styles.cellFill}
                         style={{ height: `${fill}%`, backgroundColor: posColor }}
                       />
                     )}
-                    {/* Roster count badge — how many of your rosters have this next-round pick */}
                     {hasRosters && (
                       <div
                         className={isUnseen ? styles.unseenBadge : styles.rosterBadge}
@@ -378,8 +443,8 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], onN
 
       {/* Explainer */}
       <div className={styles.explainer}>
-        Based on {getTier3Cache().metadata?.total_rosters ? `${(getTier3Cache().metadata.total_rosters / 1e6).toFixed(0)}M` : 'millions of'} simulated
-        drafts. Percentages show how often each player was picked in that round given your prior selections.
+        Based on {totalRostersLabel} simulated drafts using {mode === 'post' ? 'post-draft' : 'pre-draft'} ADP.
+        Percentages show how often each player was picked in that round given your prior selections.
         Select a player to see how the next round's distribution shifts based on that specific pick.
       </div>
     </div>

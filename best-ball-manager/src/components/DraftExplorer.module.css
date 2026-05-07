@@ -68,6 +68,44 @@
   flex-wrap: wrap;
 }
 
+.modeToggle {
+  display: inline-flex;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-right: 8px;
+}
+
+.modeToggleBtn {
+  background: var(--surface-2);
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.modeToggleBtn + .modeToggleBtn {
+  border-left: 1px solid var(--border-subtle);
+}
+
+.modeToggleBtn:hover {
+  color: var(--text-primary);
+}
+
+.modeToggleBtnActive {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.modeToggleBtnActive:hover {
+  color: var(--text-inverse);
+}
+
 .pathStep {
   display: inline-flex;
   align-items: center;

@@ -59,6 +59,7 @@
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P3 | [Plan](docs/plans/TASK-209.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No |
+| TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No |
 
 ## Completed Tasks
 
@@ -66,6 +67,8 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-212 | Generate and wire post-draft simulation data | Done | P3 | [Plan](docs/archive/plans/TASK-212.md) | No | 2026-05-07 |
+| TASK-210 | DraftExplorer — Pre-Draft / Post-Draft mode toggle | Done | P3 | [Plan](docs/archive/plans/TASK-210.md) | Yes | 2026-05-07 |
 | TASK-208 | Documentation consolidation: refactor all in-repo documentation to match implementation reality | Done | P3 | [Plan](docs/archive/plans/TASK-208.md) | No | 2026-05-07 |
 | TASK-206 | Global Tournament filter on Dashboard tab | Done | P3 | [Plan](docs/archive/plans/TASK-206.md) | Yes | 2026-05-06 |
 | TASK-204 | Global Tournament filter on Combos tab | Done | P3 | [Plan](docs/archive/plans/TASK-204.md) | Yes | 2026-05-06 |

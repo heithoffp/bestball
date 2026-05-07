@@ -86,20 +86,31 @@ def _load_players_from_file(path: str, adp_cutoff: float) -> tuple:
     return players, adp_date
 
 
-def load_players(adp_dir: str, adp_cutoff: float = 120.0) -> tuple:
+def _list_adp_files(adp_dir: str, from_date: str | None = None) -> list:
+    files = sorted(
+        f for f in os.listdir(adp_dir)
+        if f.startswith("underdog_adp_") and f.endswith(".csv")
+    )
+    if from_date:
+        files = [
+            f for f in files
+            if f.replace("underdog_adp_", "").replace(".csv", "") >= from_date
+        ]
+    return files
+
+
+def load_players(adp_dir: str, adp_cutoff: float = 120.0, from_date: str | None = None) -> tuple:
     """Load players from the latest ADP CSV snapshot.
 
     Args:
         adp_dir: Path to the directory containing underdog_adp_YYYY-MM-DD.csv files.
         adp_cutoff: Maximum ADP to include (players beyond this are excluded).
+        from_date: If provided (YYYY-MM-DD), only consider snapshots on or after this date.
 
     Returns:
         Tuple of (players, adp_date) where players is sorted by ADP ascending.
     """
-    csv_files = sorted(
-        f for f in os.listdir(adp_dir)
-        if f.startswith("underdog_adp_") and f.endswith(".csv")
-    )
+    csv_files = _list_adp_files(adp_dir, from_date=from_date)
     if not csv_files:
         raise FileNotFoundError(f"No ADP CSV files found in {adp_dir}")
 
@@ -107,25 +118,23 @@ def load_players(adp_dir: str, adp_cutoff: float = 120.0) -> tuple:
     return _load_players_from_file(latest_path, adp_cutoff)
 
 
-def load_epoch_snapshots(adp_dir: str, adp_cutoff: float = 120.0) -> list:
+def load_epoch_snapshots(adp_dir: str, adp_cutoff: float = 120.0, from_date: str | None = None) -> list:
     """Return one (date_str, players) tuple per ISO calendar week (last snapshot of each week).
 
-    Groups all underdog_adp_YYYY-MM-DD.csv files by ISO year-week and picks the last
+    Groups underdog_adp_YYYY-MM-DD.csv files by ISO year-week and picks the last
     file in each group as the epoch representative. Returns list sorted by date ascending.
 
     Args:
         adp_dir: Path to the directory containing underdog_adp_YYYY-MM-DD.csv files.
         adp_cutoff: Maximum ADP to include (players beyond this are excluded).
+        from_date: If provided (YYYY-MM-DD), only consider snapshots on or after this date.
 
     Returns:
         List of (adp_date, players) tuples, one per ISO week, sorted ascending.
     """
     from datetime import date as _date
 
-    csv_files = sorted(
-        f for f in os.listdir(adp_dir)
-        if f.startswith("underdog_adp_") and f.endswith(".csv")
-    )
+    csv_files = _list_adp_files(adp_dir, from_date=from_date)
     if not csv_files:
         raise FileNotFoundError(f"No ADP CSV files found in {adp_dir}")
 

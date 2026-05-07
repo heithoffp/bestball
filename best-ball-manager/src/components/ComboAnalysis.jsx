@@ -149,17 +149,55 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
   const blurTimeout = useRef(null);
 
   const slateGroups = useMemo(() => {
-    const map = new Map();
+    // Classification rules (name-based, since roster-completion heuristics are unreliable
+    // here — most rosters are 18 picks even before live drafts close):
+    //   - UD slate title containing "Pre-Draft" → pre-draft.
+    //   - DK tournament title containing "Early Bird" → pre-draft.
+    //   - Otherwise → post-draft.
+    const isPreDraftTournament = (slateTitle, tournamentTitle) => {
+      const slate = (slateTitle || '').toLowerCase();
+      const tourn = (tournamentTitle || '').toLowerCase();
+      if (slate.includes('pre-draft') || slate.includes('predraft')) return true;
+      if (tourn.includes('early bird')) return true;
+      return false;
+    };
+
+    const slateToTournaments = new Map();
     rosterData.forEach(p => {
       if (!p.tournamentTitle) return;
       const slate = p.slateTitle || 'Other';
-      if (!map.has(slate)) map.set(slate, new Set());
-      map.get(slate).add(p.tournamentTitle);
+      if (!slateToTournaments.has(slate)) slateToTournaments.set(slate, new Map());
+      const tournMap = slateToTournaments.get(slate);
+      if (!tournMap.has(p.tournamentTitle)) {
+        tournMap.set(p.tournamentTitle, isPreDraftTournament(p.slateTitle, p.tournamentTitle) ? 'pre' : 'post');
+      }
     });
-    return [...map.entries()]
+
+    return [...slateToTournaments.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([slate, tourns]) => ({ slate, tournaments: [...tourns].sort() }));
+      .map(([slate, tournMap]) => {
+        const tournaments = [...tournMap.keys()].sort();
+        const statuses = new Set(tournMap.values());
+        const slateStatus = statuses.size === 1
+          ? [...statuses][0]
+          : 'mixed';
+        return { slate, tournaments, slateStatus, tournamentStatuses: Object.fromEntries(tournMap) };
+      });
   }, [rosterData]);
+
+  // Default mode for DraftExplorer based on selected tournaments' status.
+  const draftExplorerDefaultMode = useMemo(() => {
+    if (selectedTournaments.length === 0) return 'pre';
+    const tournamentToStatus = new Map();
+    for (const group of slateGroups) {
+      for (const [t, status] of Object.entries(group.tournamentStatuses || {})) {
+        tournamentToStatus.set(t, status);
+      }
+    }
+    const statuses = selectedTournaments.map(t => tournamentToStatus.get(t)).filter(Boolean);
+    if (statuses.length === 0) return 'pre';
+    return statuses.every(s => s === 'post') ? 'post' : 'pre';
+  }, [selectedTournaments, slateGroups]);
 
   const filteredRosterData = useMemo(() => {
     if (selectedTournaments.length === 0) return rosterData;
@@ -1055,7 +1093,16 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
 
       {/* ── Draft Explorer ───────────────────────────────────────────────── */}
       {activeTab === 'explorer' && (
-        <DraftExplorer masterPlayers={masterPlayers} rosterData={filteredRosterData} onNavigateToRosters={onNavigateToRosters} />
+        <DraftExplorer
+          key={`${selectedTournaments.join('|')}::${draftExplorerDefaultMode}`}
+          masterPlayers={masterPlayers}
+          rosterData={filteredRosterData.filter(p => !((p.slateTitle || '').toLowerCase().includes('superflex')))}
+          tournamentStatuses={Object.fromEntries(
+            slateGroups.flatMap(g => Object.entries(g.tournamentStatuses || {}))
+          )}
+          onNavigateToRosters={onNavigateToRosters}
+          defaultMode={draftExplorerDefaultMode}
+        />
       )}
 
     </TabLayout>

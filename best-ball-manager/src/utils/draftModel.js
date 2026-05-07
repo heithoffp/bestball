@@ -7,58 +7,74 @@
  *   tier3_r3.json — R3 given specific R1+R2 (~6MB)
  *   tier3_r4.json — R4 given specific R1+R2+R3 (~20MB)
  *
+ * Two cache trees coexist: `pre/` (pre-NFL-draft ADP) and `post/` (post-NFL-draft ADP).
+ * Each loader takes a `source` argument and maintains its own per-source cache so
+ * toggling between modes after both caches are warm is instant.
+ *
  * R1 loads immediately. R2-R4 load in the background after R1 is ready.
  */
 
 // ---------------------------------------------------------------------------
-// Progressive loader
+// Per-source progressive loader
 // ---------------------------------------------------------------------------
 
-const _cache = { r1: null, r2: null, r3: null, r4: null, metadata: null };
-const _loading = { r1: false, r2: false, r3: false, r4: false };
-const _callbacks = { r1: [], r2: [], r3: [], r4: [] };
+const _states = new Map(); // source → { cache, loading, callbacks }
 
-async function _fetchRound(rnd) {
-  if (_cache[rnd]) return _cache[rnd];
-  if (_loading[rnd]) return new Promise(resolve => _callbacks[rnd].push(resolve));
-  _loading[rnd] = true;
-  try {
-    const data = await fetch(`/sim/tier3_${rnd}.json`).then(r => r.json());
-    _cache[rnd] = data[rnd];
-    if (data.metadata) _cache.metadata = data.metadata;
-  } finally {
-    _loading[rnd] = false;
-    _callbacks[rnd].forEach(cb => cb(_cache[rnd]));
-    _callbacks[rnd].length = 0;
+function _getState(source) {
+  let s = _states.get(source);
+  if (!s) {
+    s = {
+      cache: { r1: null, r2: null, r3: null, r4: null, metadata: null },
+      loading: { r1: false, r2: false, r3: false, r4: false },
+      callbacks: { r1: [], r2: [], r3: [], r4: [] },
+    };
+    _states.set(source, s);
   }
-  return _cache[rnd];
+  return s;
+}
+
+async function _fetchRound(rnd, source) {
+  const s = _getState(source);
+  if (s.cache[rnd]) return s.cache[rnd];
+  if (s.loading[rnd]) return new Promise(resolve => s.callbacks[rnd].push(resolve));
+  s.loading[rnd] = true;
+  try {
+    const data = await fetch(`/sim/${source}/tier3_${rnd}.json`).then(r => r.json());
+    s.cache[rnd] = data[rnd];
+    if (data.metadata) s.cache.metadata = data.metadata;
+  } finally {
+    s.loading[rnd] = false;
+    s.callbacks[rnd].forEach(cb => cb(s.cache[rnd]));
+    s.callbacks[rnd].length = 0;
+  }
+  return s.cache[rnd];
 }
 
 /**
  * Load R1 data immediately, then kick off background loads for R2-R4.
  * Returns the metadata + a flag indicating R1 is ready.
  */
-export async function loadTier3Initial() {
-  await _fetchRound('r1');
+export async function loadTier3Initial(source = 'pre') {
+  await _fetchRound('r1', source);
   // Start background loads for R2-R4
-  _fetchRound('r2');
-  _fetchRound('r3');
-  _fetchRound('r4');
-  return { metadata: _cache.metadata };
+  _fetchRound('r2', source);
+  _fetchRound('r3', source);
+  _fetchRound('r4', source);
+  return { metadata: _getState(source).cache.metadata };
 }
 
 /**
  * Get the current tier3 cache state (may have partial data).
  */
-export function getTier3Cache() {
-  return _cache;
+export function getTier3Cache(source = 'pre') {
+  return _getState(source).cache;
 }
 
 /**
  * Ensure a specific round's data is loaded. Returns immediately if cached.
  */
-export async function ensureRound(rnd) {
-  return _fetchRound(rnd);
+export async function ensureRound(rnd, source = 'pre') {
+  return _fetchRound(rnd, source);
 }
 
 // ---------------------------------------------------------------------------

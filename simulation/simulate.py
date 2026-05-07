@@ -46,6 +46,8 @@ def main():
                         help="Run simulation across one epoch per ISO week (equal weight)")
     parser.add_argument("--pos-dampen", type=float, default=1.0,
                         help="Dampen position modifiers toward 1.0 (0.0=off, 0.5=half, 1.0=full, default: 1.0)")
+    parser.add_argument("--adp-from", type=str, default=None,
+                        help="Only use ADP snapshots on or after this date (YYYY-MM-DD)")
 
     args = parser.parse_args()
 
@@ -89,7 +91,7 @@ def main():
 
     if args.multi_epoch:
         # Multi-epoch: one ISO-week representative snapshot per week, equal weight
-        epochs = load_epoch_snapshots(adp_dir, adp_cutoff=args.adp_cutoff)
+        epochs = load_epoch_snapshots(adp_dir, adp_cutoff=args.adp_cutoff, from_date=args.adp_from)
         n_epochs = len(epochs)
         base_sims = num_sims // n_epochs
         remainder = num_sims - base_sims * n_epochs
@@ -145,7 +147,7 @@ def main():
         }
     else:
         # Single-epoch: latest snapshot only
-        players, adp_date = load_players(adp_dir, adp_cutoff=args.adp_cutoff)
+        players, adp_date = load_players(adp_dir, adp_cutoff=args.adp_cutoff, from_date=args.adp_from)
         print(f"  Loaded {len(players)} players from ADP snapshot {adp_date}")
         print(f"  ADP range: {players[0].adp:.1f} - {players[-1].adp:.1f}")
         print(f"  Positions: {', '.join(sorted(set(p.position for p in players)))}")

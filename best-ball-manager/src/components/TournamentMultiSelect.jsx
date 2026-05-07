@@ -72,11 +72,12 @@ export default function TournamentMultiSelect({ slateGroups, selected, onChange 
             <div className={s.empty}>No tournaments available</div>
           )}
 
-          {slateGroups.map(({ slate, tournaments }) => (
+          {slateGroups.map(({ slate, tournaments, slateStatus }) => (
             <SlateGroup
               key={slate}
               slate={slate}
               tournaments={tournaments}
+              slateStatus={slateStatus}
               selected={selected}
               onToggleSlate={toggleSlate}
               onToggleTournament={toggleTournament}
@@ -88,7 +89,13 @@ export default function TournamentMultiSelect({ slateGroups, selected, onChange 
   );
 }
 
-function SlateGroup({ slate, tournaments, selected, onToggleSlate, onToggleTournament }) {
+const SLATE_STATUS_LABELS = {
+  pre: 'Pre-Draft',
+  post: 'Post-Draft',
+  mixed: 'Mixed',
+};
+
+function SlateGroup({ slate, tournaments, slateStatus, selected, onToggleSlate, onToggleTournament }) {
   const slateCheckRef = useRef(null);
   const checkedCount = tournaments.filter(t => selected.includes(t)).length;
   const allChecked = checkedCount === tournaments.length;
@@ -111,6 +118,11 @@ function SlateGroup({ slate, tournaments, selected, onToggleSlate, onToggleTourn
           className={s.checkbox}
         />
         <span className={s.slateLabel}>{slate}</span>
+        {slateStatus && SLATE_STATUS_LABELS[slateStatus] && (
+          <span className={`${s.slateStatusBadge} ${s[`slateStatus_${slateStatus}`] || ''}`}>
+            {SLATE_STATUS_LABELS[slateStatus]}
+          </span>
+        )}
       </label>
       {tournaments.map(t => (
         <label key={t} className={s.tournamentRow}>

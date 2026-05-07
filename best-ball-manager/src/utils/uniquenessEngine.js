@@ -7,26 +7,34 @@
  * If a combo is not in the table, it is reported as "< 1 per totalRosters" — a rare roster.
  */
 
-let _tier1 = null;
-let _loading = false;
-const _callbacks = [];
+const _states = new Map(); // source → { tier1, loading, callbacks }
+
+function _getState(source) {
+  let s = _states.get(source);
+  if (!s) {
+    s = { tier1: null, loading: false, callbacks: [] };
+    _states.set(source, s);
+  }
+  return s;
+}
 
 /**
- * Lazy-load Tier 1 frequency table. Module-level singleton — only one fetch in flight.
+ * Lazy-load Tier 1 frequency table for the requested source ('pre' | 'post').
  * @returns {Promise<object>} tier1 data
  */
-export async function loadSimData() {
-  if (_tier1) return _tier1;
-  if (_loading) return new Promise(resolve => _callbacks.push(resolve));
-  _loading = true;
+export async function loadSimData(source = 'pre') {
+  const s = _getState(source);
+  if (s.tier1) return s.tier1;
+  if (s.loading) return new Promise(resolve => s.callbacks.push(resolve));
+  s.loading = true;
   try {
-    _tier1 = await fetch('/sim/tier1_frequency.json').then(r => r.json());
+    s.tier1 = await fetch(`/sim/${source}/tier1_frequency.json`).then(r => r.json());
   } finally {
-    _loading = false;
-    _callbacks.forEach(cb => cb(_tier1));
-    _callbacks.length = 0;
+    s.loading = false;
+    s.callbacks.forEach(cb => cb(s.tier1));
+    s.callbacks.length = 0;
   }
-  return _tier1;
+  return s.tier1;
 }
 
 /**
