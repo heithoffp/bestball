@@ -39,7 +39,7 @@ const tabs = [
   { key: 'exposures', label: 'Exposures', icon: BarChart3 },
   { key: 'rosters', label: 'Rosters', icon: Users },
   { key: 'timeseries', label: 'ADP Tracker', icon: TrendingUp },
-  { key: 'combo', label: 'Combos', icon: Network },
+  { key: 'combo', label: 'Combos', icon: Network, isNew: true },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
 ];
@@ -327,7 +327,7 @@ export default function App() {
       <BetaBanner />
       <div className="card">
         <div className="tab-bar">
-          {tabs.map(({ key, label, icon: Icon }) => {
+          {tabs.map(({ key, label, icon: Icon, isNew }) => {
             const locked = !subLoading && !canAccessFeature(tier, key);
             return (
               <button
@@ -339,11 +339,13 @@ export default function App() {
                   <>
                     <Icon className="tab-icon" size={20} />
                     <span>{label}</span>
+                    {isNew && <span className="new-badge" aria-label="New feature">New</span>}
                     {locked && <Lock size={12} style={{ marginLeft: 2, opacity: 0.5 }} />}
                   </>
                 ) : (
                   <>
                     {label}
+                    {isNew && <span className="new-badge" aria-label="New feature">New</span>}
                     {locked && <Lock size={12} style={{ marginLeft: 4, opacity: 0.5 }} />}
                   </>
                 )}

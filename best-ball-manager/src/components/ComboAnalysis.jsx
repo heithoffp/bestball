@@ -124,7 +124,7 @@ const SIMILARITY_HELP_ANNOTATIONS = [
 
 const EXPLORER_HELP_ANNOTATIONS = [
   { id: 'draft-grid', label: 'Draft Board', anchor: 'above', description: 'Players arranged by ADP in snake draft order. Color intensity shows how often each player was drafted in that round across 10M simulated drafts. Click a player to see the next round\'s distribution.' },
-  { id: 'combo-results', label: 'Combo Results', anchor: 'below', description: 'After selecting 4 players, see how often this combo appeared in 10M simulated drafts and which of your actual rosters have it.' },
+  { id: 'combo-results', label: 'Combo Results', anchor: 'above', description: 'After selecting 4 players, see how often this combo appeared in 10M simulated drafts and which of your actual rosters have it.' },
 ];
 
 export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
@@ -186,8 +186,10 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
   }, [rosterData]);
 
   // Default mode for DraftExplorer based on selected tournaments' status.
+  // We're now in the post-draft season, so post is the default view; only fall
+  // back to pre when every selected tournament is explicitly pre-draft.
   const draftExplorerDefaultMode = useMemo(() => {
-    if (selectedTournaments.length === 0) return 'pre';
+    if (selectedTournaments.length === 0) return 'post';
     const tournamentToStatus = new Map();
     for (const group of slateGroups) {
       for (const [t, status] of Object.entries(group.tournamentStatuses || {})) {
@@ -195,8 +197,8 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
       }
     }
     const statuses = selectedTournaments.map(t => tournamentToStatus.get(t)).filter(Boolean);
-    if (statuses.length === 0) return 'pre';
-    return statuses.every(s => s === 'post') ? 'post' : 'pre';
+    if (statuses.length === 0) return 'post';
+    return statuses.every(s => s === 'pre') ? 'pre' : 'post';
   }, [selectedTournaments, slateGroups]);
 
   const filteredRosterData = useMemo(() => {
@@ -510,7 +512,7 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
           { key: 'stacks', label: 'Stack Profiles' },
           { key: 'qbpairs', label: 'QB Pairs' },
           { key: 'similarity', label: 'Roster Similarity' },
-          { key: 'explorer', label: 'Draft Explorer' },
+          { key: 'explorer', label: 'Draft Explorer', isNew: true },
         ].map(t => (
           <button
             key={t.key}
@@ -518,6 +520,7 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
             onClick={() => handleTabClick(t.key)}
           >
             {t.label}
+            {t.isNew && <span className="new-badge" aria-label="New feature">New</span>}
           </button>
         ))}
       </div>

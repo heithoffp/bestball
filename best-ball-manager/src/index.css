@@ -109,6 +109,81 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border-subtle); }
 .badge-rb { background: var(--pos-rb-bg); color: var(--pos-rb); }
 .badge-wr { background: var(--pos-wr-bg); color: var(--pos-wr); }
 .badge-te { background: var(--pos-te-bg); color: var(--pos-te); }
+
+/* "NEW" stamp — sits as an overlay badge on a button, tilted like a rubber stamp */
+.new-badge {
+  position: absolute;
+  top: -10px;
+  right: -14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-inverse);
+  background: linear-gradient(135deg, #f7d36a 0%, #e8bf4a 50%, #c89a2d 100%);
+  padding: 4px 8px 4px 9px;
+  border-radius: 3px;
+  line-height: 1;
+  transform: rotate(-9deg);
+  pointer-events: none;
+  z-index: 5;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 240, 190, 0.7),
+    inset 0 0 0 2px #8a5e1a,
+    inset 0 0 0 3px #f7d36a,
+    0 3px 8px rgba(0, 0, 0, 0.55),
+    0 0 16px rgba(232, 191, 74, 0.45);
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.4);
+  animation: stampPulse 2.8s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.new-badge::before {
+  /* faint inner highlight — sells the embossed look */
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  right: 3px;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+@keyframes stampPulse {
+  0%, 100% {
+    transform: rotate(-9deg) scale(1);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 240, 190, 0.7),
+      inset 0 0 0 2px #8a5e1a,
+      inset 0 0 0 3px #f7d36a,
+      0 3px 8px rgba(0, 0, 0, 0.55),
+      0 0 12px rgba(232, 191, 74, 0.35);
+  }
+  50% {
+    transform: rotate(-9deg) scale(1.05);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 240, 190, 0.85),
+      inset 0 0 0 2px #8a5e1a,
+      inset 0 0 0 3px #f7d36a,
+      0 3px 10px rgba(0, 0, 0, 0.6),
+      0 0 22px rgba(232, 191, 74, 0.7);
+  }
+}
+
+/* Buttons that host a stamp need positioning context and to allow the stamp to spill outside */
+.tab-button,
+.filter-btn-group__item {
+  position: relative;
+  overflow: visible;
+}
+
+
 .tab-bar {
   display: flex;
   gap: 5px;
@@ -777,7 +852,7 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border-subtle); }
   display: inline-flex;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .filter-btn-group__item {

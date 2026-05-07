@@ -162,6 +162,22 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
     // tier3Version dependency triggers recompute when background data arrives
   }, [source, selections, tier3Ready, tier3Version, gridPlayers, playerIdToGrid]);
 
+  // ── Cumulative sim counts at each prefix length ─────────────────────────
+  // counts[i] = number of simulated rosters that drafted players[0..i] in order.
+  // Drives the waterfall bar widths.
+  const cumulativeCounts = useMemo(() => {
+    if (selections.length === 0 || !tier3Ready) return [];
+    const cache = getTier3Cache(source);
+    const pids = selections.map(s => gridPlayers[s.gridIndex]?.player_id).filter(Boolean);
+    const counts = [];
+    if (pids.length >= 1) counts[0] = cache.r1?.[pids[0]] || 0;
+    if (pids.length >= 2) counts[1] = cache.r2?.[pids[0]]?.[pids[1]] || 0;
+    if (pids.length >= 3) counts[2] = cache.r3?.[`${pids[0]}|${pids[1]}`]?.[pids[2]] || 0;
+    if (pids.length >= 4) counts[3] = cache.r4?.[`${pids[0]}|${pids[1]}|${pids[2]}`]?.[pids[3]] || 0;
+    return counts;
+    // tier3Version included so background-loaded rounds repopulate counts.
+  }, [source, selections, gridPlayers, tier3Ready, tier3Version]);
+
   const matchingRosters = useMemo(() => {
     if (selections.length < 1) return [];
     const selectedCanonical = selections.map(s => canonicalName(gridPlayers[s.gridIndex]?.name));
@@ -343,7 +359,7 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
       </div>
 
       {/* Draft Board Grid */}
-      <div className={styles.gridContainer}>
+      <div className={styles.gridContainer} data-help-id="draft-grid">
         {draftBoard.map((row, roundIdx) => {
           const isActiveRound = roundIdx + 1 === currentRound && currentRound <= MAX_PICK_ROUNDS;
 
@@ -413,30 +429,110 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
         })}
       </div>
 
-      {/* Combo info — shown as soon as 1+ players selected */}
+      {/* Combo Waterfall — cumulative sim counts cascading down with each pick */}
       {selections.length >= 1 && (
-        <div className={styles.comboResults}>
-          <div className={styles.comboFrequency}>
-            {selectionFrequency?.count > 0
-              ? `Seen ${selectionFrequency.count.toLocaleString()} times in ${(selectionFrequency.totalRosters / 1e6).toFixed(0)}M simulated rosters (${((selectionFrequency.count / selectionFrequency.totalRosters) * 100).toFixed(4)}%)`
-              : `Never seen in ${selectionFrequency?.totalRosters ? `${(selectionFrequency.totalRosters / 1e6).toFixed(0)}M` : ''} simulated rosters — extremely rare combo`
-            }
-          </div>
-          <div className={styles.comboRosterCount}>
-            <span>
-              {matchingRosters.length > 0
-                ? `${matchingRosters.length} of your ${rostersByEntry.size} rosters have ${selections.length === 1 ? 'this player' : 'this combo'}`
-                : `None of your ${rostersByEntry.size} rosters have ${selections.length === 1 ? 'this player' : 'this combo'}`
-              }
+        <div className={styles.waterfallPanel} data-help-id="combo-results">
+          <div className={styles.waterfallPanelHeader}>
+            <span className={styles.waterfallPanelTitle}>Combo Waterfall</span>
+            <span className={styles.waterfallPanelDivider}>·</span>
+            <span className={styles.waterfallPanelSubtitle}>
+              rosters out of <strong>{(cache.metadata?.total_rosters || 0).toLocaleString()}</strong> simulated drafts
             </span>
-            {matchingRosters.length > 0 && onNavigateToRosters && (
-              <button
-                className={styles.seeRostersBtn}
-                onClick={() => onNavigateToRosters({ players: selections.map(s => gridPlayers[s.gridIndex].name) })}
-              >
-                See Rosters →
-              </button>
-            )}
+          </div>
+          <div className={styles.waterfallBody}>
+            <div className={styles.waterfallBars}>
+              {selections.map((sel, i) => {
+                const player = gridPlayers[sel.gridIndex];
+                if (!player) return null;
+                const posColor = POS_COLORS[player.position] || '#6b7280';
+                const count = cumulativeCounts[i] ?? 0;
+                const maxCount = cumulativeCounts[0] || 1;
+                // Square-root scale so the dropoff feels dramatic but later bars stay legible
+                const ratio = maxCount > 0 ? Math.sqrt(count / maxCount) : 0;
+                const widthPct = count > 0 ? Math.max(2, ratio * 100) : 0;
+                const totalSim = cache.metadata?.total_rosters || 1;
+                const pctOfSim = (count / totalSim) * 100;
+
+                return (
+                  <div key={i} className={styles.waterfallRow}>
+                    <div className={styles.waterfallLabel}>
+                      <span className={styles.waterfallStep}>{i === 0 ? '' : '+'}</span>
+                      <span
+                        className={styles.posBadge}
+                        style={{ backgroundColor: posColor }}
+                      >
+                        {player.position}
+                      </span>
+                      <span className={styles.waterfallPlayerName} title={player.name}>
+                        {player.name}
+                      </span>
+                    </div>
+                    <div className={styles.waterfallBarTrack}>
+                      {count > 0 ? (
+                        <div
+                          className={styles.waterfallBar}
+                          style={{
+                            width: `${widthPct}%`,
+                            background: `linear-gradient(90deg, ${posColor} 0%, ${posColor}b3 100%)`,
+                            boxShadow: `0 0 18px ${posColor}40`,
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className={count > 0 ? styles.waterfallCount : styles.waterfallCountZero}
+                        title={count > 0 ? `${pctOfSim.toFixed(4)}% of simulated drafts` : 'Never seen in simulation'}
+                      >
+                        {count > 0 ? count.toLocaleString() : 'never seen'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <aside className={styles.waterfallSidebar}>
+              <div className={styles.sidebarSection}>
+                <div className={styles.sidebarLabel}>Sim Frequency</div>
+                <div className={styles.sidebarValue}>
+                  {selectionFrequency?.count > 0 ? (
+                    <>
+                      Seen <strong>{selectionFrequency.count.toLocaleString()}</strong> times
+                    </>
+                  ) : (
+                    <em className={styles.sidebarNeverSeen}>Never seen</em>
+                  )}
+                </div>
+                <div className={styles.sidebarSubtext}>
+                  in {selectionFrequency?.totalRosters
+                    ? `${(selectionFrequency.totalRosters / 1e6).toFixed(0)}M`
+                    : ''} sim rosters
+                  {selectionFrequency?.count > 0 && (
+                    <> · <span className={styles.sidebarPct}>{((selectionFrequency.count / selectionFrequency.totalRosters) * 100).toFixed(4)}%</span></>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.sidebarDivider} />
+
+              <div className={styles.sidebarSection}>
+                <div className={styles.sidebarLabel}>Your Portfolio</div>
+                <div className={styles.sidebarValue}>
+                  <strong>{matchingRosters.length}</strong>
+                  <span className={styles.sidebarOf}> / {rostersByEntry.size}</span>
+                </div>
+                <div className={styles.sidebarSubtext}>
+                  rosters {selections.length === 1 ? 'have this player' : 'have this combo'}
+                </div>
+                {matchingRosters.length > 0 && onNavigateToRosters && (
+                  <button
+                    className={styles.seeRostersBtn}
+                    onClick={() => onNavigateToRosters({ players: selections.map(s => gridPlayers[s.gridIndex].name) })}
+                  >
+                    See Rosters →
+                  </button>
+                )}
+              </div>
+            </aside>
           </div>
         </div>
       )}

@@ -19,6 +19,9 @@
   padding: 8px 12px;
   max-width: 240px;
   min-width: 140px;
+  max-height: min(320px, calc(100vh - 140px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   pointer-events: auto;
   animation: calloutIn 200ms var(--ease-default) both;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 8px rgba(232, 191, 74, 0.1);
@@ -140,6 +143,9 @@
 .navCardContent {
   padding: 4px 2px 2px;
   max-width: 260px;
+  max-height: 40vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* ── Mobile overrides ── */

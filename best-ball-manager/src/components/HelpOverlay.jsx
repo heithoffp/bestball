@@ -22,6 +22,7 @@ import styles from './HelpOverlay.module.css';
 const CALLOUT_W = 240;
 const CALLOUT_H_EST = 80;
 const GAP = 10;
+const NAVBAR_RESERVE = 80; // bottom space reserved for the nav bar
 
 function computePosition(elRect, containerRect, anchor = 'below') {
   let top, left;
@@ -47,9 +48,17 @@ function computePosition(elRect, containerRect, anchor = 'below') {
   // Clamp within container bounds
   const maxLeft = containerRect.width - CALLOUT_W - 8;
   left = Math.max(8, Math.min(left, maxLeft));
+
+  // Compute max-height for the callout based on remaining space, leaving
+  // room for the bottom nav bar so the card never gets clipped by the
+  // container's overflow:hidden.
+  const availableBelow = containerRect.height - NAVBAR_RESERVE - top;
+  const maxHeight = Math.max(120, availableBelow);
+
+  // If top is negative or pushes the callout off the top, clamp it down.
   top = Math.max(8, top);
 
-  return { top, left };
+  return { top, left, maxHeight };
 }
 
 /** Find the nearest scrollable ancestor within (or equal to) the container. */
@@ -175,7 +184,7 @@ export default function HelpOverlay({ annotations, onClose, containerRef }) {
         <div
           key={current.id}
           className={styles.callout}
-          style={{ top: position.top, left: position.left }}
+          style={{ top: position.top, left: position.left, maxHeight: position.maxHeight }}
         >
           <div className={styles.calloutLabel}>{current.label}</div>
           {current.description && <p className={styles.calloutDesc}>{current.description}</p>}
