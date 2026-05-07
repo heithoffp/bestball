@@ -1,4 +1,4 @@
-<!-- Completed: 2026-05-07 | Commit: pending -->
+<!-- Completed: 2026-05-07 | Commit: 868da6e -->
 # TASK-212: Generate and wire post-draft simulation data
 
 **Status:** Approved
