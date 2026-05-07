@@ -37,7 +37,7 @@ const HELP_ANNOTATIONS = [
  * @returns {{ text: string, muted: boolean }}
  */
 function formatUniqueness(score, loading) {
-  if (loading || !score) return { text: '—', muted: true };
+  if (loading || !score || score.loading) return { text: '—', muted: true };
   if (!score.found) return { text: '0.0', muted: false };
   const perMillion = (score.count / (score.totalRosters / 1_000_000)).toFixed(1);
   return { text: perMillion, muted: false };
@@ -159,8 +159,26 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   const scrollRef = useRef(null);
 
   // ── Simulation data ──────────────────────────────────────────────────────────
-  const [tier1, setTier1] = useState(null);
-  useEffect(() => { loadSimData().then(setTier1); }, []);
+  // Load both pre- and post-draft tier1 tables so each roster can be scored
+  // against the simulation source that matches its tournament status.
+  const [tier1Pre, setTier1Pre] = useState(null);
+  const [tier1Post, setTier1Post] = useState(null);
+  useEffect(() => { loadSimData('pre').then(setTier1Pre); }, []);
+  useEffect(() => { loadSimData('post').then(setTier1Post); }, []);
+
+  // Mirrors the classification used in ComboAnalysis: name-based, since
+  // roster-completion heuristics are unreliable (most rosters are 18 picks
+  // even before live drafts close).
+  //   - UD slate title containing "Pre-Draft" → pre-draft
+  //   - DK tournament title containing "Early Bird" → pre-draft
+  //   - Otherwise → post-draft
+  const isPreDraftRoster = (slateTitle, tournamentTitle) => {
+    const slate = (slateTitle || '').toLowerCase();
+    const tourn = (tournamentTitle || '').toLowerCase();
+    if (slate.includes('pre-draft') || slate.includes('predraft')) return true;
+    if (tourn.includes('early bird')) return true;
+    return false;
+  };
 
   // name (lowercase, normalised) → player_id from masterPlayers (uses full team name — matches sim format)
   const nameToPlayerId = useMemo(() => {
@@ -276,18 +294,27 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
     });
   }, [rosterData, alpha, nameToPlayerId]);
 
-  // Per-roster uniqueness score via Tier 1 simulation lookup
+  // Per-roster uniqueness score via Tier 1 simulation lookup.
+  // Pre-draft rosters score against the pre sim; post-draft rosters score
+  // against the post sim. Rosters whose source is still loading are flagged
+  // so the UI can show a loading dash instead of a stale value.
   const rosterScores = useMemo(() => {
     const byId = {};
     rosters.forEach(r => {
+      const isPre = isPreDraftRoster(r.slateTitle, r.tournamentTitle);
+      const source = isPre ? tier1Pre : tier1Post;
+      if (!source) {
+        byId[r.entry_id] = { loading: true, found: false, totalRosters: 10000000 };
+        return;
+      }
       const key = buildComboKey(r.players);
-      const hit = key && tier1 ? lookupTier1(key, tier1) : null;
+      const hit = key ? lookupTier1(key, source) : null;
       byId[r.entry_id] = hit
         ? { found: true, count: hit.count, totalRosters: hit.totalRosters }
-        : { found: false, totalRosters: tier1?.metadata?.total_rosters ?? 10000000 };
+        : { found: false, totalRosters: source.metadata?.total_rosters ?? 10000000 };
     });
     return byId;
-  }, [rosters, tier1]);
+  }, [rosters, tier1Pre, tier1Post]);
 
 
 
@@ -470,7 +497,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   const renderRosterCard = (roster, virtualRow) => {
     const clv    = clvLabel(roster.avgCLV);
     const isOpen = expandedEntry === roster.entry_id;
-    const uniq   = formatUniqueness(rosterScores[roster.entry_id], !tier1);
+    const uniq   = formatUniqueness(rosterScores[roster.entry_id], false);
 
     return (
       <div
@@ -821,10 +848,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
           {displayed.map((roster) => {
             const clv    = clvLabel(roster.avgCLV);
             const isOpen = expandedEntry === roster.entry_id;
-            const uniq = formatUniqueness(rosterScores[roster.entry_id], !tier1);
-            const uniqTooltip = rosterScores[roster.entry_id]?.found
+            const score = rosterScores[roster.entry_id];
+            const uniq = formatUniqueness(score, false);
+            const uniqTooltip = score?.found
               ? 'Observed in simulation — exact frequency count per simulated rosters.'
-              : !tier1 ? 'Loading simulation data…' : 'Not observed — this is a uniquely rare combo.';
+              : score?.loading ? 'Loading simulation data…' : 'Not observed — this is a uniquely rare combo.';
             return (
               <React.Fragment key={roster.entry_id}>
                 <tr
