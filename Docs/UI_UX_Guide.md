@@ -1,5 +1,5 @@
 # UI/UX Guiding Star
-## Best Ball Portfolio Manager
+## Best Ball Exposures
 
 **Version:** 1.0
 **Date:** 2026-04-01
@@ -8,7 +8,7 @@
 
 ## 1. Aesthetic Identity — "Command Deck"
 
-Best Ball Portfolio Manager's visual identity is **Command Deck** — a fusion of *Data-Driven Dashboard* precision and *Scientific/Technical* authority. The aesthetic evokes a professional trading terminal: dark, focused, information-dense, and premium — without feeling cold or intimidating.
+Best Ball Exposures's visual identity is **Command Deck** — a fusion of *Data-Driven Dashboard* precision and *Scientific/Technical* authority. The aesthetic evokes a professional trading terminal: dark, focused, information-dense, and premium — without feeling cold or intimidating.
 
 ### Why This Direction
 
@@ -449,4 +449,4 @@ When building or reviewing any new UI element, verify:
 
 ---
 
-*This document is the aesthetic authority for Best Ball Portfolio Manager. For product direction and feature scope, see `Vision_and_Scope.md`. For detailed feature behavior, see `Feature_Specs/`.*
+*This document is the aesthetic authority for Best Ball Exposures. For product direction and feature scope, see `Vision_and_Scope.md`. For detailed feature behavior, see `Feature_Specs/`.*

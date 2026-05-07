@@ -1,36 +1,48 @@
 # Combo Analysis
 
 ## Purpose
-Analyzes QB stacking patterns and multi-QB portfolio construction. Surfaces which QB-to-teammate combinations and QB pairs appear most frequently across rosters.
+Cross-roster stacking pattern analysis. Surfaces which QB-to-teammate combinations and dual-QB pairs appear most frequently across the user's portfolio, revealing whether correlation bets are intentional or accidental.
 
 ## Current Status
-**Disabled** — commented out in `App.jsx` due to performance concerns.
+**Active.** Wired in `App.jsx` at the `/combos` route via the `combo` tab key.
 
-## User-Facing Behavior (When Enabled)
+## User-Facing Behavior
 
-### Tabs
-- **Stacks:** QB → teammate combinations (WR/TE/RB) with frequency counts
-- **QBQB:** Dual-QB pairs across rosters with co-occurrence rates
-- **Starts:** (Incomplete in current implementation)
+### Tabs / Views
+- **Stacks** — QB → teammate combinations (WR/TE/RB) with frequency counts and stack-diversity bars per QB.
+- **QBQB** — Dual-QB pairs across rosters with co-occurrence rates.
+- **Starts** — Stack patterns segmented by team / starting roster slot.
 
-### Core Workflow
-Shows which stacking patterns emerge naturally from the user's drafts. Helps identify whether correlation bets are intentional or accidental.
+### Filters
+- Tournament multi-select (`TournamentMultiSelect.jsx`) — restrict analysis to specific draft tournaments.
+- Combined search input (`filters/CombinedSearchInput.jsx`) — filter by player name, team, or position.
+- NFL team chips (`utils/nflTeams.js`) — restrict to specific teams.
+
+### Visual Treatment
+- Position palette: QB purple, RB green, WR amber, TE blue.
+- Distinct combo palette (10 colors) cycled by index for stack segments — not position-based, so visually adjacent combos are easy to distinguish.
+- Hover tooltips on stack diversity bar segments show segment label.
+- "Rosters →" navigation buttons jump to the Roster Viewer filtered to rosters containing the selected combo.
+
+### Empty State
+Falls back to `EmptyState` with a `FolderSync` icon when no roster data is loaded.
 
 ## Computations & Data Dependencies
 
-**Props:** `rosterData`, `allRosters`
+**Props:** `rosterData`, `masterPlayers`, `onNavigateToRosters`
 
 **Key computations:**
-- Groups rosters by entry_id, identifies same-team player pairs
-- Counts QB-teammate co-occurrences across all rosters
-- Computes naked QB percentage (QBs without same-team pass catchers)
-- Uses stack classification from `utils/stackAnalysis.js`
+- Groups rosters by `entry_id`, identifies same-team player pairs.
+- Counts QB-teammate co-occurrences across all rosters.
+- Counts dual-QB pair frequencies.
+- Position-aware grouping for stack diversity visualization.
 
-## Known Limitations
-- Disabled for performance — needs optimization before re-enabling
-- "Starts" tab incomplete
-- No visual heatmap (future feature: player correlation heatmap)
+## Performance Notes
+The component was previously disabled for performance (see `docs/archive/notes/OPTIMIZATION_PLAN.md`). It has since been re-enabled. If the QB pair matrix or stack rendering becomes a bottleneck on large portfolios, profile before further optimization work.
 
 ## Key Files
-- `src/components/ComboAnalysis.jsx` — main component (disabled)
-- `src/utils/stackAnalysis.js` — `analyzeRosterStacks()`, stack type classification
+- `src/components/ComboAnalysis.jsx` — main component
+- `src/components/DraftExplorer.jsx` — child component used for drill-down
+- `src/components/TournamentMultiSelect.jsx` — tournament filter
+- `src/components/filters/CombinedSearchInput.jsx` — search input
+- `src/utils/nflTeams.js` — team metadata

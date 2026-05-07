@@ -36,7 +36,7 @@ Active
 - Supports both File objects and raw text strings
 
 ### 2. Column Mapping (`utils/dataLoader.js`)
-Roster CSV column fallbacks (Underdog variants only):
+Roster data primarily arrives via the Chrome extension (`utils/extensionBridge.js`), pre-shaped to canonical fields. The CSV column fallbacks below remain in use for the bundled demo dataset and the Rankings CSV upload. Underdog variants:
 - Name: `Player Name` | `player_name` | `Player`
 - Position: `Position` | `position` | `Pos`
 - Team: `Team` | `team`
@@ -76,12 +76,11 @@ Joins rosters + ADP snapshots into canonical player objects:
 - No backup of previous data
 
 ## Known Limitations
-- **No CSV format validation** — non-Underdog CSVs parse silently and produce empty results
+- **No CSV format validation** — unrecognized CSVs parse silently and produce empty results
 - **No sync confirmation** — destructive replacement with no undo
 - **No progress bar** during processing (only text status messages)
 - **No error boundaries** — errors surface as raw `String(err)` in status banner
-- Column fallbacks only cover Underdog naming variations, not other platforms
-- ADP snapshots are static (bundled at build time); users cannot add their own
+- ADP snapshots are static (bundled at build time, both Underdog and DraftKings); users cannot add their own
 
 ## Key Files
 - `src/components/FileUploadButton.jsx` — upload UI component (used by Rankings tab)

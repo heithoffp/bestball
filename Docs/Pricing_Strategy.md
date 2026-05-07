@@ -127,7 +127,7 @@ Most users expected to use promo codes (effective price). Nominal-price users ar
 ---
 
 ## References
-- **Competitive Analysis:** `docs/Competitive_Analysis.md`
+- **Competitive Landscape:** `docs/competitive-landscape.md`
 - **Channel Strategy:** `docs/Channel_Strategy.md`
 - **Feature Gating Implementation:** TASK-015 (Done)
 - **Stripe Integration:** TASK-013, TASK-014 (Done)

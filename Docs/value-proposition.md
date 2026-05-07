@@ -27,7 +27,7 @@
 ### Option B — One-stop-shop angle
 > **Stop Juggling Five Tools to Understand One Portfolio.**
 >
-> Exposure trackers. ADP charts. Stacking analyzers. Roster graders. You've been stitching together your portfolio picture from a dozen tabs. Best Ball Portfolio Manager puts it all in one place — sync your rosters and see everything.
+> Exposure trackers. ADP charts. Stacking analyzers. Roster graders. You've been stitching together your portfolio picture from a dozen tabs. Best Ball Exposures puts it all in one place — sync your rosters and see everything.
 
 ### Option C — Portfolio-first angle
 > **You Draft Portfolios. Your Tools Should Analyze Them.**

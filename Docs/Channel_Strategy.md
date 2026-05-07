@@ -121,7 +121,7 @@ Channels ranked by ROI (reach x conversion likelihood / effort + cost):
 
 **Approach:**
 1. **Join 3-5 servers now** as a genuine participant. Contribute to best-ball discussions.
-2. **Create a Best Ball Portfolio Manager Discord** as a community/support hub. Link from the app. This becomes a feedback loop and retention tool.
+2. **Create a Best Ball Exposures Discord** as a community/support hub. Link from the app. This becomes a feedback loop and retention tool.
 3. **Do not spam other servers.** Participate genuinely, mention the tool when contextually relevant (e.g., someone asks "how do I track my exposure across 20 rosters?").
 4. **Post-launch:** Use your own Discord for: beta feedback, feature requests, sharing portfolio analysis, building a community of power users who become evangelists.
 

@@ -1,147 +1,229 @@
-# Best Ball Portfolio Manager
+# Best Ball Exposures
 
 ## Overview
 
-Best Ball Portfolio Manager is a commercial SaaS product for analyzing fantasy football best-ball draft portfolios. It ingests roster CSVs and ADP (Average Draft Position) snapshots, then provides analytics across multiple tab views — serving as the one-stop shop for portfolio awareness. Users gain actionable insights through a simple, intuitive interface that surfaces the most useful data without requiring them to dig.
+**Best Ball Exposures** (BBE) is a commercial SaaS product for analyzing fantasy football best-ball draft portfolios. Users sync rosters from supported platforms via a Chrome extension, then explore portfolio-level analytics across a tabbed dashboard — exposures, ADP movement, draft assistance, combo analysis, and more. The product positions as the "one-stop shop for portfolio awareness" and follows a *mirror, not advisor* design philosophy: describe state, don't prescribe action.
+
+- **Brand:** Best Ball Exposures (mobile: "BB EXPOSURES")
+- **Domain:** BestBallExposures.com
+- **Social:** [@BBExposures](https://x.com/BBExposures)
+- **Platforms supported:** Underdog and DraftKings
+- **Distribution:** Web app (subscription) + Chrome extension (roster sync)
 
 ## Project Vision
 
-The full product vision, design principles, scope, and exclusions are defined in **`Docs/Vision_and_Scope.md`**. This is the authoritative source for product direction — consult it before proposing new features or making design decisions. Key principles: the app is a "mirror, not advisor" (describe state, don't prescribe actions), all features must be zero-config (no user-set targets), and the dashboard is the primary entry point with tabs as drill-downs.
+The full product vision, design principles, and exclusions live in **`docs/Vision_and_Scope.md`**. Consult it before proposing new features. Core principles:
+
+- **Mirror, not advisor** — describe portfolio state; never prescribe. Computed opinions are limited to the Draft Assistant tab and Roster Viewer (single-roster grading is OK there).
+- **Zero-config insights** — every feature must be useful immediately after sync; no targets, no preference wizards.
+- **Dashboard-first navigation** — Dashboard is the home base; other tabs are drill-downs.
 
 ## Tech Stack
-- **Language(s):** JavaScript (ES Modules)
-- **Framework(s):** React 19, Recharts, Lucide React
-- **Build/Package:** Vite 7, npm
-- **Runtime:** Browser (client-side only)
-- **Backend Services:** Supabase (auth + cloud storage, optional — IndexedDB fallback)
-- **Deployment:** Vercel (with analytics + speed insights)
+
+### Web app (`best-ball-manager/`)
+- **Language:** JavaScript (ES Modules)
+- **UI:** React 19, React Router 7, Recharts, Lucide React, @dnd-kit (drag-and-drop)
+- **State / data:** PapaParse (CSV), @tanstack/react-virtual (large lists)
+- **Build:** Vite 7
+- **Auth + cloud storage:** Supabase (`@supabase/supabase-js`); IndexedDB fallback when unauthenticated
+- **Payments:** Stripe (`@stripe/stripe-js`) — handled via Supabase Edge Functions for webhooks (see ADR-001)
+- **Observability:** Sentry (`@sentry/react`), Vercel Analytics, Vercel Speed Insights
+- **Testing:** Playwright
+- **Lint:** ESLint 9
+- **Hosting:** Vercel
+
+### Chrome extension (`chrome-extension/`)
+Roster sync utility — reads Underdog/DraftKings draft pages, writes entries to Supabase / IndexedDB for the web app to consume. Out of scope for most web-app sessions.
+
+### Auxiliary code (out of scope unless explicitly working on it)
+- `scrapers/` — Python ADP scrapers
+- `simulation/` — Python Monte Carlo / projection tools
+- `scripts/` — Node admin scripts (e.g., `grant-pro.mjs`)
+- `supabase/` — Edge Functions and SQL migrations
 
 ## Key Commands
 
-All commands must be run from the `best-ball-manager/` subdirectory.
+All web-app commands run from `best-ball-manager/`:
 
 | Command | Purpose | Confirm Before Running? |
 |---------|---------|------------------------|
-| `npm run dev` | Start Vite dev server with HMR | No |
+| `npm run dev` | Vite dev server with HMR | No |
 | `npm run build` | Production build | No |
 | `npm run lint` | ESLint | No |
 | `npm run preview` | Preview production build | No |
+| `npx playwright test` | Run e2e tests | No |
 
 ## Read-Only Paths
-- `best-ball-manager/src/assets/` — CSV data files (demo rosters, ADP snapshots, projections, rankings). Never modify these.
+
+- `best-ball-manager/src/assets/` — bundled CSV data (demo rosters, ADP snapshots, projections, default rankings). Never modify.
 
 ## Architecture
 
-### Data Flow
+### Tab structure (`src/App.jsx`)
 
-Roster data is synced from the Chrome extension (stored in IndexedDB or Supabase cloud storage). ADP snapshots (`src/assets/adp/*.csv` date-stamped) are bundled at build time. Both are loaded in `App.jsx` on mount, parsed via PapaParse (`utils/csv.js`), then processed through `utils/helpers.js` which normalizes player names, computes exposure percentages, and builds a master player list with historical ADP timelines. Enriched data flows into tab components.
+The app routes via `react-router-dom` with these tabs:
 
-### Key Utilities
+| Tab key | Path | Component | Purpose |
+|---------|------|-----------|---------|
+| `dashboard` | `/` | `Dashboard.jsx` | Portfolio overview (default landing) |
+| `exposures` | `/exposures` | `ExposureTable.jsx` | Player exposure table |
+| `rosters` | `/rosters` | `RosterViewer.jsx` | Per-roster deep dive with grades |
+| `timeseries` | `/adp-tracker` | `AdpTimeSeries.jsx` | Historical ADP timelines |
+| `combo` | `/combos` | `ComboAnalysis.jsx` | QB stack and dual-QB pair analysis |
+| `rankings` | `/rankings` | `PlayerRankings.jsx` | Custom drag-and-drop draft board |
+| `draftflow` | `/draft-assistant` | `DraftFlowAnalysis.jsx` | Live-draft companion (the only opinionated tab) |
 
-- **`utils/helpers.js`** — `stableId()` for canonical player IDs, `parseAdpString()` for ADP format handling, `processMasterList()` for the main aggregation pipeline that joins rosters with ADP data
-- **`utils/draftScorer.js`** — Multi-factor candidate scoring: projected value, diversification, exposure penalty, strategy fit, reach penalty, and strategy kill detection. Uses weighted utility composition.
-- **`utils/rosterArchetypes.js`** — Classifies rosters into strategic archetypes (RB_HERO, RB_ZERO, RB_HYPER_FRAGILE, RB_VALUE) via `PROTOCOL_TREE`. `analyzePortfolioTree()` aggregates portfolio-level strategy distribution.
+Help is rendered as a **per-tab overlay** (`HelpOverlay.jsx`), not its own tab. The standalone `HelpGuide.jsx` is no longer mounted as a tab.
 
-### Components
+`RosterConstruction.jsx` exists in the codebase but is **disabled** in `App.jsx` for performance. The source file is preserved.
 
-Main tab components in `src/components/`: Dashboard, ExposureTable, AdpTimeSeries, DraftFlowAnalysis, ComboAnalysis, RosterConstruction, RosterViewer, PlayerRankings, HelpGuide. All are functional components using hooks with `useMemo` for expensive computations.
+`DraftExplorer.jsx` exists but is unused — dead code candidate.
+
+### Data flow
+
+1. **Bootstrap (`App.jsx`)** — On mount, `loadData()` chooses a path:
+   - Authenticated user with Supabase: load rosters via `extensionBridge` (data written by the Chrome extension), plus per-platform rankings from Supabase.
+   - Unauthenticated guest: render `LandingPage`. Demo data loads on demand via "Try Demo".
+2. **Bundled assets** — ADP snapshots (`src/assets/adp/{underdog|draftking}_adp_YYYY-MM-DD.csv`), projections, rankings, and demo rosters are imported via Vite `import.meta.glob`.
+3. **Processing (`utils/dataLoader.js` → `utils/helpers.js`)** — CSVs parsed by PapaParse, players normalized via `stableId()`, exposure percentages computed, master player list built with historical ADP timelines per platform.
+4. **Subscription gating (`SubscriptionContext.jsx`, `featureAccess.js`)** — Each tab is wrapped in `canAccessFeature(tier, key)`; locked tabs render `LockedFeature` with a sign-up prompt.
+
+### Key utilities (`src/utils/`)
+
+| File | Responsibility |
+|------|----------------|
+| `helpers.js` | `stableId()`, `parseAdpString()`, `processMasterList()` aggregation pipeline |
+| `dataLoader.js` | Top-level orchestration of CSV → enriched data structures |
+| `csv.js` | Thin PapaParse wrapper |
+| `extensionBridge.js` | Reads roster entries written by the Chrome extension |
+| `storage.js` / `cloudStorage.js` | IndexedDB + Supabase storage with sync-first-then-cloud strategy |
+| `draftModel.js` | Draft state model used by Draft Assistant |
+| `rosterArchetypes.js` | `classifyRosterPath()`, `analyzePortfolioTree()`, `PROTOCOL_TREE` (Hero RB / Zero RB / Hyper Fragile / Balanced × QB tiers × TE tiers) |
+| `stackAnalysis.js` | `analyzeStack()` — Elite Overstack / Stack / RB Stack / Game Stack classification |
+| `uniquenessEngine.js` | Roster uniqueness scoring (see ADR-003) |
+| `clvHelpers.js` | Closing Line Value helpers |
+| `featureAccess.js` | Subscription tier gating |
+| `supabaseClient.js`, `stripeClient.js` | Third-party client singletons |
+| `sentry.js`, `analytics.js` | Observability shims |
+
+### Contexts
+
+- `AuthContext.jsx` — Supabase auth state + recovery mode
+- `SubscriptionContext.jsx` — Stripe-backed tier (`guest` | paid tiers)
 
 ## Development Guidelines
 
 - ES Modules throughout (`"type": "module"`)
-- Utility files use lowercase with camelCase (`draftScorer.js`); components use PascalCase
-- Player identity is normalized via `stableId()` — always use it when matching players across data sources
-- ADP snapshots are named `underdog_adp_YYYY-MM-DD.csv` and sorted by date for timeline construction
+- Components: `PascalCase.jsx` with co-located `PascalCase.module.css`
+- Utilities: `camelCase.js`
+- Player identity: always normalize via `stableId()` when matching across data sources
+- ADP filenames: `{underdog|draftking}_adp_YYYY-MM-DD.csv`; sorted by date for timeline construction
+- Mobile responsiveness via `useMediaQuery` hook + CSS modules with breakpoints at 599px / 899px
 
 ## External Dependencies & Environment
 
-- **Supabase:** Auth and cloud storage (optional — app works fully via IndexedDB without auth)
-- **Vercel:** Hosting with analytics and speed insights
-- No required environment variables for local development
+- **Supabase:** Auth, cloud storage (`user-files` bucket), Edge Functions for Stripe webhooks (ADR-001)
+- **Stripe:** Subscription billing
+- **Vercel:** Hosting, Analytics, Speed Insights
+- **Sentry:** Error reporting
+- Local development: app runs without environment variables (Supabase/Stripe optional — guest tier and IndexedDB fallback)
 
 ## Platform
+
 - **OS:** Windows 11
-- **Shell:** bash (Unix-style paths and syntax)
-- **Path syntax:** Forward slashes, `/dev/null`
+- **Shell:** PowerShell (project default) or bash (also available)
+- **Path syntax:** Forward slashes work in both shells
 
 ## Documentation Structure
 
-- **`Docs/Vision_and_Scope.md`** — Product direction, design principles, exclusions (the "why" and "what")
-- **`Docs/Feature_Specs/`** — Detailed behavior specs per implemented feature (the "how")
+> **Note:** Git tracks the documentation tree as `Docs/` (capital D); on Windows the
+> case-insensitive filesystem makes `docs/` (lowercase) work too. Convention in this
+> project — and in the hus skills — is to *refer* to it as `docs/` in prose. A planned
+> rename to canonical lowercase is tracked as TASK-209.
 
-When modifying a feature, update the corresponding Feature Spec. Vision_and_Scope should only change when product direction shifts.
+- **`docs/Vision_and_Scope.md`** — Product direction, design principles, exclusions (the "why" / "what")
+- **`docs/Feature_Specs/`** — Detailed behavior specs per implemented tab (the "how")
+- **`docs/adr/`** — Architecture Decision Records (owned by hus-adr)
+- **`docs/plans/`** — Per-task implementation plans (owned by hus-backlog)
+- **`docs/archive/`** — Completed plans + retired notes
+- **`docs/systems-model/`** — Systems-thinking diagrams and analyses
+- **`docs/migrations/`** — Database / data migration notes
+- Business / strategy docs live alongside specs in `docs/`: `Pricing_Strategy.md`, `Channel_Strategy.md`, `Uniqueness_Model.md`, `competitive-landscape.md`, `creator-outreach.md`, `value-proposition.md`, `UI_UX_Guide.md`
+
+When modifying a feature, update its Feature Spec. Vision_and_Scope changes only on product direction shifts.
 
 ## Project Files
 
-| File/Dir | Purpose |
-|----------|---------|
+| File / Dir | Purpose |
+|------------|---------|
 | `CLAUDE.md` | This file — project context and working agreements |
-| `LIFECYCLE.md` | Project phase, current phase, phase goal, deadline, and governance tier |
-| `ROADMAP.md` | Epics and features — high-level project planning (owned by hus-backlog) |
-| `BACKLOG.md` | Task table with status, priority, and plan links |
-| `docs/plans/` | Per-task implementation plans (approval required before coding) |
-| `docs/adr/` | Architecture Decision Records (approval required before acting) |
-| `Docs/Vision_and_Scope.md` | Product vision, design principles, scope, and exclusions |
-| `Docs/Feature_Specs/` | Detailed behavior specs per implemented feature |
+| `LIFECYCLE.md` | Project phase, goal, deadline, governance tier |
+| `ROADMAP.md` | Epics and features (owned by hus-backlog) |
+| `BACKLOG.md` | Active and completed task table (owned by hus-backlog) |
+| `README.md` | Public repo README |
+| `docs/` | All other documentation (specs, ADRs, plans, strategy) |
+| `best-ball-manager/` | The web application |
+| `chrome-extension/` | Roster-sync extension |
+| `scrapers/` | Python ADP scrapers |
+| `simulation/` | Python simulation / projection tools |
+| `scripts/` | Node admin scripts |
+| `supabase/` | Edge Functions + SQL migrations |
+| `brand/` | Brand assets |
 
 ---
 
 ## Session Protocol
 
-Follow these steps at the start of every Claude Code session:
+At the start of every session:
 
-1. Read this file (`CLAUDE.md`) to re-orient to the project.
-2. Read `LIFECYCLE.md` — note the current phase, phase goal, governance tier, and deadline.
-   Apply the governance behavior for this tier (per hus-lifecycle rules).
-   If a phase deadline is set, note days remaining.
-3. Read `ROADMAP.md` to confirm current epic context.
-4. Check `BACKLOG.md` for any tasks with status `In Progress`.
-5. If resuming a task, confirm its plan file exists and has been **approved** before
-   touching any code.
+1. Read this file (`CLAUDE.md`).
+2. Read `LIFECYCLE.md` — note phase, goal, governance tier, deadline. Apply tier behavior per hus-lifecycle.
+3. Read `ROADMAP.md` — confirm current epic context.
+4. Check `BACKLOG.md` for tasks with status `In Progress`.
+5. If resuming a task, confirm its plan file exists and has been **approved** before touching code.
 
 ---
 
 ## Working Agreements
 
 ### File Ownership — Non-Negotiable
-**Every governed file has exactly one owning skill. Never edit these files directly — always use the owning skill.**
 
-| File/Directory | Owning Skill | Rule |
-|----------------|-------------|------|
-| `BACKLOG.md` | hus-backlog | All edits via hus-backlog |
-| `ROADMAP.md` | hus-backlog | All edits via hus-backlog |
-| `docs/plans/` | hus-backlog | All edits via hus-backlog |
-| `LIFECYCLE.md` | hus-lifecycle | All edits via hus-lifecycle |
-| `docs/adr/` | hus-adr | All edits via hus-adr |
+Every governed file has exactly one owning skill. Never edit these directly — invoke the owning skill.
+
+| File / Directory | Owning Skill |
+|------------------|--------------|
+| `BACKLOG.md` | hus-backlog |
+| `ROADMAP.md` | hus-backlog |
+| `docs/plans/` | hus-backlog |
+| `LIFECYCLE.md` | hus-lifecycle |
+| `docs/adr/` | hus-adr |
 
 ### Approval Gate — Non-Negotiable
-**Claude never writes code or acts on a decision without explicit developer approval.**
 
-- **Plans:** Use hus-backlog to draft a plan file. Present it to the developer.
-  Wait for approval. Only then write code.
-- **ADRs:** Use hus-adr to draft an ADR. Present it to the developer.
-  Wait for approval. Only then act on the decision.
+Claude never writes code or acts on a decision without explicit developer approval.
 
-When proposing a plan or ADR, end the message with:
+- **Plans** — drafted via hus-backlog, presented, approved, then code.
+- **ADRs** — drafted via hus-adr, presented, approved, then act.
+
+End every plan or ADR proposal with:
 > "Please review and reply **approved** to proceed, or provide feedback to revise."
 
-Do not proceed until the developer has explicitly said "approved" or equivalent confirmation.
-
 ### Task Management
-Use **hus-backlog** for all task and plan operations. Do not edit `BACKLOG.md` or
-`docs/plans/` manually — always follow hus-backlog rules.
+
+Use **hus-backlog** for all task and plan operations. Never edit `BACKLOG.md` or `docs/plans/` manually.
 
 ### Architectural Decisions
-Use **hus-adr** whenever making a significant design choice — technology selection,
-structural patterns, meaningful trade-offs. When in doubt, write an ADR.
+
+Use **hus-adr** for any significant design choice — technology selection, structural patterns, meaningful trade-offs. When in doubt, write an ADR.
 
 ### Lifecycle and Phases
-Use **hus-lifecycle** for all phase tracking, phase transitions, and governance tier
-management. Do not manually edit `LIFECYCLE.md` — always follow hus-lifecycle rules.
+
+Use **hus-lifecycle** for phase tracking, transitions, and governance tier management. Never manually edit `LIFECYCLE.md`.
 
 ### Never
-- Write code without an approved plan file.
+
+- Write code without an approved plan.
 - Act on an architectural decision without an approved ADR.
 - Transition phases without developer approval.
-- Modify read-only paths listed above.
+- Modify read-only paths.
 - Skip the session protocol.

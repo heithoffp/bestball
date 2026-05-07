@@ -21,6 +21,7 @@
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 | [Plan](docs/plans/TASK-171.md) | No |
 | TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P1 | [Plan](docs/plans/TASK-173.md) — Draft | No |
 | TASK-182 | Submit Chrome extension to Chrome Web Store | Todo | P1 | [Plan](docs/plans/TASK-182.md) — Draft | No |
+| TASK-207 | Scope Chrome extension manifest to fantasy-only paths (1.0.4 resubmit) | Todo | P1 | [Plan](docs/plans/TASK-207.md) -- Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No |
@@ -55,6 +56,7 @@
 | TASK-197 | PlayerRankings — projections.csv as authoritative projection source | In Progress | P3 | [Plan](docs/plans/TASK-197.md) -- Pending Approval | No |
 | TASK-199 | Clean up duplicate Supabase users created during TASK-192 Google OAuth window | Todo | P3 | [Plan](docs/plans/TASK-199.md) -- Draft | No |
 | TASK-203 | ADR: Comp access modeled separately from beta access | Todo | P3 | [Plan](docs/plans/TASK-203.md) -- Draft | No |
+| TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P3 | [Plan](docs/plans/TASK-209.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No |
 
@@ -64,6 +66,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-208 | Documentation consolidation: refactor all in-repo documentation to match implementation reality | Done | P3 | [Plan](docs/archive/plans/TASK-208.md) | No | 2026-05-07 |
 | TASK-206 | Global Tournament filter on Dashboard tab | Done | P3 | [Plan](docs/archive/plans/TASK-206.md) | Yes | 2026-05-06 |
 | TASK-204 | Global Tournament filter on Combos tab | Done | P3 | [Plan](docs/archive/plans/TASK-204.md) | Yes | 2026-05-06 |
 | TASK-202 | Admin comp Pro script + comp_expires_at column | Done | P2 | [Plan](docs/archive/plans/TASK-202.md) | No | 2026-05-06 |

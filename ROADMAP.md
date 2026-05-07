@@ -47,11 +47,11 @@
 
 ### FEAT-005: Re-enable Combo Analysis
 **Status:** Not Started
-**Description:** Performance optimization to make the Combo Analysis tab usable at scale. Currently disabled due to performance issues. See `Docs/Feature_Specs/Combo_Analysis.md`.
+**Description:** Combo Analysis has been re-enabled in `App.jsx`. This feature remains on the roadmap as a placeholder for future performance optimization if scale problems re-emerge. See `docs/Feature_Specs/Combo_Analysis.md`. Consider marking Complete or removing.
 
 ### FEAT-006: Re-enable Roster Construction
 **Status:** Not Started
-**Description:** Performance optimization to make the Roster Construction tab usable at scale. Currently disabled due to performance issues. See `Docs/Feature_Specs/Roster_Construction.md`.
+**Description:** Performance optimization to make the Roster Construction tab usable at scale. Currently disabled in `App.jsx` due to performance issues. Component source preserved. See archived spec at `docs/archive/notes/Roster_Construction.md` for prior behavior.
 
 ### FEAT-007: CSV Export
 **Status:** Not Started
