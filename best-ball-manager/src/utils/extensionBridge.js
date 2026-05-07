@@ -1,6 +1,18 @@
 import { supabase } from './supabaseClient';
 
 /**
+ * Re-bucket DK entries into Pre-Draft / Post-Draft slates from the tournament
+ * name. Older syncs stamped every DK entry as "DK Pre-Draft"; this normalizer
+ * keeps slate grouping correct without requiring a re-sync. Mirrors
+ * `deriveDkSlate` in chrome-extension/src/adapters/draftkings.js.
+ */
+function normalizeSlateTitle(slateTitle, tournamentTitle) {
+  if (!slateTitle || !slateTitle.startsWith('DK')) return slateTitle;
+  const tourn = (tournamentTitle || '').toLowerCase();
+  return tourn.includes('early bird') ? 'DK Pre-Draft' : 'DK Post-Draft';
+}
+
+/**
  * Reads portfolio entries synced from the Chrome extension for the given user.
  * Returns an array of Entry objects matching the adapter interface shape.
  *
@@ -21,7 +33,7 @@ export async function readExtensionEntries(userId) {
   return (data ?? []).map(row => ({
     entryId: row.entry_id,
     tournamentTitle: row.tournament,
-    slateTitle: row.slate_title ?? null,
+    slateTitle: normalizeSlateTitle(row.slate_title ?? null, row.tournament),
     draftDate: row.draft_date,
     players: row.players,
     syncedAt: row.synced_at,

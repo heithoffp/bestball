@@ -16,6 +16,20 @@
 const TEAM_POS_MAP = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE' };
 
 /**
+ * Bucket a DK contest into a slate. DK does not expose a season-label slate
+ * field comparable to Underdog's `slate.title`, so we derive it from the
+ * contest name: "Early Bird" tournaments are the pre-NFL-draft pool; everything
+ * else is post-draft.
+ *
+ * @param {string|undefined} contestName
+ * @returns {'DK Pre-Draft'|'DK Post-Draft'}
+ */
+function deriveDkSlate(contestName) {
+  const name = (contestName || '').toLowerCase();
+  return name.includes('early bird') ? 'DK Pre-Draft' : 'DK Post-Draft';
+}
+
+/**
  * Parse the /contest/mycontests HTML page to extract contest-entry mappings.
  * The page embeds JSON objects containing ContestId, UserContestId, and
  * ActiveLineupId which map lineup data to draftStatus URL parameters.
@@ -206,11 +220,12 @@ const draftkingsAdapter = {
       const contest = contestMap.get(lid);
       const pickMap = draftStatusMap.get(lid);
 
+      const tournamentTitle = contest?.contestName
+        ?? `DraftKings #${lineup.ContestDraftGroupId}`;
       return {
         entryId: lid,
-        slateTitle: 'DK Pre-Draft',
-        tournamentTitle: contest?.contestName
-          ?? `DraftKings #${lineup.ContestDraftGroupId}`,
+        slateTitle: deriveDkSlate(tournamentTitle),
+        tournamentTitle,
         draftDate: new Date(
           parseInt(lineup.LastModified.match(/\d+/)[0], 10)
         ).toISOString(),

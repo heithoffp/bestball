@@ -137,10 +137,22 @@ export async function readEntries() {
   return (data ?? []).map(row => ({
     entryId: row.entry_id,
     tournamentTitle: row.tournament,
-    slateTitle: row.slate_title ?? '',
+    slateTitle: normalizeSlateTitle(row.slate_title ?? '', row.tournament),
     draftDate: row.draft_date,
     players: row.players ?? [],
   }));
+}
+
+/**
+ * Re-bucket DK entries by tournament name when reading from Supabase. Older
+ * syncs stamped every DK entry as "DK Pre-Draft"; this normalizer keeps slate
+ * grouping correct without requiring a re-sync. Mirrors `deriveDkSlate` in
+ * src/adapters/draftkings.js.
+ */
+function normalizeSlateTitle(slateTitle, tournamentTitle) {
+  if (!slateTitle || !slateTitle.startsWith('DK')) return slateTitle;
+  const tourn = (tournamentTitle || '').toLowerCase();
+  return tourn.includes('early bird') ? 'DK Pre-Draft' : 'DK Post-Draft';
 }
 
 /**
