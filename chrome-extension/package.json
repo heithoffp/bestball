@@ -4,13 +4,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "release": "node scripts/release.mjs",
+    "release:dry": "node scripts/release.mjs --dry-run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.30",
+    "crx3": "^1.1.3",
+    "dotenv": "^16.4.7",
     "vite": "^6.0.0"
   }
 }
