@@ -5,6 +5,7 @@
 - TASK-196: PlayerRankings Compare View — full tier-break editing parity with single-platform views
 - TASK-197: PlayerRankings — projections.csv as authoritative projection source
 - TASK-198: Incremental Underdog sync to fix timeouts on large portfolios
+- TASK-213: Implement self-hosted extension distribution with browser-detecting install flow
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -22,7 +23,7 @@
 | TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P1 | [Plan](docs/plans/TASK-173.md) — Draft | No |
 | TASK-182 | Submit Chrome extension to Chrome Web Store | Todo | P1 | [Plan](docs/plans/TASK-182.md) — Draft | No |
 | TASK-207 | Scope Chrome extension manifest to fantasy-only paths (1.0.4 resubmit) | Todo | P1 | [Plan](docs/plans/TASK-207.md) -- Draft | No |
-| TASK-213 | Implement self-hosted extension distribution with browser-detecting install flow | Todo | P1 | [Plan](docs/plans/TASK-213.md) -- Draft | No |
+| TASK-213 | Implement self-hosted extension distribution with browser-detecting install flow | In Progress | P1 | [Plan](docs/plans/TASK-213.md) | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No |
