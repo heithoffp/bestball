@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Best Ball Exposures",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Portfolio-aware draft context for best-ball fantasy football",
-  "permissions": ["storage", "identity"],
+  "permissions": [
+    "storage",
+    "identity"
+  ],
   "host_permissions": [
     "https://app.underdogfantasy.com/*",
     "https://api.underdogfantasy.com/*",
@@ -24,7 +27,9 @@
         "https://app.underdogfantasy.com/*",
         "https://app.underdogsports.com/*"
       ],
-      "js": ["src/injected/underdog-bridge.js"],
+      "js": [
+        "src/injected/underdog-bridge.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN"
     },
@@ -33,12 +38,18 @@
         "https://app.underdogfantasy.com/*",
         "https://app.underdogsports.com/*"
       ],
-      "js": ["src/content/content.js"],
+      "js": [
+        "src/content/content.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.draftkings.com/*"],
-      "js": ["src/content/content.js"],
+      "matches": [
+        "https://www.draftkings.com/*"
+      ],
+      "js": [
+        "src/content/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
