@@ -6,6 +6,7 @@
 - TASK-197: PlayerRankings — projections.csv as authoritative projection source
 - TASK-198: Incremental Underdog sync to fix timeouts on large portfolios
 - TASK-218: Migration communication for existing extension users
+- TASK-226: Fix DK name-matching: strip generational suffixes in extension overlay
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -37,6 +38,7 @@
 | TASK-221 | Audit and remediate innerHTML usage in extension content script (XSS hardening) | Todo | P2 | [Plan](docs/plans/TASK-221.md) -- Draft | No |
 | TASK-223 | Extension-driven update notifications (latest.json polling + UPD badge) | Todo | P2 | [Plan](docs/plans/TASK-223.md) -- Draft | No |
 | TASK-224 | Pin Chromium extension ID by adding manifest.key field | Todo | P2 | [Plan](docs/plans/TASK-224.md) -- Draft | No |
+| TASK-226 | Fix DK name-matching: strip generational suffixes in extension overlay | In Progress | P2 | [Plan](docs/plans/TASK-226.md) | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |

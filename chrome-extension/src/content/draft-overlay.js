@@ -12,6 +12,7 @@
 
 import { createReconnectingObserver } from '../utils/observer.js';
 import { readEntries, readRankings, getAuthSession, signIn, signInWithGoogle, signOut, fetchTier } from '../utils/bridge.js';
+import { canonicalName } from '../utils/canonicalName.js';
 
 const INJECTED_ATTR = 'data-bbm-injected';
 const PLAYER_ID_ATTR = 'data-bbm-player-id';
@@ -27,10 +28,10 @@ let lastUrl = window.location.href;
 let wasOnDraftPage = false;
 
 // Portfolio data for metric computation
-let playerIndexMap = new Map();  // lowerCasedName -> Set<rosterIndex>
-let playerTeamMap = new Map();   // lowerCasedName -> team abbreviation
-let playerPositionMap = new Map(); // lowerCasedName -> position
-let abbreviatedNameMap = new Map(); // "j. jefferson" -> "justin jefferson" (for DK-style names)
+let playerIndexMap = new Map();  // canonicalName -> Set<rosterIndex>
+let playerTeamMap = new Map();   // canonicalName -> team abbreviation
+let playerPositionMap = new Map(); // canonicalName -> position
+let abbreviatedNameMap = new Map(); // "j. jefferson" -> canonicalName (for DK-style abbreviated display)
 let totalRosters = 0;
 let currentPicks = [];           // [{name, position, round}, ...]
 let picksObserver = null;
@@ -264,7 +265,8 @@ function applyPortfolioFilter() {
   filtered.forEach((entry, rosterIdx) => {
     (entry.players ?? []).forEach(p => {
       if (!p.name) return;
-      const key = p.name.trim().toLowerCase();
+      const key = canonicalName(p.name);
+      if (!key) return;
       if (!playerIndexMap.has(key)) playerIndexMap.set(key, new Set());
       playerIndexMap.get(key).add(rosterIdx);
       if (p.team && !playerTeamMap.has(key)) playerTeamMap.set(key, p.team);
@@ -687,11 +689,20 @@ function getPlayerNameFromRow(row) {
  */
 function resolvePlayerKey(displayName, rowOrContext) {
   if (!displayName) return null;
-  const key = displayName.trim().toLowerCase();
+  const key = canonicalName(displayName);
   // Direct match (full name or already known)
   if (playerIndexMap.has(key)) return key;
   // Abbreviated name lookup ("j. jefferson" → "justin jefferson")
-  const resolved = abbreviatedNameMap.get(key);
+  // Lookup uses the raw lowercased input (with periods preserved) to match
+  // the abbreviation-map keys built in rebuildPlayerIndex.
+  // Strip generational suffixes but preserve the initial's period (e.g. "K. Walker III" → "k. walker")
+  // so abbreviation keys match regardless of whether the DOM source carries the suffix.
+  const abbrevKey = displayName
+    .trim()
+    .replace(/\s+(jr\.?|sr\.?|ii|iii|iv|v)\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+  const resolved = abbreviatedNameMap.get(abbrevKey);
   if (typeof resolved === 'string') return resolved;
 
   // Ambiguous — try to disambiguate with context
@@ -747,7 +758,7 @@ function computeCorrelation(playerName) {
   let comparisons = 0;
 
   currentPicks.forEach(pick => {
-    const pickRosters = playerIndexMap.get(pick.name.trim().toLowerCase()) ?? new Set();
+    const pickRosters = playerIndexMap.get(canonicalName(pick.name)) ?? new Set();
     if (pickRosters.size === 0) return;
 
     let intersection = 0;
@@ -875,7 +886,7 @@ function analyzeStackOverlay(playerName) {
   if (!team || !pos || currentPicks.length === 0) return null;
 
   const teammates = currentPicks.filter(p => {
-    const t = playerTeamMap.get(p.name.trim().toLowerCase());
+    const t = playerTeamMap.get(canonicalName(p.name));
     return t && t === team;
   });
   if (teammates.length === 0) return null;
