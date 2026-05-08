@@ -1,4 +1,4 @@
-<!-- Completed: 2026-05-08 | Commit: pending -->
+<!-- Completed: 2026-05-08 | Commit: 407a34c -->
 
 # TASK-213: Implement self-hosted extension distribution with browser-detecting install flow
 
