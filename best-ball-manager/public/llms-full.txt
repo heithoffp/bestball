@@ -7,7 +7,7 @@ This document provides comprehensive context about Best Ball Exposures for AI se
 Best Ball Exposures (BBE) is a commercial SaaS product for analyzing fantasy football best-ball draft portfolios. It ingests roster data from Underdog Fantasy and DraftKings, plus ADP (Average Draft Position) snapshots, and provides analytics across multiple views — exposure, roster archetypes, team stacks, draft flow, and ADP trends — so drafters can see the shape of their entire portfolio in one place.
 
 - **Website:** https://bestballexposures.com/
-- **Chrome extension:** https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj
+- **Browser extension:** https://bestballexposures.com/install (self-hosted; supports Chrome, Edge, Brave, and Firefox)
 - **X / Twitter:** https://x.com/BBExposures
 - **Contact:** bestballexposures@gmail.com
 
@@ -94,8 +94,8 @@ Yes. The Chrome extension provides a live overlay showing exposure and combo ana
 ### How is BBE different from other best-ball tools?
 Most best-ball tools show one roster at a time and only support a single platform. Best Ball Exposures is portfolio-first and multi-platform, unifying Underdog and DraftKings, and uniquely classifies every roster into strategic archetypes.
 
-### Where can I install the Chrome extension?
-https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj
+### Where can I install the browser extension?
+https://bestballexposures.com/install — a self-hosted install page that detects your browser (Chrome, Edge, Brave, or Firefox) and walks you through the steps. The extension is no longer distributed via the Chrome Web Store.
 
 ### How do I contact support?
 Email bestballexposures@gmail.com or DM @BBExposures on X.

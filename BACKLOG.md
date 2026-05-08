@@ -5,6 +5,7 @@
 - TASK-196: PlayerRankings Compare View — full tier-break editing parity with single-platform views
 - TASK-197: PlayerRankings — projections.csv as authoritative projection source
 - TASK-198: Incremental Underdog sync to fix timeouts on large portfolios
+- TASK-218: Migration communication for existing extension users
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -20,8 +21,6 @@
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 | [Plan](docs/plans/TASK-170.md) | No |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 | [Plan](docs/plans/TASK-171.md) | No |
 | TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P1 | [Plan](docs/plans/TASK-173.md) — Draft | No |
-| TASK-182 | Submit Chrome extension to Chrome Web Store | Todo | P1 | [Plan](docs/plans/TASK-182.md) — Draft | No |
-| TASK-207 | Scope Chrome extension manifest to fantasy-only paths (1.0.4 resubmit) | Todo | P1 | [Plan](docs/plans/TASK-207.md) -- Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No |
@@ -34,8 +33,7 @@
 | TASK-192 | Restore Google OAuth buttons on website AuthModal | Todo | P2 | [Plan](docs/plans/TASK-192.md) -- Draft | No |
 | TASK-194 | Search Console — add Domain property and unify URL variants via Vercel redirects | Todo | P2 | [Plan](docs/plans/TASK-194.md) -- Draft | No |
 | TASK-198 | Incremental Underdog sync to fix timeouts on large portfolios | In Progress | P2 | [Plan](docs/plans/TASK-198.md) | No |
-| TASK-214 | Refactor all Chrome Web Store links to point to /install | Todo | P2 | [Plan](docs/plans/TASK-214.md) -- Draft | No |
-| TASK-218 | Migration communication for existing extension users | Todo | P2 | [Plan](docs/plans/TASK-218.md) -- Draft | No |
+| TASK-218 | Migration communication for existing extension users | In Progress | P2 | [Plan](docs/plans/TASK-218.md) | No |
 | TASK-221 | Audit and remediate innerHTML usage in extension content script (XSS hardening) | Todo | P2 | [Plan](docs/plans/TASK-221.md) -- Draft | No |
 | TASK-223 | Extension-driven update notifications (latest.json polling + UPD badge) | Todo | P2 | [Plan](docs/plans/TASK-223.md) -- Draft | No |
 | TASK-224 | Pin Chromium extension ID by adding manifest.key field | Todo | P2 | [Plan](docs/plans/TASK-224.md) -- Draft | No |
@@ -63,7 +61,6 @@
 | TASK-203 | ADR: Comp access modeled separately from beta access | Todo | P3 | [Plan](docs/plans/TASK-203.md) -- Draft | No |
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P3 | [Plan](docs/plans/TASK-209.md) -- Draft | No |
 | TASK-220 | Fix release script changelog-gate flow (placeholder vs pre-flight order) | Todo | P3 | [Plan](docs/plans/TASK-220.md) -- Draft | No |
-| TASK-222 | Add data_collection_permissions to Firefox manifest disclosure | Todo | P3 | [Plan](docs/plans/TASK-222.md) -- Draft | No |
 | TASK-225 | Release artifact smoke test before tagging extension versions | Todo | P3 | [Plan](docs/plans/TASK-225.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No |
@@ -76,6 +73,10 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-222 | Add data_collection_permissions to Firefox manifest disclosure | Done | P3 | [Plan](docs/archive/plans/TASK-222.md) | No | 2026-05-08 |
+| TASK-214 | Refactor all Chrome Web Store links to point to /install | Done | P2 | [Plan](docs/archive/plans/TASK-214.md) | No | 2026-05-08 |
+| TASK-207 | Scope Chrome extension manifest to fantasy-only paths (1.0.4 resubmit) (Won't Do: Web Store resubmit path abandoned. Self-hosting via TASK-213 / ADR-005 supersedes; manifest scoping for AMO is tracked separately if needed.) | Won't Do | P1 | [Plan](docs/archive/plans/TASK-207.md) | No | 2026-05-08 |
+| TASK-182 | Submit Chrome extension to Chrome Web Store (Won't Do: Superseded by TASK-213 self-hosted distribution (ADR-005). Web Store listing path abandoned.) | Won't Do | P1 | [Plan](docs/archive/plans/TASK-182.md) — Draft | No | 2026-05-08 |
 | TASK-202 | Admin comp Pro script + comp_expires_at column | Done | P2 | [Plan](docs/archive/plans/TASK-202.md) | No | 2026-05-06 |
 | TASK-201 | Customer comms for Chrome review window | Done | P2 | [Plan](docs/archive/plans/TASK-201.md) | No | 2026-05-06 |
 | TASK-200 | Sideload extension stopgap (download zip + install instructions) | Done | P2 | [Plan](docs/archive/plans/TASK-200.md) | Yes | 2026-05-06 |
