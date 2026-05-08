@@ -325,7 +325,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
         <ol style={{ textAlign: 'left', margin: '0.5rem 0 0', padding: '0 0 0 1.4rem', lineHeight: 1.8, fontSize: '0.88rem' }}>
           <li>
             Install the{' '}
-            <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+            <a href="/install" target="_blank" rel="noopener noreferrer" style={linkStyle}>
               Chrome extension
             </a>
           </li>
@@ -344,7 +344,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
           <li>Come back here — your portfolio loads automatically</li>
         </ol>
         <a
-          href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj"
+          href="/install"
           target="_blank"
           rel="noopener noreferrer"
           style={{

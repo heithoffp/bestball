@@ -125,7 +125,31 @@ In a real Firefox profile, drag the signed `.xpi` onto `about:addons` (or open t
 
 ---
 
+## Publishing to bestballexposures.com (per release)
+
+After producing the signed artifacts above, publish them through the web app's static hosting so installed extensions can auto-update.
+
+Layout under `best-ball-manager/public/extension/`:
+
+| File | Source |
+|------|--------|
+| `bestballexposures-extension-<version>.crx` | Copy from `chrome-extension/releases/` |
+| `bestballexposures-extension-<version>.xpi` | Copy from `chrome-extension/releases/` (renamed from web-ext output) |
+| `updates.xml` | Chromium auto-update manifest — append/replace the `<app>` block from `chrome-extension/releases/updates-<version>.xml` |
+| `updates.json` | Firefox auto-update manifest — append a new entry to `addons["bbe-extension@bestballexposures.com"].updates[]` with the new version, `update_link`, and `update_hash` |
+
+`update_hash` for the `.xpi` is the sha256 of the signed file. Compute with PowerShell:
+
+```powershell
+Get-FileHash -Algorithm SHA256 best-ball-manager\public\extension\bestballexposures-extension-<version>.xpi
+```
+
+Format as `"sha256:<lowercase hex>"`.
+
+**SPA-rewrite guard.** `best-ball-manager/vercel.json` has an identity rewrite `{"source": "/extension/(.*)", "destination": "/extension/$1"}` that must remain ahead of the catch-all `/(.*)` → `/index.html` rewrite. Without it, Vercel returns the SPA `index.html` for binary requests and auto-update breaks silently. Re-verify on a Vercel preview deploy before promoting.
+
+Commit the `public/extension/` and `vercel.json` changes alongside whatever other web-app changes are in flight, then deploy via Vercel as usual.
+
 ## Out of scope here
 
-- Hosting the `.crx`, `.xpi`, `updates.xml`, and `updates.json` on BestBallExposures.com → **TASK-213**.
 - CI-driven releases → deferred. Re-evaluate if release cadence increases or a second maintainer is added.

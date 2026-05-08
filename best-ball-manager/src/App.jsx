@@ -56,6 +56,7 @@ const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 // DISABLED for performance — keep source file intact
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
+const InstallPage = lazy(() => import('./components/InstallPage'));
 
 // Bundled assets (developer-controlled) — all use glob so missing files don't break the build
 const rosterModules = import.meta.glob('./assets/rosters.csv', { as: 'raw', eager: true });
@@ -261,6 +262,17 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadDemoData = useCallback(() => { loadFromAssets({ forceDemo: true }); }, []);
 
+  // Standalone /install — public, no auth gate, no tab chrome
+  if (location.pathname === '/install') {
+    return (
+      <Suspense fallback={null}>
+        <InstallPage />
+        <Analytics />
+        <SpeedInsights />
+      </Suspense>
+    );
+  }
+
   // Show landing page for unauthenticated guests with no data
   const showLanding = tier === 'guest' && rosterData.length === 0 && !isUsingDemoData && !authLoading && !subLoading;
 
@@ -371,7 +383,7 @@ export default function App() {
         {isUsingDemoData && rosterData.length > 0 && (
           <div className="demo-banner">
             <Info size={16} />
-            <span>You're viewing sample data. Sign in and connect the <a href="https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> to load your portfolio.</span>
+            <span>You're viewing sample data. Sign in and connect the <a href="/install" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Chrome extension</a> to load your portfolio.</span>
           </div>
         )}
 

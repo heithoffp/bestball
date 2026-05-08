@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "rewrites": [
+    { "source": "/extension/(.*)", "destination": "/extension/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

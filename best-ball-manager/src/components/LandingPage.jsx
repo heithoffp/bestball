@@ -6,7 +6,7 @@ import {
 import BrandLogo from './BrandLogo';
 import styles from './LandingPage.module.css';
 
-const EXTENSION_URL = 'https://chromewebstore.google.com/detail/best-ball-exposures/cnljeadelfnabalcdongglhfhiceakaj';
+const EXTENSION_URL = '/install';
 
 /* ── Scroll-triggered fade-in ── */
 function useFadeIn() {
