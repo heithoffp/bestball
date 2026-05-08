@@ -52,6 +52,35 @@
   margin-top: 0.4rem;
 }
 
+.updateBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.95rem 1.1rem;
+  background: rgba(232, 191, 74, 0.1);
+  border: 1px solid rgba(232, 191, 74, 0.35);
+  border-radius: 10px;
+  color: var(--text, #e9ecf3);
+}
+
+.updateBanner svg {
+  color: var(--accent, #e8bf4a);
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+
+.updateBannerTitle {
+  font-weight: 700;
+  font-size: 0.98rem;
+  margin-bottom: 0.2rem;
+}
+
+.updateBannerBody {
+  color: var(--text-muted, #d3d8e6);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .card {
   background: var(--surface, #131c33);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));

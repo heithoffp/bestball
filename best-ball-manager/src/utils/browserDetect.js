@@ -1,9 +1,9 @@
 // Browser detection for the /install page.
 // Returns one of: 'chrome' | 'edge' | 'chromium-other' | 'firefox' | 'safari' | 'mobile' | 'unknown'.
 //
-// Edge accepts drag-drop .crx without the "unknown source" warning when the manifest carries
-// a Chromium update_url (1.0.5+). Brave/Arc/Vivaldi/Opera don't expose Edge's relaxed handler,
-// so they get the same guided 4-step flow as Chrome.
+// Per ADR-007, all Chromium variants now share a single ZIP + load-unpacked install flow.
+// The chrome / edge / chromium-other discriminator is preserved for analytics and per-browser
+// copy hints (e.g., chrome:// vs edge:// extensions URL), but routing is unified.
 export function detectBrowser() {
   if (typeof navigator === 'undefined') return 'unknown';
   const ua = navigator.userAgent || '';

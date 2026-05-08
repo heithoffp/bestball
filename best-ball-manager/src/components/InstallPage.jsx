@@ -1,30 +1,32 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Chrome, Globe, Download, Copy, Check, ArrowLeft, Info } from 'lucide-react';
 import { detectBrowser } from '../utils/browserDetect';
 import BrandLogo from './BrandLogo';
 import styles from './InstallPage.module.css';
 
 const VERSION = '1.0.5';
-const CRX_HREF = `/extension/bestballexposures-extension-${VERSION}.crx`;
+const ZIP_HREF = `/extension/bestballexposures-extension-${VERSION}.zip`;
 const XPI_HREF = `/extension/bestballexposures-extension-${VERSION}.xpi`;
 
 export default function InstallPage() {
   const browser = useMemo(() => detectBrowser(), []);
+  const [isUpdate, setIsUpdate] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sync = () => setIsUpdate(window.location.hash === '#update');
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+
+  const isChromium = browser === 'chrome' || browser === 'edge' || browser === 'chromium-other';
 
   const view = useMemo(() => {
-    switch (browser) {
-      case 'edge': return <EdgeView />;
-      case 'firefox': return <FirefoxView />;
-      case 'chrome':
-      case 'chromium-other':
-        return <ChromeGuidedView />;
-      case 'safari':
-      case 'mobile':
-      case 'unknown':
-      default:
-        return <UnsupportedView browser={browser} />;
-    }
-  }, [browser]);
+    if (isChromium) return <ChromiumView browser={browser} isUpdate={isUpdate} />;
+    if (browser === 'firefox') return <FirefoxView />;
+    return <UnsupportedView browser={browser} />;
+  }, [browser, isChromium, isUpdate]);
 
   return (
     <div className={styles.page}>
@@ -41,6 +43,8 @@ export default function InstallPage() {
           Sync your rosters from Underdog and DraftKings into the dashboard.
         </p>
 
+        {isUpdate && <UpdateBanner />}
+
         <div className={styles.viewWrap}>{view}</div>
 
         <Transparency />
@@ -49,111 +53,113 @@ export default function InstallPage() {
   );
 }
 
-function ChromeGuidedView() {
+function UpdateBanner() {
+  return (
+    <div className={styles.updateBanner} role="status">
+      <Info size={18} />
+      <div>
+        <div className={styles.updateBannerTitle}>It's time to update Best Ball Exposures</div>
+        <div className={styles.updateBannerBody}>
+          Your installed version is older than the latest. Follow the steps below to install the
+          new version on top of your existing one.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChromiumView({ browser, isUpdate }) {
+  const isEdge = browser === 'edge';
+  const extUrl = isEdge ? 'edge://extensions' : 'chrome://extensions';
+  const browserLabel = isEdge ? 'Edge' : browser === 'chromium-other' ? 'your browser' : 'Chrome';
+
   const [copied, setCopied] = useState(false);
   const onCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText('chrome://extensions');
+      await navigator.clipboard.writeText(extUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
       // user can select+copy manually
     }
-  }, []);
+  }, [extUrl]);
 
   return (
     <section className={styles.card}>
       <div className={styles.flowHeader}>
         <Chrome size={22} />
-        <span>Install for Chrome</span>
+        <span>Install for {browserLabel}</span>
       </div>
       <p className={styles.lede}>
-        Chrome doesn't allow one-click installs from outside the Web Store, so the install
-        is a few short steps. Takes about a minute.
+        {browserLabel} blocks one-click installs of extensions hosted outside the Web Store, so
+        the install is a few short steps. Takes about a minute.
       </p>
 
       <ol className={styles.steps}>
         <li>
           <div className={styles.stepLabel}>1. Download the extension</div>
-          <a className={styles.primaryDownload} href={CRX_HREF} download>
+          <a className={styles.primaryDownload} href={ZIP_HREF} download>
             <Download size={16} />
-            Download .crx ({VERSION})
+            Download .zip ({VERSION})
           </a>
           <p className={styles.hint}>
-            Chrome will warn that this file isn't commonly downloaded — click <strong>Keep</strong>.
+            If {browserLabel} warns about the download, click <strong>Keep</strong>.
           </p>
         </li>
 
         <li>
-          <div className={styles.stepLabel}>2. Open Chrome's extensions page</div>
+          <div className={styles.stepLabel}>2. Unzip the file</div>
+          <p className={styles.hint}>
+            You should end up with a folder named{' '}
+            <code>bestballexposures-extension-{VERSION}</code> containing{' '}
+            <code>manifest.json</code> and other files. On Mac the OS may unzip it automatically —
+            note where it left the folder.
+          </p>
+        </li>
+
+        <li>
+          <div className={styles.stepLabel}>3. Open the extensions page</div>
           <div className={styles.codeRow}>
-            <code className={styles.code}>chrome://extensions</code>
+            <code className={styles.code}>{extUrl}</code>
             <button type="button" className={styles.copyBtn} onClick={onCopy} aria-label="Copy URL">
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
           <p className={styles.hint}>
-            Paste it into the address bar. (Chrome blocks linking to <code>chrome://</code> URLs.)
+            Paste it into the address bar. ({browserLabel} blocks linking to{' '}
+            <code>{isEdge ? 'edge://' : 'chrome://'}</code> URLs.)
           </p>
         </li>
 
         <li>
-          <div className={styles.stepLabel}>3. Turn on Developer mode</div>
-          <p className={styles.hint}>Toggle in the top-right of the extensions page.</p>
-        </li>
-
-        <li>
-          <div className={styles.stepLabel}>4. Drag the .crx onto the page</div>
+          <div className={styles.stepLabel}>4. Turn on Developer mode</div>
           <p className={styles.hint}>
-            Drag the file you downloaded in step 1 anywhere on the extensions page. Click
-            <strong> Add extension</strong> when Chrome asks to confirm.
+            Toggle in the {isEdge ? 'left side' : 'top-right'} of the extensions page. The warning
+            that appears is expected — Developer mode is required for any self-hosted extension.
+          </p>
+        </li>
+
+        <li>
+          <div className={styles.stepLabel}>5. Click "Load unpacked"</div>
+          <p className={styles.hint}>The button appears in the top-left after Developer mode is on.</p>
+        </li>
+
+        <li>
+          <div className={styles.stepLabel}>6. Select the unzipped folder</div>
+          <p className={styles.hint}>
+            Pick the folder from step 2 — the inner folder containing <code>manifest.json</code>,
+            not the outer download folder.
           </p>
         </li>
       </ol>
 
-      <p className={styles.callout}>
-        <Info size={14} /> The extension auto-updates from our server — you only do this once.
-      </p>
-    </section>
-  );
-}
-
-function EdgeView() {
-  return (
-    <section className={styles.card}>
-      <div className={styles.flowHeader}>
-        <Chrome size={22} />
-        <span>Install for Edge</span>
-      </div>
-      <p className={styles.lede}>
-        Edge accepts our signed extension directly. Download, then drag the file onto Edge's
-        extensions page and confirm.
-      </p>
-
-      <a className={styles.primaryDownload} href={CRX_HREF} download>
-        <Download size={16} />
-        Download .crx ({VERSION})
-      </a>
-
-      <ol className={styles.steps}>
-        <li>
-          <div className={styles.stepLabel}>1. Open <code>edge://extensions</code></div>
-          <p className={styles.hint}>Paste the URL into Edge's address bar.</p>
-        </li>
-        <li>
-          <div className={styles.stepLabel}>2. Turn on Developer mode</div>
-          <p className={styles.hint}>Toggle on the left side of the extensions page.</p>
-        </li>
-        <li>
-          <div className={styles.stepLabel}>3. Drag the .crx onto the page</div>
-          <p className={styles.hint}>Click <strong>Add extension</strong> when Edge asks to confirm.</p>
-        </li>
-      </ol>
-
-      <p className={styles.callout}>
-        <Info size={14} /> The extension auto-updates from our server — you only do this once.
-      </p>
+      {isUpdate && (
+        <p className={styles.callout}>
+          <Info size={14} /> Do I need to remove the old version first? No — loading the new
+          unpacked folder replaces the old one and your saved settings stay put.
+        </p>
+      )}
     </section>
   );
 }
@@ -212,16 +218,12 @@ function Transparency() {
       <summary>Why isn't this on the Chrome Web Store?</summary>
       <div className={styles.transparencyBody}>
         <p>
-          Best Ball Exposures was rejected from the Chrome Web Store under a category we
-          disagree with. Rather than appeal indefinitely, we host the extension directly on
-          our own domain.
-        </p>
-        <p>
-          The install is a few extra clicks on Chrome compared to the Web Store, but the
-          extension itself is identical and updates automatically.
+          Best Ball Exposures was rejected from the Chrome Web Store under a policy
+          classification we disagree with. Chrome and Edge block one-click installs of
+          extensions hosted outside the Web Store, so the install is a few extra steps. The
+          extension itself is identical to what we'd ship to the Web Store.
         </p>
       </div>
     </details>
   );
 }
-

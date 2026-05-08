@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
@@ -49,6 +49,18 @@ async function main() {
     `--api-secret="${apiSecret}"`,
   ].join(' ');
 
+  // AMO/web-ext requires background.scripts alongside background.service_worker
+  // for MV3 validation. Chromium rejects that combo, so dist/ is Chromium-clean
+  // by default — patch it in here just for signing, then revert.
+  const distManifestPath = path.join(DIST, 'manifest.json');
+  const originalManifest = await readFile(distManifestPath, 'utf8');
+  const distManifest = JSON.parse(originalManifest);
+  const sw = distManifest.background?.service_worker;
+  if (sw && !distManifest.background.scripts) {
+    distManifest.background.scripts = [sw];
+    await writeFile(distManifestPath, JSON.stringify(distManifest, null, 2));
+  }
+
   try {
     execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
   } catch (err) {
@@ -56,6 +68,8 @@ async function main() {
           `  - Wrong API credentials\n` +
           `  - gecko.id collision with an existing AMO entry\n` +
           `  - Manifest validation errors (run "npx web-ext lint --source-dir=dist")\n`);
+  } finally {
+    await writeFile(distManifestPath, originalManifest);
   }
 
   console.log('\n' + '='.repeat(60));

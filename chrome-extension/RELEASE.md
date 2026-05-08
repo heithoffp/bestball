@@ -127,16 +127,23 @@ In a real Firefox profile, drag the signed `.xpi` onto `about:addons` (or open t
 
 ## Publishing to bestballexposures.com (per release)
 
-After producing the signed artifacts above, publish them through the web app's static hosting so installed extensions can auto-update.
+After producing the signed artifacts above, publish them through the web app's static hosting.
+Per [ADR-007](../docs/adr/adr-007-chromium-distribution-zip-load-unpacked-with-extension.md),
+Chromium auto-update is no longer in scope — Chromium users install via ZIP + Developer Mode
+"Load unpacked" and re-install on update via the `/install#update` flow.
 
 Layout under `best-ball-manager/public/extension/`:
 
 | File | Source |
 |------|--------|
-| `bestballexposures-extension-<version>.crx` | Copy from `chrome-extension/releases/` |
+| `bestballexposures-extension-<version>.zip` | Copy from `chrome-extension/releases/` (Chromium load-unpacked install) |
 | `bestballexposures-extension-<version>.xpi` | Copy from `chrome-extension/releases/` (renamed from web-ext output) |
-| `updates.xml` | Chromium auto-update manifest — append/replace the `<app>` block from `chrome-extension/releases/updates-<version>.xml` |
 | `updates.json` | Firefox auto-update manifest — append a new entry to `addons["bbe-extension@bestballexposures.com"].updates[]` with the new version, `update_link`, and `update_hash` |
+| `latest.json` | TASK-223 update-notification channel — bump the `version` field, set `released` to today's date, update `chromium_zip` and `firefox_xpi` URLs to the new artifacts |
+
+The `.crx` and `updates.xml` files from earlier releases are no longer produced or hosted —
+they are dead per ADR-007 (Chromium policy blocks consumer drag-drop install of self-hosted
+CRX, and self-hosted Chromium auto-update was tied to that signed-CRX path).
 
 `update_hash` for the `.xpi` is the sha256 of the signed file. Compute with PowerShell:
 

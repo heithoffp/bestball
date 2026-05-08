@@ -1,6 +1,6 @@
 # Backlog Archive -- May 2026
 
-Archived from `BACKLOG.md`. Last updated 2026-05-06. Contains completed tasks through TASK-191.
+Archived from `BACKLOG.md`. Last updated 2026-05-08. Contains completed tasks through TASK-206.
 
 ## Completed Tasks
 
@@ -27,3 +27,14 @@ Archived from `BACKLOG.md`. Last updated 2026-05-06. Contains completed tasks th
 | TASK-156 | Contextual Help — Rankings annotations | 2026-04-06 | [Plan](../plans/TASK-156.md) |
 | TASK-153 | Contextual Help — Exposures annotations + global Help button | 2026-04-06 | [Plan](../plans/TASK-153.md) |
 | TASK-154 | Contextual Help — Rosters annotations | 2026-04-06 | [Plan](../plans/TASK-154.md) |
+| TASK-151 | Contextual Help — shared HelpOverlay component and infrastructure | 2026-04-06 | [Plan](../plans/TASK-151.md) |
+| TASK-150 | Gate ADP Tracker behind Pro tier | 2026-04-06 | [Plan](../plans/TASK-150.md) |
+| TASK-149 | User Feedback Button — in-app form that emails feedback to developer via Resend | 2026-04-06 | [Plan](../plans/TASK-149.md) |
+| TASK-126 | Cross-module roster nav — Combo Analysis, ADP Tracker, Roster Construction | 2026-04-06 | [Plan](../plans/TASK-126.md) |
+| TASK-145 | Cross-platform player name normalization — UD / DK alignment | 2026-04-06 | [Plan](../plans/TASK-145.md) |
+| TASK-144 | PlayerRankings platform toggle + per-platform storage | 2026-04-06 | [Plan](../plans/TASK-144.md) |
+| TASK-143 | Platform-aware CLV calculation | 2026-04-06 | [Plan](../plans/TASK-143.md) |
+| TASK-146 | Platform-aware Cur ADP in Rosters tab + 1-decimal formatting | 2026-04-06 | [Plan](../plans/TASK-146.md) |
+| TASK-142 | ADP TimeSeries platform selector | 2026-04-06 |
+| TASK-206 | Global Tournament filter on Dashboard tab | Done | P3 | [Plan](../plans/TASK-206.md) | Yes | 2026-05-06 |
+| TASK-204 | Global Tournament filter on Combos tab | Done | P3 | [Plan](../plans/TASK-204.md) | Yes | 2026-05-06 |
