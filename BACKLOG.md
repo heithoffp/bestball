@@ -5,7 +5,6 @@
 - TASK-196: PlayerRankings Compare View — full tier-break editing parity with single-platform views
 - TASK-197: PlayerRankings — projections.csv as authoritative projection source
 - TASK-198: Incremental Underdog sync to fix timeouts on large portfolios
-- TASK-215: Set up extension build and release pipeline with secure key management
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -24,7 +23,6 @@
 | TASK-182 | Submit Chrome extension to Chrome Web Store | Todo | P1 | [Plan](docs/plans/TASK-182.md) — Draft | No |
 | TASK-207 | Scope Chrome extension manifest to fantasy-only paths (1.0.4 resubmit) | Todo | P1 | [Plan](docs/plans/TASK-207.md) -- Draft | No |
 | TASK-213 | Implement self-hosted extension distribution with browser-detecting install flow | Todo | P1 | [Plan](docs/plans/TASK-213.md) -- Draft | No |
-| TASK-215 | Set up extension build and release pipeline with secure key management | In Progress | P1 | [Plan](docs/plans/TASK-215.md) -- Pending Approval | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No |
@@ -38,8 +36,8 @@
 | TASK-194 | Search Console — add Domain property and unify URL variants via Vercel redirects | Todo | P2 | [Plan](docs/plans/TASK-194.md) -- Draft | No |
 | TASK-198 | Incremental Underdog sync to fix timeouts on large portfolios | In Progress | P2 | [Plan](docs/plans/TASK-198.md) | No |
 | TASK-214 | Refactor all Chrome Web Store links to point to /install | Todo | P2 | [Plan](docs/plans/TASK-214.md) -- Draft | No |
-| TASK-216 | Decide and execute Firefox distribution strategy (AMO listed vs. unlisted self-distribution signing) | Todo | P2 | [Plan](docs/plans/TASK-216.md) -- Draft | No |
 | TASK-218 | Migration communication for existing extension users | Todo | P2 | [Plan](docs/plans/TASK-218.md) -- Draft | No |
+| TASK-221 | Audit and remediate innerHTML usage in extension content script (XSS hardening) | Todo | P2 | [Plan](docs/plans/TASK-221.md) -- Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
@@ -63,6 +61,8 @@
 | TASK-199 | Clean up duplicate Supabase users created during TASK-192 Google OAuth window | Todo | P3 | [Plan](docs/plans/TASK-199.md) -- Draft | No |
 | TASK-203 | ADR: Comp access modeled separately from beta access | Todo | P3 | [Plan](docs/plans/TASK-203.md) -- Draft | No |
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P3 | [Plan](docs/plans/TASK-209.md) -- Draft | No |
+| TASK-220 | Fix release script changelog-gate flow (placeholder vs pre-flight order) | Todo | P3 | [Plan](docs/plans/TASK-220.md) -- Draft | No |
+| TASK-222 | Add data_collection_permissions to Firefox manifest disclosure | Todo | P3 | [Plan](docs/plans/TASK-222.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No |
@@ -74,6 +74,8 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-216 | Decide and execute Firefox distribution strategy (AMO listed vs. unlisted self-distribution signing) | Done | P2 | [Plan](docs/archive/plans/TASK-216.md) | Yes | 2026-05-08 |
+| TASK-215 | Set up extension build and release pipeline with secure key management | Done | P1 | [Plan](docs/archive/plans/TASK-215.md) | Yes | 2026-05-08 |
 | TASK-217 | Audit current Web Store extension install base before cutover (Won't Do: Email-list-as-population is sufficient: signup is required to use the extension, so the signed-up user list captures 100% of affected users (~20 total). No separate Web Store baseline needed; TASK-218 will use the email list as both audience and denominator.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-217.md) | No | 2026-05-08 |
 | TASK-212 | Generate and wire post-draft simulation data | Done | P3 | [Plan](docs/archive/plans/TASK-212.md) | No | 2026-05-07 |
 | TASK-210 | DraftExplorer — Pre-Draft / Post-Draft mode toggle | Done | P3 | [Plan](docs/archive/plans/TASK-210.md) | Yes | 2026-05-07 |

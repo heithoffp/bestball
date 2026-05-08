@@ -92,8 +92,40 @@ This scenario is the entire reason for the offline-backup checklist above. Take 
 
 ---
 
+## Firefox `.xpi` signing (TASK-216)
+
+Per [ADR-005](../docs/adr/adr-005-self-host-the-chrome-extension-with-browser-detecting.md) (Firefox sub-decision), Firefox builds use **unlisted self-distribution signing** — Mozilla signs the artifact for hosting on bestballexposures.com without a public AMO listing.
+
+### One-time setup
+
+1. **Mozilla developer account** — create or log in at https://addons.mozilla.org/developers/.
+2. **Generate API credentials** — at https://addons.mozilla.org/developers/addon/api/key/, create a JWT issuer + secret. These are bearer credentials; treat like a password.
+3. **Add to `.env`** — set `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` (see `.env.example`).
+4. **Manifest already configured** — `manifest.json` carries `browser_specific_settings.gecko.id = bbe-extension@bestballexposures.com` and `update_url = https://bestballexposures.com/updates.json`. Chrome ignores this block; Firefox requires it.
+
+### Signing flow (run after `npm run release`)
+
+```bash
+cd chrome-extension
+npm run build                    # produces dist/ — sign:firefox reads from here
+npm run sign:firefox             # web-ext sign --channel=unlisted
+```
+
+Output lands in `chrome-extension/releases/` as a `.xpi` named by web-ext. Rename to `bestballexposures-extension-<version>.xpi` for consistency with the `.crx` naming.
+
+### Sanity-check the build
+
+In a real Firefox profile, drag the signed `.xpi` onto `about:addons` (or open the file directly). It should install without the *"this add-on could not be verified"* warning. If you see that warning, the `.xpi` is unsigned — the signing call did not complete.
+
+### Recovery scenarios
+
+- **Lost AMO credentials.** Regenerate at the AMO API key page. Old credentials immediately invalidate. No effect on previously signed artifacts.
+- **Mozilla rejects unlisted signing.** Rare for unlisted (automated review). If it happens — likely a "gambling" classification matching the Chrome Web Store rejection — fall back to AMO listed submission (`--channel=listed`) and accept the longer review timeline. The same artifact and credentials work for both channels.
+- **gecko.id collision.** If `bbe-extension@bestballexposures.com` is already registered to a different account, change the ID in `manifest.json` (this changes the Firefox-side extension identity — installed users would need to reinstall, but at the time of TASK-216 there are zero installed Firefox users).
+
+---
+
 ## Out of scope here
 
-- Firefox `.xpi` packaging and Mozilla signing → **TASK-216**.
-- Hosting the `.crx` and `updates.xml` on BestBallExposures.com → **TASK-213**.
+- Hosting the `.crx`, `.xpi`, `updates.xml`, and `updates.json` on BestBallExposures.com → **TASK-213**.
 - CI-driven releases → deferred. Re-evaluate if release cadence increases or a second maintainer is added.

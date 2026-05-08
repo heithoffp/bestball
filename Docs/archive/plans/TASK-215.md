@@ -1,6 +1,7 @@
+<!-- Completed: 2026-05-08 | Commit: ffe75cc -->
 # TASK-215: Set up extension build and release pipeline with secure key management
 
-**Status:** Pending Approval
+**Status:** Done
 **Priority:** P1
 
 ---
