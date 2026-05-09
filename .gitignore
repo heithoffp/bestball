@@ -6,3 +6,6 @@ simulation/Historical_Data/*.csv
 
 # Script-local installs
 scripts/node_modules
+
+# Claude Code transient runtime artifacts
+.claude/scheduled_tasks.lock
