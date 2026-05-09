@@ -8,10 +8,16 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = (url && key)
   ? createClient(url, key, {
       auth: {
+        // Callback form (not Promise form) is required for Firefox: in content
+        // scripts, Promises returned by chrome.* APIs live in the privileged
+        // extension compartment, and Firefox's Xray vision blocks the content
+        // sandbox from accessing `.then` on them ("Permission denied to access
+        // property 'then'"). Wrapping the callback in a sandbox-owned Promise
+        // sidesteps the cross-compartment block. Chromium accepts both forms.
         storage: {
-          getItem: (k) => chrome.storage.local.get(k).then(r => r[k] ?? null),
-          setItem: (k, v) => chrome.storage.local.set({ [k]: v }),
-          removeItem: (k) => chrome.storage.local.remove(k),
+          getItem: (k) => new Promise((resolve) => chrome.storage.local.get(k, (r) => resolve(r[k] ?? null))),
+          setItem: (k, v) => new Promise((resolve) => chrome.storage.local.set({ [k]: v }, () => resolve())),
+          removeItem: (k) => new Promise((resolve) => chrome.storage.local.remove(k, () => resolve())),
         },
         autoRefreshToken: true,
         persistSession: true,

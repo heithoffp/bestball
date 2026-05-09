@@ -239,13 +239,13 @@ export async function writeEntries(input, { platform } = {}) {
     }
 
     const totalCount = currentDraftIds.length;
-    await chrome.storage.local.set({
+    await new Promise((resolve) => chrome.storage.local.set({
       lastSync:                       Date.now(),
       entryCount:                     totalCount,
       [`${platform}_entry_ids`]:      currentDraftIds.map(String),
       [`${platform}_lastSync`]:       Date.now(),
       [`${platform}_entryCount`]:     totalCount,
-    });
+    }, () => resolve()));
     return { count: totalCount };
   }
 
@@ -285,7 +285,7 @@ export async function writeEntries(input, { platform } = {}) {
       emptyUpdate[`${platform}_lastSync`] = Date.now();
       emptyUpdate[`${platform}_entryCount`] = 0;
     }
-    await chrome.storage.local.set(emptyUpdate);
+    await new Promise((resolve) => chrome.storage.local.set(emptyUpdate, () => resolve()));
     return { count: 0 };
   }
 
@@ -302,6 +302,6 @@ export async function writeEntries(input, { platform } = {}) {
     update[`${platform}_lastSync`] = Date.now();
     update[`${platform}_entryCount`] = entries.length;
   }
-  await chrome.storage.local.set(update);
+  await new Promise((resolve) => chrome.storage.local.set(update, () => resolve()));
   return { count: count ?? entries.length };
 }
