@@ -4,6 +4,7 @@
   "installCommand": "npm install",
   "rewrites": [
     { "source": "/extension/(.*)", "destination": "/extension/$1" },
+    { "source": "/updates.json", "destination": "/extension/updates.json" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
