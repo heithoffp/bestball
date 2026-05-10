@@ -75,6 +75,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-227 | Fix DK roster name matching — use draftables displayName at sync time | Done | P1 | [Plan](docs/archive/plans/TASK-227.md) | No | 2026-05-10 |
 | TASK-222 | Add data_collection_permissions to Firefox manifest disclosure | Done | P3 | [Plan](docs/archive/plans/TASK-222.md) | No | 2026-05-08 |
 | TASK-214 | Refactor all Chrome Web Store links to point to /install | Done | P2 | [Plan](docs/archive/plans/TASK-214.md) | No | 2026-05-08 |
 | TASK-207 | Scope Chrome extension manifest to fantasy-only paths (1.0.4 resubmit) (Won't Do: Web Store resubmit path abandoned. Self-hosting via TASK-213 / ADR-005 supersedes; manifest scoping for AMO is tracked separately if needed.) | Won't Do | P1 | [Plan](docs/archive/plans/TASK-207.md) | No | 2026-05-08 |

@@ -168,6 +168,7 @@ const draftkingsAdapter = {
           didToInfo[d.draftableId] = {
             position: d.position ?? null,
             team: d.teamAbbreviation ?? null,
+            displayName: d.displayName ?? null,
           };
         }
       });
@@ -233,7 +234,7 @@ const draftkingsAdapter = {
           const dInfo = didToInfo[p.did];   // from draftables (position + team)
           const sInfo = pickMap?.get(p.did); // from draftStatus (pick + round + position)
           return {
-            name: `${p.fn} ${p.ln}`,
+            name: dInfo?.displayName ?? `${p.fn} ${p.ln}`,
             position: sInfo?.position ?? dInfo?.position ?? p.pn,
             team: tidToTeam[p.tid] ?? dInfo?.team ?? p.tid?.toString() ?? '',
             pick: sInfo?.pick ?? (idx + 1),
@@ -389,7 +390,8 @@ const draftkingsAdapter = {
       if (!name) return;
       const posEl = row.querySelector('.DKResponsiveGrid_dk-grid-cell');
       const position = posEl?.textContent?.trim() ?? '';
-      picks.push({ name, position, round: idx + 1 });
+      const team = row.querySelector('.PlayerCell_player-team')?.textContent?.trim().toUpperCase() ?? '';
+      picks.push({ name, position, team, round: idx + 1 });
     });
     return picks;
   },

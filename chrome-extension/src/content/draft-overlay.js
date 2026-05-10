@@ -274,15 +274,17 @@ function applyPortfolioFilter() {
     });
   });
 
-  // Build abbreviated name reverse-lookup: "j. jefferson" → "justin jefferson"
+  // Build abbreviated name reverse-lookup: "j jefferson" → "justin jefferson"
   // Handles DK-style abbreviated display names (first initial + last name).
   // Ambiguous abbreviations store candidate arrays for DOM-based disambiguation.
+  // Key uses canonical form (no periods) so last names with embedded periods
+  // like "St. Brown" match the lookup, which also routes through canonicalName.
   for (const fullName of playerIndexMap.keys()) {
     const parts = fullName.split(/\s+/);
     if (parts.length < 2) continue;
     const firstInitial = parts[0][0];
     const lastName = parts.slice(1).join(' ');
-    const abbrev = `${firstInitial}. ${lastName}`;
+    const abbrev = `${firstInitial} ${lastName}`;
     if (abbreviatedNameMap.has(abbrev)) {
       const existing = abbreviatedNameMap.get(abbrev);
       const candidate = {
@@ -595,7 +597,7 @@ function resolveCurrentPicks() {
     const raw = adapter.getCurrentPicks();
     if (!raw) return;
     picks = raw.map(p => ({
-      name: resolvePlayerKey(p.name, { position: p.position }) ?? p.name,
+      name: resolvePlayerKey(p.name, { position: p.position, team: p.team }) ?? p.name,
       position: p.position,
       round: p.round,
     }));
@@ -692,16 +694,10 @@ function resolvePlayerKey(displayName, rowOrContext) {
   const key = canonicalName(displayName);
   // Direct match (full name or already known)
   if (playerIndexMap.has(key)) return key;
-  // Abbreviated name lookup ("j. jefferson" → "justin jefferson")
-  // Lookup uses the raw lowercased input (with periods preserved) to match
-  // the abbreviation-map keys built in rebuildPlayerIndex.
-  // Strip generational suffixes but preserve the initial's period (e.g. "K. Walker III" → "k. walker")
-  // so abbreviation keys match regardless of whether the DOM source carries the suffix.
-  const abbrevKey = displayName
-    .trim()
-    .replace(/\s+(jr\.?|sr\.?|ii|iii|iv|v)\s*$/i, '')
-    .replace(/\s+/g, ' ')
-    .toLowerCase();
+  // Abbreviated name lookup ("j cook" → "james cook")
+  // Both build and lookup route through canonicalName so embedded periods in
+  // last names (e.g. "St. Brown") and the initial's period normalize identically.
+  const abbrevKey = canonicalName(displayName);
   const resolved = abbreviatedNameMap.get(abbrevKey);
   if (typeof resolved === 'string') return resolved;
 
