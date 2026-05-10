@@ -2,6 +2,10 @@
 
 All notable changes to the BBE Chrome extension are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.9] - 2026-05-10
+
+- Fix Firefox content-script auth + portfolio load: bypass supabase's default `navigator.locks`-based token-refresh lock with a no-op lock function. In Firefox content scripts, `navigator` is Xray-wrapped from the page compartment and `navigator.locks.request(...)` returns a privileged-compartment Promise the content sandbox cannot `.then` on, throwing "Permission denied to access property 'then'" on every `supabase.auth.getSession()` / `supabase.from(...)` call. Each tab has its own client and there's no concurrent refresh to serialize, so a no-op lock is safe.
+
 ## [1.0.8] - 2026-05-10
 
 - Fix Firefox Google sign-in from the FAB auth panel: wrap `chrome.runtime.sendMessage({ type: 'GOOGLE_OAUTH' })` in a sandbox-owned Promise via the callback form. v1.0.6 covered `chrome.storage.*` but missed this one chrome.* await in `signInWithGoogle`, so the Google button silently failed in Firefox with "Permission denied to access property 'then'". Email/password sign-in was already working post-1.0.6.
