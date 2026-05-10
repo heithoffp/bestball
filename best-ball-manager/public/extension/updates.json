@@ -6,6 +6,11 @@
           "version": "1.0.7",
           "update_link": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.7.xpi",
           "update_hash": "sha256:479bf6ac0ca3ccdd42da5f5f775628ca210f8d27f1a161a7b9de5d2720293d16"
+        },
+        {
+          "version": "1.0.8",
+          "update_link": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.8.xpi",
+          "update_hash": "sha256:67c4be38c32f2bd16dbeb26dbe8e651def4e91300a497005fe140cd979881aeb"
         }
       ]
     }
