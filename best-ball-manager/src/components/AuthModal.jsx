@@ -188,13 +188,10 @@ export default function AuthModal({ isOpen, onClose, message }) {
             <button type="submit" className="toolbar-btn modal-submit-btn" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign In'}
             </button>
-            {/* Google OAuth disabled — see TASK-192: separate Supabase user is created when an email/password user signs in via Google for the first time, causing entries to land under a different user_id than the website session */}
-            {/*
             <div className="modal-divider">or</div>
             <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
               Continue with Google
             </button>
-            */}
           </form>
         )}
 
@@ -273,13 +270,10 @@ export default function AuthModal({ isOpen, onClose, message }) {
             >
               {loading ? 'Creating account…' : 'Create Account'}
             </button>
-            {/* Google OAuth disabled — see TASK-192 */}
-            {/*
             <div className="modal-divider">or</div>
             <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
               Continue with Google
             </button>
-            */}
           </form>
         )}
 
