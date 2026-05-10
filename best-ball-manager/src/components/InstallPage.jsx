@@ -46,8 +46,6 @@ export default function InstallPage() {
         {isUpdate && <UpdateBanner />}
 
         <div className={styles.viewWrap}>{view}</div>
-
-        <Transparency />
       </main>
     </div>
   );
@@ -212,18 +210,3 @@ function UnsupportedView({ browser }) {
   );
 }
 
-function Transparency() {
-  return (
-    <details className={styles.transparency}>
-      <summary>Why isn't this on the Chrome Web Store?</summary>
-      <div className={styles.transparencyBody}>
-        <p>
-          Best Ball Exposures was rejected from the Chrome Web Store under a policy
-          classification we disagree with. Chrome and Edge block one-click installs of
-          extensions hosted outside the Web Store, so the install is a few extra steps. The
-          extension itself is identical to what we'd ship to the Web Store.
-        </p>
-      </div>
-    </details>
-  );
-}
