@@ -3,11 +3,6 @@
     "bbe-extension@bestballexposures.com": {
       "updates": [
         {
-          "version": "1.0.5",
-          "update_link": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.5.xpi",
-          "update_hash": "sha256:822e0ffbd6ed3aded663a32344df96ab0409f7fe1e1fa2b8740b2004244a1969"
-        },
-        {
           "version": "1.0.7",
           "update_link": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.7.xpi",
           "update_hash": "sha256:479bf6ac0ca3ccdd42da5f5f775628ca210f8d27f1a161a7b9de5d2720293d16"
