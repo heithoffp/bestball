@@ -73,11 +73,14 @@ async function loadBundledAdp() {
     const parts = filePath.split('/');
     const fileName = parts[parts.length - 1];
     const dateMatch = fileName.match(/(\d{4}-\d{2}-\d{2})/);
-    const dateStr = dateMatch ? dateMatch[1] : fileName;
+    const isSuperflex = /^superflex_adp/.test(fileName);
+    // Superflex has different scoring; never let it win the global "latest" fallback
+    // used for slates that don't resolve to a specific platform.
+    const dateStr = dateMatch ? dateMatch[1] : (isSuperflex ? '1900-01-01' : fileName);
     const platformMatch = fileName.match(/^(underdog|draftking)_adp_/);
-    const platform = platformMatch
-      ? (platformMatch[1] === 'draftking' ? 'draftkings' : platformMatch[1])
-      : 'unknown';
+    let platform = 'unknown';
+    if (isSuperflex) platform = 'superflex';
+    else if (platformMatch) platform = platformMatch[1] === 'draftking' ? 'draftkings' : platformMatch[1];
     return { text: String(text), date: dateStr, filename: fileName, platform };
   }));
   return files;

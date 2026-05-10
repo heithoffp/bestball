@@ -39,9 +39,10 @@ function buildLookupsFromRows(rows) {
   return { adpMap, teamLookup, projPointsMap };
 }
 
-/** Infer draft platform from slate title string. Returns 'underdog', 'draftkings', or null. */
+/** Infer draft platform from slate title string. Returns 'superflex', 'underdog', 'draftkings', or null. */
 function detectPlatformFromSlate(slateTitle) {
   const t = (slateTitle || '').toLowerCase();
+  if (t.includes('superflex')) return 'superflex';
   if (t.includes('ud')) return 'underdog';
   if (t.includes('draftkings')) return 'draftkings';
   return null;
