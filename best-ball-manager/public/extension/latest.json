@@ -1,7 +1,7 @@
 {
-  "version": "1.0.5",
-  "released": "2026-05-08",
+  "version": "1.0.7",
+  "released": "2026-05-10",
   "install_url": "https://bestballexposures.com/install",
-  "chromium_zip": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.5.zip",
-  "firefox_xpi": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.5.xpi"
+  "chromium_zip": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.7.zip",
+  "firefox_xpi": "https://bestballexposures.com/extension/bestballexposures-extension-1.0.7.xpi"
 }
