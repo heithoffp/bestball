@@ -2,6 +2,11 @@
 
 All notable changes to the BBE Chrome extension are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.8] - 2026-05-10
+
+- Fix Firefox Google sign-in from the FAB auth panel: wrap `chrome.runtime.sendMessage({ type: 'GOOGLE_OAUTH' })` in a sandbox-owned Promise via the callback form. v1.0.6 covered `chrome.storage.*` but missed this one chrome.* await in `signInWithGoogle`, so the Google button silently failed in Firefox with "Permission denied to access property 'then'". Email/password sign-in was already working post-1.0.6.
+- Sync popup version string to manifest (was still showing v1.0.6).
+
 ## [1.0.7] - 2026-05-10
 
 - Fix DraftKings roster name matching (TASK-227). DK's lineup API returns abbreviated first names, so synced rosters were stored as "B. Robinson", "J. Cook III", "L. Burden III" and never matched DK ADP CSV keys — silently breaking ADP, projections, team, and stack lookups across Exposures, ADP Tracker, Combos, Draft Assistant, and Roster Viewer. The DK adapter now prefers `displayName` from the draftables endpoint we already fetch, falling back to the abbreviated concatenation only when unavailable.

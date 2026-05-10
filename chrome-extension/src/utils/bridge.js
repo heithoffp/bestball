@@ -34,7 +34,13 @@ export async function signIn(email, password) {
  */
 export async function signInWithGoogle() {
   if (!supabase) throw new Error('[BBM] Supabase not configured');
-  const result = await chrome.runtime.sendMessage({ type: 'GOOGLE_OAUTH' });
+  // Callback form, then sandbox-owned Promise: same Firefox Xray workaround
+  // as in supabase.js — chrome.* APIs return Promises from the privileged
+  // extension compartment, so `await chrome.runtime.sendMessage(...)` throws
+  // "Permission denied to access property 'then'" from a content script.
+  const result = await new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GOOGLE_OAUTH' }, resolve);
+  });
   if (result.error) throw new Error(result.error);
 
   const { data, error } = await supabase.auth.setSession({
