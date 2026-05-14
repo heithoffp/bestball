@@ -373,7 +373,7 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
 
     return Array.from(pairMap.values())
       .sort((a, b) => b.count - a.count)
-      .slice(0, 20)
+      .slice(0, 50)
       .map((p, i) => ({
         ...p,
         rank: i + 1,
