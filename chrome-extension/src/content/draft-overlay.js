@@ -13,6 +13,19 @@
 import { createReconnectingObserver } from '../utils/observer.js';
 import { readEntries, readRankings, getAuthSession, signIn, signInWithGoogle, signOut, fetchTier } from '../utils/bridge.js';
 import { canonicalName } from '../utils/canonicalName.js';
+import playoffSchedule from '../data/playoff-schedule-2026.json';
+
+// Playoff weeks rendered on the candidate row (TASK-232).
+const PLAYOFF_WEEKS = ['15', '16', '17'];
+
+// Meaningful best-ball game-stack pairs (candidate pos -> rostered opposing positions).
+// RB intentionally absent (RBs are not game-stack assets in best ball); TE excludes TE
+// in its own value set so TE<->TE pairings never qualify.
+const MEANINGFUL_GAME_PAIRS = Object.freeze({
+  QB: new Set(['QB', 'WR', 'TE']),
+  WR: new Set(['QB', 'WR', 'TE']),
+  TE: new Set(['QB', 'WR']),
+});
 
 const INJECTED_ATTR = 'data-bbm-injected';
 const PLAYER_ID_ATTR = 'data-bbm-player-id';
@@ -34,6 +47,10 @@ let playerPositionMap = new Map(); // canonicalName -> position
 let abbreviatedNameMap = new Map(); // "j. jefferson" -> canonicalName (for DK-style abbreviated display)
 let totalRosters = 0;
 let currentPicks = [];           // [{name, position, round}, ...]
+// DK virtualizes the roster panel — see TASK-233. Accumulate observed picks
+// across scroll-driven mutations so the visible-subset reads never shrink the
+// set. Keyed by canonicalName so dedup is stable across abbreviated/full names.
+let pickRegistry = new Map();    // canonicalName -> {name, position, round}
 let picksObserver = null;
 let picksRafId = null; // RAF debounce for picks observer
 
@@ -48,6 +65,14 @@ let loadError = null;   // string | null
 
 // Sync callback — injected from content.js so the overlay can trigger entry scraping
 let syncCallback = null;
+
+// Subscription tier state (TASK-231) — 'pro' | 'free' | null (unknown/error)
+// Row injection, correlation popup, tournament filter, and the Overlay toggle are
+// gated to 'pro'. Initial value `null` ensures we never flash the overlay before
+// confirming Pro on first load.
+let currentTier = null;
+
+const UPGRADE_URL = 'https://bestballexposures.com/?upgrade=1';
 
 // Tournament filter state (TASK-107)
 // Shape mirrors web app's TournamentMultiSelect: slateGroups = [{slate, tournaments[]}]
@@ -314,6 +339,91 @@ function applyPortfolioFilter() {
   sweepRows();
 }
 
+// --- Tier gate helpers (TASK-231) ---
+
+/**
+ * Re-fetch tier from Supabase and reapply the gate. Safe to call repeatedly;
+ * `fetchTier()` returns null on any error so we fail closed (non-Pro UI).
+ */
+async function refreshTier() {
+  currentTier = await fetchTier();
+  applyTierGate();
+}
+
+/**
+ * Apply or lift Pro gating across the panel and draft-row injections.
+ * - Pro: re-arm overlay on draft pages, enable toggle, hide upgrade CTA,
+ *   show tournament filter section.
+ * - Non-Pro (free, signed-out, or fetch-failed): strip row injections,
+ *   stop observers, disable the toggle, show upgrade CTA, hide filter.
+ */
+function applyTierGate() {
+  const isPro = currentTier === 'pro';
+
+  // Overlay toggle row
+  const overlayRow = document.getElementById('bbm-overlay-row');
+  const toggle = document.getElementById('bbm-overlay-toggle');
+  if (overlayRow && toggle) {
+    if (isPro) {
+      overlayRow.classList.remove('bbm-locked');
+      overlayRow.removeAttribute('title');
+      toggle.disabled = false;
+      toggle.checked = enabled;
+    } else {
+      overlayRow.classList.add('bbm-locked');
+      overlayRow.setAttribute('title', 'Pro feature — upgrade to use the overlay');
+      toggle.disabled = true;
+      toggle.checked = false;
+    }
+  }
+
+  // Tournament filter section — meaningless without the row overlay
+  const filterWrap = document.getElementById('bbm-filter-wrap');
+  if (filterWrap) {
+    filterWrap.style.display = isPro ? '' : 'none';
+  }
+
+  // Upgrade CTA
+  renderUpgradeCta();
+
+  // Draft-row injections
+  if (isPro) {
+    if (adapter?.isDraftPage?.() && enabled && !gridObserver) {
+      startOverlay();
+    }
+  } else {
+    // Tear down any active injections / observers
+    if (gridObserver || sortObserver || picksObserver) {
+      stopOverlay();
+    } else {
+      // Even without observers, scrub any leftover injected DOM
+      removeAllOverlays();
+    }
+  }
+}
+
+/**
+ * Render (or clear) the "Upgrade to Pro" CTA inside the FAB panel.
+ * Shown when tier is not 'pro' (free, signed-out, or unknown).
+ */
+function renderUpgradeCta() {
+  const container = document.getElementById('bbm-upgrade-cta');
+  if (!container) return;
+  if (currentTier === 'pro') {
+    container.innerHTML = '';
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'block';
+  container.innerHTML = `
+    <a href="${UPGRADE_URL}" target="_blank" rel="noopener noreferrer" class="bbm-upgrade-btn">
+      <span class="bbm-upgrade-icon" aria-hidden="true">★</span>
+      Upgrade to Pro
+    </a>
+    <div class="bbm-upgrade-sub">Unlock the in-draft overlay</div>
+  `;
+}
+
 // --- Auth panel helpers (TASK-129) ---
 
 /**
@@ -330,9 +440,9 @@ async function renderAuthSection() {
     container.innerHTML = `
       <div class="bbm-account-toggle" id="bbm-account-toggle">
         <span class="bbm-account-toggle-label">Account</span>
-        <span class="bbm-account-chevron">&#9660;</span>
+        <span class="bbm-account-chevron" style="transform:rotate(180deg)">&#9660;</span>
       </div>
-      <div class="bbm-account-body" id="bbm-account-body" style="display:none">
+      <div class="bbm-account-body" id="bbm-account-body" style="display:block">
         <button id="bbm-google-btn" class="bbm-btn bbm-btn-google">
           <svg width="16" height="16" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15 15.6 19.1 12 24 12c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.3 6.3 14.7z"/><path fill="#FBBC05" d="M24 46c5.4 0 10.3-1.8 14.1-5l-6.9-5.7C29.1 37 26.7 38 24 38c-6 0-10.6-3.9-12.3-9.2l-7 5.4C8.1 41 15.4 46 24 46z"/><path fill="#EA4335" d="M46 24c0-1.3-.2-2.7-.5-4H24v8.5h11.8c-1 3-3 5.4-5.8 7l6.9 5.7C41 37.5 46 31.5 46 24z"/></svg>
           Sign in with Google
@@ -403,6 +513,7 @@ async function handleGoogleSignIn() {
 
   try {
     await signInWithGoogle();
+    await refreshTier();
     await renderAuthSection();
     loadPortfolioData();
   } catch (err) {
@@ -426,6 +537,7 @@ async function handleSignIn() {
 
   try {
     await signIn(email, password);
+    await refreshTier();
     await renderAuthSection();
     loadPortfolioData();
   } catch (err) {
@@ -445,8 +557,9 @@ async function handleSignOut() {
   totalRosters = 0;
   allEntries = [];
   slateGroups = [];
-  sweepRows();
+  currentTier = null;
   await renderAuthSection();
+  applyTierGate();
   updatePanelStatus();
 }
 
@@ -614,14 +727,32 @@ function resolveCurrentPicks() {
       }
     });
   }
-  // Only re-sweep if picks actually changed
-  const changed =
-    picks.length !== currentPicks.length ||
-    picks.some((p, i) => p.name !== currentPicks[i]?.name);
-  if (changed) {
-    currentPicks = picks;
-    sweepRows();
-  }
+
+  // Accumulate into the registry: add new picks, fill in round when a later
+  // observation supplies one that earlier did not, but never shrink the set.
+  // Scroll-driven mutations on virtualized roster panels (DK) only ever expose
+  // a subset of the roster, so replacing currentPicks with each observation
+  // would drop off-screen picks from correlation/stack calculations.
+  let registryChanged = false;
+  picks.forEach(p => {
+    const key = canonicalName(p.name);
+    if (!key) return;
+    const existing = pickRegistry.get(key);
+    if (!existing) {
+      pickRegistry.set(key, { name: p.name, position: p.position, round: p.round ?? null });
+      registryChanged = true;
+      return;
+    }
+    if ((existing.round == null || existing.round === 0) && p.round != null && p.round > 0) {
+      existing.round = p.round;
+      registryChanged = true;
+    }
+  });
+
+  if (!registryChanged) return;
+
+  currentPicks = [...pickRegistry.values()];
+  sweepRows();
 }
 
 /**
@@ -661,6 +792,7 @@ function stopPicksObserver() {
     picksObserver = null;
   }
   currentPicks = [];
+  pickRegistry.clear();
 }
 
 /**
@@ -809,6 +941,7 @@ function updateRowMetrics(row) {
   populateCorrPopup(popup, breakdown);
 
   applyStackBadge(row, resolvedName);
+  applyPlayoffStackBadge(row, resolvedName);
 
   applyTierBreak(row, resolvedName);
 }
@@ -905,6 +1038,146 @@ function analyzeStackOverlay(playerName) {
   if ((pos === 'WR' || pos === 'TE') && rbs.length > 0) return { type: 'TEAM', color: '#8A9BB5' };
 
   return null;
+}
+
+/**
+ * Analyze playoff-week (W15/16/17) game-stack correlations between the candidate
+ * and the user's already-rostered picks in the active draft.
+ *
+ * Game stack = candidate and rostered pick are on opposing teams playing each other
+ * in the given playoff week, AND the position pair is meaningful in best ball
+ * (see MEANINGFUL_GAME_PAIRS). Same-team teammates are intentionally excluded
+ * because they're already represented by the standard stack pill.
+ *
+ * @param {string} playerName
+ * @returns {{ count: number, weeks: Array<{ week: string, entries: Array<{name,position,team,opp}> }>}|null}
+ */
+function analyzePlayoffStackOverlay(playerName) {
+  const key = resolvePlayerKey(playerName);
+  if (!key) return null;
+  const candidateTeam = playerTeamMap.get(key);
+  const candidatePos = playerPositionMap.get(key);
+  if (!candidateTeam || !candidatePos || currentPicks.length === 0) return null;
+
+  const qualifyingOpps = MEANINGFUL_GAME_PAIRS[candidatePos];
+  if (!qualifyingOpps) return null; // Candidate position not a game-stack asset (e.g. RB)
+
+  const weeks = [];
+  let count = 0;
+
+  PLAYOFF_WEEKS.forEach(week => {
+    const opp = playoffSchedule[candidateTeam]?.[week];
+    if (!opp) return; // bye or missing — silently skip
+
+    const entries = [];
+    currentPicks.forEach(pick => {
+      const pickKey = canonicalName(pick.name);
+      const pickTeam = playerTeamMap.get(pickKey);
+      const pickPos = playerPositionMap.get(pickKey);
+      if (!pickTeam || !pickPos) return;
+      if (pickTeam === candidateTeam) return; // Same-team — covered by stack pill
+      if (pickTeam !== opp) return; // Not in this game
+      // Confirm reciprocal schedule entry too, when present
+      const pickOpp = playoffSchedule[pickTeam]?.[week];
+      if (pickOpp && pickOpp !== candidateTeam) return;
+      if (!qualifyingOpps.has(pickPos)) return; // Position pair not meaningful
+
+      entries.push({
+        name: pick.name,
+        position: pickPos,
+        team: pickTeam,
+        opp: candidateTeam,
+      });
+    });
+
+    if (entries.length > 0) {
+      weeks.push({ week, entries });
+      count += entries.length;
+    }
+  });
+
+  if (count === 0) return null;
+  return { count, weeks };
+}
+
+/**
+ * Inject (or refresh) the playoff game-stack pill inline after the standard stack
+ * pill. Rendered only when the candidate has at least one qualifying game-stack
+ * correlation in W15/16/17. Pro-gated as a belt-and-braces check; the row-injection
+ * path is already gated upstream (TASK-231).
+ *
+ * @param {Element} row
+ * @param {string} playerName
+ */
+function applyPlayoffStackBadge(row, playerName) {
+  const info = (currentTier === 'pro') ? analyzePlayoffStackOverlay(playerName) : null;
+  const sig = info ? JSON.stringify(info) : '';
+  const existing = row.querySelector('.bbm-playoff-pill');
+
+  // No-op when the payload is unchanged — avoids tearing down the pill mid-hover
+  // on every sweepRows / updateRowMetrics tick.
+  if (existing && existing._playoffSig === sig) return;
+
+  if (existing) {
+    if (corrPopupPortal && existing._ownsPortal) {
+      corrPopupPortal.style.display = 'none';
+    }
+    existing.remove();
+  }
+
+  if (!info) return;
+
+  const positionRow = row.querySelector(adapter.selectors.stackPillTargetSelector);
+  if (!positionRow) return;
+
+  const pill = document.createElement('span');
+  pill.className = 'bbm-playoff-pill bbm-inline-overlay';
+  pill.innerHTML = `PLAYOFFS<span class="bbm-playoff-count">${info.count}</span>`;
+  pill._playoffPayload = info;
+  pill._playoffSig = sig;
+  positionRow.appendChild(pill);
+  attachPlayoffPopupHandlers(pill);
+}
+
+/**
+ * Build the playoff-popup HTML from an analyzePlayoffStackOverlay payload.
+ * Reuses the shared correlation-popup portal but with playoff-specific content.
+ *
+ * @param {{count:number, weeks:Array<{week:string,entries:Array<{name,position,team,opp}>}>}} payload
+ * @returns {string}
+ */
+function buildPlayoffPopupHtml(payload) {
+  const sections = payload.weeks.map(group => {
+    const rows = group.entries.map(e => `
+      <div class="bbm-corr-popup-row">
+        <span class="bbm-corr-popup-pos">${e.position}</span>
+        <span class="bbm-corr-popup-name">${titleCase(e.name)}</span>
+        <span class="bbm-playoff-popup-matchup">${e.team} @ ${e.opp}</span>
+      </div>`).join('');
+    return `<div class="bbm-playoff-popup-week">Week ${group.week}</div>${rows}`;
+  }).join('');
+  return `<div class="bbm-corr-popup-title">Playoff Game Stacks</div>${sections}`;
+}
+
+/**
+ * Wire mouseenter/mouseleave on the playoff pill to render the shared portal popup.
+ * Mirrors the pattern used by the Corr cell at createOverlayElements().
+ */
+function attachPlayoffPopupHandlers(pill) {
+  pill.addEventListener('mouseenter', () => {
+    if (!pill._playoffPayload) return;
+    ensureCorrPopupPortal();
+    corrPopupPortal.innerHTML = buildPlayoffPopupHtml(pill._playoffPayload);
+    const rect = pill.getBoundingClientRect();
+    corrPopupPortal.style.left = `${Math.max(8, rect.right - 280)}px`;
+    corrPopupPortal.style.top = `${rect.bottom + 4}px`;
+    corrPopupPortal.style.display = 'block';
+    pill._ownsPortal = true;
+  });
+  pill.addEventListener('mouseleave', () => {
+    pill._ownsPortal = false;
+    if (corrPopupPortal) corrPopupPortal.style.display = 'none';
+  });
 }
 
 /**
@@ -1023,7 +1296,10 @@ function processRow(row) {
   }
 
   // Inject stack pill inline after player name
-  if (resolvedName) applyStackBadge(row, resolvedName);
+  if (resolvedName) {
+    applyStackBadge(row, resolvedName);
+    applyPlayoffStackBadge(row, resolvedName);
+  }
 
   // Inject tier break indicator if sorted by My Rank and rankings data is available
   applyTierBreak(row, resolvedName);
@@ -1152,6 +1428,7 @@ function sweepRows() {
   rafId = requestAnimationFrame(() => {
     rafId = null;
     if (!enabled) return;
+    if (currentTier !== 'pro') return; // TASK-231: row overlay is Pro-only
     // Use adapter.getPlayerRows() when available (e.g. DK scopes to player list only,
     // excluding roster panel and picks panel BaseTables)
     const rows = adapter.getPlayerRows?.() ?? document.querySelectorAll(adapter.selectors.rowSelector);
@@ -1310,6 +1587,60 @@ function injectStyles() {
       white-space: nowrap;
       pointer-events: none;
       opacity: 0.85;
+    }
+
+    /* Playoff game-stack pill (TASK-232) — sibling of .bbm-stack-pill, teal accent
+       to differentiate from purple QB stack and amber WR stack. Interactive (hover
+       opens the shared correlation popup with playoff-grouped contents). */
+    .bbm-playoff-pill {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 20px;
+      border: 1px solid #06B6D4;
+      color: #06B6D4;
+      background: rgba(6, 182, 212, 0.10);
+      line-height: 1.5;
+      white-space: nowrap;
+      cursor: default;
+      opacity: 0.9;
+    }
+    .bbm-playoff-pill .bbm-playoff-count {
+      display: inline-block;
+      margin-left: 4px;
+      min-width: 12px;
+      padding: 0 4px;
+      border-radius: 8px;
+      background: #06B6D4;
+      color: #0C1A30;
+      font-weight: 800;
+      text-align: center;
+    }
+    .bbm-playoff-popup-week {
+      margin-top: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #06B6D4;
+      opacity: 0.9;
+    }
+    .bbm-playoff-popup-week:first-child {
+      margin-top: 4px;
+    }
+    .bbm-playoff-popup-matchup {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: inherit;
+      opacity: 0.65;
+      margin-left: auto;
+      white-space: nowrap;
     }
 
     /* Tier break — full-width divider with centered pill label */
@@ -1587,6 +1918,69 @@ function injectStyles() {
       accent-color: #E8BF4A;
     }
 
+    /* TASK-231: locked overlay row (non-Pro) */
+    .bbm-lock-icon {
+      display: none;
+      margin-left: 5px;
+      font-size: 11px;
+      vertical-align: -1px;
+      filter: grayscale(1) brightness(1.3);
+      opacity: 0.7;
+    }
+    #bbm-overlay-row.bbm-locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #bbm-overlay-row.bbm-locked .bbm-panel-label {
+      pointer-events: none;
+    }
+    #bbm-overlay-row.bbm-locked .bbm-lock-icon {
+      display: inline;
+    }
+    #bbm-overlay-row.bbm-locked #bbm-overlay-toggle {
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* TASK-231: Upgrade-to-Pro CTA */
+    #bbm-upgrade-cta {
+      margin: 8px 0 4px;
+    }
+    .bbm-upgrade-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #D4A843 0%, #F0CC5B 50%, #E8BF4A 100%);
+      color: #0C1A30;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      border: 1px solid #B8911E;
+      box-shadow: 0 1px 4px rgba(232, 191, 74, 0.25);
+      box-sizing: border-box;
+      transition: filter 120ms ease, transform 120ms ease;
+    }
+    .bbm-upgrade-btn:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+    .bbm-upgrade-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+    .bbm-upgrade-sub {
+      font-size: 10px;
+      color: #8A9BB5;
+      text-align: center;
+      margin-top: 4px;
+    }
+
     /* Confidence panel — status and sync lines (TASK-106) */
     .bbm-panel-divider {
       border: none;
@@ -1706,6 +2100,7 @@ function removeStyles() {
  */
 function startOverlay() {
   if (gridObserver) return; // already running
+  if (currentTier !== 'pro') return; // TASK-231: row overlay is Pro-only
   loadPortfolioData();   // async — re-loads on each draft entry so filter/metrics stay fresh
   loadRankingsData();    // async — sweeps rows when tier data is ready
   startPicksObserver();  // watches "my team" panel for new picks
@@ -1783,9 +2178,13 @@ function injectFloatingButton() {
   panel.innerHTML = `
     <div class="bbm-panel-title">Best Ball Exposures</div>
     <div id="bbm-auth-section"></div>
+    <div id="bbm-upgrade-cta" style="display:none"></div>
     <hr class="bbm-panel-divider" />
-    <div class="bbm-panel-row">
-      <label class="bbm-panel-label" for="bbm-overlay-toggle">Overlay</label>
+    <div class="bbm-panel-row" id="bbm-overlay-row">
+      <label class="bbm-panel-label" for="bbm-overlay-toggle">
+        Overlay
+        <span class="bbm-lock-icon" aria-hidden="true">\u{1F512}</span>
+      </label>
       <input type="checkbox" id="bbm-overlay-toggle" />
     </div>
     <hr class="bbm-panel-divider" />
@@ -1794,9 +2193,11 @@ function injectFloatingButton() {
       <span class="bbm-status-label">\u2014</span>
     </div>
     <div class="bbm-panel-sync-line">\u2014</div>
-    <hr class="bbm-panel-divider" />
-    <div class="bbm-panel-title bbm-filter-title">Tournament Filter</div>
-    <div id="bbm-tournament-filter" style="display:none"></div>
+    <div id="bbm-filter-wrap">
+      <hr class="bbm-panel-divider" />
+      <div class="bbm-panel-title bbm-filter-title">Tournament Filter</div>
+      <div id="bbm-tournament-filter" style="display:none"></div>
+    </div>
   `;
 
   const toggle = panel.querySelector('#bbm-overlay-toggle');
@@ -1819,10 +2220,20 @@ function injectFloatingButton() {
     if (panel.classList.contains('open')) {
       renderAuthSection();
       updatePanelStatus();
+      // Re-check tier on every open so a freshly-completed upgrade is reflected
+      // without requiring a page reload (TASK-231).
+      refreshTier();
     }
   });
 
   toggle.addEventListener('change', () => {
+    // Non-Pro users can't engage the toggle — the input is `disabled` and the
+    // label has pointer-events:none, but guard defensively in case the change
+    // event fires via keyboard or assistive tech.
+    if (currentTier !== 'pro') {
+      toggle.checked = false;
+      return;
+    }
     enabled = toggle.checked;
     chrome.storage.local.set({ overlayEnabled: enabled });
     if (enabled) {
@@ -1863,12 +2274,12 @@ function handleUrlChange() {
   const isOnDraft = wasOnDraftPage;
 
   if (!wasOnDraft && isOnDraft) {
-    if (enabled) startOverlay();
+    refreshTier().then(() => { if (enabled && currentTier === 'pro') startOverlay(); });
   } else if (wasOnDraft && !isOnDraft) {
     stopOverlay();
   } else if (wasOnDraft && isOnDraft) {
     stopOverlay();
-    if (enabled) startOverlay();
+    refreshTier().then(() => { if (enabled && currentTier === 'pro') startOverlay(); });
   }
 }
 
@@ -1913,12 +2324,16 @@ export function initDraftOverlay(platformAdapter, onSync = null) {
     injectFloatingButton();
     watchNavigation();
 
-    if (wasOnDraftPage && enabled) {
-      startOverlay(); // startOverlay calls loadPortfolioData
-    } else {
-      // Not a draft page — still load data for panel status + tournament filter
-      loadPortfolioData();
-    }
+    // Resolve tier before any overlay decision. startOverlay() and sweepRows()
+    // both early-return on non-Pro, so calling them before the tier resolves
+    // is safe; refreshTier() will re-arm them when Pro is confirmed.
+    refreshTier().then(() => {
+      if (wasOnDraftPage && enabled && currentTier === 'pro') {
+        startOverlay();
+      } else {
+        loadPortfolioData();
+      }
+    });
 
     // Close panel when clicking outside the FAB/panel
     document.addEventListener('click', () => {
@@ -1936,6 +2351,7 @@ export function initDraftOverlay(platformAdapter, onSync = null) {
   // Listen for toggle messages from popup — sync FAB checkbox to match
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type !== 'TOGGLE_OVERLAY') return;
+    if (currentTier !== 'pro' && message.enabled) return; // TASK-231: ignore enable from popup for non-Pro
     enabled = message.enabled;
     const toggle = document.getElementById('bbm-overlay-toggle');
     if (toggle) toggle.checked = enabled;

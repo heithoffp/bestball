@@ -85,16 +85,19 @@ export async function fetchTier() {
         .maybeSingle(),
       supabase
         .from('profiles')
-        .select('beta_expires_at')
+        .select('beta_expires_at, comp_expires_at')
         .eq('id', userId)
         .maybeSingle(),
     ]);
 
     const hasActiveSubscription = subResult.data?.status === 'active' || subResult.data?.status === 'trialing';
+    const now = new Date();
     const betaExpiresAt = profileResult.data?.beta_expires_at;
-    const isBetaActive = betaExpiresAt ? new Date(betaExpiresAt) > new Date() : false;
+    const compExpiresAt = profileResult.data?.comp_expires_at;
+    const isBetaActive = betaExpiresAt ? new Date(betaExpiresAt) > now : false;
+    const isCompActive = compExpiresAt ? new Date(compExpiresAt) > now : false;
 
-    return (hasActiveSubscription || isBetaActive) ? 'pro' : 'free';
+    return (hasActiveSubscription || isBetaActive || isCompActive) ? 'pro' : 'free';
   } catch {
     return null;
   }

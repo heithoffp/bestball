@@ -373,17 +373,27 @@ const draftkingsAdapter = {
 
   /**
    * Read current picks from the DK roster panel.
-   * Returns an array of {name, position, round} for filled slots,
-   * or null if the roster panel isn't found.
    *
-   * @returns {Array<{name: string, position: string, round: number}>|null}
+   * IMPORTANT: The roster panel is a react-base-table virtualized list — only
+   * rows currently inside the scroll viewport exist in the DOM. The returned
+   * array is therefore the *visible subset* of picks, not the full roster.
+   * The caller in draft-overlay.js maintains an accumulator across observations
+   * so scrolling does not drop previously-seen picks. See TASK-233.
+   *
+   * Round is read from `aria-rowindex` (react-base-table's stable row-position
+   * attribute) when available so a pick's true draft round is recovered even
+   * when the row is observed mid-scroll. When the attribute is absent or
+   * non-positive, `round` is left null and the accumulator preserves whatever
+   * round was recorded on first observation.
+   *
+   * @returns {Array<{name: string, position: string, team: string, round: number|null}>|null}
    */
   getCurrentPicks() {
     const rosterBody = document.querySelector('.RosterTable_rosterTable-component .BaseTable__body');
     if (!rosterBody) return null;
     const rows = rosterBody.querySelectorAll('[role="row"].BaseTable__row');
     const picks = [];
-    rows.forEach((row, idx) => {
+    rows.forEach(row => {
       const nameEl = row.querySelector('.PlayerCell_player-name');
       if (!nameEl) return;
       const name = nameEl.textContent?.trim();
@@ -391,7 +401,12 @@ const draftkingsAdapter = {
       const posEl = row.querySelector('.DKResponsiveGrid_dk-grid-cell');
       const position = posEl?.textContent?.trim() ?? '';
       const team = row.querySelector('.PlayerCell_player-team')?.textContent?.trim().toUpperCase() ?? '';
-      picks.push({ name, position, team, round: idx + 1 });
+      const ariaRowIndex = parseInt(row.getAttribute('aria-rowindex') ?? '', 10);
+      // aria-rowindex is 1-based and typically reserves index 1 for the header
+      // row, so subtract 1. If the value is missing or non-positive, leave round
+      // null and let the accumulator hold whatever round was seen earlier.
+      const round = Number.isFinite(ariaRowIndex) && ariaRowIndex > 1 ? ariaRowIndex - 1 : null;
+      picks.push({ name, position, team, round });
     });
     return picks;
   },
