@@ -2,6 +2,10 @@
 
 All notable changes to the BBE Chrome extension are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.10] - 2026-05-14
+
+- TODO: fill in changes
+
 ## [1.0.9] - 2026-05-10
 
 - Fix Firefox content-script auth + portfolio load: bypass supabase's default `navigator.locks`-based token-refresh lock with a no-op lock function. In Firefox content scripts, `navigator` is Xray-wrapped from the page compartment and `navigator.locks.request(...)` returns a privileged-compartment Promise the content sandbox cannot `.then` on, throwing "Permission denied to access property 'then'" on every `supabase.auth.getSession()` / `supabase.from(...)` call. Each tab has its own client and there's no concurrent refresh to serialize, so a no-op lock is safe.
