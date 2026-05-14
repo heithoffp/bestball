@@ -35,6 +35,8 @@ The full product vision, design principles, and exclusions live in **`docs/Visio
 ### Chrome extension (`chrome-extension/`)
 Roster sync utility — reads Underdog/DraftKings draft pages, writes entries to Supabase / IndexedDB for the web app to consume. Out of scope for most web-app sessions.
 
+Bundled by **Vite + @crxjs/vite-plugin** into `chrome-extension/dist/` — the dist directory is what Edge / Chrome / Firefox load, not `src/`. **Any change to files under `chrome-extension/src/` requires `cd chrome-extension && npm run build` before the developer can reload-and-test in the browser.** Skipping the build silently runs the previous bundle and looks like the fix didn't work.
+
 ### Auxiliary code (out of scope unless explicitly working on it)
 - `scrapers/` — Python ADP scrapers
 - `simulation/` — Python Monte Carlo / projection tools
@@ -52,6 +54,13 @@ All web-app commands run from `best-ball-manager/`:
 | `npm run lint` | ESLint | No |
 | `npm run preview` | Preview production build | No |
 | `npx playwright test` | Run e2e tests | No |
+
+Extension commands run from `chrome-extension/`:
+
+| Command | Purpose | Confirm Before Running? |
+|---------|---------|------------------------|
+| `npm run build` | Bundle `src/` → `dist/` (run after every source edit) | No |
+| `npm run release` | Cut a versioned release (zip + signed xpi) | Yes |
 
 ## Read-Only Paths
 

@@ -1,0 +1,56 @@
+# Subsystem S1 — Capture & Recognition (inside the broadcast extension)
+# d2-render-layout: elk
+
+direction: right
+
+# Internal blocks
+P2: "Broadcast Capture" {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5}
+P3: "Frame-Diff\nMotion Detector" {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5}
+P4: "Vision OCR Pipeline" {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5}
+A6: "Frame Buffer" {style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5}
+E3: "Apple ReplayKit" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+
+# Interface stubs
+P5_stub: "Fuzzy Resolver\n(S2)" {style.fill: "#BDC3C7"; style.stroke-dash: 5}
+A2_stub: "ROI Config\n(S5)" {style.fill: "#BDC3C7"; style.stroke-dash: 5}
+A1_stub: "App Group Store\n(S2)" {style.fill: "#BDC3C7"; style.stroke-dash: 5}
+
+# Gap annotations
+gap_mem: "50MB memory ceiling\n— no custom CoreML" {
+  style.fill: "#E74C3C"; style.font-color: "#FFFFFF"; style.stroke: "#C0392B"; style.border-radius: 8
+}
+gap_latency: "3-5s end-to-end budget\nbefore reco is stale" {
+  style.fill: "#E74C3C"; style.font-color: "#FFFFFF"; style.stroke: "#C0392B"; style.border-radius: 8
+}
+gap_ui: "UI updates break\nROI coordinates" {
+  style.fill: "#E74C3C"; style.font-color: "#FFFFFF"; style.stroke: "#C0392B"; style.border-radius: 8
+}
+
+E3 -> P2: CMSampleBuffer
+P2 -> A6: buffer
+P2 -> P3: submit
+P3 -> P4: trigger on motion
+A2_stub -> P4: ROIs / templates
+P4 -> P5_stub: strings (via IPC)
+P5_stub -> A1_stub: pick events
+
+gap_mem -> P2: {style.stroke-dash: 5}
+gap_latency -> P4: {style.stroke-dash: 5}
+gap_ui -> A2_stub: {style.stroke-dash: 5}
+
+legend: {
+  style.fill: "#F8F9FA"
+  style.stroke: "#CED4DA"
+  style.border-radius: 4
+
+  _p: Process / Tool {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"}
+  _a: Artifact {style.fill: "#2ECC71"; style.font-color: "#FFFFFF"}
+  _e: External System {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+  _asp: Aspirational Block {style.stroke-dash: 5}
+  _stub: Interface Stub {style.fill: "#BDC3C7"; style.stroke-dash: 5}
+  _gap: Known Gap {style.fill: "#E74C3C"; style.font-color: "#FFFFFF"; style.stroke: "#C0392B"; style.border-radius: 8}
+
+  _aa: "" {style.fill: "#F8F9FA"; style.stroke: "#F8F9FA"}
+  _ab: aspirational interaction {shape: text}
+  _aa -> _ab: {style.stroke-dash: 5}
+}

@@ -7,6 +7,8 @@
 - TASK-198: Incremental Underdog sync to fix timeouts on large portfolios
 - TASK-218: Migration communication for existing extension users
 - TASK-226: Fix DK name-matching: strip generational suffixes in extension overlay
+- TASK-231: Gate extension overlay behind Pro subscription
+- TASK-233: Fix DK roster panel virtualization breaking correlation/stack on scroll
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -22,6 +24,11 @@
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 | [Plan](docs/plans/TASK-170.md) | No |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 | [Plan](docs/plans/TASK-171.md) | No |
 | TASK-173 | End-to-end launch readiness test — signup to first insight flow | Todo | P1 | [Plan](docs/plans/TASK-173.md) — Draft | No |
+| TASK-234 | ADR: iOS privacy vs operability resolution | Todo | P1 | [Plan](docs/plans/TASK-234.md) -- Draft | No |
+| TASK-235 | ADR: iOS analysis subsystem residence (wakeability) | Todo | P1 | [Plan](docs/plans/TASK-235.md) -- Draft | No |
+| TASK-236 | Prototype: iOS Draft Assistant latency + memory feasibility | Todo | P1 | [Plan](docs/plans/TASK-236.md) -- Draft | No |
+| TASK-237 | Risk note: iOS App Store rejection scenarios and fallbacks | Todo | P1 | [Plan](docs/plans/TASK-237.md) -- Draft | No |
+| TASK-238 | L5 config-update loop design (gated on TASK-234) | Todo | P1 | [Plan](docs/plans/TASK-238.md) -- Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No |
@@ -39,6 +46,9 @@
 | TASK-223 | Extension-driven update notifications (latest.json polling + UPD badge) | Todo | P2 | [Plan](docs/plans/TASK-223.md) -- Draft | No |
 | TASK-224 | Pin Chromium extension ID by adding manifest.key field | Todo | P2 | [Plan](docs/plans/TASK-224.md) -- Draft | No |
 | TASK-226 | Fix DK name-matching: strip generational suffixes in extension overlay | In Progress | P2 | [Plan](docs/plans/TASK-226.md) | No |
+| TASK-230 | InstallPage VERSION constant should derive from latest.json (stop drifting every release) | Todo | P2 | [Plan](docs/plans/TASK-230.md) -- Draft | No |
+| TASK-231 | Gate extension overlay behind Pro subscription | In Progress | P2 | [Plan](docs/plans/TASK-231.md) | No |
+| TASK-233 | Fix DK roster panel virtualization breaking correlation/stack on scroll | In Progress | P2 | [Plan](docs/plans/TASK-233.md) | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
@@ -75,6 +85,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-232 | Playoff week (15/16/17) correlation pills in extension overlay | Done | P2 | [Plan](docs/archive/plans/TASK-232.md) | No | 2026-05-11 |
 | TASK-229 | Clean up superseded extension artifacts in public/extension/ | Done | P3 | [Plan](docs/archive/plans/TASK-229.md) | No | 2026-05-10 |
 | TASK-228 | Fix Firefox auto-update routing — manifest update_url points at /updates.json but file lives at /extension/updates.json | Done | P2 | [Plan](docs/archive/plans/TASK-228.md) | No | 2026-05-10 |
 | TASK-227 | Fix DK roster name matching — use draftables displayName at sync time | Done | P1 | [Plan](docs/archive/plans/TASK-227.md) | No | 2026-05-10 |

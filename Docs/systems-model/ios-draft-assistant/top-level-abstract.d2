@@ -1,0 +1,104 @@
+# iOS Draft Assistant — abstract quickview
+# d2-render-layout: elk
+# Note: every internal block in this model is aspirational. The abstract view renders
+# the proposed substrate as solid for orientation; the detailed top-level.d2 shows the
+# aspirational distinction.
+
+direction: right
+
+drafter: Drafter {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+
+underdog: "Underdog App\n(iOS)" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+
+apple: "Apple Platform\n(ReplayKit + ActivityKit)" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+
+bbe: "BBE Web Backend\n(Supabase)" {
+  style.fill: "#E67E22"
+  style.font-color: "#FFFFFF"
+}
+
+capture: "Capture\n(extension)" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+resolve: "Resolve State\n(main app)" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+analyze: "Analyze\n(main app)" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+surface: "Surface\n(Live Activity)" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+sync: "Sync & Config" {
+  style.fill: "#7B68EE"
+  style.font-color: "#FFFFFF"
+}
+
+shared: "App Group Store" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+portfolio: "Synced Portfolio Data" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+island: "Dynamic Island" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+config: "ROI / Template Config" {
+  style.fill: "#2ECC71"
+  style.font-color: "#FFFFFF"
+}
+
+drafter -> underdog: drafts in
+underdog -> apple: screen pixels
+apple -> capture: frames
+config -> capture: ROIs
+capture -> shared: pick events
+shared -> resolve: notify
+resolve -> analyze: state change
+portfolio -> analyze: targets
+analyze -> surface: top recs
+surface -> apple: update activity
+apple -> island: render
+island -> drafter: shows recs
+drafter -> surface: override (App Intent)
+bbe -> sync: portfolio + config
+sync -> portfolio: populate
+sync -> config: publish
+
+legend: {
+  style.fill: "#F8F9FA"
+  style.stroke: "#CED4DA"
+  style.border-radius: 4
+
+  _r: Role {style.fill: "#4A90D9"; style.font-color: "#FFFFFF"}
+  _p: Process / Tool {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"}
+  _a: Artifact {style.fill: "#2ECC71"; style.font-color: "#FFFFFF"}
+  _e: External System {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+
+  _ca: "" {style.fill: "#F8F9FA"; style.stroke: "#F8F9FA"}
+  _cb: interaction {shape: text}
+  _ca -> _cb
+}

@@ -1,0 +1,49 @@
+# Subsystem S4 — Surface (Live Activity / Dynamic Island)
+# d2-render-layout: elk
+
+direction: right
+
+P8: "Live Activity Updater" {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5}
+P9: "App Intent Handlers" {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5}
+A4: "Dynamic Island\nLive Activity" {style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5}
+E4: "Apple ActivityKit" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+R1: "Drafter" {style.fill: "#4A90D9"; style.font-color: "#FFFFFF"}
+
+# Stubs
+P7_stub: "Analysis Engine\n(S3)" {style.fill: "#BDC3C7"; style.stroke-dash: 5}
+A1_stub: "App Group Store\n(S2)" {style.fill: "#BDC3C7"; style.stroke-dash: 5}
+
+gap_throttle: "ActivityKit update throttle\n~1 update / pick" {
+  style.fill: "#E74C3C"; style.font-color: "#FFFFFF"; style.stroke: "#C0392B"; style.border-radius: 8
+}
+gap_realestate: "Limited real estate:\n2-3 recs max" {
+  style.fill: "#E74C3C"; style.font-color: "#FFFFFF"; style.stroke: "#C0392B"; style.border-radius: 8
+}
+
+P7_stub -> P8: top-N recs
+P8 -> E4: update content state
+E4 -> A4: render
+A4 -> R1: shows recs / delta
+R1 -> P9: tap App Intent
+P9 -> A1_stub: write override
+
+gap_throttle -> P8: {style.stroke-dash: 5}
+gap_realestate -> A4: {style.stroke-dash: 5}
+
+legend: {
+  style.fill: "#F8F9FA"
+  style.stroke: "#CED4DA"
+  style.border-radius: 4
+
+  _r: Role {style.fill: "#4A90D9"; style.font-color: "#FFFFFF"}
+  _p: Process / Tool {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"}
+  _a: Artifact {style.fill: "#2ECC71"; style.font-color: "#FFFFFF"}
+  _e: External System {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+  _asp: Aspirational Block {style.stroke-dash: 5}
+  _stub: Interface Stub {style.fill: "#BDC3C7"; style.stroke-dash: 5}
+  _gap: Known Gap {style.fill: "#E74C3C"; style.font-color: "#FFFFFF"; style.stroke: "#C0392B"; style.border-radius: 8}
+
+  _aa: "" {style.fill: "#F8F9FA"; style.stroke: "#F8F9FA"}
+  _ab: aspirational interaction {shape: text}
+  _aa -> _ab: {style.stroke-dash: 5}
+}

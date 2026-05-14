@@ -1,0 +1,170 @@
+# iOS Draft Assistant — detailed top-level (proposed architecture)
+# d2-render-layout: elk
+# All iOS-internal blocks are aspirational (dashed). Externals are current (solid).
+
+direction: right
+
+# Roles
+R1: "Drafter\n(iOS)" {
+  style.fill: "#4A90D9"
+  style.font-color: "#FFFFFF"
+}
+
+# Processes (aspirational)
+P1: "Companion App\nOrchestrator" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P2: "Broadcast Capture\n(ReplayKit ext.)" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P3: "Frame-Diff\nMotion Detector" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P4: "Vision OCR Pipeline" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P5: "Player Fuzzy-Match\nResolver" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P6: "Draft State Engine" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P7: "Analysis Engine\n(correlation / exposure)" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P8: "Live Activity Updater\n(ActivityKit)" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P9: "App Intent Handlers" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P10: "Website Sync Client" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P11: "Remote Config Fetcher" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P12: "Diagnostic Reporter\n(PII-scrubbed)" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P13: "Stage Timer" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P14: "ROI Calibration Mode\n(dev only)" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P15: "Platform Detector" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+P16: "Pre-Draft Health Check" {
+  style.fill: "#7B68EE"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+
+# Artifacts (aspirational)
+A1: "App Group Store\n(SQLite)" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A2: "ROI / Template Config\n(versioned)" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A3: "Synced Portfolio Data\n(exposures, correlations)" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A4: "Dynamic Island\nLive Activity" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A5: "Player Pool Cache" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A6: "Frame Buffer\n(CMSampleBuffer)" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A7: "Diagnostic Telemetry\nStream" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A8: "Latency Budget\n+ Measurements" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+A9: "Match Confidence\nRegistry" {
+  style.fill: "#2ECC71"; style.font-color: "#FFFFFF"; style.stroke-dash: 5
+}
+
+R2: "Developer" {
+  style.fill: "#4A90D9"; style.font-color: "#FFFFFF"
+}
+
+# Externals (current)
+E1: "Underdog iOS App" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+E2: "DraftKings iOS App" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+E3: "Apple ReplayKit" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+E4: "Apple ActivityKit /\nDynamic Island" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+E5: "Darwin Notification\nCenter" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+E6: "BBE Web Backend\n(Supabase)" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+E7: "App Store Review" {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+
+# Interactions (all aspirational unless connecting two externals)
+R1 -> P1: starts assist {style.stroke-dash: 5}
+P1 -> E3: requests broadcast {style.stroke-dash: 5}
+R1 -> E3: confirms broadcast {style.stroke-dash: 5}
+E1 -> E3: screen pixels
+E2 -> E3: screen pixels
+E3 -> P2: CMSampleBuffer {style.stroke-dash: 5}
+P2 -> A6: buffers frames {style.stroke-dash: 5}
+P2 -> P3: submit frame {style.stroke-dash: 5}
+P3 -> P4: trigger on change {style.stroke-dash: 5}
+A2 -> P4: ROI / templates {style.stroke-dash: 5}
+P4 -> P5: recognized strings {style.stroke-dash: 5}
+A5 -> P5: player pool {style.stroke-dash: 5}
+P5 -> A1: pick events {style.stroke-dash: 5}
+A1 -> E5: signal {style.stroke-dash: 5}
+E5 -> P1: wakes main app {style.stroke-dash: 5}
+P1 -> P6: invoke {style.stroke-dash: 5}
+A1 -> P6: read events {style.stroke-dash: 5}
+P6 -> A1: write state {style.stroke-dash: 5}
+P6 -> P7: state change {style.stroke-dash: 5}
+A3 -> P7: targets / correlations {style.stroke-dash: 5}
+P7 -> P8: top-N recs {style.stroke-dash: 5}
+P8 -> E4: activity update {style.stroke-dash: 5}
+E4 -> A4: render {style.stroke-dash: 5}
+A4 -> R1: shows recs {style.stroke-dash: 5}
+R1 -> P9: override tap {style.stroke-dash: 5}
+P9 -> A1: write override {style.stroke-dash: 5}
+P10 -> E6: pull portfolio {style.stroke-dash: 5}
+E6 -> A3: populate {style.stroke-dash: 5}
+P11 -> E6: fetch config {style.stroke-dash: 5}
+E6 -> A2: publish config {style.stroke-dash: 5}
+P10 -> E6: push results {style.stroke-dash: 5}
+E7 -> P2: review constraint {style.stroke-dash: 5}
+
+# Revision additions (pass 1 → revisions)
+P13 -> A8: stage timing {style.stroke-dash: 5}
+A8 -> R2: budget burn {style.stroke-dash: 5}
+P5 -> P12: confidence metrics {style.stroke-dash: 5}
+P12 -> A7: buffer events {style.stroke-dash: 5}
+A7 -> E6: consented upload {style.stroke-dash: 5}
+E6 -> R2: diagnostics {style.stroke-dash: 5}
+P9 -> A9: write override {style.stroke-dash: 5}
+A9 -> P5: learned aliases {style.stroke-dash: 5}
+P15 -> P4: select ROI set {style.stroke-dash: 5}
+P10 -> P16: invoke on draft start {style.stroke-dash: 5}
+P16 -> R1: warn (stale / config / battery) {style.stroke-dash: 5}
+P14 -> A2: propose ROI updates {style.stroke-dash: 5}
+
+legend: {
+  style.fill: "#F8F9FA"
+  style.stroke: "#CED4DA"
+  style.border-radius: 4
+
+  _r: Role {style.fill: "#4A90D9"; style.font-color: "#FFFFFF"}
+  _p: Process / Tool {style.fill: "#7B68EE"; style.font-color: "#FFFFFF"}
+  _a: Artifact {style.fill: "#2ECC71"; style.font-color: "#FFFFFF"}
+  _e: External System {style.fill: "#E67E22"; style.font-color: "#FFFFFF"}
+  _asp: Aspirational Block {style.stroke-dash: 5}
+
+  _ca: "" {style.fill: "#F8F9FA"; style.stroke: "#F8F9FA"}
+  _cb: current interaction {shape: text}
+  _ca -> _cb
+  _aa: "" {style.fill: "#F8F9FA"; style.stroke: "#F8F9FA"}
+  _ab: aspirational interaction {shape: text}
+  _aa -> _ab: {style.stroke-dash: 5}
+}
