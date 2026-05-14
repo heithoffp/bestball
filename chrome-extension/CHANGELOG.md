@@ -4,7 +4,13 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 ## [1.0.10] - 2026-05-14
 
-- TODO: fill in changes
+- Fix DK overlay correlation/stack disappearing when scrolling the roster panel (TASK-233). DK's roster panel is a virtualized react-base-table that only mounts visible rows, so reads via `getCurrentPicks()` returned a moving subset of the roster and `resolveCurrentPicks()` overwrote `currentPicks` with each scroll. Now the picks resolver accumulates observed picks into a per-draft registry keyed by canonical name and never shrinks the set during a draft. Round is read from `aria-rowindex` to preserve true draft round across observations. Registry resets on overlay teardown / SPA navigation off a draft page. Underdog flow unchanged (its picks panel is not virtualized).
+- Gate the in-draft row overlay (Exp %, Corr, tier badges, correlation popup) behind a Pro subscription (TASK-231). Free and signed-out users keep the FAB, sync, and tournament-aware status panel, but draft-row injections are not rendered.
+- FAB panel "Overlay" toggle is greyed out with a lock icon and tooltip for non-Pro users. The Tournament Filter section is hidden when the row overlay is gated.
+- New "Upgrade to Pro" button in the FAB panel opens `bestballexposures.com/?upgrade=1` in a new tab, which auto-launches the PlanPicker on the web app.
+- Tier re-checks on init, sign-in/out, panel open, and draft-page navigation — upgrading without reloading reflects on the next panel open.
+- Added playoff-week (W15-17) game-stack correlation pill on candidate rows (TASK-232). Pill renders when the candidate shares an NFL playoff-week game with one of the user's already-rostered players, restricted to meaningful best-ball position pairs (QB↔QB/WR/TE, WR↔QB/WR/TE, TE↔QB/WR — RB and TE↔TE excluded). Hover shows a per-week (W15/W16/W17) breakdown of correlated rostered players.
+- Replaced placeholder 2026 playoff-week schedule JSON with the real NFL W15/16/17 matchups published 2026-05-14.
 
 ## [1.0.9] - 2026-05-10
 
