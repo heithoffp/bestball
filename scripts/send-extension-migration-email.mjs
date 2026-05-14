@@ -36,20 +36,23 @@ function usage() {
   node scripts/send-extension-migration-email.mjs --test
   node scripts/send-extension-migration-email.mjs --to a@x.com,b@y.com
   node scripts/send-extension-migration-email.mjs --from-supabase   # pull all auth.users emails
+  node scripts/send-extension-migration-email.mjs --from-supabase --dry-run   # list recipients, do not send
 
-Requires RESEND_API_KEY in environment.
+Requires RESEND_API_KEY in environment (not required with --dry-run).
 For --from-supabase, also requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.`);
   process.exit(1);
 }
 
 function parseArgs(argv) {
-  const args = { test: false, recipients: [], fromSupabase: false };
+  const args = { test: false, recipients: [], fromSupabase: false, dryRun: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--test') {
       args.test = true;
     } else if (a === '--from-supabase') {
       args.fromSupabase = true;
+    } else if (a === '--dry-run') {
+      args.dryRun = true;
     } else if (a === '--to') {
       const next = argv[++i];
       if (!next) usage();
@@ -113,13 +116,13 @@ async function sendOne({ apiKey, to, html }) {
 }
 
 async function main() {
+  const args = parseArgs(process.argv);
+
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!apiKey && !args.dryRun) {
     console.error('Missing RESEND_API_KEY in environment.');
     process.exit(1);
   }
-
-  const args = parseArgs(process.argv);
 
   let recipients;
   if (args.test) {
@@ -133,9 +136,15 @@ async function main() {
 
   const html = readFileSync(join(__dirname, 'templates', 'extension-migration-email.html'), 'utf8');
 
-  console.log(`Mode: ${args.test ? 'TEST' : args.fromSupabase ? 'SUPABASE' : 'SEND'}`);
+  const mode = args.dryRun ? 'DRY-RUN' : args.test ? 'TEST' : args.fromSupabase ? 'SUPABASE' : 'SEND';
+  console.log(`Mode: ${mode}`);
   console.log(`Recipients (${recipients.length}): ${recipients.join(', ')}`);
   console.log('');
+
+  if (args.dryRun) {
+    console.log('Dry run: no emails sent.');
+    process.exit(0);
+  }
 
   let failures = 0;
   for (const to of recipients) {
