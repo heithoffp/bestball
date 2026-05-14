@@ -593,20 +593,24 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border-subtle); }
 
 .modal-google-btn {
   width: 100%;
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #dadce0;
+  color: #3c4043;
   padding: 0.7rem;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: background var(--duration-fast), border-color var(--duration-fast);
   font-family: inherit;
 }
 .modal-google-btn:hover {
-  background: var(--surface-2);
-  border-color: var(--text-muted);
+  background: #f1f3f4;
+  border-color: #c6c8ca;
 }
 
 .modal-back-btn {

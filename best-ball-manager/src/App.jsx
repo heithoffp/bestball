@@ -98,10 +98,11 @@ export default function App() {
   const [rankingsByPlatform, setRankingsByPlatform] = useState({});
   const { isMobile } = useMediaQuery();
   const { user, loading: authLoading, recoveryMode } = useAuth();
-  const { tier, loading: subLoading } = useSubscription();
+  const { tier, loading: subLoading, openPlanPicker } = useSubscription();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMessage, setAuthModalMessage] = useState('');
   const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [pendingUpgrade, setPendingUpgrade] = useState(false);
   const [isUsingDemoData, setIsUsingDemoData] = useState(false);
   const [rosterNavContext, setRosterNavContext] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -126,6 +127,35 @@ export default function App() {
   useEffect(() => {
     if (recoveryMode) setShowAuthModal(true);
   }, [recoveryMode]);
+
+  // TASK-231: arriving from the extension's "Upgrade to Pro" link (?upgrade=1).
+  // Strip the param so refresh/back doesn't re-trigger. If the user is signed
+  // in, open the PlanPicker immediately; if not, gate it behind the AuthModal
+  // and complete the hand-off once auth resolves.
+  useEffect(() => {
+    if (authLoading) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgrade') !== '1') return;
+    params.delete('upgrade');
+    const next = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (next ? `?${next}` : ''));
+    if (user) {
+      openPlanPicker();
+    } else {
+      setPendingUpgrade(true);
+      setAuthModalMessage('Create an account or sign in to subscribe.');
+      setShowAuthModal(true);
+    }
+  }, [authLoading, user, openPlanPicker]);
+
+  // Complete the deferred upgrade once the user has authenticated.
+  useEffect(() => {
+    if (!pendingUpgrade || !user || subLoading) return;
+    setPendingUpgrade(false);
+    setShowAuthModal(false);
+    setAuthModalMessage('');
+    openPlanPicker();
+  }, [pendingUpgrade, user, subLoading, openPlanPicker]);
 
 
   async function loadFromExtension() {

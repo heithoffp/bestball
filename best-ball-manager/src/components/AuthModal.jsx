@@ -3,6 +3,17 @@ import { X, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../utils/analytics';
 
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" style={{ flexShrink: 0 }} aria-hidden="true">
+      <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+      <path fill="#34A853" d="M6.3 14.7l7 5.1C15 15.6 19.1 12 24 12c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.3 6.3 14.7z"/>
+      <path fill="#FBBC05" d="M24 46c5.4 0 10.3-1.8 14.1-5l-6.9-5.7C29.1 37 26.7 38 24 38c-6 0-10.6-3.9-12.3-9.2l-7 5.4C8.1 41 15.4 46 24 46z"/>
+      <path fill="#EA4335" d="M46 24c0-1.3-.2-2.7-.5-4H24v8.5h11.8c-1 3-3 5.4-5.8 7l6.9 5.7C41 37.5 46 31.5 46 24z"/>
+    </svg>
+  );
+}
+
 export default function AuthModal({ isOpen, onClose, message }) {
   const { signInWithGoogle, signUpWithEmail, signInWithEmail, resetPassword, updatePassword, recoveryMode, authError, clearError } = useAuth();
 
@@ -190,7 +201,8 @@ export default function AuthModal({ isOpen, onClose, message }) {
             </button>
             <div className="modal-divider">or</div>
             <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
-              Continue with Google
+              <GoogleIcon />
+              Sign in with Google
             </button>
           </form>
         )}
@@ -272,7 +284,8 @@ export default function AuthModal({ isOpen, onClose, message }) {
             </button>
             <div className="modal-divider">or</div>
             <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
-              Continue with Google
+              <GoogleIcon />
+              Sign in with Google
             </button>
           </form>
         )}
