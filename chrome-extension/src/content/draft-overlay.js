@@ -1132,7 +1132,8 @@ function applyPlayoffStackBadge(row, playerName) {
 
   const pill = document.createElement('span');
   pill.className = 'bbm-playoff-pill bbm-inline-overlay';
-  pill.innerHTML = `PLAYOFFS<span class="bbm-playoff-count">${info.count}</span>`;
+  const weekLabel = info.weeks.map(w => w.week).join('/');
+  pill.innerHTML = `W${weekLabel}<span class="bbm-playoff-count">${info.count}</span>`;
   pill._playoffPayload = info;
   pill._playoffSig = sig;
   positionRow.appendChild(pill);
