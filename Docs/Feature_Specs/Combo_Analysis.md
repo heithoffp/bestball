@@ -12,6 +12,7 @@ Cross-roster stacking pattern analysis. Surfaces which QB-to-teammate combinatio
 - **Stacks** — QB → teammate combinations (WR/TE/RB) with frequency counts and stack-diversity bars per QB.
 - **QBQB** — Dual-QB pairs across rosters with co-occurrence rates.
 - **Starts** — Stack patterns segmented by team / starting roster slot.
+- **Playoff Stacks** — Portfolio-level NFL playoff (W15/16/17) game-stack concentration. Three week sections, each with a per-week KPI tile (% of rosters with ≥1 meaningful game stack in that week) and a grid of scoreboard-style game cards. A card renders for every playoff matchup where the portfolio holds at least one meaningful cross-team pair (QB/WR/TE pairings; RB and TE↔TE excluded — mirrors the extension overlay rule from TASK-232). Cards show distinct contributing players on each side with per-player roster counts, total rosters carrying the stack, and a `Rosters →` navigation jump. Leader card per week gets the gold accent. A naked-portfolio footer counts rosters with no playoff stack in any week. Schedule data lives at `src/data/playoff-schedule-2026.json` (mirror of the extension copy).
 
 ### Filters
 - Tournament multi-select (`TournamentMultiSelect.jsx`) — restrict analysis to specific draft tournaments.
@@ -43,6 +44,10 @@ The component was previously disabled for performance (see `docs/archive/notes/O
 ## Key Files
 - `src/components/ComboAnalysis.jsx` — main component
 - `src/components/DraftExplorer.jsx` — child component used for drill-down
+- `src/components/PlayoffStacks.jsx` — Playoff Stacks sub-tab (W15/16/17 portfolio analysis)
+- `src/components/PlayoffStacks.module.css` — scoped styles for the playoff view
+- `src/utils/playoffStacks.js` — pure logic: position-pair rule, per-roster analysis, portfolio aggregation
+- `src/data/playoff-schedule-2026.json` — 2026 NFL W15/16/17 schedule (mirror of the extension copy)
 - `src/components/TournamentMultiSelect.jsx` — tournament filter
 - `src/components/filters/CombinedSearchInput.jsx` — search input
 - `src/utils/nflTeams.js` — team metadata

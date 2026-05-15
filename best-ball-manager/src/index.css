@@ -187,7 +187,7 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border-subtle); }
 .tab-bar {
   display: flex;
   gap: 5px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   flex-shrink: 0;
   background: var(--surface-1);
   padding: 5px;

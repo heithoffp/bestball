@@ -141,7 +141,7 @@ function HighlightedName({ name, query }) {
 
 export default function RosterViewer({ rosterData = [], masterPlayers = [], initialFilter = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
-  const [expandedEntry, setExpandedEntry]   = useState(null);
+  const [expandedEntry, setExpandedEntry]   = useState(() => initialFilter?.entry_id ?? null);
   const [filtersOpen, setFiltersOpen]       = useState(false);
   const [sortKey, setSortKey]               = useState('avgCLV');
   const [sortDir, setSortDir]               = useState('desc');
@@ -153,9 +153,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   const [selectedTournaments, setSelectedTournaments] = useState([]);
   const [combinedSearch, setCombinedSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState(() => initialFilter?.players ?? []);
-  const [selectedTeams, setSelectedTeams] = useState([]);
+  const [selectedTeams, setSelectedTeams] = useState(() => initialFilter?.teams ?? []);
   const [navBannerPlayers, setNavBannerPlayers] = useState(() => initialFilter?.players ?? []);
+  const [navBannerTeams, setNavBannerTeams] = useState(() => initialFilter?.teams ?? []);
   const [navBannerArchetype, setNavBannerArchetype] = useState(() => initialFilter?.archetype ?? null);
+  const [selectedEntryId, setSelectedEntryId] = useState(() => initialFilter?.entry_id ?? null);
   const scrollRef = useRef(null);
 
   // ── Simulation data ──────────────────────────────────────────────────────────
@@ -334,6 +336,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   // Filter + sort
   const displayed = useMemo(() => {
     let list = [...rosters];
+    if (selectedEntryId) list = list.filter(r => r.entry_id === selectedEntryId);
     if (selectedPlayers.length > 0) list = list.filter(r => r.entry_id in rosterSearchMatches);
     if (selectedTeams.length > 0) {
       list = list.filter(r =>
@@ -376,7 +379,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, selectedTournaments, rosterScores, selectedPlayers, selectedTeams, rosterSearchMatches]);
+  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, selectedTournaments, rosterScores, selectedPlayers, selectedTeams, rosterSearchMatches, selectedEntryId]);
 
   const slateGroups = useMemo(() => {
     const map = new Map();
@@ -394,6 +397,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   // Base list with all non-archetype filters applied
   const baseFiltered = useMemo(() => {
     let list = [...rosters];
+    if (selectedEntryId) list = list.filter(r => r.entry_id === selectedEntryId);
     if (selectedPlayers.length > 0) list = list.filter(r => r.entry_id in rosterSearchMatches);
     if (selectedTeams.length > 0) list = list.filter(r => selectedTeams.every(team => r.players.some(p => p.team === team && !selectedPlayers.includes(p.name))));
     if (clvFilter === 'positive') list = list.filter(r => r.avgCLV !== null && r.avgCLV >= 0);
@@ -402,7 +406,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
       list = list.filter(r => selectedTournaments.includes(r.tournamentTitle));
     }
     return list;
-  }, [rosters, clvFilter, selectedTournaments, selectedPlayers, selectedTeams, rosterSearchMatches]);
+  }, [rosters, clvFilter, selectedTournaments, selectedPlayers, selectedTeams, rosterSearchMatches, selectedEntryId]);
 
   const rbCounts = useMemo(() => {
     let list = baseFiltered;
@@ -950,7 +954,18 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   return (
     <TabLayout helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle} flush>
     <div className={css.root}>
-      {navBannerArchetype ? (
+      {selectedEntryId ? (
+        <div className={css.navBanner}>
+          Showing roster <strong>{shortEntry(selectedEntryId)}</strong>
+          {' — '}
+          <button
+            className={css.navBannerClear}
+            onClick={() => { setSelectedEntryId(null); setExpandedEntry(null); }}
+          >
+            Clear filter
+          </button>
+        </div>
+      ) : navBannerArchetype ? (
         <div className={css.navBanner}>
           {(() => {
             const type = Object.keys(navBannerArchetype)[0];
@@ -982,6 +997,17 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
           <button
             className={css.navBannerClear}
             onClick={() => { setNavBannerPlayers([]); setSelectedPlayers([]); }}
+          >
+            Clear filter
+          </button>
+        </div>
+      ) : navBannerTeams.length > 0 ? (
+        <div className={css.navBanner}>
+          Showing rosters with players from <strong>{navBannerTeams.join(' & ')}</strong>
+          {' — '}
+          <button
+            className={css.navBannerClear}
+            onClick={() => { setNavBannerTeams([]); setSelectedTeams([]); }}
           >
             Clear filter
           </button>

@@ -6,6 +6,7 @@ import CombinedSearchInput from './filters/CombinedSearchInput';
 import TournamentMultiSelect from './TournamentMultiSelect';
 import { NFL_TEAMS } from '../utils/nflTeams';
 import DraftExplorer from './DraftExplorer';
+import PlayoffStacks from './PlayoffStacks';
 
 // Position palette — shared across all views
 const POS_COLORS = {
@@ -125,6 +126,14 @@ const SIMILARITY_HELP_ANNOTATIONS = [
 const EXPLORER_HELP_ANNOTATIONS = [
   { id: 'draft-grid', label: 'Draft Board', anchor: 'above', description: 'Players arranged by ADP in snake draft order. Color intensity shows how often each player was drafted in that round across 10M simulated drafts. Click a player to see the next round\'s distribution.' },
   { id: 'combo-results', label: 'Combo Results', anchor: 'above', description: 'After selecting 4 players, see how often this combo appeared in 10M simulated drafts and which of your actual rosters have it.' },
+];
+
+const PLAYOFF_HELP_ANNOTATIONS = [
+  { id: 'playoff-view-switch', label: 'View Mode', anchor: 'below', description: 'Three lenses on the same data: Games (which matchups you’re leveraged on), Teams (every team’s playoff schedule plus your stack rate), and Rosters (which of your lineups carry the most stacks).' },
+  { id: 'playoff-kpi', label: 'Week KPI', anchor: 'below', description: 'Percentage of rosters with at least one meaningful game stack in this playoff week. The segmented bar visualizes per-roster coverage at a glance.' },
+  { id: 'playoff-card', label: 'Game Card', anchor: 'below', description: 'Each card is a playoff matchup where your portfolio carries a meaningful cross-team stack (QB/WR/TE pairings, RB and TE↔TE excluded). The gold card is your most concentrated game that week.' },
+  { id: 'playoff-teams', label: 'Team Rotation', anchor: 'below', description: 'One row per team your portfolio touches. Cells show that team’s opponent each week and the % of your rosters that hold a meaningful stack involving that team. Click any column header to sort — heaviest exposure, weakest week, or alphabetical.' },
+  { id: 'playoff-rosters', label: 'Roster Leaderboard', anchor: 'below', description: 'Every roster ranked by total playoff stacks. The three coverage dots show which weeks each roster is stacked. Sort by W15/W16/W17 to find the rosters that are heaviest or naked in a specific week.' },
 ];
 
 export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
@@ -506,13 +515,14 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
   }
 
   const toolbarControls = (
-    <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+    <div style={{ display: 'flex', width: '100%', minWidth: 0, alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <div className="filter-btn-group">
         {[
           { key: 'stacks', label: 'Stack Profiles' },
           { key: 'qbpairs', label: 'QB Pairs' },
           { key: 'similarity', label: 'Roster Similarity' },
-          { key: 'explorer', label: 'Draft Explorer', isNew: true },
+          { key: 'playoffs', label: 'Playoff Stacks', isNew: true },
+          { key: 'explorer', label: 'Draft Explorer' },
         ].map(t => (
           <button
             key={t.key}
@@ -551,7 +561,7 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
   );
 
   return (
-    <TabLayout toolbar={toolbarControls} helpAnnotations={activeTab === 'stacks' ? STACK_HELP_ANNOTATIONS : activeTab === 'qbpairs' ? QBPAIRS_HELP_ANNOTATIONS : activeTab === 'explorer' ? EXPLORER_HELP_ANNOTATIONS : SIMILARITY_HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
+    <TabLayout toolbar={toolbarControls} helpAnnotations={activeTab === 'stacks' ? STACK_HELP_ANNOTATIONS : activeTab === 'qbpairs' ? QBPAIRS_HELP_ANNOTATIONS : activeTab === 'explorer' ? EXPLORER_HELP_ANNOTATIONS : activeTab === 'playoffs' ? PLAYOFF_HELP_ANNOTATIONS : SIMILARITY_HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
 
       {/* ── Stack Profiles ─────────────────────────────────────────────────── */}
       {activeTab === 'stacks' && (
@@ -1092,6 +1102,16 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
           })()}
         </div>
         </>
+      )}
+
+      {/* ── Playoff Stacks ─────────────────────────────────────────────── */}
+      {activeTab === 'playoffs' && (
+        <PlayoffStacks
+          rosters={rosters}
+          totalRosters={totalRosters}
+          minCount={minCount}
+          onNavigateToRosters={onNavigateToRosters}
+        />
       )}
 
       {/* ── Draft Explorer ───────────────────────────────────────────────── */}

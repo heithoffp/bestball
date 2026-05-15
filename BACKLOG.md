@@ -9,6 +9,7 @@
 - TASK-226: Fix DK name-matching: strip generational suffixes in extension overlay
 - TASK-231: Gate extension overlay behind Pro subscription
 - TASK-233: Fix DK roster panel virtualization breaking correlation/stack on scroll
+- TASK-239: Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -49,6 +50,7 @@
 | TASK-230 | InstallPage VERSION constant should derive from latest.json (stop drifting every release) | Todo | P2 | [Plan](docs/plans/TASK-230.md) -- Draft | No |
 | TASK-231 | Gate extension overlay behind Pro subscription | In Progress | P2 | [Plan](docs/plans/TASK-231.md) | No |
 | TASK-233 | Fix DK roster panel virtualization breaking correlation/stack on scroll | In Progress | P2 | [Plan](docs/plans/TASK-233.md) | No |
+| TASK-239 | Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks) | In Progress | P2 | [Plan](docs/plans/TASK-239.md) | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No |
