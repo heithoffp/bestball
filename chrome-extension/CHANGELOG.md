@@ -2,6 +2,10 @@
 
 All notable changes to the BBE Chrome extension are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.11] - 2026-05-15
+
+- Playoff game-stack pill now labels itself with the actual playoff week(s) instead of the generic "PLAYOFFS" word. A candidate whose hits land in W15 shows `W15`; one with hits in W15 and W17 shows `W15/17`; etc. The count badge and the per-week hover popup are unchanged. Helps later in drafts when several candidates carry playoff correlations and disambiguating by week matters more than the count.
+
 ## [1.0.10] - 2026-05-14
 
 - Fix DK overlay correlation/stack disappearing when scrolling the roster panel (TASK-233). DK's roster panel is a virtualized react-base-table that only mounts visible rows, so reads via `getCurrentPicks()` returned a moving subset of the roster and `resolveCurrentPicks()` overwrote `currentPicks` with each scroll. Now the picks resolver accumulates observed picks into a per-draft registry keyed by canonical name and never shrinks the set during a draft. Round is read from `aria-rowindex` to preserve true draft round across observations. Registry resets on overlay teardown / SPA navigation off a draft page. Underdog flow unchanged (its picks panel is not virtualized).
