@@ -2,6 +2,11 @@
 
 All notable changes to the BBE Chrome extension are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0] - 2026-05-20
+
+- Playoff game-stack pill: W17 (championship week) now includes RB pairings on both sides (RB↔QB/WR/TE/RB) since any opposing-game correlation carries more weight in the final week. W15 and W16 keep the conservative filter (RB excluded; TE↔TE excluded).
+- Playoff pills are now per-week color-coded chips so the week is readable at a glance: W15 bronze, W16 silver, W17 gold. Candidates with hits across multiple playoff weeks collapse into a single red multi-week chip. The per-week hover popup gets matching header colors.
+
 ## [1.0.11] - 2026-05-15
 
 - Playoff game-stack pill now labels itself with the actual playoff week(s) instead of the generic "PLAYOFFS" word. A candidate whose hits land in W15 shows `W15`; one with hits in W15 and W17 shows `W15/17`; etc. The count badge and the per-week hover popup are unchanged. Helps later in drafts when several candidates carry playoff correlations and disambiguating by week matters more than the count.
