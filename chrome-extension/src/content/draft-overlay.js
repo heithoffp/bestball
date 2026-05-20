@@ -19,13 +19,24 @@ import playoffSchedule from '../data/playoff-schedule-2026.json';
 const PLAYOFF_WEEKS = ['15', '16', '17'];
 
 // Meaningful best-ball game-stack pairs (candidate pos -> rostered opposing positions).
-// RB intentionally absent (RBs are not game-stack assets in best ball); TE excludes TE
-// in its own value set so TE<->TE pairings never qualify.
-const MEANINGFUL_GAME_PAIRS = Object.freeze({
+// W15/W16 follow the conservative rule: RB excluded (not a game-stack asset in best ball),
+// TE excludes TE so TE<->TE pairings never qualify.
+// W17 is championship week and relaxes the filter to include RB on both sides, since any
+// opposing-game correlation matters more in the final week.
+const MEANINGFUL_GAME_PAIRS_DEFAULT = Object.freeze({
   QB: new Set(['QB', 'WR', 'TE']),
   WR: new Set(['QB', 'WR', 'TE']),
   TE: new Set(['QB', 'WR']),
 });
+const MEANINGFUL_GAME_PAIRS_W17 = Object.freeze({
+  QB: new Set(['QB', 'WR', 'TE', 'RB']),
+  WR: new Set(['QB', 'WR', 'TE', 'RB']),
+  TE: new Set(['QB', 'WR', 'RB']),
+  RB: new Set(['QB', 'WR', 'TE', 'RB']),
+});
+function pairsForWeek(week) {
+  return week === '17' ? MEANINGFUL_GAME_PAIRS_W17 : MEANINGFUL_GAME_PAIRS_DEFAULT;
+}
 
 const INJECTED_ATTR = 'data-bbm-injected';
 const PLAYER_ID_ATTR = 'data-bbm-player-id';
@@ -1059,13 +1070,13 @@ function analyzePlayoffStackOverlay(playerName) {
   const candidatePos = playerPositionMap.get(key);
   if (!candidateTeam || !candidatePos || currentPicks.length === 0) return null;
 
-  const qualifyingOpps = MEANINGFUL_GAME_PAIRS[candidatePos];
-  if (!qualifyingOpps) return null; // Candidate position not a game-stack asset (e.g. RB)
-
   const weeks = [];
   let count = 0;
 
   PLAYOFF_WEEKS.forEach(week => {
+    const qualifyingOpps = pairsForWeek(week)[candidatePos];
+    if (!qualifyingOpps) return; // Candidate position not eligible this week (e.g. RB outside W17)
+
     const opp = playoffSchedule[candidateTeam]?.[week];
     if (!opp) return; // bye or missing — silently skip
 
@@ -1132,8 +1143,13 @@ function applyPlayoffStackBadge(row, playerName) {
 
   const pill = document.createElement('span');
   pill.className = 'bbm-playoff-pill bbm-inline-overlay';
-  const weekLabel = info.weeks.map(w => w.week).join('/');
-  pill.innerHTML = `W${weekLabel}<span class="bbm-playoff-count">${info.count}</span>`;
+  if (info.weeks.length === 1) {
+    const w = info.weeks[0];
+    pill.innerHTML = `<span class="bbm-playoff-chip bbm-playoff-w${w.week}">W${w.week}<span class="bbm-playoff-chip-count">${w.entries.length}</span></span>`;
+  } else {
+    const weekLabel = info.weeks.map(w => w.week).join('/');
+    pill.innerHTML = `<span class="bbm-playoff-chip bbm-playoff-multi">W${weekLabel}<span class="bbm-playoff-chip-count">${info.count}</span></span>`;
+  }
   pill._playoffPayload = info;
   pill._playoffSig = sig;
   positionRow.appendChild(pill);
@@ -1155,7 +1171,7 @@ function buildPlayoffPopupHtml(payload) {
         <span class="bbm-corr-popup-name">${titleCase(e.name)}</span>
         <span class="bbm-playoff-popup-matchup">${e.team} @ ${e.opp}</span>
       </div>`).join('');
-    return `<div class="bbm-playoff-popup-week">Week ${group.week}</div>${rows}`;
+    return `<div class="bbm-playoff-popup-week bbm-playoff-w${group.week}">Week ${group.week}</div>${rows}`;
   }).join('');
   return `<div class="bbm-corr-popup-title">Playoff Game Stacks</div>${sections}`;
 }
@@ -1590,46 +1606,55 @@ function injectStyles() {
       opacity: 0.85;
     }
 
-    /* Playoff game-stack pill (TASK-232) — sibling of .bbm-stack-pill, teal accent
-       to differentiate from purple QB stack and amber WR stack. Interactive (hover
-       opens the shared correlation popup with playoff-grouped contents). */
+    /* Playoff game-stack pill (TASK-232) — container for per-week chips colored
+       bronze/silver/gold (W15/W16/W17) to differentiate weeks at a glance.
+       Interactive (hover opens the shared correlation popup with playoff-grouped
+       contents). */
     .bbm-playoff-pill {
-      display: inline-block;
+      display: inline-flex;
       vertical-align: middle;
+      align-items: center;
+      gap: 3px;
       margin-left: 4px;
+      line-height: 1.5;
+      white-space: nowrap;
+      cursor: default;
+    }
+    .bbm-playoff-chip {
+      display: inline-flex;
+      align-items: center;
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       padding: 1px 5px;
       border-radius: 20px;
-      border: 1px solid #06B6D4;
-      color: #06B6D4;
-      background: rgba(6, 182, 212, 0.10);
-      line-height: 1.5;
-      white-space: nowrap;
-      cursor: default;
-      opacity: 0.9;
+      border: 1px solid currentColor;
+      background: rgba(255, 255, 255, 0.04);
+      opacity: 0.95;
     }
-    .bbm-playoff-pill .bbm-playoff-count {
+    .bbm-playoff-chip-count {
       display: inline-block;
       margin-left: 4px;
-      min-width: 12px;
-      padding: 0 4px;
-      border-radius: 8px;
-      background: #06B6D4;
-      color: #0C1A30;
+      color: currentColor;
       font-weight: 800;
       text-align: center;
     }
+    /* W15 bronze, W16 silver, W17 gold for single-week chips and popup
+       section headers. Multi-week collapses to a single red pill (so the
+       red signals "spans multiple playoff weeks" at a glance). */
+    .bbm-playoff-w15 { color: #CD7F32; }
+    .bbm-playoff-w16 { color: #C9CED6; }
+    .bbm-playoff-w17 { color: #FFD700; }
+    .bbm-playoff-multi { color: #EF4444; }
+
     .bbm-playoff-popup-week {
       margin-top: 8px;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #06B6D4;
-      opacity: 0.9;
+      opacity: 0.95;
     }
     .bbm-playoff-popup-week:first-child {
       margin-top: 4px;
