@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BBE Admin Scraper</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>BBE Admin Scraper</h1>
+    <p class="dev-only">Developer-only · ADR-008</p>
+
+    <div id="disabled-banner" class="banner hidden">
+      <strong>Auth failed.</strong>
+      <span id="disabled-reason"></span>
+      <button id="reenable-btn">Re-enable</button>
+    </div>
+
+    <section>
+      <div class="row"><span class="label">UD token:</span> <span id="token-state">…</span></div>
+      <div class="row"><span class="label">Supabase:</span> <span id="supabase-state">…</span></div>
+      <div class="row"><span class="label">Boards cached:</span> <span id="cached-count">…</span></div>
+      <div class="row"><span class="label">Last run:</span> <span id="last-run">never</span></div>
+    </section>
+
+    <button id="run-btn">Run now</button>
+
+    <div id="status" class="status"></div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

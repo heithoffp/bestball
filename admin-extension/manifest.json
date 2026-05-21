@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "BBE Admin — Draft Board Scraper (Developer Only)",
+  "version": "0.1.0",
+  "description": "Internal developer tool. Not for distribution. Implements TASK-241 / ADR-008.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://app.underdogfantasy.com/*",
+    "https://api.underdogfantasy.com/*",
+    "https://app.underdogsports.com/*",
+    "https://api.underdogsports.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://app.underdogfantasy.com/*",
+        "https://app.underdogsports.com/*"
+      ],
+      "js": ["src/injected/ud-token-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://app.underdogfantasy.com/*",
+        "https://app.underdogsports.com/*"
+      ],
+      "js": ["src/content/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "BBE Admin Scraper"
+  }
+}

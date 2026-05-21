@@ -9,3 +9,4 @@
 | [ADR-005](adr-005-self-host-the-chrome-extension-with-browser-detecting.md) | Self-host the Chrome extension with browser-detecting install flow | Accepted | 2026-05-08 |
 | [ADR-006](adr-006-use-unlisted-self-distribution-signing-for-the-firefox.md) | Use unlisted self-distribution signing for the Firefox extension | Accepted | 2026-05-08 |
 | [ADR-007](adr-007-chromium-distribution-zip-load-unpacked-with-extension.md) | Chromium distribution: ZIP + load-unpacked, with extension-driven update notifications | Accepted | 2026-05-08 |
+| [ADR-008](adr-008-admin-side-ud-scraping-pipeline-for-draft-board-backfill.md) | Admin-side UD scraping pipeline for draft-board backfill | Accepted | 2026-05-21 |

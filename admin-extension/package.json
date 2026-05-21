@@ -1,0 +1,21 @@
+{
+  "name": "bbe-admin-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Developer-only admin tool. Not for distribution. Implements TASK-241 / ADR-008.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint src --max-warnings=0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.3"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.30",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.0.0",
+    "vite": "^6.0.0"
+  }
+}
