@@ -10,6 +10,7 @@
 - TASK-231: Gate extension overlay behind Pro subscription
 - TASK-233: Fix DK roster panel virtualization breaking correlation/stack on scroll
 - TASK-239: Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks)
+- TASK-241: Admin draft-board scraper — periodic UD fetch by draft_id
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -76,6 +77,11 @@
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P3 | [Plan](docs/plans/TASK-209.md) -- Draft | No |
 | TASK-220 | Fix release script changelog-gate flow (placeholder vs pre-flight order) | Todo | P3 | [Plan](docs/plans/TASK-220.md) -- Draft | No |
 | TASK-225 | Release artifact smoke test before tagging extension versions | Todo | P3 | [Plan](docs/plans/TASK-225.md) -- Draft | No |
+| TASK-240 | Roster Viewer — full Draft Board view (Underdog) | Todo | P3 | [Plan](docs/plans/TASK-240.md) -- Pending Approval | No |
+| TASK-241 | Admin draft-board scraper — periodic UD fetch by draft_id | In Progress | P3 | [Plan](docs/plans/TASK-241.md) | No |
+| TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Todo | P3 | [Plan](docs/plans/TASK-242.md) -- Draft | No |
+| TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available | Todo | P3 | [Plan](docs/plans/TASK-243.md) -- Draft | No |
+| TASK-244 | Admin scraper — scheduled background runs via chrome.alarms | Todo | P3 | [Plan](docs/plans/TASK-244.md) -- Draft | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No |
@@ -87,6 +93,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-245 | Draft Assistant — port Tournament Filter and Playoff Stacks from extension | Done | P2 | [Plan](docs/archive/plans/TASK-245.md) | Yes | 2026-05-21 |
 | TASK-232 | Playoff week (15/16/17) correlation pills in extension overlay | Done | P2 | [Plan](docs/archive/plans/TASK-232.md) | No | 2026-05-11 |
 | TASK-229 | Clean up superseded extension artifacts in public/extension/ | Done | P3 | [Plan](docs/archive/plans/TASK-229.md) | No | 2026-05-10 |
 | TASK-228 | Fix Firefox auto-update routing — manifest update_url points at /updates.json but file lives at /extension/updates.json | Done | P2 | [Plan](docs/archive/plans/TASK-228.md) | No | 2026-05-10 |

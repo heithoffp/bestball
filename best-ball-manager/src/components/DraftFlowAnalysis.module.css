@@ -419,6 +419,135 @@
   line-height: 1.2;
 }
 
+/* === Tournament filter (TASK-245) === */
+.tournamentFilterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 8px;
+}
+
+/* === Playoff stack pill (TASK-245) === */
+.playoffPill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1px solid currentColor;
+  line-height: 1.4;
+  flex-shrink: 0;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.playoffPillW15 { color: #38bdf8; background: rgba(56, 189, 248, 0.12); }
+.playoffPillW16 { color: #a78bfa; background: rgba(167, 139, 250, 0.12); }
+.playoffPillW17 { color: #facc15; background: rgba(250, 204, 21, 0.15); }
+.playoffPillMulti { color: #fb923c; background: rgba(251, 146, 60, 0.15); }
+
+.playoffPillCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 15px;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(15, 23, 42, 0.55);
+  color: #f8fafc;
+  border: 1px solid currentColor;
+}
+
+/* Fixed-position popup — pill lives inside .playerIdentity which has
+   overflow:hidden, so an absolutely-positioned child would be clipped.
+   PlayoffStackPill computes coords from the pill's getBoundingClientRect. */
+.playoffPopupFixed {
+  position: fixed;
+  z-index: 9999;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 8px 10px;
+  background: var(--surface-3, #1e293b);
+  border: 1px solid var(--border-default, #334155);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-primary, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.playoffPopupTitle {
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #94a3b8);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle, #334155);
+}
+
+.playoffPopupSection {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.playoffPopupWeek {
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.playoffPopupRow {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.playoffPopupPos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 9px;
+  color: #0f172a;
+  border-radius: 3px;
+  padding: 1px 2px;
+  text-transform: uppercase;
+}
+
+.playoffPopupName {
+  font-weight: 600;
+  color: var(--text-primary, #e2e8f0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playoffPopupMatchup {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+}
+
 .teamCol {
   width: 200px;
   text-align: center;
@@ -527,6 +656,17 @@
 }
 
 .corrTrigger:hover .corrPopup {
+  display: block;
+}
+
+/* Hovering the correlation stat cell itself reveals the roster-overlap popup
+   (TASK-245 follow-up — replaces the separate "{N} picks" trigger button). */
+.statCellHasPopup {
+  position: relative;
+  cursor: help;
+}
+
+.statCellHasPopup:hover .corrPopup {
   display: block;
 }
 

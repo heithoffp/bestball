@@ -1,16 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Target, Zap, Users, GitBranch, Link as LinkIcon, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Target, Zap, Users, GitBranch, Lock, AlertTriangle, TrendingUp, Shield, Anchor, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../utils/rosterArchetypes';
 import { analyzeStack } from '../utils/stackAnalysis';
+import { analyzeCandidatePlayoffStack } from '../utils/playoffStacks';
+import playoffSchedule from '../data/playoff-schedule-2026.json';
 import useMediaQuery from '../hooks/useMediaQuery';
 import styles from './DraftFlowAnalysis.module.css';
 import { SearchInput } from './filters';
+import TournamentMultiSelect from './TournamentMultiSelect';
 import { trackEvent } from '../utils/analytics';
 import TabLayout from './TabLayout';
 
 const HELP_ANNOTATIONS = [
   { id: 'draft-slot', label: 'Draft Slot', description: 'Set your draft position (1–12) to align the player window with your snake pick.' },
   { id: 'draft-board', label: 'Draft Board', description: 'Your picks so far. Undo or clear to explore different draft paths.' },
+  { id: 'tournament-filter', label: 'Tournament Filter', description: 'Scope exposure, correlation, and avg-pick stats to a subset of your slates and tournaments. Empty selection = all tournaments.' },
   { id: 'player-search', label: 'Player Search', description: 'Search any player by name — bypasses the ADP window to find anyone in the player pool.' },
   { id: 'column-headers', label: 'Player Columns', description: 'ADP = consensus draft position. Avg = your historical pick. Correlation = co-occurrence with your picks. Global = portfolio-wide ownership %.' },
   { id: 'player-list', label: 'Available Players', description: 'Players in the ADP window for this pick. Click a row to draft that player.', anchor: 'above' },
@@ -129,6 +134,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTournaments, setSelectedTournaments] = useState([]);
   const playerListRef = useRef(null);
   const adpDividerRef = useRef(null);
 
@@ -158,18 +164,62 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
     return () => clearTimeout(timer);
   }, [draftToast]);
 
+  // --- 1a. TOURNAMENT FILTER — slate groups + filtered rosterData ---
+  // Mirrors ComboAnalysis pattern so users get a consistent control across tabs.
+  const slateGroups = useMemo(() => {
+    const isPreDraftTournament = (slateTitle, tournamentTitle) => {
+      const slate = (slateTitle || '').toLowerCase();
+      const tourn = (tournamentTitle || '').toLowerCase();
+      if (slate.includes('pre-draft') || slate.includes('predraft')) return true;
+      if (tourn.includes('early bird')) return true;
+      return false;
+    };
+
+    const slateToTournaments = new Map();
+    (Array.isArray(rosterData) ? rosterData : []).forEach(p => {
+      if (!p || !p.tournamentTitle) return;
+      const slate = p.slateTitle || 'Other';
+      if (!slateToTournaments.has(slate)) slateToTournaments.set(slate, new Map());
+      const tournMap = slateToTournaments.get(slate);
+      if (!tournMap.has(p.tournamentTitle)) {
+        tournMap.set(p.tournamentTitle, isPreDraftTournament(p.slateTitle, p.tournamentTitle) ? 'pre' : 'post');
+      }
+    });
+
+    return [...slateToTournaments.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([slate, tournMap]) => {
+        const tournaments = [...tournMap.keys()].sort();
+        const statuses = new Set(tournMap.values());
+        const slateStatus = statuses.size === 1 ? [...statuses][0] : 'mixed';
+        return { slate, tournaments, slateStatus, tournamentStatuses: Object.fromEntries(tournMap) };
+      });
+  }, [rosterData]);
+
+  const hasTournamentMetadata = slateGroups.length > 0;
+
+  const filteredRosterData = useMemo(() => {
+    if (selectedTournaments.length === 0) return rosterData;
+    const set = new Set(selectedTournaments);
+    if (Array.isArray(rosterData) && rosterData.length > 0 && Array.isArray(rosterData[0])) {
+      // rosterData is already grouped — filter per-roster by the first pick's tournament.
+      return rosterData.filter(roster => roster[0] && set.has(roster[0].tournamentTitle));
+    }
+    return (rosterData || []).filter(p => set.has(p.tournamentTitle));
+  }, [rosterData, selectedTournaments]);
+
   // --- 1. DATA TRANSFORMATION ---
   const allRosters = useMemo(() => {
-    if (rosterData.length > 0 && Array.isArray(rosterData[0])) return rosterData;
+    if (filteredRosterData.length > 0 && Array.isArray(filteredRosterData[0])) return filteredRosterData;
 
     const tMap = new Map();
-    rosterData.forEach(p => {
+    filteredRosterData.forEach(p => {
       const id = p.entry_id || p.entryId || p['Entry ID'] || 'unknown';
       if (!tMap.has(id)) tMap.set(id, []);
       tMap.get(id).push(p);
     });
     return Array.from(tMap.values());
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   // --- 2. PLAYER INDEX MAP (from V1) ---
   const playerIndexMap = useMemo(() => {
@@ -263,9 +313,13 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
   }, [currentPicks, currentRound, allRosters]);
 
   // --- 7. MY AVG PICK MAP ---
+  // Uses filtered rosterData so the "Avg" column matches the selected tournament subset.
   const myAvgPickMap = useMemo(() => {
     const buckets = new Map();
-    rosterData.forEach(p => {
+    const source = Array.isArray(filteredRosterData) && filteredRosterData.length > 0 && Array.isArray(filteredRosterData[0])
+      ? filteredRosterData.flat()
+      : (filteredRosterData || []);
+    source.forEach(p => {
       const pick = Number(p.pick);
       if (!p.name || !Number.isFinite(pick)) return;
       if (!buckets.has(p.name)) buckets.set(p.name, []);
@@ -276,7 +330,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
       result.set(name, picks.reduce((a, b) => a + b, 0) / picks.length);
     });
     return result;
-  }, [rosterData]);
+  }, [filteredRosterData]);
 
   // --- 8. CANDIDATE PLAYERS (FULL V1 LOGIC) ---
   const parseRoundNum = (r) => {
@@ -469,6 +523,13 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
 
       const isFallingKnife = adpDelta != null && adpTrend != null && adpDelta < -5 && adpTrend > 3;
 
+      const playoffStack = analyzeCandidatePlayoffStack({
+        candidateTeam: candidate.team,
+        candidatePos: candidate.position,
+        currentPicks,
+        schedule: playoffSchedule,
+      });
+
       return {
         ...candidate,
         portfolioExposure: pathPercent,
@@ -481,7 +542,8 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
         myAvgPick,
         adpDelta,
         adpTrend,
-        isFallingKnife
+        isFallingKnife,
+        playoffStack,
       };
     });
 
@@ -580,6 +642,13 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
         const adpTrend = hist.length >= 2 ? hist[hist.length - 1].adpPick - hist[0].adpPick : null;
         const isFallingKnife = adpDelta != null && adpTrend != null && adpDelta < -5 && adpTrend > 3;
 
+        const playoffStack = analyzeCandidatePlayoffStack({
+          candidateTeam: mp.team,
+          candidatePos: mp.position,
+          currentPicks,
+          schedule: playoffSchedule,
+        });
+
         return {
           ...mp,
           _sortAdp: adp,
@@ -595,6 +664,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
           adpDelta,
           adpTrend,
           isFallingKnife,
+          playoffStack,
         };
       });
 
@@ -780,6 +850,15 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
           </div>
         )}
       </div>
+      {hasTournamentMetadata && (
+        <div className={styles.tournamentFilterRow} data-help-id="tournament-filter">
+          <TournamentMultiSelect
+            slateGroups={slateGroups}
+            selected={selectedTournaments}
+            onChange={setSelectedTournaments}
+          />
+        </div>
+      )}
       <div data-help-id="player-search">
         <SearchInput
           value={searchQuery}
@@ -819,6 +898,12 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
 
   const renderPlayerList = () => (
     <div ref={playerListRef} className={`${styles.playerList} ${styles.scrollArea}`} data-help-id="player-list">
+      {selectedTournaments.length > 0 && allRosters.length === 0 && (
+        <div className={styles.playerListEmpty}>
+          No rosters match the selected tournaments.<br/>
+          <span className={styles.playerListEmptySub}>Clear the filter to restore portfolio aggregates.</span>
+        </div>
+      )}
       {displayPlayers.length === 0 ? (
         <div className={styles.playerListEmpty}>
           {searchQuery.trim() ? (
@@ -919,6 +1004,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
 function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile = false, isExpanded = false, onToggleBreakdown }) {
     const color = getPosColor(player.position);
     const stackInfo = analyzeStack(player, currentPicks);
+    const playoffStack = player.playoffStack || null;
 
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
@@ -972,6 +1058,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
                 {stackInfo.type}
               </span>
             )}
+            {playoffStack && <PlayoffStackPill payload={playoffStack} />}
             {isFallingKnife && (
               <span className={styles.adpRisingBadge}>
                 <TrendingUp size={11} /> ADP Rising
@@ -1079,6 +1166,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
                 {stackInfo.type}
               </span>
             )}
+            {playoffStack && <PlayoffStackPill payload={playoffStack} />}
             {isFallingKnife && (
               <div className={styles.adpRisingBadge}>
                 <TrendingUp size={11} /> ADP Rising
@@ -1115,7 +1203,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
 
           {/* Stats row */}
           <div className={styles.statsRow}>
-            <div className={`${styles.statCell} ${styles.colCorrelation}`}>
+            <div className={`${styles.statCell} ${styles.colCorrelation} ${sorted.length > 0 ? styles.statCellHasPopup : ''}`}>
               <div className={styles.statValueRow}>
                 <span className={styles.statValue} style={{ color: corrColor }}>
                   {currentPicks.length > 0 ? Math.round(corr) + '%' : '—'}
@@ -1124,6 +1212,32 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
                   {corr < 5 && currentPicks.length > 0 ? 'unq' : currentPicks.length > 0 ? 'com' : ''}
                 </span>
               </div>
+              {sorted.length > 0 && (
+                <div className={styles.corrPopup} onClick={e => e.stopPropagation()}>
+                  <div className={styles.corrPopupTitle}>Roster Overlap ({sorted.length} pick{sorted.length === 1 ? '' : 's'})</div>
+                  {sorted.map((entry, i) => {
+                    const pct = entry.pGivenPick * 100;
+                    const barColor = getBarColor(pct);
+                    const posColor = getPosColor(entry.position);
+                    return (
+                      <div key={entry.name + '-' + i} className={styles.corrPopupRow}>
+                        <span className={styles.corrPopupPos} style={{ background: posColor }}>
+                          {entry.position}
+                        </span>
+                        <span className={styles.corrPopupName}>
+                          {lastName(entry.name)}
+                        </span>
+                        <div className={styles.corrPopupBar}>
+                          <div className={styles.corrPopupBarFill} style={{ width: `${Math.min(pct, 100)}%`, background: barColor }} />
+                        </div>
+                        <span className={styles.corrPopupPct} style={{ color: barColor }}>
+                          {Math.round(pct)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className={`${styles.statCell} ${styles.statCellBorder} ${styles.colGlobalExp}`}>
@@ -1136,41 +1250,84 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
             </div>
           </div>
 
-          {/* Correlation Breakdown — hover popout (desktop only) */}
-          {sorted.length > 0 && (
-            <div className={styles.corrTrigger}>
-              <div className={styles.corrTriggerBtn} onClick={e => e.stopPropagation()}>
-                <LinkIcon size={12} color={corrColor} />
-                <span>{sorted.length} picks</span>
-              </div>
-
-              <div className={styles.corrPopup} onClick={e => e.stopPropagation()}>
-                <div className={styles.corrPopupTitle}>Roster Overlap</div>
-                {sorted.map((entry, i) => {
-                  const pct = entry.pGivenPick * 100;
-                  const barColor = getBarColor(pct);
-                  const posColor = getPosColor(entry.position);
-                  return (
-                    <div key={entry.name + '-' + i} className={styles.corrPopupRow}>
-                      <span className={styles.corrPopupPos} style={{ background: posColor }}>
-                        {entry.position}
-                      </span>
-                      <span className={styles.corrPopupName}>
-                        {lastName(entry.name)}
-                      </span>
-                      <div className={styles.corrPopupBar}>
-                        <div className={styles.corrPopupBarFill} style={{ width: `${Math.min(pct, 100)}%`, background: barColor }} />
-                      </div>
-                      <span className={styles.corrPopupPct} style={{ color: barColor }}>
-                        {Math.round(pct)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
+}
+
+// --- PLAYOFF STACK PILL ---
+// Mirrors the inline pill the extension injects after the standard stack pill
+// (chrome-extension/src/content/draft-overlay.js — TASK-232). Shows the
+// qualifying W15/16/17 opponent overlaps for a candidate, with a hover popup
+// listing the rostered picks grouped by week.
+//
+// Uses fixed positioning + JS hover state because the pill renders inside
+// `.playerIdentity` which has `overflow: hidden` (for name ellipsis) — a
+// CSS-only absolutely-positioned popup would be clipped.
+function PlayoffStackPill({ payload }) {
+  const pillRef = useRef(null);
+  const [coords, setCoords] = useState(null);
+
+  const showPopup = () => {
+    if (!pillRef.current) return;
+    const rect = pillRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 6, left: rect.left });
+  };
+  const hidePopup = () => setCoords(null);
+
+  if (!payload || !payload.weeks || payload.weeks.length === 0) return null;
+
+  const isMulti = payload.weeks.length > 1;
+  const isW17Only = !isMulti && payload.weeks[0].week === '17';
+  const label = isMulti
+    ? `W${payload.weeks.map(w => w.week).join('/')}`
+    : `W${payload.weeks[0].week}`;
+
+  const pillClass = isMulti
+    ? styles.playoffPillMulti
+    : isW17Only
+      ? styles.playoffPillW17
+      : payload.weeks[0].week === '16'
+        ? styles.playoffPillW16
+        : styles.playoffPillW15;
+
+  return (
+    <>
+      <span
+        ref={pillRef}
+        className={`${styles.playoffPill} ${pillClass}`}
+        onClick={e => e.stopPropagation()}
+        onMouseEnter={showPopup}
+        onMouseLeave={hidePopup}
+      >
+        {label}
+        <span className={styles.playoffPillCount}>{payload.count}</span>
+      </span>
+      {coords && createPortal(
+        <div
+          className={styles.playoffPopupFixed}
+          style={{ top: coords.top, left: coords.left }}
+          onMouseEnter={showPopup}
+          onMouseLeave={hidePopup}
+        >
+          <div className={styles.playoffPopupTitle}>Playoff Game Stacks</div>
+          {payload.weeks.map(group => (
+            <div key={group.week} className={styles.playoffPopupSection}>
+              <div className={styles.playoffPopupWeek}>Week {group.week}</div>
+              {group.entries.map((e, i) => (
+                <div key={`${group.week}-${i}`} className={styles.playoffPopupRow}>
+                  <span className={styles.playoffPopupPos} style={{ background: getPosColor(e.position) }}>
+                    {e.position}
+                  </span>
+                  <span className={styles.playoffPopupName}>{e.name}</span>
+                  <span className={styles.playoffPopupMatchup}>{e.team} @ {e.opp}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
 }

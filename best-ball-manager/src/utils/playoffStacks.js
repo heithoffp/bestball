@@ -235,6 +235,73 @@ export function aggregateByTeam(aggregate, schedule) {
 //   perWeek: { '15': [...], '16': [...], '17': [...] },  // raw games per week
 //   counts: { 15, 16, 17, total, weeksCovered },
 // }>
+// Candidate-side game-stack analysis for the live Draft Assistant (TASK-245).
+// Asymmetric: given a candidate (team + position) and the user's current picks,
+// returns the qualifying opponent overlaps in W15/16/17. Mirrors the extension's
+// MEANINGFUL_GAME_PAIRS rule from draft-overlay.js — W17 (championship week) is
+// the only week that admits RB on either side.
+//
+// Returns null when there is no overlap; otherwise:
+//   { count, weeks: [{ week, entries: [{ name, position, team, opp }] }] }
+const CANDIDATE_PAIRS_DEFAULT = Object.freeze({
+  QB: new Set(['QB', 'WR', 'TE']),
+  WR: new Set(['QB', 'WR', 'TE']),
+  TE: new Set(['QB', 'WR']),
+});
+const CANDIDATE_PAIRS_W17 = Object.freeze({
+  QB: new Set(['QB', 'WR', 'TE', 'RB']),
+  WR: new Set(['QB', 'WR', 'TE', 'RB']),
+  TE: new Set(['QB', 'WR', 'RB']),
+  RB: new Set(['QB', 'WR', 'TE', 'RB']),
+});
+
+function candidatePairsForWeek(week) {
+  return week === '17' ? CANDIDATE_PAIRS_W17 : CANDIDATE_PAIRS_DEFAULT;
+}
+
+export function analyzeCandidatePlayoffStack({ candidateTeam, candidatePos, currentPicks, schedule }) {
+  const team = teamToAbbr(candidateTeam);
+  if (!team || !candidatePos || !currentPicks || currentPicks.length === 0) return null;
+
+  const weeks = [];
+  let count = 0;
+
+  for (const week of PLAYOFF_WEEKS) {
+    const qualifyingOpps = candidatePairsForWeek(week)[candidatePos];
+    if (!qualifyingOpps) continue;
+
+    const opp = schedule[team]?.[week];
+    if (!opp) continue;
+
+    const entries = [];
+    for (const pick of currentPicks) {
+      const pickTeam = teamToAbbr(pick.team);
+      const pickPos = pick.position;
+      if (!pickTeam || !pickPos) continue;
+      if (pickTeam === team) continue; // same-team — covered by standard stack pill
+      if (pickTeam !== opp) continue;
+      const pickOpp = schedule[pickTeam]?.[week];
+      if (pickOpp && pickOpp !== team) continue;
+      if (!qualifyingOpps.has(pickPos)) continue;
+
+      entries.push({
+        name: pick.name,
+        position: pickPos,
+        team: pickTeam,
+        opp: team,
+      });
+    }
+
+    if (entries.length > 0) {
+      weeks.push({ week, entries });
+      count += entries.length;
+    }
+  }
+
+  if (count === 0) return null;
+  return { count, weeks };
+}
+
 export function aggregatePerRoster(rosters, schedule) {
   return rosters.map((roster, idx) => {
     const entryId = roster[0]?.entry_id || `roster-${idx}`;
