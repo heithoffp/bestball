@@ -59,8 +59,9 @@ The "real" target price is the promo price. The nominal price exists to create p
 | Code Type | Discount | Duration | Example | Use Case |
 |-----------|----------|----------|---------|----------|
 | Creator affiliate | 25% off | Forever (all renewals) | `RYAN25`, `CIELY25` | YouTube/podcast creator partnerships |
-| Beta conversion | 25% off | Forever | `BETA25` | Expired beta users converting to paid |
 | Launch promo | 25% off | First payment only | `LAUNCH25` | Launch week promotion |
+
+> **Retired:** `BETA25` (25% off forever, for expired beta users converting to paid) was deactivated in Stripe after the beta conversion window closed. Kept here as historical context only.
 
 ### Stripe Configuration Required
 Each promo code needs:

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Clock, AlertTriangle } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import styles from './BetaBanner.module.css';
 
@@ -7,7 +7,6 @@ export default function BetaBanner() {
   const {
     tier,
     isBetaActive,
-    isBetaExpired,
     betaDaysRemaining,
     openPlanPicker,
     subscription,
@@ -29,24 +28,6 @@ export default function BetaBanner() {
         </span>
         <button className={styles.action} onClick={() => openPlanPicker()}>
           Subscribe
-        </button>
-        <button className={styles.dismiss} onClick={() => setDismissed(true)} aria-label="Dismiss">
-          <X size={14} />
-        </button>
-      </div>
-    );
-  }
-
-  // Conversion mode: beta expired, user is free tier
-  if (isBetaExpired && tier === 'free') {
-    return (
-      <div className={`${styles.banner} ${styles.warning}`}>
-        <AlertTriangle size={16} />
-        <span>
-          Your beta access has ended. Use code <strong>BETA25</strong> for 25% off when you subscribe.
-        </span>
-        <button className={styles.action} onClick={() => openPlanPicker('BETA25')}>
-          Subscribe Now
         </button>
         <button className={styles.dismiss} onClick={() => setDismissed(true)} aria-label="Dismiss">
           <X size={14} />

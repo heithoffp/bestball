@@ -369,10 +369,8 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
           {/* Pro tier */}
           <div className={styles.pricingCardPro}>
             <div className={styles.proGlow} aria-hidden="true" />
-            <div className={styles.pricingPopular}>★ 25% off with code BETA25 — through May 18</div>
             <div className={styles.pricingTier}>Pro</div>
             <div className={styles.pricingPrice}>$20 <span>/ month</span></div>
-            <p className={styles.pricingPromo}>$15/mo with code BETA25 (25% off)</p>
             <ul className={styles.pricingFeatures}>
               {PRO_FEATURES.map((f, i) => (
                 <li key={f} className={i === 0 ? styles.featuresHeading : ''}>
