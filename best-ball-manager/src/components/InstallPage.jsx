@@ -4,7 +4,7 @@ import { detectBrowser } from '../utils/browserDetect';
 import BrandLogo from './BrandLogo';
 import styles from './InstallPage.module.css';
 
-const VERSION = '1.1.0';
+const VERSION = '1.1.1';
 const ZIP_HREF = `/extension/bestballexposures-extension-${VERSION}.zip`;
 const XPI_HREF = `/extension/bestballexposures-extension-${VERSION}.xpi`;
 
