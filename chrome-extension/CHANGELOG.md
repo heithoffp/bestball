@@ -2,14 +2,21 @@
 
 All notable changes to the BBE Chrome extension are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+
+## [1.1.1] - 2026-05-22
+
+- Fix DK overlay returning 0% exposure for abbreviated player names that share both position and team. When a portfolio contained two players sharing the same first initial, last name, position, and NFL team (e.g., Bijan Robinson and Brian Robinson Jr., both RB ATL after Brian's 2026 offseason move to the Falcons), the name resolver could not disambiguate and returned null, hiding all exposure stats for both players. The resolver now adds an ADP-proximity tiebreak: when position + team narrowing leaves multiple candidates and the row exposes an ADP value, it picks the candidate whose median portfolio pick is closest to the row's displayed ADP. DK adapter row reads ADP via a three-strategy fallback (`data-key` attribute → header-column-index match → last `NumberCell`), since react-base-table does not reliably put `data-key` on body cells. Underdog flow unchanged.
+
 ## [1.1.0] - 2026-05-20
 
 - Playoff game-stack pill: W17 (championship week) now includes RB pairings on both sides (RB↔QB/WR/TE/RB) since any opposing-game correlation carries more weight in the final week. W15 and W16 keep the conservative filter (RB excluded; TE↔TE excluded).
 - Playoff pills are now per-week color-coded chips so the week is readable at a glance: W15 bronze, W16 silver, W17 gold. Candidates with hits across multiple playoff weeks collapse into a single red multi-week chip. The per-week hover popup gets matching header colors.
 
+
 ## [1.0.11] - 2026-05-15
 
 - Playoff game-stack pill now labels itself with the actual playoff week(s) instead of the generic "PLAYOFFS" word. A candidate whose hits land in W15 shows `W15`; one with hits in W15 and W17 shows `W15/17`; etc. The count badge and the per-week hover popup are unchanged. Helps later in drafts when several candidates carry playoff correlations and disambiguating by week matters more than the count.
+
 
 ## [1.0.10] - 2026-05-14
 
@@ -21,14 +28,17 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 - Added playoff-week (W15-17) game-stack correlation pill on candidate rows (TASK-232). Pill renders when the candidate shares an NFL playoff-week game with one of the user's already-rostered players, restricted to meaningful best-ball position pairs (QB↔QB/WR/TE, WR↔QB/WR/TE, TE↔QB/WR — RB and TE↔TE excluded). Hover shows a per-week (W15/W16/W17) breakdown of correlated rostered players.
 - Replaced placeholder 2026 playoff-week schedule JSON with the real NFL W15/16/17 matchups published 2026-05-14.
 
+
 ## [1.0.9] - 2026-05-10
 
 - Fix Firefox content-script auth + portfolio load: bypass supabase's default `navigator.locks`-based token-refresh lock with a no-op lock function. In Firefox content scripts, `navigator` is Xray-wrapped from the page compartment and `navigator.locks.request(...)` returns a privileged-compartment Promise the content sandbox cannot `.then` on, throwing "Permission denied to access property 'then'" on every `supabase.auth.getSession()` / `supabase.from(...)` call. Each tab has its own client and there's no concurrent refresh to serialize, so a no-op lock is safe.
+
 
 ## [1.0.8] - 2026-05-10
 
 - Fix Firefox Google sign-in from the FAB auth panel: wrap `chrome.runtime.sendMessage({ type: 'GOOGLE_OAUTH' })` in a sandbox-owned Promise via the callback form. v1.0.6 covered `chrome.storage.*` but missed this one chrome.* await in `signInWithGoogle`, so the Google button silently failed in Firefox with "Permission denied to access property 'then'". Email/password sign-in was already working post-1.0.6.
 - Sync popup version string to manifest (was still showing v1.0.6).
+
 
 ## [1.0.7] - 2026-05-10
 
@@ -37,15 +47,18 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 - Live-overlay abbreviation map: build and lookup both route through `canonicalName`, fixing 0% exposure on last names with embedded periods (e.g. Amon-Ra St. Brown).
 - Existing already-synced rosters keep their abbreviated names until the user re-syncs; no auto-backfill.
 
+
 ## [1.0.6] - 2026-05-09
 
 - Fix Firefox content-script auth panel: switch `chrome.storage.local` calls used in content-script context (Supabase auth storage adapter, post-sync writes) to callback form so Firefox's Xray vision doesn't block `.then` access on cross-compartment Promises.
 - Bump `browser_specific_settings.gecko.strict_min_version` to `128.0` (required for `world: "MAIN"` content scripts).
 - Sync popup version string to manifest.
 
+
 ## [1.0.5] - 2026-05-08
 
 - Add Chromium self-hosted auto-update via top-level `update_url` (TASK-213). Resolves Edge "unknown source" install warning that grayed out the enable toggle when dragging a self-hosted `.crx` onto `edge://extensions`.
+
 
 ## [1.0.4] - 2026-05-08
 
