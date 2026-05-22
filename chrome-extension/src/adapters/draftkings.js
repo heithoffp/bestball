@@ -30,6 +30,61 @@ function deriveDkSlate(contestName) {
 }
 
 /**
+ * Read the ADP value from a DK player row. react-base-table doesn't reliably
+ * put data-key on body cells, so we try several strategies in order:
+ *   1) Direct [data-key="averageDraftPosition"] on the row.
+ *   2) Header-position match: find the header's averageDraftPosition column
+ *      index, then read the body gridcell at the same index.
+ *   3) Last `.NumberCell_number-cell` in the row (ADP is the rightmost stat
+ *      column on the DK board).
+ *
+ * Logs the first successful strategy once per session for diagnosis.
+ *
+ * @param {Element} row
+ * @returns {number|null}
+ */
+let dkAdpStrategyLogged = false;
+function readDkRowAdp(row) {
+  const parseCell = (el, strategy) => {
+    if (!el) return null;
+    const text = el.textContent?.trim() ?? '';
+    const num = Number.parseFloat(text);
+    if (!Number.isFinite(num)) return null;
+    if (!dkAdpStrategyLogged) {
+      dkAdpStrategyLogged = true;
+      console.debug(`[BBM] DK ADP read via strategy: ${strategy}, value=${num}`);
+    }
+    return num;
+  };
+
+  // Strategy 1: data-key on row cell
+  const direct = row.querySelector('[data-key="averageDraftPosition"]');
+  const v1 = parseCell(direct, 'data-key');
+  if (v1 !== null) return v1;
+
+  // Strategy 2: header column index → same index in row
+  const headerCell = document.querySelector('.BaseTable__header-cell[data-key="averageDraftPosition"]');
+  if (headerCell) {
+    const headerRow = headerCell.closest('[role="row"]');
+    const headerCells = headerRow ? [...headerRow.querySelectorAll('[role="columnheader"], [role="gridcell"], .BaseTable__header-cell')] : [];
+    const idx = headerCells.indexOf(headerCell);
+    if (idx >= 0) {
+      const bodyCells = [...row.querySelectorAll('[role="gridcell"], .BaseTable__row-cell')];
+      const v2 = parseCell(bodyCells[idx], 'header-index');
+      if (v2 !== null) return v2;
+    }
+  }
+
+  // Strategy 3: last NumberCell in the row
+  const numberCells = row.querySelectorAll('.NumberCell_number-cell');
+  const last = numberCells[numberCells.length - 1];
+  const v3 = parseCell(last, 'last-numbercell');
+  if (v3 !== null) return v3;
+
+  return null;
+}
+
+/**
  * Parse the /contest/mycontests HTML page to extract contest-entry mappings.
  * The page embeds JSON objects containing ContestId, UserContestId, and
  * ActiveLineupId which map lineup data to draftStatus URL parameters.
@@ -412,18 +467,19 @@ const draftkingsAdapter = {
   },
 
   /**
-   * Extract position and team from a DK player row's DOM.
-   * Parses the "RB - LAR" style text in PlayerCell_player-position-and-team.
+   * Extract position, team, and ADP from a DK player row's DOM.
+   * Parses the "RB - LAR" style text in PlayerCell_player-position-and-team
+   * and the ADP value from the averageDraftPosition gridcell.
    *
    * @param {Element} row
-   * @returns {{ position: string|null, team: string|null }}
+   * @returns {{ position: string|null, team: string|null, adp: number|null }}
    */
   getPlayerContext(row) {
     const container = row.querySelector('.PlayerCell_player-position-and-team');
-    if (!container) return { position: null, team: null };
-    const position = container.querySelector('.player-position')?.textContent?.trim().toUpperCase() || null;
-    const team = container.querySelector('.PlayerCell_player-team')?.textContent?.trim().toUpperCase() || null;
-    return { position, team };
+    const position = container?.querySelector('.player-position')?.textContent?.trim().toUpperCase() || null;
+    const team = container?.querySelector('.PlayerCell_player-team')?.textContent?.trim().toUpperCase() || null;
+    const adp = readDkRowAdp(row);
+    return { position, team, adp };
   },
 
   selectors: {

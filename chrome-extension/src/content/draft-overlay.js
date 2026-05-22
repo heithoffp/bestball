@@ -298,6 +298,8 @@ function applyPortfolioFilter() {
   playerTeamMap = new Map();
   playerPositionMap = new Map();
   abbreviatedNameMap = new Map();
+  // Per-player pick samples for ambiguous-abbrev tiebreak (e.g., Bijan vs Brian Robinson)
+  const pickSamplesByKey = new Map();
   filtered.forEach((entry, rosterIdx) => {
     (entry.players ?? []).forEach(p => {
       if (!p.name) return;
@@ -307,8 +309,21 @@ function applyPortfolioFilter() {
       playerIndexMap.get(key).add(rosterIdx);
       if (p.team && !playerTeamMap.has(key)) playerTeamMap.set(key, p.team);
       if (p.position && !playerPositionMap.has(key)) playerPositionMap.set(key, p.position);
+      const pickNum = Number(p.pick);
+      if (Number.isFinite(pickNum) && pickNum > 0) {
+        if (!pickSamplesByKey.has(key)) pickSamplesByKey.set(key, []);
+        pickSamplesByKey.get(key).push(pickNum);
+      }
     });
   });
+
+  function medianPick(key) {
+    const arr = pickSamplesByKey.get(key);
+    if (!arr || arr.length === 0) return null;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
 
   // Build abbreviated name reverse-lookup: "j jefferson" → "justin jefferson"
   // Handles DK-style abbreviated display names (first initial + last name).
@@ -327,6 +342,7 @@ function applyPortfolioFilter() {
         fullName,
         position: playerPositionMap.get(fullName)?.toUpperCase() ?? null,
         team: playerTeamMap.get(fullName)?.toUpperCase() ?? null,
+        medianPick: medianPick(fullName),
       };
       if (typeof existing === 'string') {
         // Convert first entry to array, add second candidate
@@ -335,6 +351,7 @@ function applyPortfolioFilter() {
             fullName: existing,
             position: playerPositionMap.get(existing)?.toUpperCase() ?? null,
             team: playerTeamMap.get(existing)?.toUpperCase() ?? null,
+            medianPick: medianPick(existing),
           },
           candidate,
         ]);
@@ -860,6 +877,25 @@ function resolvePlayerKey(displayName, rowOrContext) {
       const team = ctx.team.toUpperCase();
       const byTeam = candidates.filter(c => c.team === team);
       if (byTeam.length === 1) return byTeam[0].fullName;
+      if (byTeam.length > 1) candidates = byTeam;
+    }
+    // ADP-proximity tiebreak: candidates share position+team (e.g., Bijan vs Brian Robinson).
+    // Pick the candidate whose median portfolio pick is closest to the row's displayed ADP.
+    if (candidates.length > 1 && Number.isFinite(ctx.adp)) {
+      const withPicks = candidates.filter(c => Number.isFinite(c.medianPick));
+      if (withPicks.length >= 1) {
+        let best = withPicks[0];
+        let bestDist = Math.abs(best.medianPick - ctx.adp);
+        for (let i = 1; i < withPicks.length; i++) {
+          const d = Math.abs(withPicks[i].medianPick - ctx.adp);
+          if (d < bestDist) { best = withPicks[i]; bestDist = d; }
+        }
+        console.debug(`[BBM] ambig "${displayName}" rowADP=${ctx.adp} → ${best.fullName} (medianPick=${best.medianPick})`);
+        return best.fullName;
+      }
+    }
+    if (candidates.length > 1) {
+      console.debug(`[BBM] ambig "${displayName}" unresolved`, { ctx, candidates: candidates.map(c => ({ full: c.fullName, pos: c.position, team: c.team, med: c.medianPick })) });
     }
   }
 
