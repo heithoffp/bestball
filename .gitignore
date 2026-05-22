@@ -9,3 +9,6 @@ scripts/node_modules
 
 # Claude Code transient runtime artifacts
 .claude/scheduled_tasks.lock
+
+# Admin script output (user data dumps, etc.)
+tmp/
