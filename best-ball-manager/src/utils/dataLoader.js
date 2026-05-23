@@ -43,8 +43,8 @@ function buildLookupsFromRows(rows) {
 function detectPlatformFromSlate(slateTitle) {
   const t = (slateTitle || '').toLowerCase();
   if (t.includes('superflex')) return 'superflex';
+  if (t.includes('draftkings') || t.startsWith('dk ') || t === 'dk') return 'draftkings';
   if (t.includes('ud')) return 'underdog';
-  if (t.includes('draftkings')) return 'draftkings';
   return null;
 }
 
