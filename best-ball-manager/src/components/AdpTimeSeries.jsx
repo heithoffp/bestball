@@ -3,6 +3,7 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
   Tooltip, Legend, CartesianGrid, ReferenceArea, ReferenceLine
 } from 'recharts';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { parseAdpString, canonicalName } from '../utils/helpers';
 import styles from './AdpTimeSeries.module.css';
 import { SearchInput } from './filters';
@@ -55,14 +56,14 @@ function PosBadge({ pos }) {
   );
 }
 
-function CustomTooltip({ active, label, payload, richPlayerList }) {
+function CustomTooltip({ active, label, payload, playerById }) {
   if (!active || !label) return null;
   return (
     <div className={styles.tooltip}>
       <div className={styles.tooltipDate}>{label}</div>
       {payload && payload.map((entry) => {
         const baseId = entry.dataKey.replace(/_ud$|_dk$/, '');
-        const player = richPlayerList.find(p => p.id === baseId);
+        const player = playerById.get(baseId);
         const platformLabel = entry.dataKey.endsWith('_ud') ? ' (UD)' : entry.dataKey.endsWith('_dk') ? ' (DK)' : '';
         const stats = player?.pickStats;
         const hasStats = stats && stats.count > 0;
@@ -208,6 +209,13 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     });
   }, [masterPlayers, activeSnapshots, teams, rosterData]);
 
+  // O(1) lookup map — eliminates repeated linear scans of richPlayerList in chart paths
+  const playerById = useMemo(() => {
+    const m = new Map();
+    for (const p of richPlayerList) m.set(p.id, p);
+    return m;
+  }, [richPlayerList]);
+
   // 2. Per-platform table stats — always uses full adpByPlatform regardless of platformFilter
   const platStats = useMemo(() => {
     const extractName = row => {
@@ -337,6 +345,12 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     }
   }, [filteredAndSortedList]);
 
+  // Hoist selected-player lookup out of hot loops below
+  const selectedPlayers = useMemo(
+    () => selectedIds.map(id => playerById.get(id)).filter(Boolean),
+    [selectedIds, playerById]
+  );
+
   // 5. Chart data — deduplicate by date so UD + DK snapshots on the same date merge into one x-axis point
   const chartData = useMemo(() => {
     const now = new Date();
@@ -349,9 +363,8 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
       if (cutoff && new Date(snap.date) < cutoff) return;
       if (!dateMap.has(snap.date)) dateMap.set(snap.date, { date: snap.date });
       const row = dateMap.get(snap.date);
-      selectedIds.forEach(id => {
-        const player = richPlayerList.find(p => p.id === id);
-        if (!player) return;
+      selectedPlayers.forEach(player => {
+        const id = player.id;
         if (isBothMode) {
           const udVal = player.adpHistoryByPlatform?.underdog?.[snapIdx];
           const dkVal = player.adpHistoryByPlatform?.draftkings?.[snapIdx];
@@ -364,7 +377,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
       });
     });
     return Array.from(dateMap.values());
-  }, [activeSnapshots, richPlayerList, selectedIds, timeScale, isBothMode]);
+  }, [activeSnapshots, selectedPlayers, timeScale, isBothMode]);
 
   // 6. Y-axis domain
   const chartDomain = useMemo(() => {
@@ -372,15 +385,24 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     const keys = isBothMode ? selectedIds.flatMap(id => [`${id}_ud`, `${id}_dk`]) : selectedIds;
     chartData.forEach(row => keys.forEach(k => { const v = row[k]; if (v != null) { if (v < min) min = v; if (v > max) max = v; } }));
     if (showPickRanges && !isBothMode) {
-      selectedIds.forEach(id => {
-        const p = richPlayerList.find(p => p.id === id);
+      selectedPlayers.forEach(p => {
         if (p?.pickStats) { if (p.pickStats.min < min) min = p.pickStats.min; if (p.pickStats.max > max) max = p.pickStats.max; }
       });
     }
     if (min === Infinity || max === -Infinity) return ['auto', 'auto'];
     const pad = (max - min) * 0.05;
     return [Math.floor(min - pad), Math.ceil(max + pad)];
-  }, [chartData, selectedIds, richPlayerList, showPickRanges, isBothMode]);
+  }, [chartData, selectedIds, selectedPlayers, showPickRanges, isBothMode]);
+
+  // Virtualize the player table body — avoids rendering hundreds of rows per filter change
+  const tableBodyRef = useRef(null);
+  const rowHeight = isMobile ? 36 : 34;
+  const rowVirtualizer = useVirtualizer({
+    count: filteredAndSortedList.length,
+    getScrollElement: () => tableBodyRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 8,
+  });
 
   // Handlers
   const handleSort = key => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -481,8 +503,10 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
           </div>
 
           {/* Body */}
-          <div className={styles.tableBody}>
-            {filteredAndSortedList.map(p => {
+          <div className={styles.tableBody} ref={tableBodyRef}>
+          <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+            {rowVirtualizer.getVirtualItems().map(virtualRow => {
+              const p = filteredAndSortedList[virtualRow.index];
               const checked = selectedIds.includes(p.id);
               const colorIndex = selectedIds.indexOf(p.id);
               const strokeColor = colorIndex >= 0 ? colorPalette[colorIndex % colorPalette.length] : 'transparent';
@@ -492,9 +516,19 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
               return (
                 <div
                   key={p.id}
+                  data-index={virtualRow.index}
                   onClick={() => toggleSelect(p.id)}
                   className={`hover-row ${styles.playerRow} ${checked ? styles.playerRowSelected : ''}`}
-                  style={{ gridTemplateColumns: tableGrid, borderLeft: checked ? `3px solid ${strokeColor}` : '3px solid transparent' }}
+                  style={{
+                    gridTemplateColumns: tableGrid,
+                    borderLeft: checked ? `3px solid ${strokeColor}` : '3px solid transparent',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: virtualRow.size,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
                 >
                   <input type="checkbox" checked={checked} readOnly style={{ cursor: 'pointer' }} />
 
@@ -557,6 +591,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
               );
             })}
           </div>
+          </div>
         </div>
 
         {/* --- Chart --- */}
@@ -569,11 +604,11 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="date" tick={{ fontSize: tickFontSize, fill: '#9ca3af', fontFamily: 'var(--font-mono)' }} stroke="#4b5563" />
                 <YAxis reversed domain={chartDomain} tick={{ fontSize: tickFontSize, fill: '#9ca3af', fontFamily: 'var(--font-mono)' }} stroke="#4b5563" width={isMobile ? 40 : 50} />
-                <Tooltip content={<CustomTooltip richPlayerList={richPlayerList} />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
+                <Tooltip content={<CustomTooltip playerById={playerById} />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
                 {!isMobile && <Legend wrapperStyle={{ paddingTop: 13, fontFamily: 'var(--font-sans)', fontSize: 13 }} />}
 
                 {showPickRanges && !isBothMode && selectedIds.map((id, idx) => {
-                  const player = richPlayerList.find(p => p.id === id);
+                  const player = playerById.get(id);
                   const stats = player?.pickStats;
                   if (!player || !stats || stats.count === 0) return null;
                   const color = colorPalette[idx % colorPalette.length];
@@ -588,7 +623,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
                 })}
 
                 {selectedIds.map((id, idx) => {
-                  const player = richPlayerList.find(p => p.id === id);
+                  const player = playerById.get(id);
                   if (!player) return null;
                   const color = colorPalette[idx % colorPalette.length];
                   if (isBothMode) {
