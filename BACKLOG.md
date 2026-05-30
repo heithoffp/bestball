@@ -11,6 +11,7 @@
 - TASK-233: Fix DK roster panel virtualization breaking correlation/stack on scroll
 - TASK-239: Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks)
 - TASK-241: Admin draft-board scraper — periodic UD fetch by draft_id
+- TASK-248: Retroactive user_rankings migration + Security Advisor audit
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -82,6 +83,8 @@
 | TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Todo | P3 | [Plan](docs/plans/TASK-242.md) -- Draft | No |
 | TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available | Todo | P3 | [Plan](docs/plans/TASK-243.md) -- Draft | No |
 | TASK-244 | Admin scraper — scheduled background runs via chrome.alarms | Todo | P3 | [Plan](docs/plans/TASK-244.md) -- Draft | No |
+| TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy | Todo | P3 | [Plan](docs/plans/TASK-247.md) -- Draft | No |
+| TASK-248 | Retroactive user_rankings migration + Security Advisor audit | In Progress | P3 | [Plan](docs/plans/TASK-248.md) | No |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No |
@@ -93,6 +96,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-246 | Supabase migration grants: update template, existing migrations, and CLAUDE.md | Done | P2 | [Plan](docs/archive/plans/TASK-246.md) | Yes | 2026-05-28 |
 | TASK-245 | Draft Assistant — port Tournament Filter and Playoff Stacks from extension | Done | P2 | [Plan](docs/archive/plans/TASK-245.md) | Yes | 2026-05-21 |
 | TASK-232 | Playoff week (15/16/17) correlation pills in extension overlay | Done | P2 | [Plan](docs/archive/plans/TASK-232.md) | No | 2026-05-11 |
 | TASK-229 | Clean up superseded extension artifacts in public/extension/ | Done | P3 | [Plan](docs/archive/plans/TASK-229.md) | No | 2026-05-10 |

@@ -18,6 +18,18 @@ create table public.subscriptions (
 -- RLS: users can only read their own subscription
 alter table public.subscriptions enable row level security;
 
+-- Data API grants (required for new tables in public schema after 2026-10-30).
+-- Web client (authenticated) reads own row; Edge Functions (service_role)
+-- upsert/delete via stripe-webhook, create-checkout-session, create-portal-session,
+-- and delete-account.
+grant select
+  on public.subscriptions
+  to authenticated;
+
+grant select, insert, update, delete
+  on public.subscriptions
+  to service_role;
+
 create policy "Users can read own subscription"
   on public.subscriptions for select
   using (auth.uid() = user_id);

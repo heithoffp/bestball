@@ -21,3 +21,11 @@ create table if not exists public.draft_boards_admin (
 );
 
 alter table public.draft_boards_admin enable row level security;
+
+-- Data API grants (required for new tables in public schema after 2026-10-30).
+-- The admin scraper authenticates with service_role. A future migration will
+-- add `grant select ... to authenticated` alongside a read policy for
+-- customers when RosterViewer is wired to read this table (see TASK-247).
+grant select, insert, update, delete
+  on public.draft_boards_admin
+  to service_role;

@@ -137,6 +137,34 @@ Help is rendered as a **per-tab overlay** (`HelpOverlay.jsx`), not its own tab. 
 - **Sentry:** Error reporting
 - Local development: app runs without environment variables (Supabase/Stripe optional — guest tier and IndexedDB fallback)
 
+### Supabase Data API grants (post-2026-10-30)
+
+Starting **October 30, 2026**, Supabase no longer auto-exposes new `public` schema
+tables to the Data API. Every new table created in `public` after that date requires
+explicit `GRANT` statements; an RLS policy alone is not sufficient — `supabase-js`,
+PostgREST, and GraphQL will return `42501` if grants are missing. **Existing tables
+keep their current grants**, so no action is needed for tables already in production.
+
+Every new migration that creates a table in `public` must follow this pattern:
+
+```sql
+create table public.your_table (...);
+
+alter table public.your_table enable row level security;
+
+-- Required: grant the roles that need access. Match the roles to actual callsites.
+grant select on public.your_table to anon;                              -- only if anonymous reads are intended
+grant select, insert, update, delete on public.your_table to authenticated;
+grant select, insert, update, delete on public.your_table to service_role;
+
+-- Then policies, indexes, etc.
+create policy "..." on public.your_table for select to authenticated using (...);
+```
+
+Note: `service_role` requires an explicit grant under the new default — it is not
+automatically bypassed. Tighten grants to the verbs actually used (e.g., read-only
+tables should only grant `select`).
+
 ## Platform
 
 - **OS:** Windows 11
