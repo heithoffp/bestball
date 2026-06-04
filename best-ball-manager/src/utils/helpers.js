@@ -1,5 +1,5 @@
 // src/utils/helpers.js
-import { NFL_TEAMS } from './nflTeams';
+import { NFL_TEAMS } from './nflTeams.js';
 
 /**
  * Expand a team abbreviation to its full name.

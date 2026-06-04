@@ -57,6 +57,7 @@ const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const InstallPage = lazy(() => import('./components/InstallPage'));
+const Unsubscribe = lazy(() => import('./components/Unsubscribe'));
 
 // Bundled assets (developer-controlled) — all use glob so missing files don't break the build
 const rosterModules = import.meta.glob('./assets/rosters.csv', { as: 'raw', eager: true });
@@ -294,6 +295,15 @@ export default function App() {
   // Load bundled demo data on demand (triggered from landing page "Try Demo")
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadDemoData = useCallback(() => { loadFromAssets({ forceDemo: true }); }, []);
+
+  // Standalone /unsubscribe — public, no auth gate, no tab chrome (email link target)
+  if (location.pathname === '/unsubscribe') {
+    return (
+      <Suspense fallback={null}>
+        <Unsubscribe />
+      </Suspense>
+    );
+  }
 
   // Standalone /install — public, no auth gate, no tab chrome
   if (location.pathname === '/install') {

@@ -116,7 +116,7 @@
 ### FEAT-014: Landing Page
 **Status:** Not Started
 **Description:** Marketing site with clear value proposition, product screenshots, pricing tiers, competitor comparison, and signup CTA. First touchpoint for potential subscribers. Must look polished (not "AI slop"), load fast, and have compelling Open Graph previews for Reddit/social sharing.
-**Tasks:** TASK-165, TASK-166, TASK-167, TASK-189
+**Tasks:** TASK-165, TASK-166, TASK-167, TASK-189, TASK-249
 
 ---
 
