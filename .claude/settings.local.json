@@ -93,7 +93,9 @@
       "Bash(ls:*)",
       "WebFetch(domain:www.espn.com)",
       "Bash(which python3:*)",
-      "Bash(which python:*)"
+      "Bash(which python:*)",
+      "WebFetch(domain:underdognetwork.com)",
+      "WebFetch(domain:www.fantasyunleashd.com)"
     ]
   },
   "enabledPlugins": {
