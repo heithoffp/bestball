@@ -31,6 +31,17 @@ export function canonicalName(name = '') {
     .toLowerCase();
 }
 
+/**
+ * Normalize a player position across platforms.
+ * Two-way players can sync with a defensive designation (e.g. Travis Hunter
+ * arrives as CB on some platforms); fantasy-relevant position is WR.
+ */
+export function normalizePosition(raw = '') {
+  const pos = String(raw).trim().toUpperCase();
+  if (pos === 'CB') return 'WR';
+  return pos || 'N/A';
+}
+
 // stable id generator used for canonical player_id
 export function stableId(input = '') {
   let hash = 0;
@@ -204,7 +215,7 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
     return {
       player_id: `id-${displayName}-${pos}-${team}`.replace(/[^\w-]/g, ''),
       name: displayName,
-      position: pos || 'N/A',
+      position: normalizePosition(pos),
       team: team || 'N/A',
       count,
       exposure: ((count / totalEntries) * 100).toFixed(1),

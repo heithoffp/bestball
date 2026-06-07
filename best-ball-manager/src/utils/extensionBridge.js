@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { normalizePosition } from './helpers';
 
 /**
  * Re-bucket DK entries into Pre-Draft / Post-Draft slates from the tournament
@@ -53,7 +54,7 @@ export function convertEntriesToRosterRows(entries) {
     for (const player of (entry.players ?? [])) {
       rows.push({
         name: player.name?.trim().replace(/\s+/g, ' ') || 'Unknown',
-        position: player.position || 'N/A',
+        position: normalizePosition(player.position),
         team: player.team || 'N/A',
         entry_id: entry.entryId,
         pick: Number(player.pick) || 0,

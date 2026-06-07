@@ -1,5 +1,5 @@
 import { parseCSVText } from './csv';
-import { processMasterList, parseAdpString, canonicalName } from './helpers';
+import { processMasterList, parseAdpString, canonicalName, normalizePosition } from './helpers';
 
 /** Extract a normalized name from a CSV row, handling multiple column conventions. */
 function rowName(row) {
@@ -80,7 +80,7 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
 
     return {
       name: name ? name.trim().replace(/\s+/g, ' ') : 'Unknown',
-      position: row['Position'] || row.position || 'N/A',
+      position: normalizePosition(row['Position'] || row.position),
       team: row['Team'] || row.team || 'N/A',
       entry_id: entry,
       pick,
