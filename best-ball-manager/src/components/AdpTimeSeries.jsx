@@ -294,6 +294,11 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     const maxUdAdp = allPs.reduce((m, ps) => Math.max(m, ps.underdog?.adp ?? 0), 0) || null;
     const maxDkAdp = allPs.reduce((m, ps) => Math.max(m, ps.draftkings?.adp ?? 0), 0) || null;
 
+    // DK drafts run 20 rounds (max pick 240) vs Underdog's 18 (max pick 216). For the
+    // Δ UD-DK column, clamp DK to UD's depth so a player at the tail of both boards
+    // doesn't show an artificially negative delta. Display columns keep the true DK ADP.
+    const UD_MAX_PICK = 216;
+
     let list = timeFilteredPlayers
       .filter(p => p.lastAdp !== null)
       .map(p => {
@@ -304,7 +309,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         const dkAdp   = rawDk ?? maxUdAdp;
         const udTrend = ps.underdog?.trend  ?? null;
         const dkTrend = ps.draftkings?.trend ?? null;
-        return { ...p, udAdp, dkAdp, deltaAdp: rawUd !== null && rawDk !== null ? rawUd - rawDk : null, udTrend, dkTrend };
+        return { ...p, udAdp, dkAdp, deltaAdp: rawUd !== null && rawDk !== null ? rawUd - Math.min(rawDk, UD_MAX_PICK) : null, udTrend, dkTrend };
       });
 
     const q = (query || '').toLowerCase().trim();

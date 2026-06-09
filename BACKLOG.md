@@ -81,11 +81,8 @@
 | TASK-220 | Fix release script changelog-gate flow (placeholder vs pre-flight order) | Todo | P3 | [Plan](docs/plans/TASK-220.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-225 | Release artifact smoke test before tagging extension versions | Todo | P3 | [Plan](docs/plans/TASK-225.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-240 | Roster Viewer — full Draft Board view (Underdog) | Todo | P3 | [Plan](docs/plans/TASK-240.md) -- Pending Approval | No | 2026-05-21 | 2026-05-21 |
-| TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available | Todo | P3 | [Plan](docs/plans/TASK-243.md) -- Draft | No | 2026-05-21 | 2026-05-21 |
-| TASK-244 | Admin scraper — scheduled background runs via chrome.alarms | Todo | P3 | [Plan](docs/plans/TASK-244.md) -- Draft | No | 2026-05-21 | 2026-05-21 |
-| TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy | Todo | P3 | [Plan](docs/plans/TASK-247.md) -- Draft | No | 2026-05-30 | 2026-05-30 |
 | TASK-248 | Retroactive user_rankings migration + Security Advisor audit | In Progress | P3 | [Plan](docs/plans/TASK-248.md) | No | 2026-05-30 | 2026-05-30 |
-| TASK-251 | Admin scraper — negative-cache 404 draft IDs to stop re-fetching dead drafts | Todo | P3 | [Plan](docs/plans/TASK-251.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
+| TASK-252 | Retire admin-extension and draft_boards_admin (per ADR-009) | Todo | P3 | [Plan](docs/plans/TASK-252.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
@@ -97,6 +94,10 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy (Won't Do: Moot per ADR-009: draft_boards_admin is being dropped (TASK-252); no authenticated read policy/grant will ever be added.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-247.md) | No | 2026-06-09 |
+| TASK-251 | Admin scraper — negative-cache 404 draft IDs to stop re-fetching dead drafts (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to negative-cache 404s.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-251.md) | No | 2026-06-09 |
+| TASK-244 | Admin scraper — scheduled background runs via chrome.alarms (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to schedule.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-244.md) | No | 2026-06-09 |
+| TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available (Won't Do: Moot per ADR-009: admin-scraping retired (ownership-gated API). No admin-scraped board to prefer; full-board capture is now participant-authorized via TASK-240.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-243.md) | No | 2026-06-09 |
 | TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Done | P3 | [Plan](docs/archive/plans/TASK-242.md) | Yes | 2026-06-09 |
 | TASK-216 | Decide and execute Firefox distribution strategy (AMO listed vs. unlisted self-distribution signing) | Done | P2 | [Plan](docs/archive/plans/TASK-216.md) | Yes | 2026-05-08 |
 | TASK-215 | Set up extension build and release pipeline with secure key management | Done | P1 | [Plan](docs/archive/plans/TASK-215.md) | Yes | 2026-05-08 |

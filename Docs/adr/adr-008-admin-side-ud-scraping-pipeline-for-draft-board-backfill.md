@@ -1,7 +1,8 @@
 # ADR-008: Admin-side UD scraping pipeline for draft-board backfill
 
 **Date:** 2026-05-21
-**Status:** Accepted
+**Status:** Superseded
+**Superseded By:** ADR-009
 
 ---
 
