@@ -1,0 +1,263 @@
+.wrap {
+  padding: 2.4rem 0 1rem;
+}
+
+/* ---- Masthead ---- */
+.masthead {
+  text-align: center;
+  max-width: 660px;
+  margin: 0 auto 3.2rem;
+  animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.kicker {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.headline {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: clamp(3.4rem, 11vw, 6rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  margin: 0.6rem 0 0.8rem;
+  padding-bottom: 0.12em; /* background-clip:text crops descenders (the "g") — give it room */
+  background: linear-gradient(180deg, #fff 0%, #d9cfa6 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.dek {
+  font-family: var(--serif-body);
+  font-size: 1.24rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0;
+  text-wrap: balance; /* even line lengths — avoids the orphaned "on." */
+}
+
+/* ---- Featured (free) ---- */
+.feature {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  padding: 2.2rem clamp(1.4rem, 4vw, 3rem);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(232, 191, 74, 0.05), transparent 45%),
+    var(--paper-2);
+  overflow: hidden;
+  animation: rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: 80ms;
+  transition: border-color 220ms ease, transform 220ms ease;
+}
+.feature::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.7;
+}
+.feature:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.featureTop {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+}
+.freeTag {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--gold);
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+}
+.tag {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  padding: 0.26rem 0.55rem;
+  border-radius: 999px;
+}
+.featureTitle {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 5.2vw, 3.1rem);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.04em; /* room for deep Fraunces descenders */
+  max-width: 16ch;
+  color: #fff;
+}
+.featureExcerpt {
+  font-family: var(--serif-body);
+  font-size: 1.16rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 1.5rem;
+  max-width: 56ch;
+}
+.featureMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+.date { color: var(--ink-soft); }
+.dot { color: var(--rule); }
+.readCta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ---- Archive ledger ---- */
+.archive {
+  margin-top: 3.4rem;
+}
+.archiveHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.4rem;
+}
+.archiveLabel {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.archiveNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  border-bottom: 1px solid var(--rule-soft);
+  animation: rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(160ms + var(--i) * 60ms);
+}
+.rowLink {
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  align-items: center;
+  gap: 1.4rem;
+  padding: 1.25rem 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  transition: padding-left 200ms ease, background 200ms ease;
+}
+.rowLink:hover {
+  padding-left: 1.2rem;
+  background: linear-gradient(90deg, var(--gold-soft), transparent);
+}
+.rowDate {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.rowMain { min-width: 0; }
+.rowTitle {
+  display: block;
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.4rem;
+  line-height: 1.15;
+  color: var(--ink);
+  transition: color 180ms ease;
+}
+.rowLink:hover .rowTitle { color: var(--gold); }
+.rowExcerpt {
+  display: block;
+  font-family: var(--serif-body);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin-top: 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowLock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  color: var(--ink-faint);
+  transition: color 180ms ease, border-color 180ms ease;
+}
+.rowLink:hover .rowLock {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.empty {
+  text-align: center;
+  font-family: var(--serif-body);
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  padding: 4rem 1rem;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .masthead, .feature, .row { animation: none; }
+}
+
+@media (max-width: 599px) {
+  .wrap { padding-top: 1.6rem; }
+  .rowLink {
+    grid-template-columns: 1fr auto;
+    gap: 0.4rem 1rem;
+  }
+  .rowDate { grid-column: 1 / -1; order: -1; }
+  .rowExcerpt { white-space: normal; }
+  .readCta { margin-left: 0; width: 100%; margin-top: 0.4rem; }
+  .featureMeta { flex-wrap: wrap; }
+}

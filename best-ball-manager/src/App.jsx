@@ -20,7 +20,7 @@ import { trackEvent } from './utils/analytics';
 import BrandLogo from './components/BrandLogo';
 import FeedbackButton from './components/FeedbackButton';
 import InstallExtensionButton from './components/InstallExtensionButton';
-import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network, BookOpen } from 'lucide-react';
 
 const TAB_PATHS = {
   dashboard: '/',
@@ -39,7 +39,7 @@ const tabs = [
   { key: 'exposures', label: 'Exposures', icon: BarChart3 },
   { key: 'rosters', label: 'Rosters', icon: Users },
   { key: 'timeseries', label: 'ADP Tracker', icon: TrendingUp },
-  { key: 'combo', label: 'Combos', icon: Network, isNew: true },
+  { key: 'combo', label: 'Combos', icon: Network },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
 ];
@@ -58,6 +58,9 @@ const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const InstallPage = lazy(() => import('./components/InstallPage'));
 const Unsubscribe = lazy(() => import('./components/Unsubscribe'));
+const BlogChrome = lazy(() => import('./components/BlogChrome'));
+const BlogIndex = lazy(() => import('./components/BlogIndex'));
+const BlogPost = lazy(() => import('./components/BlogPost'));
 
 // Bundled assets (developer-controlled) — all use glob so missing files don't break the build
 const rosterModules = import.meta.glob('./assets/rosters.csv', { as: 'raw', eager: true });
@@ -305,6 +308,23 @@ export default function App() {
     );
   }
 
+  // Standalone /blog and /blog/:slug — public, no auth gate, no app chrome.
+  // The newest published issue is free to all; older issues are Pro-gated.
+  if (location.pathname === '/blog' || location.pathname.startsWith('/blog/')) {
+    const rawSlug = location.pathname.startsWith('/blog/')
+      ? decodeURIComponent(location.pathname.slice('/blog/'.length).replace(/\/+$/, ''))
+      : '';
+    return (
+      <Suspense fallback={null}>
+        <BlogChrome>
+          {rawSlug ? <BlogPost slug={rawSlug} /> : <BlogIndex />}
+        </BlogChrome>
+        <Analytics />
+        <SpeedInsights />
+      </Suspense>
+    );
+  }
+
   // Standalone /install — public, no auth gate, no tab chrome
   if (location.pathname === '/install') {
     return (
@@ -407,6 +427,24 @@ export default function App() {
               </button>
             );
           })}
+          <button
+            className="tab-button"
+            onClick={() => { trackEvent('blog_opened', { from: 'tab' }); navigate('/blog'); }}
+            aria-label="Read Against ADP — the Best Ball Exposures blog"
+          >
+            {isMobile ? (
+              <>
+                <BookOpen className="tab-icon" size={20} />
+                <span>Blog</span>
+                <span className="new-badge" aria-label="New feature">New</span>
+              </>
+            ) : (
+              <>
+                Blog
+                <span className="new-badge" aria-label="New feature">New</span>
+              </>
+            )}
+          </button>
           <button
             className={`tab-button${helpOpen ? ' help-active' : ''}`}
             onClick={toggleHelp}

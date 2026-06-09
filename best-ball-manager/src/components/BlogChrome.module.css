@@ -1,0 +1,174 @@
+/* "The Stack" — editorial chrome for the public blog. Navy paper, gold hairlines,
+   display serif. Fonts are scoped here so the dashboard UI is untouched. */
+
+.page {
+  --paper: #060e1f;
+  --paper-2: #0b1626;
+  --ink: #ece7da;          /* warm off-white reading ink */
+  --ink-soft: #9aa7bd;
+  --ink-faint: #5d6b82;
+  --rule: #243a5c;
+  --rule-soft: #1a2d50;
+  --gold: #e8bf4a;
+  --gold-soft: rgba(232, 191, 74, 0.16);
+
+  --serif-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --serif-body: 'Newsreader', Georgia, serif;
+  --mono: 'JetBrains Mono', monospace;
+
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #112038 0%, var(--paper) 55%) fixed,
+    var(--paper);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Fine paper grain for atmosphere */
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.glow {
+  position: fixed;
+  top: -18vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70vw;
+  height: 40vh;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(50% 50% at 50% 50%, var(--gold-soft) 0%, transparent 70%);
+  filter: blur(20px);
+  opacity: 0.6;
+}
+
+/* ---- Masthead ---- */
+.masthead {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.4rem 1.6rem;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+.brandWord {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.35rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.brandSub {
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 0.56rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 0.34rem;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+.navLink {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: 1px solid transparent;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.navLink:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.iconLink {
+  display: inline-flex;
+  color: var(--ink-soft);
+  transition: color 160ms ease, transform 160ms ease;
+}
+.iconLink:hover {
+  color: var(--gold);
+  transform: translateY(-1px);
+}
+
+/* ---- Main ---- */
+.main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.6rem;
+}
+
+/* ---- Footer ---- */
+.footer {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  width: 100%;
+  margin: 4rem auto 0;
+  padding: 0 1.6rem 2.5rem;
+}
+.footRule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rule), transparent);
+  margin-bottom: 1.4rem;
+}
+.footInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.footBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+  color: var(--ink);
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.footMeta {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 599px) {
+  .brandSub { letter-spacing: 0.28em; }
+  .footMeta { display: none; }
+}

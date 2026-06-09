@@ -1,0 +1,383 @@
+.article {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.2rem 0 1rem;
+  animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: color 160ms ease, gap 160ms ease;
+}
+.back:hover { color: var(--gold); gap: 0.6rem; }
+
+/* ---- Header ---- */
+.head { margin-top: 1.8rem; }
+.kickerRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+}
+.freeTag {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--gold);
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+}
+.proTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  padding: 0.24rem 0.55rem;
+  border-radius: 999px;
+}
+.tag {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+}
+.title {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: clamp(2.4rem, 6vw, 3.9rem);
+  line-height: 1.1;
+  letter-spacing: -0.018em;
+  margin: 0 0 1.1rem;
+  padding-bottom: 0.06em; /* room for deep Fraunces descenders (g, p, y) */
+  /* Override the global h1 gold-gradient rule (index.css) so the headline is white ink,
+     keeping gold for accents only — consistent with the index hero title. */
+  background: none;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+.byline {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+.date { color: var(--ink-soft); }
+.dot { color: var(--rule); }
+
+.ruleWrap {
+  margin: 1.8rem 0 2.2rem;
+}
+.ruleWrap span {
+  display: block;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold) 0%, var(--gold) 64px, var(--rule) 64px, transparent);
+}
+
+/* ---- Prose ---- */
+.prose {
+  font-family: var(--serif-body);
+  font-size: 1.235rem;
+  line-height: 1.72;
+  color: var(--ink);
+  font-optical-sizing: auto;
+}
+.prose > :first-child { margin-top: 0; }
+.prose p {
+  margin: 0 0 1.5rem;
+}
+/* Drop cap on the lede */
+.prose > p:first-of-type::first-letter {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  float: left;
+  font-size: 4.4rem;
+  line-height: 0.78;
+  padding: 0.12em 0.12em 0 0;
+  color: var(--gold);
+}
+.prose h2 {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.9rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: #fff;
+  margin: 2.6rem 0 1rem;
+}
+.prose h3 {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.4rem;
+  color: #fff;
+  margin: 2rem 0 0.8rem;
+}
+/* The ranking leads ("**5. Bucky Irving, down ~11%.**") become editorial markers */
+.prose strong {
+  font-family: var(--serif-display);
+  font-weight: 700;
+  color: #fff;
+}
+.prose a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold-soft);
+  transition: border-color 160ms ease;
+}
+.prose a:hover { border-color: var(--gold); }
+.prose em { font-style: italic; }
+.prose ul, .prose ol {
+  margin: 0 0 1.5rem;
+  padding-left: 1.4rem;
+}
+.prose li { margin-bottom: 0.6rem; }
+.prose li::marker { color: var(--gold); }
+.prose blockquote {
+  margin: 2.2rem 0;
+  padding: 0.4rem 0 0.4rem 1.6rem;
+  border-left: 2px solid var(--gold);
+  font-family: var(--serif-display);
+  font-style: italic;
+  font-size: 1.55rem;
+  line-height: 1.4;
+  color: #fff;
+}
+.prose hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rule), transparent);
+  margin: 2.6rem 0;
+}
+.prose code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: rgba(232, 191, 74, 0.1);
+  color: var(--gold);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+/* ---- Figures ---- */
+.figure, .figurePlaceholder {
+  display: block;
+  margin: 2.2rem 0;
+}
+.figure img {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+}
+.figurePlaceholder {
+  border: 1px dashed var(--gold);
+  border-radius: 10px;
+  background: rgba(232, 191, 74, 0.04);
+  padding: 2.2rem 1.4rem;
+  text-align: center;
+}
+.figureBadge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+.figureCaption {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+  margin-top: 0.7rem;
+}
+.figurePlaceholder .figureCaption { margin-top: 0; }
+
+/* ---- Locked teaser ---- */
+.locked { position: relative; }
+.lockedProse {
+  position: relative;
+  max-height: 320px;
+  overflow: hidden;
+}
+.fade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 70%;
+  background: linear-gradient(180deg, transparent, var(--paper) 92%);
+}
+.upsell {
+  position: relative;
+  margin-top: -2rem;
+  text-align: center;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(232, 191, 74, 0.06), transparent 40%),
+    var(--paper-2);
+  padding: 2.4rem clamp(1.4rem, 4vw, 2.8rem) 2.6rem;
+}
+.lockBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: var(--gold);
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  margin-bottom: 1rem;
+}
+.upsellKicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.upsellTitle {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.6vw, 2.1rem);
+  line-height: 1.12;
+  color: #fff;
+  margin: 0.6rem auto 0.9rem;
+  max-width: 22ch;
+}
+.upsellText {
+  font-family: var(--serif-body);
+  font-size: 1.06rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 50ch;
+  margin: 0 auto 1.5rem;
+}
+.upsellBullets {
+  list-style: none;
+  margin: 0 auto 1.8rem;
+  padding: 0;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  text-align: left;
+}
+.upsellBullets li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--serif-body);
+  font-size: 1rem;
+  color: var(--ink);
+}
+.upsellBullets svg { color: var(--gold); flex-shrink: 0; }
+.upsellBtn {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--gold);
+  padding: 0.9rem 2rem;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.upsellBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(232, 191, 74, 0.28);
+}
+.upsellFine {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  margin-top: 1rem;
+}
+
+/* ---- Pager ---- */
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--rule);
+}
+.pagerLink {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.1rem 1.3rem;
+  border: 1px solid var(--rule-soft);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+.pagerLink:hover { border-color: var(--gold); transform: translateY(-2px); }
+.pagerNext { text-align: right; align-items: flex-end; }
+.pagerDir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.pagerTitle {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .article { animation: none; }
+}
+
+@media (max-width: 599px) {
+  .prose { font-size: 1.12rem; }
+  .prose > p:first-of-type::first-letter { font-size: 3.4rem; }
+  .pager { grid-template-columns: 1fr; }
+  .pagerNext { text-align: left; align-items: flex-start; }
+}
