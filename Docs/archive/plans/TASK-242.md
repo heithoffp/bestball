@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-09 | ADR-008 accepted 2026-05-21 (no code change) -->
 # TASK-242: ADR: Admin-side UD scraping pipeline for draft-board backfill
 
 **Status:** Draft

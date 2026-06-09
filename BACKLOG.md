@@ -10,7 +10,6 @@
 - TASK-231: Gate extension overlay behind Pro subscription
 - TASK-233: Fix DK roster panel virtualization breaking correlation/stack on scroll
 - TASK-239: Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks)
-- TASK-241: Admin draft-board scraper — periodic UD fetch by draft_id
 - TASK-248: Retroactive user_rankings migration + Security Advisor audit
 - TASK-188: Weekly portfolio digest email — retention loop
 
@@ -55,6 +54,7 @@
 | TASK-231 | Gate extension overlay behind Pro subscription | In Progress | P2 | [Plan](docs/plans/TASK-231.md) | No | 2026-05-14 | 2026-05-14 |
 | TASK-233 | Fix DK roster panel virtualization breaking correlation/stack on scroll | In Progress | P2 | [Plan](docs/plans/TASK-233.md) | No | 2026-05-14 | 2026-05-14 |
 | TASK-239 | Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks) | In Progress | P2 | [Plan](docs/plans/TASK-239.md) | No | 2026-05-15 | 2026-05-15 |
+| TASK-250 | Ignore non-football UD slates (e.g. 'UD 2026 World Cup' soccer) in extension sync and/or web app | Todo | P2 | [Plan](docs/plans/TASK-250.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -81,12 +81,11 @@
 | TASK-220 | Fix release script changelog-gate flow (placeholder vs pre-flight order) | Todo | P3 | [Plan](docs/plans/TASK-220.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-225 | Release artifact smoke test before tagging extension versions | Todo | P3 | [Plan](docs/plans/TASK-225.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-240 | Roster Viewer — full Draft Board view (Underdog) | Todo | P3 | [Plan](docs/plans/TASK-240.md) -- Pending Approval | No | 2026-05-21 | 2026-05-21 |
-| TASK-241 | Admin draft-board scraper — periodic UD fetch by draft_id | In Progress | P3 | [Plan](docs/plans/TASK-241.md) | No | 2026-05-21 | 2026-05-21 |
-| TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Todo | P3 | [Plan](docs/plans/TASK-242.md) -- Draft | No | 2026-05-21 | 2026-05-21 |
 | TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available | Todo | P3 | [Plan](docs/plans/TASK-243.md) -- Draft | No | 2026-05-21 | 2026-05-21 |
 | TASK-244 | Admin scraper — scheduled background runs via chrome.alarms | Todo | P3 | [Plan](docs/plans/TASK-244.md) -- Draft | No | 2026-05-21 | 2026-05-21 |
 | TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy | Todo | P3 | [Plan](docs/plans/TASK-247.md) -- Draft | No | 2026-05-30 | 2026-05-30 |
 | TASK-248 | Retroactive user_rankings migration + Security Advisor audit | In Progress | P3 | [Plan](docs/plans/TASK-248.md) | No | 2026-05-30 | 2026-05-30 |
+| TASK-251 | Admin scraper — negative-cache 404 draft IDs to stop re-fetching dead drafts | Todo | P3 | [Plan](docs/plans/TASK-251.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
@@ -98,23 +97,14 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
-| TASK-246 | Supabase migration grants: update template, existing migrations, and CLAUDE.md | Done | P2 | [Plan](docs/archive/plans/TASK-246.md) | Yes | 2026-05-28 |
-| TASK-245 | Draft Assistant — port Tournament Filter and Playoff Stacks from extension | Done | P2 | [Plan](docs/archive/plans/TASK-245.md) | Yes | 2026-05-21 |
-| TASK-232 | Playoff week (15/16/17) correlation pills in extension overlay | Done | P2 | [Plan](docs/archive/plans/TASK-232.md) | No | 2026-05-11 |
-| TASK-229 | Clean up superseded extension artifacts in public/extension/ | Done | P3 | [Plan](docs/archive/plans/TASK-229.md) | No | 2026-05-10 |
-| TASK-228 | Fix Firefox auto-update routing — manifest update_url points at /updates.json but file lives at /extension/updates.json | Done | P2 | [Plan](docs/archive/plans/TASK-228.md) | No | 2026-05-10 |
-| TASK-227 | Fix DK roster name matching — use draftables displayName at sync time | Done | P1 | [Plan](docs/archive/plans/TASK-227.md) | No | 2026-05-10 |
-| TASK-222 | Add data_collection_permissions to Firefox manifest disclosure | Done | P3 | [Plan](docs/archive/plans/TASK-222.md) | No | 2026-05-08 |
-| TASK-214 | Refactor all Chrome Web Store links to point to /install | Done | P2 | [Plan](docs/archive/plans/TASK-214.md) | No | 2026-05-08 |
-| TASK-207 | Scope Chrome extension manifest to fantasy-only paths (1.0.4 resubmit) (Won't Do: Web Store resubmit path abandoned. Self-hosting via TASK-213 / ADR-005 supersedes; manifest scoping for AMO is tracked separately if needed.) | Won't Do | P1 | [Plan](docs/archive/plans/TASK-207.md) | No | 2026-05-08 |
-| TASK-182 | Submit Chrome extension to Chrome Web Store (Won't Do: Superseded by TASK-213 self-hosted distribution (ADR-005). Web Store listing path abandoned.) | Won't Do | P1 | [Plan](docs/archive/plans/TASK-182.md) — Draft | No | 2026-05-08 |
-| TASK-202 | Admin comp Pro script + comp_expires_at column | Done | P2 | [Plan](docs/archive/plans/TASK-202.md) | No | 2026-05-06 |
-| TASK-201 | Customer comms for Chrome review window | Done | P2 | [Plan](docs/archive/plans/TASK-201.md) | No | 2026-05-06 |
-| TASK-200 | Sideload extension stopgap (download zip + install instructions) | Done | P2 | [Plan](docs/archive/plans/TASK-200.md) | Yes | 2026-05-06 |
-| TASK-212 | Generate and wire post-draft simulation data | Done | P3 | [Plan](docs/archive/plans/TASK-212.md) | No | 2026-05-07 |
-| TASK-210 | DraftExplorer — Pre-Draft / Post-Draft mode toggle | Done | P3 | [Plan](docs/archive/plans/TASK-210.md) | Yes | 2026-05-07 |
-| TASK-208 | Documentation consolidation: refactor all in-repo documentation to match implementation reality | Done | P3 | [Plan](docs/archive/plans/TASK-208.md) | No | 2026-05-07 |
-| TASK-213 | Implement self-hosted extension distribution with browser-detecting install flow | Done | P1 | [Plan](docs/archive/plans/TASK-213.md) | Yes | 2026-05-08 |
+| TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Done | P3 | [Plan](docs/archive/plans/TASK-242.md) | Yes | 2026-06-09 |
 | TASK-216 | Decide and execute Firefox distribution strategy (AMO listed vs. unlisted self-distribution signing) | Done | P2 | [Plan](docs/archive/plans/TASK-216.md) | Yes | 2026-05-08 |
 | TASK-215 | Set up extension build and release pipeline with secure key management | Done | P1 | [Plan](docs/archive/plans/TASK-215.md) | Yes | 2026-05-08 |
 | TASK-217 | Audit current Web Store extension install base before cutover (Won't Do: Email-list-as-population is sufficient: signup is required to use the extension, so the signed-up user list captures 100% of affected users (~20 total). No separate Web Store baseline needed; TASK-218 will use the email list as both audience and denominator.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-217.md) | No | 2026-05-08 |
+| TASK-229 | Clean up superseded extension artifacts in public/extension/ | Done | P3 | [Plan](docs/archive/plans/TASK-229.md) | No | 2026-05-10 |
+| TASK-228 | Fix Firefox auto-update routing — manifest update_url points at /updates.json but file lives at /extension/updates.json | Done | P2 | [Plan](docs/archive/plans/TASK-228.md) | No | 2026-05-10 |
+| TASK-227 | Fix DK roster name matching — use draftables displayName at sync time | Done | P1 | [Plan](docs/archive/plans/TASK-227.md) | No | 2026-05-10 |
+| TASK-232 | Playoff week (15/16/17) correlation pills in extension overlay | Done | P2 | [Plan](docs/archive/plans/TASK-232.md) | No | 2026-05-11 |
+| TASK-245 | Draft Assistant — port Tournament Filter and Playoff Stacks from extension | Done | P2 | [Plan](docs/archive/plans/TASK-245.md) | Yes | 2026-05-21 |
+| TASK-246 | Supabase migration grants: update template, existing migrations, and CLAUDE.md | Done | P2 | [Plan](docs/archive/plans/TASK-246.md) | Yes | 2026-05-28 |
+| TASK-241 | Admin draft-board scraper — periodic UD fetch by draft_id | Done | P3 | [Plan](docs/archive/plans/TASK-241.md) | Yes | 2026-06-09 |

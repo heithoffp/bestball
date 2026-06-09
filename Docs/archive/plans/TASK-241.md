@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-09 | Commit: 7632f7f -->
 # TASK-241: Admin draft-board scraper — periodic UD fetch by draft_id
 
 **Status:** Pending Approval
