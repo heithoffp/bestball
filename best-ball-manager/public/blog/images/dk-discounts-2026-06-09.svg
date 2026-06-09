@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 544" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace">
+  <rect width="720" height="544" fill="#0b1626"/>
+
+  <text x="32" y="40" font-family="Georgia, 'Times New Roman', serif" font-size="20" fill="#ece7da">The gap between a player's two prices</text>
+  <text x="32" y="60" font-size="10" letter-spacing="1.5" fill="#5d6b82">DRAFTKINGS VS UNDERDOG ADP, AS A SHARE OF UNDERDOG PRICE · 2026-06-09</text>
+
+  <!-- Zero axis -->
+  <line x1="360" y1="92" x2="360" y2="514" stroke="#243a5c" stroke-width="1"/>
+  <text x="352" y="86" font-size="9" letter-spacing="1" fill="#5d6b82" text-anchor="end">← PRICIER ON DRAFTKINGS</text>
+  <text x="368" y="86" font-size="9" letter-spacing="1" fill="#5d6b82">CHEAPER ON DRAFTKINGS →</text>
+
+  <!-- Control section -->
+  <text x="32" y="116" font-size="10" letter-spacing="2" fill="#9aa7bd">THE CONTROL · SCORING DID ITS JOB</text>
+
+  <text x="32" y="140" font-size="12" fill="#ece7da">Derrick Henry</text>
+  <text x="142" y="140" font-size="9.5" fill="#5d6b82">UD 17.6 → DK 20.4 · 15 catches in 2025: the slide is earned</text>
+  <rect x="360" y="148" width="241" height="18" rx="4" fill="#5d6b82"/>
+  <text x="609" y="162" font-size="12" font-weight="bold" fill="#9aa7bd">+16.1%</text>
+
+  <text x="32" y="192" font-size="12" fill="#ece7da">Christian McCaffrey</text>
+  <text x="185" y="192" font-size="9.5" fill="#5d6b82">UD 7.3 → DK 6.3 · 102 catches in 2025: priced up, as he should be</text>
+  <rect x="156" y="200" width="204" height="18" rx="4" fill="#5d6b82"/>
+  <text x="148" y="214" font-size="12" font-weight="bold" fill="#9aa7bd" text-anchor="end">−13.6%</text>
+
+  <!-- Sales section -->
+  <text x="32" y="252" font-size="10" letter-spacing="2" fill="#e8bf4a">THE FIVE SALES · PASS-CATCHERS PRICED DOWN ANYWAY</text>
+
+  <text x="32" y="276" font-size="12" fill="#ece7da">TreVeyon Henderson</text>
+  <text x="178" y="276" font-size="9.5" fill="#5d6b82">UD 48.6 → DK 57.9</text>
+  <rect x="360" y="284" width="286" height="18" rx="4" fill="#e8bf4a"/>
+  <text x="654" y="298" font-size="12" font-weight="bold" fill="#e8bf4a">+19.1%</text>
+
+  <text x="32" y="328" font-size="12" fill="#ece7da">Mike Evans</text>
+  <text x="120" y="328" font-size="9.5" fill="#5d6b82">UD 44.6 → DK 52.0</text>
+  <rect x="360" y="336" width="250" height="18" rx="4" fill="#e8bf4a"/>
+  <text x="618" y="350" font-size="12" font-weight="bold" fill="#e8bf4a">+16.7%</text>
+
+  <text x="32" y="380" font-size="12" fill="#ece7da">Jordan Addison</text>
+  <text x="149" y="380" font-size="9.5" fill="#5d6b82">UD 86.3 → DK 96.3</text>
+  <rect x="360" y="388" width="174" height="18" rx="4" fill="#e8bf4a"/>
+  <text x="542" y="402" font-size="12" font-weight="bold" fill="#e8bf4a">+11.6%</text>
+
+  <text x="32" y="432" font-size="12" fill="#ece7da">Tetairoa McMillan</text>
+  <text x="170" y="432" font-size="9.5" fill="#5d6b82">UD 37.9 → DK 42.3</text>
+  <rect x="360" y="440" width="172" height="18" rx="4" fill="#e8bf4a"/>
+  <text x="540" y="454" font-size="12" font-weight="bold" fill="#e8bf4a">+11.5%</text>
+
+  <text x="32" y="484" font-size="12" fill="#ece7da">Bucky Irving</text>
+  <text x="134" y="484" font-size="9.5" fill="#5d6b82">UD 53.2 → DK 59.2</text>
+  <rect x="360" y="492" width="170" height="18" rx="4" fill="#e8bf4a"/>
+  <text x="538" y="506" font-size="12" font-weight="bold" fill="#e8bf4a">+11.3%</text>
+
+  <text x="32" y="532" font-size="9" letter-spacing="1" fill="#5d6b82">SOURCE: BEST BALL EXPOSURES ADP TRACKER · UNDERDOG VS DRAFTKINGS · 2026-06-09</text>
+</svg>

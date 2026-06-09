@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace">
+  <rect width="720" height="360" fill="#0b1626"/>
+
+  <text x="32" y="40" font-family="Georgia, 'Times New Roman', serif" font-size="20" fill="#ece7da">The five sales, on the board</text>
+  <text x="32" y="60" font-size="10" letter-spacing="1.5" fill="#5d6b82">OVERALL PICK · 12-TEAM ROUNDS · 2026-06-09</text>
+
+  <!-- Legend -->
+  <circle cx="520" cy="36" r="5" fill="#e8bf4a"/>
+  <text x="532" y="40" font-size="9" letter-spacing="1" fill="#9aa7bd">UNDERDOG</text>
+  <circle cx="622" cy="36" r="5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="634" y="40" font-size="9" letter-spacing="1" fill="#9aa7bd">DRAFTKINGS</text>
+
+  <!-- Round boundaries -->
+  <line x1="190" y1="96" x2="190" y2="326" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="284" y1="96" x2="284" y2="326" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="378" y1="96" x2="378" y2="326" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="472" y1="96" x2="472" y2="326" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="566" y1="96" x2="566" y2="326" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="661" y1="96" x2="661" y2="326" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="170" y1="326" x2="688" y2="326" stroke="#243a5c" stroke-width="1"/>
+  <text x="237" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 4</text>
+  <text x="331" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 5</text>
+  <text x="425" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 6</text>
+  <text x="519" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 7</text>
+  <text x="613" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 8</text>
+
+  <!-- Tetairoa McMillan 37.9 -> 42.3 -->
+  <text x="24" y="124" font-size="12" fill="#ece7da">Tetairoa McMillan</text>
+  <line x1="201" y1="120" x2="235" y2="120" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="201" cy="120" r="5.5" fill="#e8bf4a"/>
+  <circle cx="235" cy="120" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="218" y="108" font-size="10" fill="#9aa7bd" text-anchor="middle">+4.4 picks</text>
+
+  <!-- Mike Evans 44.6 -> 52.0 -->
+  <text x="24" y="172" font-size="12" fill="#ece7da">Mike Evans</text>
+  <line x1="253" y1="168" x2="312" y2="168" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="253" cy="168" r="5.5" fill="#e8bf4a"/>
+  <circle cx="312" cy="168" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="282" y="156" font-size="10" fill="#9aa7bd" text-anchor="middle">+7.4</text>
+
+  <!-- TreVeyon Henderson 48.6 -> 57.9 -->
+  <text x="24" y="220" font-size="12" fill="#ece7da">TreVeyon Henderson</text>
+  <line x1="285" y1="216" x2="357" y2="216" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="285" cy="216" r="5.5" fill="#e8bf4a"/>
+  <circle cx="357" cy="216" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="321" y="204" font-size="10" fill="#9aa7bd" text-anchor="middle">+9.3</text>
+
+  <!-- Bucky Irving 53.2 -> 59.2 -->
+  <text x="24" y="268" font-size="12" fill="#ece7da">Bucky Irving</text>
+  <line x1="321" y1="264" x2="368" y2="264" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="321" cy="264" r="5.5" fill="#e8bf4a"/>
+  <circle cx="368" cy="264" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="344" y="252" font-size="10" fill="#9aa7bd" text-anchor="middle">+6.0</text>
+
+  <!-- Jordan Addison 86.3 -> 96.3 -->
+  <text x="24" y="316" font-size="12" fill="#ece7da">Jordan Addison</text>
+  <line x1="580" y1="312" x2="659" y2="312" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="580" cy="312" r="5.5" fill="#e8bf4a"/>
+  <circle cx="659" cy="312" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="620" y="300" font-size="10" fill="#9aa7bd" text-anchor="middle">+10.0</text>
+
+  <text x="32" y="350" font-size="9" letter-spacing="1" fill="#5d6b82">SOURCE: BEST BALL EXPOSURES ADP TRACKER · 2026-06-09</text>
+</svg>
