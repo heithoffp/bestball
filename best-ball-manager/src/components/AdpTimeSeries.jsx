@@ -29,10 +29,16 @@ const calculateBoxPlot = (values) => {
 // --- Formatting helpers ---
 const fmtAdp  = v => v !== null ? v.toFixed(1) : '-';
 const fmtDelta = v => v === null ? '-' : `${v > 0 ? '+' : ''}${v.toFixed(1)}`;
+const fmtDeltaPct = v => v === null ? '-' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
 const fmtTrend = v => {
   if (v === null) return '-';
   const icon = v < 0 ? '▲' : v > 0 ? '▼' : '';
   return `${icon} ${Math.abs(v).toFixed(1)}`;
+};
+const fmtTrendPct = v => {
+  if (v === null) return '-';
+  const icon = v < 0 ? '▲' : v > 0 ? '▼' : '';
+  return `${icon} ${Math.abs(v).toFixed(1)}%`;
 };
 const trendColor = v => v === null ? 'var(--text-muted)' : v < 0 ? 'var(--positive)' : v > 0 ? 'var(--negative)' : 'var(--text-muted)';
 
@@ -91,6 +97,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
   const [showPickRanges, setShowPickRanges] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [timeScale, setTimeScale] = useState('1m');
+  const [calcMode, setCalcMode] = useState('pct'); // 'pct' = % change | 'raw' = raw ADP spots
   const [sortConfig, setSortConfig] = useState({ key: 'udTrend', direction: 'asc' });
 
   const colorPalette = [
@@ -120,9 +127,9 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
 
   const helpAnnotations = useMemo(() => {
     const items = [
-      { id: 'controls', label: 'Search & Filters', description: 'Filter players by name, team, or position. Switch the time window to scope trend calculations.' },
+      { id: 'controls', label: 'Search & Filters', description: 'Filter players by name, team, or position. Switch the time window to scope trend calculations, and toggle % / ADP to show Trend and Δ UD-DK as percentage change or raw ADP spots.' },
       { id: 'player-table', label: 'Player Selection', description: 'Click a row to add that player to the chart. Up to 10 players can be tracked at once.' },
-      { id: 'trend-col', label: 'Trend Column', description: 'ADP movement over the selected time window — rising means going earlier in drafts.' },
+      { id: 'trend-col', label: 'Trend Column', description: 'ADP movement over the selected time window — rising means going earlier in drafts. Shown as % change or raw ADP spots per the %/ADP toggle.' },
       { id: 'value-col', label: 'Value Column', description: 'Difference between your average pick and current ADP — positive means you drafted them later than market.' },
     ];
     if (!isBothMode) {
@@ -262,6 +269,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         byName[name][plat] = {
           adp: latest,
           trend: latest !== null && first !== null ? latest - first : null,
+          trendPct: latest !== null && first ? ((latest - first) / first) * 100 : null,
         };
       });
     }
@@ -283,7 +291,8 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         if (val !== undefined) { if (firstInWindow === null) firstInWindow = val; lastInWindow = val; }
       }
       const change = firstInWindow !== null && lastInWindow !== null ? lastInWindow - firstInWindow : 0;
-      return { ...p, change };
+      const changePct = firstInWindow && lastInWindow !== null ? ((lastInWindow - firstInWindow) / firstInWindow) * 100 : null;
+      return { ...p, change, changePct };
     });
   }, [richPlayerList, activeSnapshots, timeScale]);
 
@@ -309,13 +318,22 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         const dkAdp   = rawDk ?? maxUdAdp;
         const udTrend = ps.underdog?.trend  ?? null;
         const dkTrend = ps.draftkings?.trend ?? null;
-        return { ...p, udAdp, dkAdp, deltaAdp: rawUd !== null && rawDk !== null ? rawUd - Math.min(rawDk, UD_MAX_PICK) : null, udTrend, dkTrend };
+        const udTrendPct = ps.underdog?.trendPct  ?? null;
+        const dkTrendPct = ps.draftkings?.trendPct ?? null;
+        const dkClamped = rawDk !== null ? Math.min(rawDk, UD_MAX_PICK) : null;
+        const deltaAdp = rawUd !== null && rawDk !== null ? rawUd - dkClamped : null;
+        const deltaAdpPct = rawUd !== null && rawDk !== null ? ((rawUd - dkClamped) / ((rawUd + dkClamped) / 2)) * 100 : null;
+        return { ...p, udAdp, dkAdp, deltaAdp, deltaAdpPct, udTrend, dkTrend, udTrendPct, dkTrendPct };
       });
 
     const q = (query || '').toLowerCase().trim();
     if (q) list = list.filter(p => (`${p.name} ${p.team} ${p.position}`).toLowerCase().includes(q));
 
-    const numericKeys = ['lastAdp', 'udAdp', 'dkAdp', 'deltaAdp', 'udTrend', 'dkTrend', 'value', 'myAvg', 'exposure', 'change'];
+    const numericKeys = ['lastAdp', 'udAdp', 'dkAdp', 'deltaAdp', 'deltaAdpPct', 'udTrend', 'dkTrend', 'udTrendPct', 'dkTrendPct', 'value', 'myAvg', 'exposure', 'change', 'changePct'];
+    // In % mode, sort the toggleable metric columns by their percentage variant so the
+    // displayed values drive the order. Headers still emit the raw base key.
+    const METRIC_KEYS = new Set(['deltaAdp', 'udTrend', 'dkTrend', 'change']);
+    const sortKey = calcMode === 'pct' && METRIC_KEYS.has(sortConfig.key) ? `${sortConfig.key}Pct` : sortConfig.key;
     return list.sort((a, b) => {
       if (sortConfig.key === 'myPickMedian') {
         const vA = a.pickStats?.median ?? null;
@@ -325,7 +343,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
         if (vB == null) return -1;
         return sortConfig.direction === 'asc' ? vA - vB : vB - vA;
       }
-      let vA = a[sortConfig.key], vB = b[sortConfig.key];
+      let vA = a[sortKey], vB = b[sortKey];
       if (sortConfig.key === 'name') {
         vA = (vA || '').toLowerCase();
         vB = (vB || '').toLowerCase();
@@ -339,7 +357,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
       if (vA > vB) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [timeFilteredPlayers, query, sortConfig, platStats]);
+  }, [timeFilteredPlayers, query, sortConfig, platStats, calcMode]);
 
   // Auto-select top 5 on load
   const initialSelectionDone = useRef(false);
@@ -447,6 +465,14 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
           ))}
         </div>
 
+        <div className="filter-btn-group" title="Show Trend and Δ UD-DK as % change or raw ADP spots">
+          {[['pct', '%'], ['raw', 'ADP']].map(([value, label]) => (
+            <button key={value} className={`filter-btn-group__item ${calcMode === value ? 'filter-btn-group__item--active' : ''}`} onClick={() => setCalcMode(value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+
         {isTwoPlat && (
           <div className="filter-btn-group">
             {[['all', 'All'], ['underdog', 'Underdog'], ['draftkings', 'DraftKings']]
@@ -518,6 +544,15 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
               const valueColor = p.value === null ? 'inherit' : p.value > 0 ? 'var(--positive)' : p.value < 0 ? 'var(--negative)' : 'inherit';
               const valueDisplay = p.value !== null ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)}` : '-';
 
+              // Active trend/delta values + formatters per the %/ADP calc-mode toggle
+              const isPct = calcMode === 'pct';
+              const udTrendVal = isPct ? p.udTrendPct : p.udTrend;
+              const dkTrendVal = isPct ? p.dkTrendPct : p.dkTrend;
+              const changeVal  = isPct ? p.changePct  : p.change;
+              const deltaVal   = isPct ? p.deltaAdpPct : p.deltaAdp;
+              const fmtTrendActive = isPct ? fmtTrendPct : fmtTrend;
+              const fmtDeltaActive = isPct ? fmtDeltaPct : fmtDelta;
+
               return (
                 <div
                   key={p.id}
@@ -553,14 +588,14 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
                     <>
                       <div className={styles.monoCell}>{fmtAdp(p.udAdp)}</div>
                       <div className={styles.monoCell}>{fmtAdp(p.dkAdp)}</div>
-                      {!isTablet && <div className={styles.monoCell} style={{ color: 'var(--text-secondary)' }}>{fmtDelta(p.deltaAdp)}</div>}
-                      <div className={styles.trendCell} style={{ color: trendColor(p.udTrend) }}>{fmtTrend(p.udTrend)}</div>
-                      {!isTablet && <div className={styles.trendCell} style={{ color: trendColor(p.dkTrend) }}>{fmtTrend(p.dkTrend)}</div>}
+                      {!isTablet && <div className={styles.monoCell} style={{ color: 'var(--text-secondary)' }}>{fmtDeltaActive(deltaVal)}</div>}
+                      <div className={styles.trendCell} style={{ color: trendColor(udTrendVal) }}>{fmtTrendActive(udTrendVal)}</div>
+                      {!isTablet && <div className={styles.trendCell} style={{ color: trendColor(dkTrendVal) }}>{fmtTrendActive(dkTrendVal)}</div>}
                     </>
                   ) : !isTwoPlat && !isMobile ? (
                     <>
                       <div className={styles.monoCell}>{p.displayAdp}</div>
-                      <div className={styles.trendCell} style={{ color: trendColor(p.change) }}>{fmtTrend(p.change)}</div>
+                      <div className={styles.trendCell} style={{ color: trendColor(changeVal) }}>{fmtTrendActive(changeVal)}</div>
                     </>
                   ) : null}
 
@@ -574,8 +609,8 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
 
                   {/* Mobile: trend only */}
                   {isMobile && (
-                    <div className={styles.trendCell} style={{ color: trendColor(isTwoPlat ? p.udTrend : p.change) }}>
-                      {fmtTrend(isTwoPlat ? p.udTrend : p.change)}
+                    <div className={styles.trendCell} style={{ color: trendColor(isTwoPlat ? udTrendVal : changeVal) }}>
+                      {fmtTrendActive(isTwoPlat ? udTrendVal : changeVal)}
                     </div>
                   )}
 

@@ -94,6 +94,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-253 | ADP Tracker — % change / raw ADP calculation toggle | Done | P3 | [Plan](docs/archive/plans/TASK-253.md) | Yes | 2026-06-09 |
 | TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy (Won't Do: Moot per ADR-009: draft_boards_admin is being dropped (TASK-252); no authenticated read policy/grant will ever be added.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-247.md) | No | 2026-06-09 |
 | TASK-251 | Admin scraper — negative-cache 404 draft IDs to stop re-fetching dead drafts (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to negative-cache 404s.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-251.md) | No | 2026-06-09 |
 | TASK-244 | Admin scraper — scheduled background runs via chrome.alarms (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to schedule.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-244.md) | No | 2026-06-09 |

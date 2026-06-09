@@ -37,6 +37,7 @@ Active
 | Select Top 5 | Auto-selects 5 highest-exposure players |
 | Search | Filter player list by name/team/position |
 | Time Scale | 1w / 1m / All — clips chart data to window |
+| Calc Mode | % / ADP — shows Trend and Δ UD-DK columns as percentage change (default) or raw ADP spots. Affects table columns only; the chart always plots absolute ADP |
 | Pick Range | Checkbox to overlay quartile box plots from user's draft picks |
 | Sort | Name, Exposure %, ADP, Value (ADP - avg pick), Trend |
 
@@ -48,7 +49,10 @@ Active
 - Box plot statistics: quartiles, median, mean from user's pick distribution per player
 - Value metric: `ADP - userAvgPick` (positive = user got value relative to market)
 - Time window filtering: clips history array to last 7/30 days or shows all
-- Trend: `lastAdpInWindow - firstAdpInWindow` (negative trend = player being drafted earlier = rising)
+- Trend (ADP mode): `lastAdpInWindow - firstAdpInWindow` (negative trend = player being drafted earlier = rising)
+- Trend (% mode, default): `(lastAdpInWindow - firstAdpInWindow) / firstAdpInWindow × 100` — a fixed spot move registers larger in early rounds than late
+- Δ UD-DK (ADP mode): `udAdp - min(dkAdp, 216)` (DK clamped to Underdog's 18-round depth)
+- Δ UD-DK (% mode, default): `(udAdp - dkClamped) / ((udAdp + dkClamped) / 2) × 100` — mean-relative, symmetric across platforms (`dkClamped = min(dkAdp, 216)`)
 - Custom domain padding on chart axes
 
 **Data source:** ADP snapshots are date-stamped CSV files bundled at build time (`src/assets/adp/underdog_adp_YYYY-MM-DD.csv`), parsed into `masterPlayers[].history[]` by `processMasterList()`.
