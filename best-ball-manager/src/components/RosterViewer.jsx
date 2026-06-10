@@ -13,8 +13,11 @@ import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
 import { calcCLV, clvLabel } from '../utils/clvHelpers';
 import { renderRosterImage } from '../utils/rosterImageRenderer';
-import { FolderSync, Download } from 'lucide-react';
+import { FolderSync, Download, LayoutGrid } from 'lucide-react';
 import EmptyState from './EmptyState';
+import DraftBoardModal from './DraftBoardModal';
+import { fetchAvailableBoardIds } from '../utils/draftBoards';
+import { POS_COLORS, posColor } from '../utils/positionColors';
 
 const HELP_ANNOTATIONS = [
   { id: 'filter-search',     label: 'Player / Team Search',  description: 'Search by player or team name to filter to rosters containing that pick.' },
@@ -71,12 +74,7 @@ function SortIcon({ col, sortKey, sortDir }) {
 }
 
 // ── Position snapshot ─────────────────────────────────────────────────────────
-
-const POS_COLORS = {
-  QB: '#BF44EF', RB: '#10B981', WR: '#F59E0B', TE: '#3B82F6',
-  K: '#6b7280', DEF: '#ef4444', DST: '#ef4444', default: '#eeeeee',
-};
-function posColor(pos) { return POS_COLORS[pos] || POS_COLORS.default; }
+// Position colors shared via ../utils/positionColors.js
 
 function PositionSnapshot({ snap }) {
   const ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DEF'];
@@ -139,7 +137,7 @@ function HighlightedName({ name, query }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RosterViewer({ rosterData = [], masterPlayers = [], initialFilter = null, helpOpen = false, onHelpToggle }) {
+export default function RosterViewer({ rosterData = [], masterPlayers = [], adpByPlatform = {}, initialFilter = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
   const [expandedEntry, setExpandedEntry]   = useState(() => initialFilter?.entry_id ?? null);
   const [filtersOpen, setFiltersOpen]       = useState(false);
@@ -159,6 +157,18 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
   const [navBannerArchetype, setNavBannerArchetype] = useState(() => initialFilter?.archetype ?? null);
   const [selectedEntryId, setSelectedEntryId] = useState(() => initialFilter?.entry_id ?? null);
   const scrollRef = useRef(null);
+
+  // ── Draft boards (TASK-240) ─────────────────────────────────────────────────
+  // Which synced drafts have a full board available, and which board is open.
+  const [boardIds, setBoardIds] = useState(null);
+  const [boardRoster, setBoardRoster] = useState(null);
+  useEffect(() => { fetchAvailableBoardIds().then(setBoardIds); }, []);
+
+  const openBoard = useCallback((roster, e) => {
+    e.stopPropagation();
+    trackEvent('roster_draft_board_open', { draftId: roster.entry_id });
+    setBoardRoster(roster);
+  }, []);
 
   // ── Simulation data ──────────────────────────────────────────────────────────
   // Load both pre- and post-draft tier1 tables so each roster can be scored
@@ -559,9 +569,16 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
         {isOpen && (
           <div className={css.rosterCardExpanded} onClick={e => e.stopPropagation()}>
             <DraftCapitalMap players={roster.players} isMobile={true} actions={
-              <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
-                <Download size={14} /> Share Image
-              </button>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                {boardIds?.has(roster.entry_id) && (
+                  <button onClick={(e) => openBoard(roster, e)} className={css.boardBtn}>
+                    <LayoutGrid size={14} /> Board
+                  </button>
+                )}
+                <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
+                  <Download size={14} /> Share Image
+                </button>
+              </div>
             } />
             <div className={css.playerListScroll}>
               <PlayerDetail players={roster.players} alpha={alpha} isMobile={true} />
@@ -929,7 +946,18 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
                     <span className={css.clvBadge} style={{ color: clv.color, borderColor: clv.color + '44' }}>{clv.text}</span>
                   </td>
                   <td className={css.td} style={{ textAlign: 'center' }}>
-                    <span className={css.chevron}>{isOpen ? '▲' : '▼'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
+                      {boardIds?.has(roster.entry_id) && (
+                        <button
+                          className={css.boardBtn}
+                          title="View the full draft board for this pod"
+                          onClick={(e) => openBoard(roster, e)}
+                        >
+                          <LayoutGrid size={13} /> Board
+                        </button>
+                      )}
+                      <span className={css.chevron}>{isOpen ? '▲' : '▼'}</span>
+                    </div>
                   </td>
                 </tr>
                 {isOpen && (
@@ -1019,6 +1047,15 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], init
       {/* Mobile sort + card list */}
       {isMobile && renderMobileSortBar()}
       {isMobile ? renderCardList() : renderTable()}
+
+      {/* Full draft board modal */}
+      {boardRoster && (
+        <DraftBoardModal
+          roster={boardRoster}
+          adpByPlatform={adpByPlatform}
+          onClose={() => setBoardRoster(null)}
+        />
+      )}
     </div>
     </TabLayout>
   );

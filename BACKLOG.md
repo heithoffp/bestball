@@ -12,6 +12,7 @@
 - TASK-239: Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks)
 - TASK-248: Retroactive user_rankings migration + Security Advisor audit
 - TASK-188: Weekly portfolio digest email — retention loop
+- TASK-240: Roster Viewer — full Draft Board view (Underdog)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -80,11 +81,12 @@
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P3 | [Plan](docs/plans/TASK-209.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
 | TASK-220 | Fix release script changelog-gate flow (placeholder vs pre-flight order) | Todo | P3 | [Plan](docs/plans/TASK-220.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-225 | Release artifact smoke test before tagging extension versions | Todo | P3 | [Plan](docs/plans/TASK-225.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
-| TASK-240 | Roster Viewer — full Draft Board view (Underdog) | Todo | P3 | [Plan](docs/plans/TASK-240.md) -- Pending Approval | No | 2026-05-21 | 2026-05-21 |
+| TASK-240 | Roster Viewer — full Draft Board view (Underdog) | In Progress | P3 | [Plan](docs/plans/TASK-240.md) -- Pending Approval | No | 2026-05-21 | 2026-06-10 |
 | TASK-248 | Retroactive user_rankings migration + Security Advisor audit | In Progress | P3 | [Plan](docs/plans/TASK-248.md) | No | 2026-05-30 | 2026-05-30 |
 | TASK-252 | Retire admin-extension and draft_boards_admin (per ADR-009) | Todo | P3 | [Plan](docs/plans/TASK-252.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-254 | Server-side enforcement for Pro-locked blog archive (RLS-gated delivery) | Todo | P3 | [Plan](docs/plans/TASK-254.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-257 | Teach /weekly-blog skill to set image: frontmatter + generate hero card per post | Todo | P3 | [Plan](docs/plans/TASK-257.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
+| TASK-258 | Chrome extension: capture full draft board at UD sync (ADR-009) and switch web read path off draft_boards_admin | Todo | P3 | [Plan](docs/plans/TASK-258.md) -- Draft | No | 2026-06-10 | 2026-06-10 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |

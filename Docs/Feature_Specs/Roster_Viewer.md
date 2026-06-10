@@ -32,6 +32,29 @@ Active
 | Multi-Select Player Filter | Dropdown to filter rosters by player combination |
 | Expandable Rows | Click to view full breakdown per roster |
 | Virtual Scrolling | For large portfolios (100+ rosters) |
+| Board Button | On UD rosters with a captured board: opens the full Draft Board modal |
+
+## Draft Board Modal (TASK-240)
+
+Full pod board view for synced Underdog drafts. A "Board" button renders on a roster row
+(desktop: actions cell; mobile: expanded card actions) only when that draft's board exists
+in the `draft_boards_admin` Supabase table — no disabled buttons for rosters without one.
+
+- **Grid:** `entry_count` columns × `rounds` rows; cells show pick number, player name,
+  position (shared `positionColors.js` palette, position-tinted cell), team. Round labels
+  carry snake-direction arrows. Sticky header row and round column; horizontal scroll on
+  mobile (<900px full-screen panel).
+- **Your column:** identified by name-overlap between the clicked roster's players and
+  board slots (requires >50% match); highlighted with the accent color and a "YOU" label.
+- **Per-column context:** projected points (sum), Avg CLV% (same power-law as the table),
+  and RB/QB/TE archetype pills — for every team in the pod, enriched via the Underdog
+  ADP map and projections (`adpByPlatform` prop, passed from App).
+- **Data source (interim):** developer-scraped boards in `draft_boards_admin`
+  (admin-extension, TASK-241), read via `utils/draftBoards.js` with an authenticated-only
+  RLS policy (migration 009). Reads fail soft — guests see no board affordances. Boards
+  whose picks lack player names (pre-repair scrapes) are excluded from availability.
+  Participant-authorized capture at sync time (ADR-009) is the planned replacement;
+  `draft_boards_admin` retirement (TASK-252) is blocked until then.
 
 ## Computations & Data Dependencies
 
@@ -63,6 +86,9 @@ Via `classifyRosterPath()` from `utils/rosterArchetypes.js` — classifies each 
 
 ## Key Files
 - `src/components/RosterViewer.jsx` — main component
+- `src/components/DraftBoardModal.jsx` — full draft-board modal (TASK-240)
+- `src/utils/draftBoards.js` — board availability + board fetch from `draft_boards_admin`
+- `src/utils/positionColors.js` — shared position color palette
 - `src/utils/rosterArchetypes.js` — `classifyRosterPath()`
 - `src/utils/stackAnalysis.js` — `analyzeRosterStacks()`, `scoreRosterStacks()`
 - `src/utils/spikeWeekProjection.js` — `calculateSpikeWeekProjection()`

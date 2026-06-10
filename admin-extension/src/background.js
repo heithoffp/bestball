@@ -16,6 +16,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       bbe_admin_auth: {
         token: msg.token,
         apiHost: msg.apiHost,
+        statsHost: msg.statsHost || 'stats.underdogsports.com',
+        statsParams: msg.statsParams || '',
         capturedAt: msg.capturedAt ?? Date.now(),
       },
     });

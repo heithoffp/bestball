@@ -1,0 +1,351 @@
+/* === DraftBoardModal CSS Module === */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: backdropIn var(--duration-fast) ease both;
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  width: min(1560px, 100%);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: panelIn var(--duration-normal) var(--ease-default) both;
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.headerIcon {
+  color: var(--accent);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closeBtn {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+
+.closeBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Loading / empty state */
+.stateMsg {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+/* Grid */
+.gridScroll {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.grid {
+  display: grid;
+  /* --board-cols set inline (entryCount). Desktop: columns flex to fill the
+     panel so all teams fit without horizontal scrolling. */
+  grid-template-columns: 40px repeat(var(--board-cols, 12), minmax(0, 1fr));
+  gap: 0;
+}
+
+.stickyTop {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.stickyLeft {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.cornerCell {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border-subtle);
+  position: sticky;
+  left: 0;
+  z-index: 4;
+}
+
+/* Column headers */
+.colHeader {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border-subtle);
+  padding: 7px 7px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.userColHeader {
+  /* Layer the gold tint over an opaque surface — sticky headers must not be
+     see-through when rows scroll underneath. */
+  background:
+    linear-gradient(rgba(232, 191, 74, 0.14), rgba(232, 191, 74, 0.14)),
+    var(--surface-2);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.colHeaderTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.colTeamLabel {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.userColHeader .colTeamLabel {
+  color: var(--accent);
+}
+
+.colPick {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.colStats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.colStat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  cursor: default;
+}
+
+.colStatLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.colStatValue {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.colArchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.miniPill {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2px;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 1px 4px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* Round label column */
+.roundCell {
+  background: var(--surface-2);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  padding: 4px 2px;
+}
+
+.snakeArrow {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Cells */
+.cell {
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 3px 6px;
+  min-height: 42px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.userCell {
+  box-shadow: inset 2px 0 0 var(--accent), inset -2px 0 0 var(--accent);
+}
+
+.emptyCell {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  align-items: center;
+}
+
+.cellTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cellPos {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.cellPickNum {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cellName {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellTeam {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* ============ RESPONSIVE ============ */
+
+@media (max-width: 899px) {
+  .backdrop {
+    padding: 0;
+  }
+
+  .panel {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+  }
+
+  .subtitle {
+    white-space: normal;
+  }
+
+  /* Narrow screens can't fit 12 readable columns — give columns a floor and
+     scroll horizontally instead. */
+  .grid {
+    grid-template-columns: 40px repeat(var(--board-cols, 12), minmax(96px, 1fr));
+    min-width: max-content;
+  }
+}

@@ -1,131 +1,124 @@
 # TASK-240: Roster Viewer — full Draft Board view (Underdog)
 
-**Status:** Pending Approval
+**Status:** Pending Approval — implementation proceeding under the developer's /goal
+directive of 2026-06-10 ("implement … I will review it once complete"); formal plan
+review happens with the completed work.
 **Priority:** P3
 
 ---
 
 ## Objective
-Add a per-roster "Draft Board" button on Underdog rows in RosterViewer that opens a modal showing the complete 12-entry × 18-round snake draft board, with the user's column highlighted. Pure presentational — no grades, no commentary.
+Add a per-roster "Draft Board" action on Underdog rows in RosterViewer that opens a modal
+showing the complete snake draft board (entry_count columns × rounds rows), with the user's
+column clearly highlighted. Each board column (roster) also shows its **Avg CLV%**,
+**roster archetypes (RB/QB/TE)**, and **projected points** — computed opinions are allowed
+in Roster Viewer per the Mirror-not-Advisor carve-out.
+
+**Data source (interim, per developer directive 2026-06-10):** the existing
+`draft_boards_admin` table populated by the developer's admin scraper (TASK-241). This
+deviates from ADR-009's retirement plan for that table — the directive explicitly calls for
+using the already-scraped boards now, with chrome-extension participant capture to follow
+later. Consequence: **TASK-252 (retire draft_boards_admin) is blocked until the extension
+capture path lands**; noted there.
+
+**Discovered defect (2026-06-09 data):** all 89 rows in `draft_boards_admin` have
+`name/position/team/round = null` on every pick. Root cause: `admin-extension/src/scraper/normalizePick.js`
+reads `p.appearance?.name`, but UD's `/v2/drafts/{id}` picks only carry `appearance_id`;
+names require joining slate `appearances` → `players` → `teams` (exactly what
+`chrome-extension/src/injected/underdog-bridge.js` does via `ensureSlateLoaded`). The stored
+boards are unrecoverable without a re-fetch. This task therefore also fixes the admin
+scraper's normalization and adds a **repair mode** so the developer can re-scrape the 89
+boards (their accounts own those pods, so fetches will succeed).
 
 ## Verification Criteria
-1. The Supabase `extension_entries` table has a nullable `draft_board jsonb` column (verified via `select column_name from information_schema.columns where table_name='extension_entries'`).
-2. After a fresh Underdog sync from the rebuilt extension, each row in `extension_entries` for a UD draft has a `draft_board` populated with **draft.entry_count × draft.rounds** pick objects, each shaped `{pick, round, slot, draftEntryId, userId, name, position, team}`, and an outer envelope on the row that also records `userSlot` (the slot occupied by the syncing user) and `entryCount`.
-3. A Playwright test seeds an `extension_entries` row with a `draft_board` fixture, opens the Rosters tab, clicks "Draft Board" on the row, and asserts the modal renders **entryCount columns × rounds rows**, with the user's column visibly highlighted and the user's picks matching the row's `players` array.
-4. A row without `draft_board` (older sync) shows the button in a disabled state with the tooltip "Re-sync this draft to enable the board view."
-5. DraftKings rosters show **no** Draft Board button (verified by inspecting a roster with `slateTitle` starting with `DK`).
-6. The mirror-not-advisor principle holds: no grades, scores, archetype pills, or recommended-pick indicators appear in the modal — only player name, position pill, team, pick number, round number.
+1. Migration file exists granting `select` on `public.draft_boards_admin` to `authenticated`
+   with an RLS read policy. (**Manual:** developer applies it via Supabase SQL editor —
+   project is not CLI-linked.)
+2. Admin scraper `normalizePick.js` resolves player name/position/team via the
+   appearances/players join; a board scraped after the fix has every pick named.
+   Repair mode: boards whose picks lack names are re-fetched instead of skipped as cached.
+   (**Manual:** developer runs the admin extension once to repair the 89 boards.)
+3. In RosterViewer, UD roster rows whose `entry_id` has a board in `draft_boards_admin`
+   show a "Board" action; rows without one show nothing (no disabled clutter).
+4. Clicking it opens a modal rendering `entry_count` columns × `rounds` rows, every cell
+   showing pick number, player name, position pill (shared position colors), team.
+5. The user's column is visually distinct (accent highlight + "YOU" label), identified by
+   matching the clicked roster's player names against board slots.
+6. Each column header shows: projected points total, Avg CLV%, and RB/QB/TE archetype
+   pills, computed with the same helpers RosterViewer uses (`calcCLV`, `classifyRosterPath`),
+   enriched via the Underdog ADP map + projections map (`adpByPlatform`).
+7. Modal closes on backdrop click, Esc, and X. Under 900px the grid scrolls horizontally
+   with a sticky round column.
+8. DraftKings rosters show no board action. Guests (unauthenticated) see no board actions.
+9. `npm run build` and `npm run lint` pass in `best-ball-manager/`; admin-extension builds.
 
 ## Verification Approach
-1. **Migration:** Run the new migration against the local Supabase project (`supabase db push` or apply via SQL editor for the hosted project — confirm with developer which path). Then confirm the column exists via the `information_schema` query above. **Manual step:** Developer must apply the migration to the hosted Supabase project before re-syncing live data.
-2. **Extension:** `cd chrome-extension && npm run build`. **Manual step:** Developer loads the unpacked dist/ in Edge/Chrome, signs in to Underdog, runs sync, then inspects one row in the Supabase `extension_entries` table to confirm `draft_board` is populated with the expected shape. Report the picks count for one draft (should equal `entry_count × rounds`, typically 216).
-3. **Web app — Playwright:** `cd best-ball-manager && npx playwright test draftBoard.spec.js`. The test uses a mocked Supabase response (existing test pattern) seeded with a fixture board; it should pass without a live UD session.
-4. **Web app — manual smoke:** `npm run dev`, open `/rosters`, click "Draft Board" on a freshly-synced UD row. Developer confirms: grid shape correct, user column highlighted, position pill colors match the rest of the app, modal closes cleanly. Then open an older UD row (pre-resync) and confirm the disabled button + tooltip. Then open a DK row and confirm no button is rendered.
-5. **Lint:** `npm run lint` in `best-ball-manager/` and `chrome-extension/` — both clean.
+1. **Automated:** `npm run lint` + `npm run build` in `best-ball-manager/`; build admin-extension.
+2. **Visual smoke:** temporary dev harness route rendering `DraftBoardModal` with a realistic
+   fixture board (removed before commit), screenshot-verified.
+3. **Manual (developer):**
+   1. Apply `supabase/migrations/009_grant_draft_boards_admin_read.sql` in the SQL editor.
+   2. Load the rebuilt admin-extension, open Underdog signed in, run the scraper (repair
+      mode re-fetches the 89 nameless boards; ~2 runs at 50/run cap).
+   3. Open `/rosters` signed in, click "Board" on a UD roster, confirm grid, highlight,
+      and per-column stats.
 
 ## Files to Change
 | File | Action | Description |
 |------|--------|-------------|
-| `supabase/migrations/005_add_draft_board_to_extension_entries.sql` | Create | `alter table extension_entries add column if not exists draft_board jsonb;` — nullable, no default. |
-| `chrome-extension/src/injected/underdog-bridge.js` | Modify | In `syncEntries`, after fetching `/v2/drafts/{draftId}`, normalize the **full** `draft.picks` array (not just `userPicks`) into a `draftBoard` and attach to the entry alongside `userSlot` and `entryCount`. Keep `players` (userPicks) unchanged for backwards compat. |
-| `chrome-extension/src/utils/supabase.js` | Modify | Persist the new `draft_board` field on the row upsert. (Verify the upsert path — write the `{board, userSlot, entryCount}` envelope.) |
-| `chrome-extension/manifest.json` | Modify | Version bump from 1.1.0 → 1.2.0 (extension behavior change). |
-| `chrome-extension/dist/*` | Modify | Generated by `npm run build`. |
-| `best-ball-manager/src/utils/extensionBridge.js` | Modify | Read `draft_board` from the row and surface it on the returned entry object (`entry.draftBoard`). Pass through unchanged into roster row aggregation. |
-| `best-ball-manager/src/components/RosterViewer.jsx` | Modify | Add "Draft Board" button to each roster row (UD only — gate on `slateTitle?.startsWith('UD')`). Open `DraftBoardModal` on click. Disabled state + tooltip when `entry.draftBoard` is null. Wire the analytics `trackEvent('roster_draft_board_open', { draftId })`. |
-| `best-ball-manager/src/components/DraftBoardModal.jsx` | Create | New presentational component. Props: `{ entry, onClose }`. Renders a `rounds × entryCount` grid, snake-aware ordering of picks within rounds, user column highlighted via `entry.userSlot`. Uses existing position pill colors (`POS_COLORS` in RosterViewer.jsx — extract to a shared util if duplication grows). |
-| `best-ball-manager/src/components/DraftBoardModal.module.css` | Create | Grid layout, sticky header row, highlighted user column, mobile breakpoints (horizontal scroll under 899px). |
-| `best-ball-manager/tests/draftBoard.spec.js` | Create | Playwright test: mock `extension_entries` query with a seeded `draft_board`, open Rosters tab, click button, assert grid renders and user column highlight matches `userSlot`. |
-| `chrome-extension/CHANGELOG.md` | Modify | Add 1.2.0 entry: "Captures the full draft board during sync so RosterViewer can show it." |
+| `supabase/migrations/009_grant_draft_boards_admin_read.sql` | Create | `grant select to authenticated` + RLS read policy on `draft_boards_admin`. |
+| `admin-extension/src/scraper/normalizePick.js` | Modify | Join picks → appearances → players → teams (port of customer-extension logic); compute `round` from pick number. |
+| `admin-extension/src/scraper/run.js` | Modify | Fetch slate appearances/players per draft (stats API); repair mode: treat nameless cached boards as un-cached. |
+| `best-ball-manager/src/utils/positionColors.js` | Create | Shared `POS_COLORS` / `posColor` (extracted from RosterViewer). |
+| `best-ball-manager/src/utils/draftBoards.js` | Create | `fetchAvailableBoardIds()` + `fetchDraftBoard(draftId)` against `draft_boards_admin`; silent-empty on RLS/guest errors. |
+| `best-ball-manager/src/components/DraftBoardModal.jsx` | Create | Presentational board modal: grid, user-column detection by name overlap, per-column Proj/CLV/archetype header, snake pick ordering. |
+| `best-ball-manager/src/components/DraftBoardModal.module.css` | Create | Overlay + grid styling matching app tokens; sticky headers; <900px horizontal scroll. |
+| `best-ball-manager/src/components/RosterViewer.jsx` | Modify | Board availability fetch, "Board" action per UD row, modal mount, `trackEvent('roster_draft_board_open')`; import shared position colors. |
+| `best-ball-manager/src/App.jsx` | Modify | Pass `adpByPlatform` prop to RosterViewer (for opponent ADP/projection enrichment). |
 
 ## Implementation Approach
 
-### 1. Migration (Supabase)
-- File: `supabase/migrations/005_add_draft_board_to_extension_entries.sql`.
-- Content:
-  ```sql
-  alter table public.extension_entries
-    add column if not exists draft_board jsonb;
-  ```
-- No backfill — older rows stay null and the UI handles that state.
-
-### 2. Extension capture (the heart of the change)
-In `chrome-extension/src/injected/underdog-bridge.js` `syncEntries`, after `data = await apiFetch(... /v2/drafts/<id>)` and after `ensureSlateLoaded(slateId)`:
-
-```js
-const allPicks   = (draft.picks ?? []).map(p => ({
-  ...normalizePick(p, draft),                  // name, position, team, pick, round
-  draftEntryId: String(p.draft_entry_id ?? p.draftEntryId ?? ''),
-}));
-const entryCount = draft.entry_count ?? draft.entryCount ?? 12;
-const rounds     = draft.rounds ?? Math.ceil(allPicks.length / entryCount);
-
-// Build slot map: draftEntryId -> 1..entryCount (slot/seat)
-// Underdog's draft_entries have a `pick_order` or `slot_index` (verify on first sync).
-const slotByEntry = {};
-for (const e of (draft.draft_entries ?? draft.draftEntries ?? [])) {
-  const slot = e.pick_order ?? e.slot_index ?? e.slotIndex ?? null;
-  if (slot != null) slotByEntry[String(e.id)] = slot;
-}
-allPicks.forEach(p => { p.slot = slotByEntry[p.draftEntryId] ?? null; });
-
-const userSlot = slotByEntry[String(userEntry.id)] ?? null;
+### 1. Migration (manual apply)
+```sql
+grant select on public.draft_boards_admin to authenticated;
+create policy "Authenticated users can read draft boards"
+  on public.draft_boards_admin for select to authenticated using (true);
 ```
 
-Attach to the entry pushed to `entries`:
-```js
-entries.push({
-  entryId, tournamentTitle, slateTitle, draftDate,
-  players: userPicks.map(p => normalizePick(p, draft)),
-  draftBoard: { picks: allPicks, userSlot, entryCount, rounds },
-});
-```
+### 2. Admin scraper fix
+- `run.js`: after fetching a draft, fetch `https://stats.../v1/slates/{slate_id}/players`
+  (and appearances via scoring type) — the admin extension already captures the UD token;
+  capture stats host/params the same way the customer bridge does, or fall back to
+  `stats.underdogsports.com` with no params.
+- `normalizePick.js`: `normalizeDraft(draft, { appearances, players, teams })` → resolve
+  name/position/team per pick; `round = Math.ceil(pick / entryCount)`.
+- Repair: in the cached-IDs query, select `picks` head and exclude boards whose first pick
+  has `name == null` from the cached set (cheap: `picks->0->>name is null` filter or
+  client-side check).
 
-**Edge case — slot field name unknown.** The exact field for the draft entry's seat number is not visible in the existing code. The first real sync after this change should be inspected; if `pick_order` and `slot_index` are both missing, fall back to deriving slot from `Math.floor((pick.number - 1) / rounds)` order within the picks of a single `draftEntryId` — but prefer the explicit field. I'll add a `console.warn` once if neither is found, so we catch it during developer-side smoke.
-
-### 3. Extension storage (Supabase upsert)
-Update `chrome-extension/src/utils/supabase.js` so the upsert includes `draft_board: entry.draftBoard ?? null`. Keep nullable to handle the slot-fallback edge case gracefully.
-
-### 4. Web app bridge
-`extensionBridge.js`:
-- Add `draft_board` to the `.select(...)` call.
-- Surface it on the returned entry as `entry.draftBoard`.
-- `convertEntriesToRosterRows` does not change; the board lives on the entry, not flattened rows. Provide a `getEntryById(entries, entryId)` helper so RosterViewer can resolve the board for the clicked row.
-
-### 5. RosterViewer button
-- Add an icon button (Lucide `Grid3x3` or similar) inside each row's action column. Render only when `slateTitle?.startsWith('UD')`.
-- If the entry has `draftBoard`, click opens the modal. Otherwise the button is `disabled` with a `title="Re-sync this draft to enable the board view"`.
-- Track via `trackEvent('roster_draft_board_open', { draftId: entry.entryId })`.
-
-### 6. DraftBoardModal
-- Props: `{ entry, onClose }`.
-- Layout: CSS grid with `entryCount + 1` columns (first column = round number, sticky). Rows = `rounds`.
-- **Snake order:** Underdog is snake. Round 1 places slot 1..N left-to-right; round 2 N..1; etc. Index by `(round, slot)` pairs, but the cell content is "the pick at this round and slot" — which is exactly `picks.find(p => p.round === r && p.slot === s)`. Pre-bucket once: `byRoundSlot[round][slot] = pick` to keep render O(1).
-- Highlight: cells in column `userSlot` get a brand-accent border + tinted background. The column header shows "You".
-- Cell contents: pick number (small, dimmed), player name (bold), position pill (existing colors), team abbr.
-- Empty cell (shouldn't happen but defensive): render `—`.
-- Close on backdrop click, Esc key, and a top-right X.
-- Mobile (< 899px): horizontal scroll inside a fixed-height container; sticky round-number column.
-
-### 7. Tests
-Playwright `tests/draftBoard.spec.js`:
-- Mock Supabase via the same pattern other tests use (route interception of `/rest/v1/extension_entries`).
-- Fixture: 2-round × 4-entry mini draft (8 picks, snake order, userSlot=2). Asserts:
-  - Modal grid has 4 columns × 2 rows of cells (plus header/round-label).
-  - Column 2 has a highlighted class.
-  - Cell `(round=1, slot=2)` shows the same player name as `players[0]` on the entry.
-
-### 8. Release
-- Bump `chrome-extension/manifest.json` to `1.2.0`.
-- `npm run build` in `chrome-extension/`.
-- **Not** running `npm run release` (which cuts signed artifacts) as part of this task — that's a separate release step the developer triggers.
+### 3. Web app
+- `draftBoards.js`: lazy board fetch on modal open; availability set fetched once per
+  RosterViewer mount (only `draft_id` column — 89 rows today).
+- `DraftBoardModal.jsx`:
+  - Bucket `picks` by `(round, slot)`; `round` computed from pick number when null.
+  - Enrich each pick: `latestADP` via `adpByPlatform.underdog.latestAdpMap[canonicalName(name)]`,
+    `projectedPoints` via `projPointsMap`.
+  - Per slot: `classifyRosterPath`, sum projections, avg `calcCLV`.
+  - User slot = slot with max name-overlap vs the clicked roster's players (require >50%).
+  - Desktop: CSS grid, sticky column-header row and sticky round column; position-tinted
+    cells; user column accent-bordered with "YOU" chip.
+- RosterViewer: `LayoutGrid` lucide icon button in the row actions (and expanded actions
+  on mobile), rendered only when `boardIds.has(entry_id)`.
 
 ## Dependencies
-None.
+None. Blocks TASK-252 (retire draft_boards_admin) until extension capture replaces this read path.
 
 ## Open Questions
-- **Exact UD field name for the entry's slot/seat.** Will resolve on first real sync — see fallback in §2. If the fallback fires, log it loudly during dev so the developer can paste the entry shape and the code can be updated before release.
-- **Older rows have `null draft_board` forever unless the user resyncs.** Acceptable per scope. If the developer later wants automatic backfill, that's a separate task (would require either a server-side re-fetch with stored UD tokens — not available — or a "re-sync all" extension button).
+- Stats API access from the admin extension context (host/params capture) — verified during
+  the developer's repair run; falls back gracefully (skips board, logs) if appearances can't load.
 
 ---
-*Approved by: <!-- developer name/initials and date once approved -->*
+*Approved by: <!-- pending — developer reviews the completed implementation per the
+2026-06-10 /goal directive. Original extension-capture plan superseded by this interim
+read-from-draft_boards_admin approach at the developer's explicit instruction; extension
+capture remains the eventual path (ADR-009) and will be planned separately. -->*

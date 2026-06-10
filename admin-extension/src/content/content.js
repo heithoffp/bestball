@@ -15,6 +15,8 @@ function forwardToken(detail) {
     type: 'ud_token',
     token: detail.token,
     apiHost: detail.apiHost,
+    statsHost: detail.statsHost,
+    statsParams: detail.statsParams,
     capturedAt: Date.now(),
   });
 }
@@ -28,9 +30,10 @@ function pollFromPage() {
   const probe = document.createElement('script');
   probe.textContent = `
     (() => {
-      const t = window.__BBM_ADMIN?.token;
-      const h = window.__BBM_ADMIN?.apiHost;
-      if (t) document.documentElement.setAttribute('data-bbm-admin', JSON.stringify({ token: t, apiHost: h }));
+      const s = window.__BBM_ADMIN;
+      if (s?.token) document.documentElement.setAttribute('data-bbm-admin', JSON.stringify({
+        token: s.token, apiHost: s.apiHost, statsHost: s.statsHost, statsParams: s.statsParams,
+      }));
     })();
   `;
   document.documentElement.appendChild(probe);

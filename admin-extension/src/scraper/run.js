@@ -23,6 +23,53 @@ const CANDIDATE_FETCH_LIMIT = 250; // pull headroom so whitelist filter still yi
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const jitter = () => Math.random() * (2 * JITTER_MS) - JITTER_MS;
 
+// ── Slate reference data (appearances / players / teams) ─────────────────────
+// UD picks carry only appearance_id; resolving player identity requires the
+// slate's appearances + players from the stats API (no auth header needed —
+// mirrors the customer extension's ensureSlateLoaded). Cached per run.
+
+const slateRefs = { appearances: {}, players: {}, teams: {}, loadedSlates: new Set(), scoringTypeId: null };
+
+async function statsFetch(auth, path) {
+  const host = auth.statsHost || 'stats.underdogsports.com';
+  const q = auth.statsParams ? `?${auth.statsParams}` : '';
+  const res = await fetch(`https://${host}${path}${q}`, { headers: { Accept: 'application/json' } });
+  if (!res.ok) throw new Error(`stats ${res.status}: ${path}`);
+  return res.json();
+}
+
+async function ensureSlateLoaded(auth, slateId, log) {
+  if (!slateId || slateRefs.loadedSlates.has(slateId)) return;
+  slateRefs.loadedSlates.add(slateId);
+
+  if (!slateRefs.scoringTypeId) {
+    try {
+      const data = await statsFetch(auth, '/v1/scoring_types');
+      const nfl = data.scoring_types?.find((s) => s.sport_id === 'NFL');
+      if (nfl) slateRefs.scoringTypeId = nfl.id;
+    } catch (e) {
+      log('warn', `scoring_types fetch failed: ${e.message}`);
+    }
+  }
+
+  try {
+    const data = await statsFetch(auth, `/v1/slates/${slateId}/players`);
+    (data.players ?? []).forEach((p) => { slateRefs.players[p.id] = p; });
+    (data.teams ?? []).forEach((t) => { slateRefs.teams[t.id] = t; });
+  } catch (e) {
+    log('warn', `slate players fetch failed for ${slateId}: ${e.message}`);
+  }
+
+  if (slateRefs.scoringTypeId) {
+    try {
+      const data = await statsFetch(auth, `/v1/slates/${slateId}/scoring_types/${slateRefs.scoringTypeId}/appearances`);
+      (data.appearances ?? []).forEach((a) => { slateRefs.appearances[a.id] = a; });
+    } catch (e) {
+      log('warn', `slate appearances fetch failed for ${slateId}: ${e.message}`);
+    }
+  }
+}
+
 async function getAuth() {
   return new Promise((r) =>
     chrome.storage.local.get(['bbe_admin_auth', 'scraper_disabled_until_manual_reenable'], r),
@@ -66,14 +113,24 @@ export async function runScraper({ onLog } = {}) {
   }
 
   // 1. Candidate draft_ids (not already cached).
+  // Repair mode: boards whose picks have no player names (pre-fix TASK-241
+  // scrapes stored null names — see normalizePick.js) or that were seeded by
+  // a non-scraper source (e.g. the TASK-240 mock_test review board) do NOT
+  // count as cached, so they are re-fetched and overwritten with real data.
   const { data: cached, error: cachedErr } = await supabase
     .from('draft_boards_admin')
-    .select('draft_id');
+    .select('draft_id, source, first_pick_name:picks->0->>name');
   if (cachedErr) {
     log('error', `Supabase read draft_boards_admin failed: ${cachedErr.message}`);
     return { ok: false, reason: 'supabase-error' };
   }
-  const cachedIds = new Set((cached ?? []).map((r) => r.draft_id));
+  const cachedIds = new Set(
+    (cached ?? [])
+      .filter((r) => r.first_pick_name != null && r.source === 'admin_scraper')
+      .map((r) => r.draft_id)
+  );
+  const repairable = (cached ?? []).length - cachedIds.size;
+  if (repairable > 0) log('info', `${repairable} cached boards lack player names — queued for repair re-fetch`);
 
   const { data: candidates, error: candErr } = await supabase
     .from('extension_entries')
@@ -168,9 +225,10 @@ export async function runScraper({ onLog } = {}) {
     }
 
     const draft = body.draft ?? body;
-    const normalized = normalizeDraft(draft);
+    await ensureSlateLoaded(auth, draft.slate_id ?? draft.slateId, log);
+    const normalized = normalizeDraft(draft, slateRefs);
     if (!normalized) {
-      log('warn', `skipped-no-slots ${id} — draft_entries missing pick_order/slot_index`);
+      log('warn', `skipped-unnormalizable ${id} — missing slots or unresolved player names (check stats reference data)`);
       summary.skipped_no_slots++;
       continue;
     }
