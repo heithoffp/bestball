@@ -1,7 +1,7 @@
 ---
 title: "The Allen Tax"
 date: 2026-05-28
-status: draft
+status: superseded # replaced by 2026-06-10-the-allen-tax.md (opportunity-cost revision)
 kb_sources:
   - kb/articles/positional-analysis/qb-adp-sweet-spots-in-best-ball-2026.md
   - kb/articles/player-situations/jalen-hurts-rushing-td-discount.md

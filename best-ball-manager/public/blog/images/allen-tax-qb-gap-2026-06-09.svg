@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace">
+  <rect width="720" height="360" fill="#0b1626"/>
+
+  <text x="32" y="40" font-family="Georgia, 'Times New Roman', serif" font-size="20" fill="#ece7da">The Allen gap, on both boards</text>
+  <text x="32" y="60" font-size="10" letter-spacing="1.5" fill="#5d6b82">QUARTERBACK ADP · 12-TEAM ROUNDS · 2026-06-09</text>
+
+  <!-- Legend -->
+  <circle cx="500" cy="36" r="5" fill="#e8bf4a"/>
+  <text x="512" y="40" font-size="9" letter-spacing="1" fill="#9aa7bd">UNDERDOG</text>
+  <circle cx="602" cy="36" r="5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="614" y="40" font-size="9" letter-spacing="1" fill="#9aa7bd">DRAFTKINGS</text>
+
+  <!-- Round boundaries (x = 150 + (pick - 24) * 9) -->
+  <line x1="262.5" y1="100" x2="262.5" y2="318" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="370.5" y1="100" x2="370.5" y2="318" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="478.5" y1="100" x2="478.5" y2="318" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="586.5" y1="100" x2="586.5" y2="318" stroke="#1a2d50" stroke-width="1"/>
+  <line x1="150" y1="318" x2="690" y2="318" stroke="#243a5c" stroke-width="1"/>
+  <text x="207" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 3</text>
+  <text x="316.5" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 4</text>
+  <text x="424.5" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 5</text>
+  <text x="532.5" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 6</text>
+  <text x="638" y="90" font-size="9" letter-spacing="1.5" fill="#5d6b82" text-anchor="middle">ROUND 7</text>
+
+  <!-- Zero-QB band: Allen UD 33.3 to Lamar DK 51.3 -->
+  <rect x="233.7" y="100" width="162" height="218" fill="#e8bf4a" fill-opacity="0.05"/>
+  <line x1="233.7" y1="100" x2="233.7" y2="318" stroke="#e8bf4a" stroke-opacity="0.25" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="395.7" y1="100" x2="395.7" y2="318" stroke="#e8bf4a" stroke-opacity="0.25" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="314.7" y="113" font-size="9" letter-spacing="1.5" fill="#e8bf4a" text-anchor="middle">ZERO QBs, EITHER BOARD</text>
+
+  <!-- Josh Allen: DK 26.0, UD 33.3 -->
+  <text x="24" y="134" font-size="12" fill="#ece7da">Josh Allen</text>
+  <line x1="168" y1="130" x2="233.7" y2="130" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="168" cy="130" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <circle cx="233.7" cy="130" r="5.5" fill="#e8bf4a"/>
+  <text x="156" y="134" font-size="10" fill="#9aa7bd" text-anchor="end">26.0</text>
+  <text x="246" y="134" font-size="10" fill="#e8bf4a">33.3</text>
+
+  <!-- Lamar Jackson: DK 51.3, UD 56.0 -->
+  <text x="24" y="169" font-size="12" fill="#ece7da">Lamar Jackson</text>
+  <line x1="395.7" y1="165" x2="438" y2="165" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="395.7" cy="165" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <circle cx="438" cy="165" r="5.5" fill="#e8bf4a"/>
+  <text x="383.7" y="169" font-size="10" fill="#9aa7bd" text-anchor="end">51.3</text>
+  <text x="450" y="169" font-size="10" fill="#e8bf4a">56.0</text>
+
+  <!-- Joe Burrow: DK 57.5, UD 65.3 -->
+  <text x="24" y="204" font-size="12" fill="#ece7da">Joe Burrow</text>
+  <line x1="451.5" y1="200" x2="521.7" y2="200" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="451.5" cy="200" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <circle cx="521.7" cy="200" r="5.5" fill="#e8bf4a"/>
+  <text x="439.5" y="204" font-size="10" fill="#9aa7bd" text-anchor="end">57.5</text>
+  <text x="534" y="204" font-size="10" fill="#e8bf4a">65.3</text>
+
+  <!-- Jayden Daniels: UD 67.0, DK 68.9 -->
+  <text x="24" y="239" font-size="12" fill="#ece7da">Jayden Daniels</text>
+  <line x1="537" y1="235" x2="554.1" y2="235" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="537" cy="235" r="5.5" fill="#e8bf4a"/>
+  <circle cx="554.1" cy="235" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="525" y="239" font-size="10" fill="#e8bf4a" text-anchor="end">67.0</text>
+  <text x="566.5" y="239" font-size="10" fill="#9aa7bd">68.9</text>
+
+  <!-- Drake Maye: DK 64.8, UD 69.2 -->
+  <text x="24" y="274" font-size="12" fill="#ece7da">Drake Maye</text>
+  <line x1="517.2" y1="270" x2="556.8" y2="270" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="517.2" cy="270" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <circle cx="556.8" cy="270" r="5.5" fill="#e8bf4a"/>
+  <text x="505.2" y="274" font-size="10" fill="#9aa7bd" text-anchor="end">64.8</text>
+  <text x="569" y="274" font-size="10" fill="#e8bf4a">69.2</text>
+
+  <!-- Jalen Hurts: UD 71.9, DK 75.3 -->
+  <text x="24" y="309" font-size="12" fill="#ece7da">Jalen Hurts</text>
+  <line x1="581.1" y1="305" x2="611.7" y2="305" stroke="#e8bf4a" stroke-opacity="0.4" stroke-width="3"/>
+  <circle cx="581.1" cy="305" r="5.5" fill="#e8bf4a"/>
+  <circle cx="611.7" cy="305" r="5.5" fill="#0b1626" stroke="#9aa7bd" stroke-width="2"/>
+  <text x="569.1" y="309" font-size="10" fill="#e8bf4a" text-anchor="end">71.9</text>
+  <text x="624" y="309" font-size="10" fill="#9aa7bd">75.3</text>
+
+  <text x="32" y="350" font-size="9" letter-spacing="1" fill="#5d6b82">SOURCE: BEST BALL EXPOSURES ADP TRACKER · UNDERDOG + DRAFTKINGS · 2026-06-09</text>
+</svg>
