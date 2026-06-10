@@ -77,9 +77,7 @@ export default function BlogPost({ slug }) {
 
       <header className={styles.head}>
         <div className={styles.kickerRow}>
-          {free ? (
-            <span className={styles.freeTag}>Free this week</span>
-          ) : (
+          {!free && (
             <span className={styles.proTag}><Lock size={10} strokeWidth={2.75} /> Pro archive</span>
           )}
           {post.topicTags.map((t) => (

@@ -25,7 +25,6 @@ export default function BlogIndex() {
         <>
           <a href={`/blog/${featured.slug}`} className={styles.feature}>
             <div className={styles.featureTop}>
-              <span className={styles.freeTag}>Free this week</span>
               {featured.topicTags.slice(0, 3).map((t) => (
                 <span key={t} className={styles.tag}>{t}</span>
               ))}
