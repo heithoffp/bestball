@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-09 | Commit: 823dbeb -->
 # TASK-256: Per-route Open Graph metadata + hero images for blog posts (build-time prerender)
 
 **Status:** Pending Approval

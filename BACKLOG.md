@@ -12,7 +12,6 @@
 - TASK-239: Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks)
 - TASK-248: Retroactive user_rankings migration + Security Advisor audit
 - TASK-188: Weekly portfolio digest email — retention loop
-- TASK-256: Per-route Open Graph metadata + hero images for blog posts (build-time prerender)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -56,7 +55,6 @@
 | TASK-239 | Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks) | In Progress | P2 | [Plan](docs/plans/TASK-239.md) | No | 2026-05-15 | 2026-05-15 |
 | TASK-250 | Ignore non-football UD slates (e.g. 'UD 2026 World Cup' soccer) in extension sync and/or web app | Todo | P2 | [Plan](docs/plans/TASK-250.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-255 | Blog SEO — per-post meta/OG, canonical, Article schema & sitemap for /blog routes | Todo | P2 | [Plan](docs/plans/TASK-255.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
-| TASK-256 | Per-route Open Graph metadata + hero images for blog posts (build-time prerender) | In Progress | P2 | [Plan](docs/plans/TASK-256.md) | No | 2026-06-09 | 2026-06-09 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -86,6 +84,7 @@
 | TASK-248 | Retroactive user_rankings migration + Security Advisor audit | In Progress | P3 | [Plan](docs/plans/TASK-248.md) | No | 2026-05-30 | 2026-05-30 |
 | TASK-252 | Retire admin-extension and draft_boards_admin (per ADR-009) | Todo | P3 | [Plan](docs/plans/TASK-252.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-254 | Server-side enforcement for Pro-locked blog archive (RLS-gated delivery) | Todo | P3 | [Plan](docs/plans/TASK-254.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
+| TASK-257 | Teach /weekly-blog skill to set image: frontmatter + generate hero card per post | Todo | P3 | [Plan](docs/plans/TASK-257.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
@@ -97,6 +96,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-256 | Per-route Open Graph metadata + hero images for blog posts (build-time prerender) | Done | P2 | [Plan](docs/archive/plans/TASK-256.md) | Yes | 2026-06-09 |
 | TASK-249 | Publish weekly blog content to website — blog index + article pages | Done | P1 | [Plan](docs/archive/plans/TASK-249.md) | Yes | 2026-06-09 |
 | TASK-253 | ADP Tracker — % change / raw ADP calculation toggle | Done | P3 | [Plan](docs/archive/plans/TASK-253.md) | Yes | 2026-06-09 |
 | TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy (Won't Do: Moot per ADR-009: draft_boards_admin is being dropped (TASK-252); no authenticated read policy/grant will ever be added.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-247.md) | No | 2026-06-09 |
