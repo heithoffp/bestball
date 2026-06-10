@@ -11,6 +11,15 @@
     <link rel="canonical" href="https://bestballexposures.com/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#0f172a" />
+
+    <!--
+      Hide the no-JS prerender fallback (#root .prerender-fallback) from JS-capable
+      browsers to prevent a flash of unstyled content before React mounts. The
+      <noscript> override re-shows it for crawlers / users without JavaScript so the
+      SEO content remains visible.
+    -->
+    <style>#root .prerender-fallback { display: none; }</style>
+    <noscript><style>#root .prerender-fallback { display: block; }</style></noscript>
     <meta name="application-name" content="Best Ball Exposures" />
     <meta name="apple-mobile-web-app-title" content="Best Ball Exposures" />
 
@@ -180,7 +189,7 @@
         Pre-render content for crawlers and AI search engines that do not execute JavaScript
         (GPTBot, ClaudeBot, PerplexityBot, etc.). React replaces this when it mounts.
       -->
-      <main>
+      <main class="prerender-fallback">
         <header>
           <h1>Best Ball Exposures — Portfolio Analytics for Underdog &amp; DraftKings Best Ball</h1>
           <p>
