@@ -30,17 +30,17 @@ it does not prescribe action.
 ### Frontmatter schema
 
 ```yaml
-title: "Five DraftKings Sales Underdog Won't Give You"
+title: "Five DraftKings Values Underdog Won't Give You"
 date: 2026-06-09          # YYYY-MM-DD; drives ordering and the URL slug
 status: published         # draft (hidden) | published (live)
-image: "/blog/images/og-five-draftkings-sales.png"   # 1200×630 social hero; omit → default card
+image: "/blog/images/og-five-draftkings-values.png"   # 1200×630 social hero; omit → default card
 description: "..."        # optional; overrides the auto excerpt for og:description
 topic_tags: [adp, cross-platform]   # rendered as chips
 kb_sources: [...]         # provenance only; not displayed
 ```
 
 The URL slug is the filename with the date prefix and `.md` stripped
-(`2026-06-09-five-draftkings-sales-underdog-wont-give-you.md` → `/blog/five-draftkings-sales-underdog-wont-give-you`).
+(`2026-06-09-five-draftkings-values-underdog-wont-give-you.md` → `/blog/five-draftkings-values-underdog-wont-give-you`).
 
 ## Social cards (Open Graph / Twitter)
 

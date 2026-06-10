@@ -10,4 +10,4 @@ Posts live alongside this file as `YYYY-MM-DD-<slug>.md`.
 |------|-------|------|--------|------------|
 | 2026-05-28 | The Allen Tax | the-allen-tax | draft | qb-adp-sweet-spots-in-best-ball-2026.md, jalen-hurts-rushing-td-discount.md |
 | 2026-05-29 | Read the Routes, Not the Rate | read-the-routes-not-the-rate | draft | small-sample-yprr-caution.md, romeo-odunze-vs-davante-adams-adp-debate.md, stefon-diggs-free-agent-landing-bet.md, luther-burden-adp-overpricing.md |
-| 2026-06-09 | Five DraftKings Sales Underdog Won't Give You | five-draftkings-sales-underdog-wont-give-you | draft | draftkings-value-team-draft-walkthrough.md, bucky-irving-2026-best-ball-outlook.md |
+| 2026-06-09 | Five DraftKings Values Underdog Won't Give You | five-draftkings-values-underdog-wont-give-you | draft | draftkings-value-team-draft-walkthrough.md, bucky-irving-2026-best-ball-outlook.md |
