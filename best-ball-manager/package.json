@@ -9,6 +9,8 @@
     "dev": "vite",
     "prebuild": "node scripts/sync-blog.mjs",
     "build": "vite build",
+    "postbuild": "node scripts/prerender-blog.mjs",
+    "generate-og-card": "node scripts/generate-og-card.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "capture-screenshots": "node scripts/capture-screenshots.js"

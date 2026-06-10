@@ -2,6 +2,7 @@
 title: "Five DraftKings Sales Underdog Won't Give You"
 date: 2026-06-09
 status: published
+image: "/blog/images/og-five-draftkings-sales.png"
 kb_sources:
   - kb/articles/draft-mechanics/draftkings-value-team-draft-walkthrough.md
   - kb/articles/player-situations/bucky-irving-2026-best-ball-outlook.md
