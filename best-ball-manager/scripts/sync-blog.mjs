@@ -13,7 +13,14 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..');                 // best-ball-manager/
-const SRC = resolve(appRoot, '..', 'docs', 'blog');  // <repo>/docs/blog
+// Git tracks the docs tree as `Docs/` (capital D) today; a lowercase rename is
+// planned (TASK-209). Windows is case-insensitive so `docs/blog` resolves either
+// way locally, but Vercel's Linux builders are case-sensitive — pick whichever
+// casing actually exists so the sync works before and after the rename.
+const SRC = [
+  resolve(appRoot, '..', 'docs', 'blog'),  // <repo>/docs/blog (post-rename / Windows)
+  resolve(appRoot, '..', 'Docs', 'blog'),  // <repo>/Docs/blog (current committed casing)
+].find(existsSync) ?? resolve(appRoot, '..', 'docs', 'blog');
 const DEST = join(appRoot, 'src', 'content', 'blog');
 
 // A post file is a dated markdown file: YYYY-MM-DD-<slug>.md
