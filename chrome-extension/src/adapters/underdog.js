@@ -28,7 +28,7 @@ const underdogAdapter = {
    * pagination so removed drafts can be detected via currentDraftIds.
    *
    * @param {string[]} [knownEntryIds] - Previously synced entry/draft ids
-   * @returns {Promise<{ newEntries: import('./interface.js').Entry[], currentDraftIds: string[] }>}
+   * @returns {Promise<{ newEntries: import('./interface.js').Entry[], currentDraftIds: string[], boards: object[] }>}
    */
   async getEntries(knownEntryIds = []) {
     if (!UD_HOSTS.has(window.location.hostname) || !window.location.pathname.startsWith('/completed')) {
@@ -49,6 +49,7 @@ const underdogAdapter = {
           resolve({
             newEntries:      event.data.newEntries ?? [],
             currentDraftIds: event.data.currentDraftIds ?? [],
+            boards:          event.data.boards ?? [],
           });
         } else if (event.data?.type === 'BBM_SYNC_ERROR') {
           clearTimeout(timeout);
@@ -59,6 +60,42 @@ const underdogAdapter = {
 
       window.addEventListener('message', handler);
       window.postMessage({ type: 'BBM_SYNC_REQUEST', knownEntryIds }, '*');
+    });
+  },
+
+  /**
+   * TASK-260: re-fetch full pod boards for already-synced drafts that lack one.
+   * The caller supplies a pre-capped list of board-less draft ids; the bridge
+   * fetches and normalizes each. Supplementary to getEntries — does not touch
+   * the user's own roster entries.
+   *
+   * @param {string[]} draftIds - board-less draft ids to backfill (already capped)
+   * @returns {Promise<object[]>} normalized boards
+   */
+  async getBoards(draftIds = []) {
+    if (!draftIds.length) return [];
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error('Board backfill timed out')),
+        300_000
+      );
+
+      function handler(event) {
+        if (event.source !== window) return;
+        if (event.data?.type === 'BBM_BOARDS_RESULT') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          resolve(event.data.boards ?? []);
+        } else if (event.data?.type === 'BBM_SYNC_ERROR') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          reject(new Error(event.data.error));
+        }
+      }
+
+      window.addEventListener('message', handler);
+      window.postMessage({ type: 'BBM_BOARDS_REQUEST', draftIds }, '*');
     });
   },
 

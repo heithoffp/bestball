@@ -57,14 +57,20 @@
  * @property {(url: string) => boolean} isMatch
  *   Returns true if this adapter handles the given URL.
  *
- * @property {(knownEntryIds?: string[]) => Promise<Entry[] | {newEntries: Entry[], currentDraftIds: string[]}>} getEntries
+ * @property {(knownEntryIds?: string[]) => Promise<Entry[] | {newEntries: Entry[], currentDraftIds: string[], boards?: object[]}>} getEntries
  *   Scrapes roster/entry data from the platform's entries page.
  *   Rejects if not on an entries page or if scraping fails.
  *   Adapters may operate in two modes:
  *     - Full-refresh (legacy): ignore knownEntryIds and return Entry[].
  *     - Incremental: skip detail fetch for entries in knownEntryIds and
  *       return { newEntries, currentDraftIds } so writeEntries can upsert
- *       and detect removals.
+ *       and detect removals. May also include `boards` — full pod boards
+ *       captured for newly-fetched drafts (ADR-009) for writeBoards.
+ *
+ * @property {(draftIds: string[]) => Promise<object[]>} [getBoards]
+ *   Optional. Re-fetches full pod boards for already-synced drafts that lack
+ *   one (TASK-260 backfill). Caller supplies a pre-capped list of board-less
+ *   draft ids. Present on Underdog only; absent adapters skip the backfill.
  *
  * @property {() => DraftState} getDraftState
  *   Reads current live draft state from the DOM.

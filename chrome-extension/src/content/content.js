@@ -8,7 +8,7 @@
 
 import { getAdapterForUrl } from '../adapters/registry.js';
 import { createReconnectingObserver } from '../utils/observer.js';
-import { writeEntries, readEntryIds } from '../utils/bridge.js';
+import { writeEntries, writeBoards, readEntryIds, readBoardIds } from '../utils/bridge.js';
 import { initDraftOverlay } from './draft-overlay.js';
 
 const adapter = getAdapterForUrl(window.location.href);
@@ -34,7 +34,44 @@ if (adapter) {
     const knownIds = await readEntryIds();
 
     const result = await adapter.getEntries(knownIds);
-    return writeEntries(result, { platform: adapter.platform });
+    const writeResult = await writeEntries(result, { platform: adapter.platform });
+
+    // ADR-009: persist captured full pod boards. Supplementary — a board-write
+    // failure must not fail the user-facing entry sync.
+    if (result?.boards?.length) {
+      try {
+        await writeBoards(result.boards);
+      } catch (err) {
+        console.warn('[BBM] writeBoards failed (entries synced OK):', err.message);
+      }
+    }
+
+    // TASK-260: bounded backfill — capture boards for already-synced drafts that
+    // still lack one, capped per run so large portfolios converge over multiple
+    // syncs without reintroducing the TASK-198 timeout. Best-effort.
+    const BOARD_BACKFILL_PER_RUN = 100;
+    let boardsRemaining = 0;
+    if (typeof adapter.getBoards === 'function' && result?.currentDraftIds?.length) {
+      try {
+        const captured  = new Set((result.boards ?? []).map(b => String(b.draftId)));
+        const existing  = await readBoardIds(result.currentDraftIds);
+        const allMissing = result.currentDraftIds
+          .map(String)
+          .filter(id => !existing.has(id) && !captured.has(id));
+        const batch = allMissing.slice(0, BOARD_BACKFILL_PER_RUN);
+        if (batch.length) {
+          const backfilled = await adapter.getBoards(batch);
+          await writeBoards(backfilled);
+        }
+        // Board-less drafts still left after this run — surfaced so the overlay
+        // can prompt the user to reload + Sync again to continue (TASK-260).
+        boardsRemaining = Math.max(0, allMissing.length - batch.length);
+      } catch (err) {
+        console.warn('[BBM] board backfill failed (sync OK):', err.message);
+      }
+    }
+
+    return { ...writeResult, boardsRemaining };
   }
 
   // Initialize draft overlay — pass adapter and sync callback so the overlay can trigger entry scraping

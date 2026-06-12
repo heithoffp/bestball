@@ -127,6 +127,41 @@ export async function readEntryIds() {
 }
 
 /**
+ * Returns the subset of the given draft ids that already have a *usable* board
+ * row in draft_boards_admin (TASK-260). Used by the post-sync board backfill to
+ * skip drafts whose board is already complete, so repeated syncs converge.
+ *
+ * "Usable" mirrors the web read path (draftBoards.js fetchAvailableBoardIds):
+ * a row only counts if its first pick has a player name. This is critical —
+ * the legacy admin scraper (TASK-241) wrote rows with null player names, and
+ * those must NOT be treated as existing or the backfill would skip them
+ * forever and they'd never be repaired with complete data.
+ *
+ * Boards are pod-level data (not user-scoped), so this is not filtered by
+ * user_id — any usable board for the draft means we don't need to re-fetch.
+ *
+ * @param {string[]} draftIds
+ * @returns {Promise<Set<string>>}
+ */
+export async function readBoardIds(draftIds) {
+  if (!supabase || !Array.isArray(draftIds) || draftIds.length === 0) return new Set();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return new Set();
+
+  const { data, error } = await supabase
+    .from('draft_boards_admin')
+    .select('draft_id, first_pick_name:picks->0->>name')
+    .in('draft_id', draftIds.map(String));
+
+  if (error) return new Set();
+  return new Set(
+    (data ?? [])
+      .filter(r => r.first_pick_name != null)
+      .map(r => String(r.draft_id))
+  );
+}
+
+/**
  * Reads portfolio entries from Supabase for the current authenticated user.
  * Returns entries in the same shape accepted by writeEntries().
  *
@@ -313,4 +348,43 @@ export async function writeEntries(input, { platform } = {}) {
   }
   await new Promise((resolve) => chrome.storage.local.set(update, () => resolve()));
   return { count: count ?? entries.length };
+}
+
+/**
+ * Persists full pod draft boards captured at sync (ADR-009 / TASK-258).
+ *
+ * Boards are pod-level tournament data keyed by draft_id (not per-user), so
+ * rows are upserted on `draft_id` with last-writer-wins. Written by the
+ * authenticated customer via RLS insert/update policies (migration 010) and
+ * read back by the web app's RosterViewer board view. Supplementary to the
+ * user's own roster sync — callers should not let a board-write failure break
+ * the primary entry sync.
+ *
+ * Board shape (from underdog-bridge.js normalizeBoard):
+ *   { draftId, slateTitle, entryCount, rounds, picks: [...] }
+ *
+ * @param {Array<{draftId: string, slateTitle: string|null, entryCount: number, rounds: number, picks: object[]}>} boards
+ * @returns {Promise<{count: number}>}
+ */
+export async function writeBoards(boards) {
+  if (!supabase || !Array.isArray(boards) || boards.length === 0) return { count: 0 };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { count: 0 };
+
+  const rows = boards.map(b => ({
+    draft_id:    String(b.draftId),
+    slate_title: b.slateTitle ?? null,
+    entry_count: b.entryCount ?? null,
+    rounds:      b.rounds ?? null,
+    picks:       b.picks ?? [],
+    fetched_at:  new Date().toISOString(),
+    source:      'extension',
+  }));
+
+  const { error } = await supabase
+    .from('draft_boards_admin')
+    .upsert(rows, { onConflict: 'draft_id' });
+  if (error) throw error;
+
+  return { count: rows.length };
 }

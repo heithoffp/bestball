@@ -86,11 +86,12 @@
 | TASK-252 | Retire admin-extension and draft_boards_admin (per ADR-009) | Todo | P3 | [Plan](docs/plans/TASK-252.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-254 | Server-side enforcement for Pro-locked blog archive (RLS-gated delivery) | Todo | P3 | [Plan](docs/plans/TASK-254.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-257 | Teach /weekly-blog skill to set image: frontmatter + generate hero card per post | Todo | P3 | [Plan](docs/plans/TASK-257.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
-| TASK-258 | Chrome extension: capture full draft board at UD sync (ADR-009) and switch web read path off draft_boards_admin | Todo | P3 | [Plan](docs/plans/TASK-258.md) -- Draft | No | 2026-06-10 | 2026-06-10 |
+| TASK-259 | Privacy policy: note participant-captured third-party roster storage | Todo | P3 | [Plan](docs/plans/TASK-259.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
 | TASK-219 | Add install-funnel analytics for /install page | Todo | P4 | [Plan](docs/plans/TASK-219.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
+| TASK-261 | Harden getBoards/getEntries against a stale in-page bridge (fail fast, no 300s hang) | Todo | P4 | [Plan](docs/plans/TASK-261.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
 
 ## Completed Tasks
 
@@ -98,6 +99,8 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-260 | Backfill draft boards for already-synced UD drafts (bounded re-fetch) | Done | P3 | [Plan](docs/archive/plans/TASK-260.md) | Yes | 2026-06-12 |
+| TASK-258 | Chrome extension: capture full draft board at UD sync (ADR-009) and switch web read path off draft_boards_admin | Done | P3 | [Plan](docs/archive/plans/TASK-258.md) | Yes | 2026-06-12 |
 | TASK-256 | Per-route Open Graph metadata + hero images for blog posts (build-time prerender) | Done | P2 | [Plan](docs/archive/plans/TASK-256.md) | Yes | 2026-06-09 |
 | TASK-249 | Publish weekly blog content to website — blog index + article pages | Done | P1 | [Plan](docs/archive/plans/TASK-249.md) | Yes | 2026-06-09 |
 | TASK-253 | ADP Tracker — % change / raw ADP calculation toggle | Done | P3 | [Plan](docs/archive/plans/TASK-253.md) | Yes | 2026-06-09 |

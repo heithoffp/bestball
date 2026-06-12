@@ -628,15 +628,27 @@ async function handleSync() {
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
       if (progressLabel) progressLabel.textContent = `Processing ${done} / ${total} entries\u2026`;
       if (progressFill)  progressFill.style.width  = pct + '%';
+    } else if (phase === 'boards') {
+      // TASK-260: backfilling draft boards for already-synced drafts.
+      progressEl.classList.remove('bbm-progress-indeterminate');
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      if (progressLabel) progressLabel.textContent = `Backfilling boards ${done} / ${total}\u2026`;
+      if (progressFill)  progressFill.style.width  = pct + '%';
     }
   }
 
   window.addEventListener('message', onProgress);
 
   try {
-    const { count } = await syncCallback();
+    const { count, boardsRemaining = 0 } = await syncCallback();
     if (resultEl) {
-      resultEl.textContent = `Synced ${count} entries`;
+      let msg = `Synced ${count} entries`;
+      // TASK-260: more board-less drafts remain than one run can backfill.
+      if (boardsRemaining > 0) {
+        msg += ` — ${boardsRemaining} draft board${boardsRemaining === 1 ? '' : 's'} left to fill. `
+             + `Reload the page and press Sync again to continue.`;
+      }
+      resultEl.textContent = msg;
       resultEl.style.display = 'block';
     }
     loadPortfolioData();

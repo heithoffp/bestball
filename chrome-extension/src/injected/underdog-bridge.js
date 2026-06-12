@@ -180,6 +180,70 @@ if (!window.__BBM_initialized) {
     };
   }
 
+  // ── Full-board normalisation ──────────────────────────────────────────────
+  // ADR-009: the /v2/drafts/{id} response already carries all 12 rosters in
+  // draft.picks. Normalise every pick (not just the syncing user's) into the
+  // shared board shape so RosterViewer can render the full pod board. Mirrors
+  // admin-extension/src/scraper/normalizePick.js normalizeDraft.
+  // Returns null (board omitted) if seat order can't be derived or any pick's
+  // player name is unresolved — a nameless board is useless to the web app.
+
+  function normalizeBoard(draft) {
+    const entryCount   = draft.entry_count ?? draft.entryCount ?? 12;
+    const picks        = draft.picks ?? [];
+    const rounds       = draft.rounds ?? Math.ceil(picks.length / entryCount);
+    const draftEntries = draft.draft_entries ?? draft.draftEntries ?? [];
+
+    const slotByEntry = {};
+    const userByEntry = {};
+    for (const e of draftEntries) {
+      const slot = e.pick_order ?? e.slot_index ?? e.slotIndex ?? null;
+      if (slot != null) slotByEntry[String(e.id)] = slot;
+      userByEntry[String(e.id)] = String(e.user_id ?? e.userId ?? '');
+    }
+    if (Object.keys(slotByEntry).length === 0) return null;
+
+    let unresolved = 0;
+    const normalized = picks.map((p) => {
+      const deId         = String(p.draft_entry_id ?? p.draftEntryId ?? '');
+      const pickNumber   = p.number ?? p.pick_number ?? null;
+      const appearanceId = p.appearance_id ?? p.appearanceId;
+      const app          = window.__BBM.appearances[appearanceId] ?? {};
+      const playerId     = app.player_id ?? app.playerId;
+      const pl           = window.__BBM.players[playerId] ?? {};
+      const teamId       = pl.team_id ?? pl.teamId ?? app.team_id ?? app.teamId;
+      const team         = window.__BBM.teams[teamId] ?? {};
+
+      const firstName = pl.first_name ?? pl.firstName ?? '';
+      const lastName  = pl.last_name  ?? pl.lastName  ?? '';
+      const name = firstName ? (firstName + ' ' + lastName).trim() : null;
+      if (!name) unresolved++;
+
+      const position = pl.position_name ?? pl.positionName ?? null;
+
+      return {
+        pick:         pickNumber,
+        round:        p.round ?? (pickNumber ? Math.ceil(pickNumber / entryCount) : null),
+        slot:         slotByEntry[deId] ?? null,
+        draftEntryId: deId,
+        userId:       String(p.user_id ?? p.userId ?? '') || userByEntry[deId] || '',
+        name,
+        position:     position ? String(position).toUpperCase() : null,
+        team:         team.abbr ?? team.abbreviation ?? null,
+      };
+    });
+
+    if (unresolved > 0) return null;
+
+    return {
+      draftId:    String(draft.id),
+      slateTitle: draft.title ?? null,
+      entryCount,
+      rounds,
+      picks:      normalized,
+    };
+  }
+
   // ── Sync logic ────────────────────────────────────────────────────────────
 
   async function resolveUnderdogUserId() {
@@ -201,7 +265,7 @@ if (!window.__BBM_initialized) {
     await resolveUnderdogUserId();
 
     const { slates } = await apiFetch('https://' + window.__BBM.apiHost + '/v2/user/completed_slates');
-    if (!slates?.length) return { newEntries: [], currentDraftIds: [] };
+    if (!slates?.length) return { newEntries: [], currentDraftIds: [], boards: [] };
 
     const bestBallSlates = slates.filter(s => s.best_ball);
     const draftMeta      = [];
@@ -233,6 +297,7 @@ if (!window.__BBM_initialized) {
     const toFetch         = draftMeta.filter(d => !knownSet.has(String(d.draftId)));
     const total           = toFetch.length;
     const entries         = [];
+    const boards          = [];
 
     window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: 0, total }, '*');
 
@@ -271,22 +336,73 @@ if (!window.__BBM_initialized) {
         players:         userPicks.map(p => normalizePick(p, draft)),
       });
 
+      // ADR-009: capture the full pod board (all 12 rosters) — slate reference
+      // data is already loaded above for the user's own picks. Tag with the
+      // slate title so it matches the admin-written rows' shape.
+      const board = normalizeBoard(draft);
+      if (board) {
+        board.slateTitle = slateTitle || board.slateTitle;
+        boards.push(board);
+      }
+
       window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'fetching', done: i + 1, total }, '*');
     }
 
-    return { newEntries: entries, currentDraftIds };
+    return { newEntries: entries, currentDraftIds, boards };
+  }
+
+  // ── Board backfill ────────────────────────────────────────────────────────
+  // TASK-260: re-fetch full pod boards for already-synced drafts that lack one.
+  // The caller (content.js) supplies a pre-capped list of board-less draft ids;
+  // we fetch each, load its slate reference data, and normalize the full board.
+  // Per-draft failures (404 / withdrawn) are skipped, never fatal.
+
+  async function fetchBoards(draftIds) {
+    const ids   = (draftIds ?? []).map(String);
+    const total = ids.length;
+    const boards = [];
+
+    window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'boards', done: 0, total }, '*');
+
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        const data    = await apiFetch('https://' + window.__BBM.apiHost + '/v2/drafts/' + ids[i]);
+        const draft   = data.draft ?? data;
+        const slateId = draft.slate_id ?? draft.slateId;
+        if (slateId) await ensureSlateLoaded(slateId);
+        const board = normalizeBoard(draft);
+        if (board) boards.push(board);
+      } catch {
+        // skip unfetchable/unnormalizable drafts — backfill is best-effort
+      }
+      window.postMessage({ type: 'BBM_SYNC_PROGRESS', phase: 'boards', done: i + 1, total }, '*');
+    }
+
+    return boards;
   }
 
   // ── Message listener ──────────────────────────────────────────────────────
 
   window.addEventListener('message', async (event) => {
-    if (event.source !== window || event.data?.type !== 'BBM_SYNC_REQUEST') return;
+    if (event.source !== window) return;
+    const type = event.data?.type;
+    if (type !== 'BBM_SYNC_REQUEST' && type !== 'BBM_BOARDS_REQUEST') return;
 
     if (!window.__BBM.token) {
       window.postMessage({
         type:  'BBM_SYNC_ERROR',
         error: 'Not signed in to Underdog — please sign in and retry',
       }, '*');
+      return;
+    }
+
+    if (type === 'BBM_BOARDS_REQUEST') {
+      try {
+        const boards = await fetchBoards(event.data.draftIds ?? []);
+        window.postMessage({ type: 'BBM_BOARDS_RESULT', boards }, '*');
+      } catch (err) {
+        window.postMessage({ type: 'BBM_SYNC_ERROR', error: err.message }, '*');
+      }
       return;
     }
 
