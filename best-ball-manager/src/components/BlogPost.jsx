@@ -33,6 +33,17 @@ function makeComponents(onZoom) {
     a: ({ href, children }) => (
       <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
     ),
+    // remark wraps a standalone image in a <p>; since our img renders a block-level
+    // figure, unwrap those paragraphs. Keeps the figure out of a <p> (invalid nesting)
+    // and ensures the lede stays the first <p> so the drop cap lands on it, even when
+    // a post opens with a hero image.
+    p: ({ children, node }) => {
+      const kids = node?.children ?? [];
+      const imageOnly = kids.length > 0 && kids.every(
+        (c) => c.tagName === 'img' || (c.type === 'text' && !c.value.trim()),
+      );
+      return imageOnly ? <>{children}</> : <p>{children}</p>;
+    },
     // Render images as block-level spans so we never nest a <div> inside a <p>.
     img: ({ src, alt }) => {
       if (src === IMG_SENTINEL) {
