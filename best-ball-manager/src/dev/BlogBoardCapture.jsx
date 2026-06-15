@@ -148,6 +148,7 @@ for (let r = 1; r <= ROUNDS; r++) swapCells(cellAt(r, 7), cellAt(r, 8));
 swapCells(cellByName('Drake London'), cellByName('A.J. Brown'));
 swapCells(cellByName('Brian Thomas'), cellByName('Jordyn Tyson'));
 swapCells(cellByName('Lamar Jackson'), cellByName('Bhayshul Tuten'));
+swapCells(cellByName('Colston Loveland'), cellByName('TreVeyon Henderson'));
 
 // --- adpByPlatform maps (real ADP + projections drive CLV / Proj / pills) ----
 const latestAdpMap = {};
