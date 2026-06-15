@@ -59,12 +59,20 @@ export function slugFromFilename(path) {
   return file.replace(/^\d{4}-\d{2}-\d{2}-/, '');
 }
 
+// A paragraph that is only a markdown image (e.g. a leading hero) carries no
+// prose — strip image syntax and check for residual text before treating it as
+// the excerpt/lede source. Keeps a board-hero-led post from yielding an empty
+// description.
+function hasProse(p) {
+  return p.replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim().length > 0;
+}
+
 export function buildExcerpt(content) {
   const firstPara = content
     .replace(/\[INSERT IMAGE:[^\]]*\]/gi, '')
     .split(/\n\s*\n/)
     .map((p) => p.trim())
-    .find((p) => p && !p.startsWith('#'));
+    .find((p) => p && !p.startsWith('#') && hasProse(p));
   if (!firstPara) return '';
   const plain = firstPara
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')

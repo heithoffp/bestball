@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Lock, ArrowLeft, ArrowRight, Sparkles, Check } from 'lucide-react';
+import { Lock, ArrowLeft, ArrowRight, Sparkles, Check, Eye } from 'lucide-react';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   getPublishedPosts,
   getPostBySlug,
   canReadPost,
   isPostFree,
+  isLive,
   getLede,
   formatPostDate,
 } from '../utils/blog';
@@ -53,10 +55,11 @@ function Markdown({ children }) {
 
 export default function BlogPost({ slug }) {
   const { tier } = useSubscription();
-  const posts = useMemo(() => getPublishedPosts(), []);
-  const post = useMemo(() => getPostBySlug(slug), [slug]);
+  const { isAuthor } = useAuth();
+  const posts = useMemo(() => getPublishedPosts({ includeScheduled: isAuthor }), [isAuthor]);
+  const post = useMemo(() => getPostBySlug(slug, { includeScheduled: isAuthor }), [slug, isAuthor]);
 
-  // Unknown or draft slug → bounce back to the index.
+  // Unknown, draft, or not-yet-live (for non-authors) slug → bounce to the index.
   if (!post) {
     if (typeof window !== 'undefined') window.location.replace('/blog');
     return null;
@@ -66,8 +69,10 @@ export default function BlogPost({ slug }) {
   const newer = idx > 0 ? posts[idx - 1] : null;   // posts sorted newest-first
   const older = idx >= 0 && idx < posts.length - 1 ? posts[idx + 1] : null;
 
-  const free = isPostFree(slug, posts);
-  const unlocked = canReadPost(slug, tier, posts);
+  const scheduled = !isLive(post);
+  // Free/Pro tag anchors to the live list, never the author-preview list.
+  const free = isPostFree(slug);
+  const unlocked = canReadPost(slug, tier, undefined, { isAuthor });
 
   return (
     <article className={styles.article}>
@@ -75,9 +80,21 @@ export default function BlogPost({ slug }) {
         <ArrowLeft size={14} strokeWidth={2.25} /> Against ADP
       </a>
 
+      {scheduled && (
+        <div className={styles.previewBanner} role="status">
+          <Eye size={14} strokeWidth={2.5} />
+          <span>
+            <strong>Preview.</strong> Scheduled for {formatPostDate(post.date)} — not yet public.
+            Only you can see this.
+          </span>
+        </div>
+      )}
+
       <header className={styles.head}>
         <div className={styles.kickerRow}>
-          {!free && (
+          {scheduled ? (
+            <span className={styles.proTag}><Eye size={10} strokeWidth={2.75} /> Scheduled {formatPostDate(post.date)}</span>
+          ) : !free && (
             <span className={styles.proTag}><Lock size={10} strokeWidth={2.75} /> Pro archive</span>
           )}
           {post.topicTags.map((t) => (

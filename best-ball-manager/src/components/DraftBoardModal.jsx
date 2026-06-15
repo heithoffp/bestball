@@ -31,7 +31,7 @@ function MiniArchetypePill({ archetypeKey }) {
   );
 }
 
-export default function DraftBoardModal({ roster, adpByPlatform, onClose, boardOverride = null }) {
+export default function DraftBoardModal({ roster, adpByPlatform, onClose, boardOverride = null, hideColumnSummary = false }) {
   const [board, setBoard] = useState(boardOverride);
   const [loading, setLoading] = useState(!boardOverride);
 
@@ -163,19 +163,21 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, boardO
                       <span className={css.colTeamLabel}>{isUser ? 'YOU' : `Team ${slot}`}</span>
                       <span className={css.colPick}>#{slot}</span>
                     </div>
-                    <div className={css.colStats}>
-                      <span className={css.colStat} title="Projected points (sum of player projections)">
-                        <span className={css.colStatLabel}>Proj</span>
-                        <span className={css.colStatValue} style={{ color: '#60a5fa' }}>
-                          {s?.projectedPoints > 0 ? s.projectedPoints.toFixed(0) : '—'}
+                    {!hideColumnSummary && (
+                      <div className={css.colStats}>
+                        <span className={css.colStat} title="Projected points (sum of player projections)">
+                          <span className={css.colStatLabel}>Proj</span>
+                          <span className={css.colStatValue} style={{ color: '#60a5fa' }}>
+                            {s?.projectedPoints > 0 ? s.projectedPoints.toFixed(0) : '—'}
+                          </span>
                         </span>
-                      </span>
-                      <span className={css.colStat} title="Average Closing Line Value across this team's picks">
-                        <span className={css.colStatLabel}>CLV</span>
-                        <span className={css.colStatValue} style={{ color: clv.color }}>{clv.text}</span>
-                      </span>
-                    </div>
-                    {s?.path && (
+                        <span className={css.colStat} title="Average Closing Line Value across this team's picks">
+                          <span className={css.colStatLabel}>CLV</span>
+                          <span className={css.colStatValue} style={{ color: clv.color }}>{clv.text}</span>
+                        </span>
+                      </div>
+                    )}
+                    {!hideColumnSummary && s?.path && (
                       <div className={css.colArchRow}>
                         <MiniArchetypePill archetypeKey={s.path.rb} />
                         <MiniArchetypePill archetypeKey={s.path.qb} />

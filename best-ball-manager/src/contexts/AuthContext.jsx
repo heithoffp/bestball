@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { clearAllData } from '../utils/storage';
+import { isAuthorEmail } from '../utils/authorPreview';
 
 const AuthContext = createContext(null);
 
@@ -30,6 +31,9 @@ export function AuthProvider({ children }) {
   const [recoveryMode, setRecoveryMode] = useState(false);
 
   const emailVerified = user?.email_confirmed_at != null;
+  // Blog author — may preview scheduled (not-yet-live) posts in place (TASK-263).
+  // Client-side preview convenience, not a security boundary.
+  const isAuthor = isAuthorEmail(user?.email);
 
   useEffect(() => {
     if (!supabase) {
@@ -110,7 +114,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, emailVerified, authError, clearError,
+      user, loading, emailVerified, isAuthor, authError, clearError,
       signInWithGoogle, signOut,
       signUpWithEmail, signInWithEmail, resetPassword, updatePassword,
       recoveryMode,

@@ -11,6 +11,7 @@
     "build": "vite build",
     "postbuild": "node scripts/prerender-blog.mjs",
     "generate-og-card": "node scripts/generate-og-card.mjs",
+    "capture:allen-board": "node scripts/capture-allen-tax-board.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "capture-screenshots": "node scripts/capture-screenshots.js"

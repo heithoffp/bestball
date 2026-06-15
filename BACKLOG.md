@@ -92,6 +92,7 @@
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
 | TASK-219 | Add install-funnel analytics for /install page | Todo | P4 | [Plan](docs/plans/TASK-219.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-261 | Harden getBoards/getEntries against a stale in-page bridge (fail fast, no 300s hang) | Todo | P4 | [Plan](docs/plans/TASK-261.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
+| TASK-264 | Daily rebuild so scheduled posts get OG cards on go-live date | Todo | P4 | [Plan](docs/plans/TASK-264.md) -- Draft | No | 2026-06-15 | 2026-06-15 |
 
 ## Completed Tasks
 
@@ -99,23 +100,15 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
-| TASK-260 | Backfill draft boards for already-synced UD drafts (bounded re-fetch) | Done | P3 | [Plan](docs/archive/plans/TASK-260.md) | Yes | 2026-06-12 |
-| TASK-258 | Chrome extension: capture full draft board at UD sync (ADR-009) and switch web read path off draft_boards_admin | Done | P3 | [Plan](docs/archive/plans/TASK-258.md) | Yes | 2026-06-12 |
-| TASK-256 | Per-route Open Graph metadata + hero images for blog posts (build-time prerender) | Done | P2 | [Plan](docs/archive/plans/TASK-256.md) | Yes | 2026-06-09 |
-| TASK-249 | Publish weekly blog content to website — blog index + article pages | Done | P1 | [Plan](docs/archive/plans/TASK-249.md) | Yes | 2026-06-09 |
+| TASK-265 | Hide archive lock icon for users who can read the post (Pro/author) | Done | P3 | [Plan](docs/archive/plans/TASK-265.md) | Yes | 2026-06-15 |
+| TASK-263 | Scheduled blog publishing + author preview gate | Done | P2 | [Plan](docs/archive/plans/TASK-263.md) | Yes | 2026-06-15 |
 | TASK-253 | ADP Tracker — % change / raw ADP calculation toggle | Done | P3 | [Plan](docs/archive/plans/TASK-253.md) | Yes | 2026-06-09 |
 | TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy (Won't Do: Moot per ADR-009: draft_boards_admin is being dropped (TASK-252); no authenticated read policy/grant will ever be added.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-247.md) | No | 2026-06-09 |
 | TASK-251 | Admin scraper — negative-cache 404 draft IDs to stop re-fetching dead drafts (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to negative-cache 404s.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-251.md) | No | 2026-06-09 |
 | TASK-244 | Admin scraper — scheduled background runs via chrome.alarms (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to schedule.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-244.md) | No | 2026-06-09 |
 | TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available (Won't Do: Moot per ADR-009: admin-scraping retired (ownership-gated API). No admin-scraped board to prefer; full-board capture is now participant-authorized via TASK-240.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-243.md) | No | 2026-06-09 |
 | TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Done | P3 | [Plan](docs/archive/plans/TASK-242.md) | Yes | 2026-06-09 |
-| TASK-216 | Decide and execute Firefox distribution strategy (AMO listed vs. unlisted self-distribution signing) | Done | P2 | [Plan](docs/archive/plans/TASK-216.md) | Yes | 2026-05-08 |
-| TASK-215 | Set up extension build and release pipeline with secure key management | Done | P1 | [Plan](docs/archive/plans/TASK-215.md) | Yes | 2026-05-08 |
-| TASK-217 | Audit current Web Store extension install base before cutover (Won't Do: Email-list-as-population is sufficient: signup is required to use the extension, so the signed-up user list captures 100% of affected users (~20 total). No separate Web Store baseline needed; TASK-218 will use the email list as both audience and denominator.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-217.md) | No | 2026-05-08 |
-| TASK-229 | Clean up superseded extension artifacts in public/extension/ | Done | P3 | [Plan](docs/archive/plans/TASK-229.md) | No | 2026-05-10 |
-| TASK-228 | Fix Firefox auto-update routing — manifest update_url points at /updates.json but file lives at /extension/updates.json | Done | P2 | [Plan](docs/archive/plans/TASK-228.md) | No | 2026-05-10 |
-| TASK-227 | Fix DK roster name matching — use draftables displayName at sync time | Done | P1 | [Plan](docs/archive/plans/TASK-227.md) | No | 2026-05-10 |
-| TASK-232 | Playoff week (15/16/17) correlation pills in extension overlay | Done | P2 | [Plan](docs/archive/plans/TASK-232.md) | No | 2026-05-11 |
-| TASK-245 | Draft Assistant — port Tournament Filter and Playoff Stacks from extension | Done | P2 | [Plan](docs/archive/plans/TASK-245.md) | Yes | 2026-05-21 |
-| TASK-246 | Supabase migration grants: update template, existing migrations, and CLAUDE.md | Done | P2 | [Plan](docs/archive/plans/TASK-246.md) | Yes | 2026-05-28 |
 | TASK-241 | Admin draft-board scraper — periodic UD fetch by draft_id | Done | P3 | [Plan](docs/archive/plans/TASK-241.md) | Yes | 2026-06-09 |
+| TASK-260 | Backfill draft boards for already-synced UD drafts (bounded re-fetch) | Done | P3 | [Plan](docs/archive/plans/TASK-260.md) | Yes | 2026-06-12 |
+| TASK-258 | Chrome extension: capture full draft board at UD sync (ADR-009) and switch web read path off draft_boards_admin | Done | P3 | [Plan](docs/archive/plans/TASK-258.md) | Yes | 2026-06-12 |
+| TASK-262 | Draft-board hero image for The Allen Tax blog post (two-column fork) | Done | P2 | [Plan](docs/archive/plans/TASK-262.md) | Yes | 2026-06-15 |

@@ -95,6 +95,34 @@
   padding: 0.26rem 0.55rem;
   border-radius: 999px;
 }
+/* Author-only marker for a scheduled (not-yet-live) post (TASK-263). */
+.scheduledBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px dashed var(--gold);
+  padding: 0.26rem 0.55rem;
+  border-radius: 999px;
+}
+.rowScheduled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
 .featureTitle {
   font-family: var(--serif-display);
   font-weight: 600;

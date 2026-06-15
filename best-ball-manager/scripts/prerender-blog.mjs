@@ -95,13 +95,19 @@ function main() {
 
   const indexHtml = readFileSync(DIST_INDEX, 'utf8');
   const files = readdirSync(CONTENT).filter((f) => POST_RE.test(f));
+  // A scheduled post (published but future-dated) gets no public OG card until
+  // it goes live — see TASK-263. UTC date is fine for a build-time gate.
+  const today = new Date().toISOString().slice(0, 10);
 
   let count = 0;
+  let scheduled = 0;
   for (const f of files) {
     const raw = readFileSync(join(CONTENT, f), 'utf8');
     const { data, content } = parseFrontmatter(raw);
     const status = (data.status || 'draft').toLowerCase();
     if (status !== 'published') continue;
+    const date = data.date || '1970-01-01';
+    if (date > today) { scheduled++; continue; } // scheduled — skip until live
 
     const excerpt = buildExcerpt(content);
     const description = data.description || '';
@@ -121,7 +127,7 @@ function main() {
     count++;
   }
 
-  console.log(`[prerender-blog] prerendered ${count} post(s)`);
+  console.log(`[prerender-blog] prerendered ${count} post(s)${scheduled ? `, skipped ${scheduled} scheduled` : ''}`);
 }
 
 main();

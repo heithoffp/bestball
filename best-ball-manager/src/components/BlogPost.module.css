@@ -19,6 +19,24 @@
 }
 .back:hover { color: var(--gold); gap: 0.6rem; }
 
+/* Author-only preview banner for a scheduled (not-yet-live) post (TASK-263). */
+.previewBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1.4rem;
+  padding: 0.7rem 0.95rem;
+  border: 1px dashed var(--gold);
+  border-radius: 8px;
+  background: var(--gold-soft, rgba(201, 162, 39, 0.08));
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+.previewBanner strong { font-weight: 700; }
+
 /* ---- Header ---- */
 .head { margin-top: 1.8rem; }
 .kickerRow {

@@ -1,9 +1,13 @@
-import { Lock, ArrowUpRight } from 'lucide-react';
-import { getPublishedPosts, formatPostDate } from '../utils/blog';
+import { Lock, ArrowUpRight, Eye } from 'lucide-react';
+import { getPublishedPosts, formatPostDate, isLive, canReadPost } from '../utils/blog';
+import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import styles from './BlogIndex.module.css';
 
 export default function BlogIndex() {
-  const posts = getPublishedPosts();
+  const { isAuthor } = useAuth();
+  const { tier } = useSubscription();
+  const posts = getPublishedPosts({ includeScheduled: isAuthor });
   const [featured, ...archive] = posts;
 
   return (
@@ -25,6 +29,11 @@ export default function BlogIndex() {
         <>
           <a href={`/blog/${featured.slug}`} className={styles.feature}>
             <div className={styles.featureTop}>
+              {!isLive(featured) && (
+                <span className={styles.scheduledBadge}>
+                  <Eye size={11} strokeWidth={2.5} /> Preview · scheduled {formatPostDate(featured.date)}
+                </span>
+              )}
               {featured.topicTags.slice(0, 3).map((t) => (
                 <span key={t} className={styles.tag}>{t}</span>
               ))}
@@ -50,20 +59,32 @@ export default function BlogIndex() {
                 </span>
               </div>
               <ol className={styles.ledger}>
-                {archive.map((post, i) => (
+                {archive.map((post, i) => {
+                  const locked = !canReadPost(post.slug, tier, undefined, { isAuthor });
+                  return (
                   <li key={post.slug} className={styles.row} style={{ '--i': i }}>
                     <a href={`/blog/${post.slug}`} className={styles.rowLink}>
                       <span className={styles.rowDate}>{formatPostDate(post.date)}</span>
                       <span className={styles.rowMain}>
-                        <span className={styles.rowTitle}>{post.title}</span>
+                        <span className={styles.rowTitle}>
+                          {!isLive(post) && (
+                            <span className={styles.rowScheduled}>
+                              <Eye size={10} strokeWidth={2.5} /> Scheduled
+                            </span>
+                          )}
+                          {post.title}
+                        </span>
                         <span className={styles.rowExcerpt}>{post.excerpt}</span>
                       </span>
-                      <span className={styles.rowLock} aria-label="Pro subscribers only">
-                        <Lock size={13} strokeWidth={2.25} />
-                      </span>
+                      {locked && (
+                        <span className={styles.rowLock} aria-label="Pro subscribers only">
+                          <Lock size={13} strokeWidth={2.25} />
+                        </span>
+                      )}
                     </a>
                   </li>
-                ))}
+                  );
+                })}
               </ol>
             </section>
           )}

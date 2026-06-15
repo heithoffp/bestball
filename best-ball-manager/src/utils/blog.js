@@ -7,8 +7,18 @@
 // Gating rule (TASK-249): the single newest PUBLISHED post is free to everyone;
 // every older published post is Pro-only. Soft client-side gate for v1 — see
 // TASK-254 for server-side enforcement.
+//
+// Scheduled publishing (TASK-263): a post's `date` doubles as its go-live date.
+// A post is LIVE only when status==='published' AND date<=today; a published
+// post with a future date is "scheduled" — hidden from the public until its
+// date, then it surfaces automatically (client-side, no rebuild). The post
+// author can preview scheduled posts in place by passing { includeScheduled }.
 
 import { parseFrontmatter, slugFromFilename, buildExcerpt } from './blogParse.js';
+import { todayStr, isLive } from './blogSchedule.js';
+
+// Re-export so existing importers (`import { isLive } from '../utils/blog'`) keep working.
+export { todayStr, isLive };
 
 const WORDS_PER_MIN = 220;
 
@@ -51,30 +61,46 @@ const ALL_POSTS = Object.entries(modules)
   .map(([path, raw]) => buildPost(path, raw))
   .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)); // newest first
 
-/** Published posts, newest first. Drafts never surface. */
-export function getPublishedPosts() {
-  return ALL_POSTS.filter((p) => p.status === 'published');
+/** Live published posts (date<=today), newest first. */
+function getLivePosts(today = todayStr()) {
+  return ALL_POSTS.filter((p) => isLive(p, today)); // ALL_POSTS already sorted newest-first
 }
 
-export function getPostBySlug(slug) {
-  return getPublishedPosts().find((p) => p.slug === slug) || null;
+/**
+ * Published posts, newest first. By default only LIVE posts (drafts and
+ * not-yet-due scheduled posts never surface). Pass { includeScheduled: true }
+ * — the author-preview path — to include published-but-future posts too.
+ */
+export function getPublishedPosts({ includeScheduled = false, today = todayStr() } = {}) {
+  if (includeScheduled) return ALL_POSTS.filter((p) => p.status === 'published');
+  return getLivePosts(today);
 }
 
-/** The newest published post is free to everyone. */
-export function isPostFree(slug, posts = getPublishedPosts()) {
+export function getPostBySlug(slug, { includeScheduled = false } = {}) {
+  return getPublishedPosts({ includeScheduled }).find((p) => p.slug === slug) || null;
+}
+
+/** The newest LIVE post is free to everyone. Anchored to the live list so a
+ *  scheduled post being previewed never becomes (or displaces) the free post. */
+export function isPostFree(slug, posts = getLivePosts()) {
   return posts.length > 0 && posts[0].slug === slug;
 }
 
-/** Gate: newest published is free; older requires Pro. */
-export function canReadPost(slug, tier, posts = getPublishedPosts()) {
-  return isPostFree(slug, posts) || tier === 'pro';
+/** Gate: the author always reads; otherwise newest live is free, older needs Pro. */
+export function canReadPost(slug, tier, posts = getLivePosts(), { isAuthor = false } = {}) {
+  return isAuthor || isPostFree(slug, posts) || tier === 'pro';
 }
 
-/** First `count` paragraphs of a post body — used for the locked teaser. */
+/** First `count` paragraphs of a post body — used for the locked teaser.
+ *  Skips headings and image-only paragraphs (e.g. a leading hero image) so the
+ *  teaser opens on prose, not a figure. */
 export function getLede(content, count = 2) {
   return content
     .split(/\n\s*\n/)
-    .filter((p) => p.trim() && !p.trim().startsWith('#'))
+    .filter((p) => {
+      const t = p.trim();
+      return t && !t.startsWith('#') && t.replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim().length > 0;
+    })
     .slice(0, count)
     .join('\n\n');
 }
