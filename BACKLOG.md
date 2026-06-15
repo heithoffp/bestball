@@ -100,6 +100,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-266 | Tap/click-to-zoom lightbox for blog figures | Done | P2 | [Plan](docs/archive/plans/TASK-266.md) | Yes | 2026-06-15 |
 | TASK-265 | Hide archive lock icon for users who can read the post (Pro/author) | Done | P3 | [Plan](docs/archive/plans/TASK-265.md) | Yes | 2026-06-15 |
 | TASK-263 | Scheduled blog publishing + author preview gate | Done | P2 | [Plan](docs/archive/plans/TASK-263.md) | Yes | 2026-06-15 |
 | TASK-253 | ADP Tracker — % change / raw ADP calculation toggle | Done | P3 | [Plan](docs/archive/plans/TASK-253.md) | Yes | 2026-06-09 |

@@ -210,6 +210,123 @@
   border-radius: 10px;
   border: 1px solid var(--rule);
 }
+
+/* Click/tap-to-zoom affordance for raster figures (the wide draft board, etc.). */
+.zoomFigure {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 10px;
+}
+.zoomFigure img { transition: filter 160ms ease; }
+.zoomFigure:hover img,
+.zoomFigure:focus-visible img { filter: brightness(0.88); }
+.zoomFigure:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.zoomHint {
+  position: absolute;
+  bottom: 0.6rem;
+  right: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: rgba(20, 20, 20, 0.78);
+  border: 1px solid rgba(232, 191, 74, 0.5);
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  pointer-events: none;
+}
+.zoomFigure:hover .zoomHint,
+.zoomFigure:focus-visible .zoomHint { opacity: 1; transform: translateY(0); }
+
+/* ---- Lightbox overlay ---- */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem 1rem;
+  background: rgba(8, 8, 10, 0.92);
+  backdrop-filter: blur(3px);
+  animation: lightboxFade 200ms ease both;
+}
+.lightboxScroll {
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-overflow-scrolling: touch;
+}
+.lightboxImg {
+  display: block;
+  max-width: 100%;
+  max-height: 84vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  cursor: zoom-in;
+}
+/* Toggled state: render at native pixels and let the container scroll/pan. */
+.lightboxActual {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+.lightboxClose {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--paper);
+  background: rgba(20, 20, 20, 0.7);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.lightboxClose:hover { background: rgba(40, 40, 40, 0.9); border-color: var(--gold); }
+.lightboxClose:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lightboxCaption {
+  flex-shrink: 0;
+  margin-top: 0.9rem;
+  max-width: 70ch;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+}
+@keyframes lightboxFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lightbox { animation: none; }
+  .zoomFigure img, .zoomHint { transition: none; }
+}
 .figurePlaceholder {
   border: 1px dashed var(--gold);
   border-radius: 10px;

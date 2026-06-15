@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Lock, ArrowLeft, ArrowRight, Sparkles, Check, Eye } from 'lucide-react';
+import { Lock, ArrowLeft, ArrowRight, Sparkles, Check, Eye, Maximize2, X } from 'lucide-react';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -22,40 +23,112 @@ function preprocess(markdown) {
   return markdown.replace(/\[INSERT IMAGE:\s*([^\]]*)\]/gi, (_, desc) => `![${desc.trim()}](${IMG_SENTINEL})`);
 }
 
-const MD_COMPONENTS = {
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-  ),
-  // Render images as block-level spans so we never nest a <div> inside a <p>.
-  img: ({ src, alt }) => {
-    if (src === IMG_SENTINEL) {
+// Raster images can't survive being shrunk into the 720px column — they get a
+// click/tap-to-zoom affordance. Vector (SVG) figures scale crisply and render as-is.
+const isRaster = (src) => /\.(png|jpe?g|webp|gif)$/i.test(src || '');
+
+// Built per-render so the img renderer can call back into component state.
+function makeComponents(onZoom) {
+  return {
+    a: ({ href, children }) => (
+      <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+    ),
+    // Render images as block-level spans so we never nest a <div> inside a <p>.
+    img: ({ src, alt }) => {
+      if (src === IMG_SENTINEL) {
+        return (
+          <span className={styles.figurePlaceholder} role="img" aria-label={alt || 'Image placeholder'}>
+            <span className={styles.figureBadge}>Figure</span>
+            <span className={styles.figureCaption}>{alt || 'Image to come'}</span>
+          </span>
+        );
+      }
+      if (isRaster(src)) {
+        return (
+          <span className={styles.figure}>
+            <button
+              type="button"
+              className={styles.zoomFigure}
+              onClick={() => onZoom({ src, alt: alt || '' })}
+              aria-label={alt ? `Enlarge: ${alt}` : 'Enlarge image'}
+            >
+              <img src={src} alt={alt || ''} loading="lazy" />
+              <span className={styles.zoomHint} aria-hidden="true">
+                <Maximize2 size={12} strokeWidth={2.5} /> Enlarge
+              </span>
+            </button>
+            {alt ? <span className={styles.figureCaption}>{alt}</span> : null}
+          </span>
+        );
+      }
       return (
-        <span className={styles.figurePlaceholder} role="img" aria-label={alt || 'Image placeholder'}>
-          <span className={styles.figureBadge}>Figure</span>
-          <span className={styles.figureCaption}>{alt || 'Image to come'}</span>
+        <span className={styles.figure}>
+          <img src={src} alt={alt || ''} loading="lazy" />
+          {alt ? <span className={styles.figureCaption}>{alt}</span> : null}
         </span>
       );
-    }
-    return (
-      <span className={styles.figure}>
-        <img src={src} alt={alt || ''} loading="lazy" />
-        {alt ? <span className={styles.figureCaption}>{alt}</span> : null}
-      </span>
-    );
-  },
-};
+    },
+  };
+}
 
-function Markdown({ children }) {
+function Markdown({ children, onZoom }) {
+  const components = useMemo(() => makeComponents(onZoom), [onZoom]);
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
       {children}
     </ReactMarkdown>
   );
 }
 
+// Full-screen overlay: image at native resolution, scroll/pan when larger than the
+// viewport, pinch-zoom on touch. Click the image to toggle fit-to-screen ↔ 100%.
+function Lightbox({ src, alt, onClose }) {
+  const [actualSize, setActualSize] = useState(false);
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  // Portal to <body>: the article retains a transform from its `rise` animation
+  // (fill-mode: both), which would otherwise make this fixed overlay positioned
+  // relative to the article instead of the viewport.
+  return createPortal((
+    <div
+      className={styles.lightbox}
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt || 'Enlarged image'}
+      onClick={onClose}
+    >
+      <button ref={closeRef} type="button" className={styles.lightboxClose} onClick={onClose} aria-label="Close">
+        <X size={20} strokeWidth={2.5} />
+      </button>
+      <div className={styles.lightboxScroll} onClick={(e) => e.stopPropagation()}>
+        <img
+          src={src}
+          alt={alt || ''}
+          className={`${styles.lightboxImg} ${actualSize ? styles.lightboxActual : ''}`}
+          onClick={() => setActualSize((v) => !v)}
+        />
+      </div>
+      {alt ? <span className={styles.lightboxCaption}>{alt}</span> : null}
+    </div>
+  ), document.body);
+}
+
 export default function BlogPost({ slug }) {
   const { tier } = useSubscription();
   const { isAuthor } = useAuth();
+  const [zoomed, setZoomed] = useState(null);
   const posts = useMemo(() => getPublishedPosts({ includeScheduled: isAuthor }), [isAuthor]);
   const post = useMemo(() => getPostBySlug(slug, { includeScheduled: isAuthor }), [slug, isAuthor]);
 
@@ -113,10 +186,10 @@ export default function BlogPost({ slug }) {
 
       {unlocked ? (
         <div className={styles.prose}>
-          <Markdown>{preprocess(post.content)}</Markdown>
+          <Markdown onZoom={setZoomed}>{preprocess(post.content)}</Markdown>
         </div>
       ) : (
-        <LockedBody post={post} />
+        <LockedBody post={post} onZoom={setZoomed} />
       )}
 
       {(newer || older) && (
@@ -135,16 +208,20 @@ export default function BlogPost({ slug }) {
           ) : <span />}
         </nav>
       )}
+
+      {zoomed && (
+        <Lightbox src={zoomed.src} alt={zoomed.alt} onClose={() => setZoomed(null)} />
+      )}
     </article>
   );
 }
 
-function LockedBody({ post }) {
+function LockedBody({ post, onZoom }) {
   return (
     <div className={styles.locked}>
       <div className={styles.lockedProse}>
         <div className={styles.prose}>
-          <Markdown>{getLede(post.content, 2)}</Markdown>
+          <Markdown onZoom={onZoom}>{getLede(post.content, 2)}</Markdown>
         </div>
         <div className={styles.fade} aria-hidden="true" />
       </div>
