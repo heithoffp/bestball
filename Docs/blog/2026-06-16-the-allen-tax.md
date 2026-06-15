@@ -2,7 +2,7 @@
 title: "The Allen Tax"
 date: 2026-06-16
 status: published
-image: "/blog/images/allen-tax-board-og-2026-06-15.png"
+image: "/blog/images/og-the-allen-tax.png"
 kb_sources:
   - kb/articles/positional-analysis/qb-adp-sweet-spots-in-best-ball-2026.md
   - kb/articles/player-situations/jalen-hurts-rushing-td-discount.md
@@ -27,7 +27,7 @@ The specific thing you're paying for at 33, a quarterback whose legs hold up his
 
 And this is the worst year I can remember to hand round three to a quarterback. Sixteen running backs go inside the first three rounds on DraftKings, and on Underdog the position thins out right behind Allen's price: Josh Jacobs at 38.2 is the last back in the tier I trust, and behind him it's Cam Skattebo at 43.4 and a string of committee guesses. The late rounds don't cover it either. The contingent-upside backs that used to wait in the double-digit rounds are priced into rounds four through six now, with TreVeyon Henderson at 49.7 and Bhayshul Tuten at 55.3, and the backs left in rounds 16-20 are mostly fighting for NFL roster spots, not fantasy roles. Yes, that stuffs the cheap quarterbacks and the last real RB upside into the same middle rounds. That congestion is the argument: round three is the one window left where you can buy a back or receiver you trust at full strength, and quarterback is the one position still available three rounds later.
 
-Here's the counter I can't fully beat. Allen's floor is current, and the discount quarterbacks come with mileage on theirs. Hurts ran for [8 touchdowns last season](https://www.nfl.com/players/jalen-hurts/stats/), not 14. Daniels' rushing receipt is his rookie year; his 2025 was [58 carries for 278 yards](https://www.nfl.com/players/jayden-daniels/stats/). I can't name a season where Allen sank the teams that drafted him, and both quarterbacks I'm steering you toward just had one. If you want certainty at the position, Allen is the only shelf it's sold on, and that's a real thing to pay for.
+Here's the counter I can't fully beat. Allen's floor is current, and the discount quarterbacks each come with a question he doesn't. Hurts ran for [8 touchdowns last season](https://www.nfl.com/players/jalen-hurts/stats/), not 14, so that rushing peak is already fading. With Daniels it's availability: his rushing receipt is a rookie line, and last year he played [just 7 of a possible 17 games](https://www.nfl.com/players/jayden-daniels/stats/), 58 carries for 278 yards. I can't name a season where Allen sank the teams that drafted him, and last year one of these two faded while the other missed more than half the season. If you want certainty at the position, Allen is the only shelf it's sold on, and that's a real thing to pay for.
 
 I'm still out, for two reasons. The first is what the format pays: best ball doesn't pay floors, it pays ceilings, the spike weeks that win tournaments. And the ceiling is the part the discount never touched: Hurts' 15-touchdown season is a higher rushing peak than either of Allen's last two years, and Daniels at his rookie pace put up the same kind of week-winning lines. Allen's real edge is hitting that ceiling more often, and the reliability is worth something. It isn't worth a Kyren Williams.
 
@@ -37,4 +37,4 @@ Here's the trade at a real table. A 12-team Best Ball Mania draft from June 10, 
 
 ![A 12-team Underdog board from June 10. One rival spends up on Josh Allen in round three; the highlighted column passes, takes Kyren Williams there, and lands Jayden Daniels in round six.](/blog/images/allen-tax-board-2026-06-15.png)
 
-Allen will probably outscore every name in this post. The pick still loses, because a draft isn't scored one player at a time. I'd rather have the three rounds. On DraftKings, make it four.
+Allen will probably outscore every name in this post. The pick still loses, because a draft isn't scored one player at a time. I'd rather have the three rounds.
