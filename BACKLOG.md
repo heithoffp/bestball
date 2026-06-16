@@ -13,6 +13,7 @@
 - TASK-248: Retroactive user_rankings migration + Security Advisor audit
 - TASK-188: Weekly portfolio digest email — retention loop
 - TASK-240: Roster Viewer — full Draft Board view (Underdog)
+- TASK-268: Add Avg CLV column to Exposures tab
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -87,6 +88,8 @@
 | TASK-254 | Server-side enforcement for Pro-locked blog archive (RLS-gated delivery) | Todo | P3 | [Plan](docs/plans/TASK-254.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-257 | Teach /weekly-blog skill to set image: frontmatter + generate hero card per post | Todo | P3 | [Plan](docs/plans/TASK-257.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-259 | Privacy policy: note participant-captured third-party roster storage | Todo | P3 | [Plan](docs/plans/TASK-259.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
+| TASK-267 | Fix blog OG card gate for same-day-published posts | Todo | P3 | [Plan](docs/plans/TASK-267.md) -- Draft | No | 2026-06-16 | 2026-06-16 |
+| TASK-268 | Add Avg CLV column to Exposures tab | In Progress | P3 | [Plan](docs/plans/TASK-268.md) | No | 2026-06-16 | 2026-06-16 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |

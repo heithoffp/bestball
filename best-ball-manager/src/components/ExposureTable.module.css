@@ -140,13 +140,14 @@
   min-width: 100px;
 }
 
-.colName { width: 22%; }
-.colPos { width: 7%; }
-.colTeam { width: 13%; }
-.colExposure { width: 12%; }
-.colCount { width: 7%; }
+.colName { width: 20%; }
+.colPos { width: 6%; }
+.colTeam { width: 12%; }
+.colExposure { width: 11%; }
+.colCount { width: 6%; }
 .colAdp { width: 7%; }
-.colTrend { width: 18%; }
+.colClv { width: 9%; }
+.colTrend { width: 15%; }
 .colNav { width: 7%; }
 
 .seeRostersBtn {
@@ -337,12 +338,13 @@
     display: none;
   }
 
-  .colName { width: 28%; }
-  .colPos { width: 9%; }
+  .colName { width: 24%; }
+  .colPos { width: 8%; }
   .colTeam { width: 11%; }
-  .colExposure { width: 20%; }
-  .colCount { width: 15%; }
-  .colAdp { width: 17%; }
+  .colExposure { width: 17%; }
+  .colCount { width: 12%; }
+  .colAdp { width: 13%; }
+  .colClv { width: 15%; }
 
   .cell {
     padding: 8px 10px;

@@ -9,7 +9,7 @@ Active
 ## User-Facing Behavior
 
 ### Desktop
-- Full-width sortable table with columns: Player Name, Position, Team, Exposure %, Count, ADP, 2-Week Trend
+- Full-width sortable table with columns: Player Name, Position, Team, Exposure %, Count, ADP, Avg CLV, 2-Week Trend
 - Inline ADP sparkline per row showing historical ADP movement
 - Strategy filter chips for RB (Zero/Hero/Hyper Fragile/Balanced), QB (Elite/Core/Late), TE (Elite/Anchor/Late)
 - Search bar with 250ms debounce for player name, team, or position
@@ -17,7 +17,7 @@ Active
 ### Mobile
 - Vertical chip filters replace horizontal filter bar
 - Stacked search input
-- Card-based layout with expandable rows — tap to reveal ADP sparkline and 2-week trend
+- Card-based layout with expandable rows — tap to reveal ADP sparkline and 2-week trend; stat row shows Exp / Count / ADP / CLV
 - Row height: 50px (vs 51px desktop)
 
 ### Empty States
@@ -29,7 +29,7 @@ Active
 
 | Control | Behavior |
 |---------|----------|
-| Sort | 5 options: Exposure %, ADP, Name, Count, ADP Trend (2-week) |
+| Sort | 6 options: Exposure %, ADP, Avg CLV, Name, Count, ADP Trend (2-week) |
 | Position/Strategy Filters | RB/QB/TE strategy archetype chips; dynamically updates roster count |
 | Search | Fuzzy match on name, team, position (250ms debounce) |
 | Show 0% Toggle | Include players with 0% exposure; auto-enabled when no roster data |
@@ -41,6 +41,7 @@ Active
 
 **Key computations (all via `useMemo`):**
 - Exposure aggregation: counts player appearances across filtered roster set, computes `count / totalEntries * 100`
+- Avg CLV: mean of `calcCLV(pick, latestADP, alpha=0.5)` across the player's appearances in the filtered roster set, reusing the Rosters-tab CLV math (`utils/clvHelpers.js`); colored via `clvLabel()`. Players with no valid picks show "—".
 - 2-week trend: compares baseline ADP from 14+ days ago against latest ADP value
 - Player identity: normalized via `stableId()` from `utils/helpers.js`
 - Orphaned players (not in any roster) rendered at 0.5 opacity
@@ -57,3 +58,4 @@ Active
 - `src/components/ExposureTable.jsx` — main component
 - `src/components/AdpSparkline.jsx` — inline sparkline chart
 - `src/utils/helpers.js` — `stableId()`, `processMasterList()`
+- `src/utils/clvHelpers.js` — `calcCLV()`, `clvLabel()` (shared with Rosters tab)
