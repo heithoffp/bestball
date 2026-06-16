@@ -2,8 +2,10 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import {
   LayoutDashboard, Users, TrendingUp, BarChart3, Network, Crosshair,
   Check, Minus, ChevronRight, Shield, Zap, Globe, X, Chrome, Puzzle,
+  BookOpen, ArrowUpRight, Lock,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import { getPublishedPosts, formatPostDate } from '../utils/blog';
 import { addToBrowserLabel, browserDisplayName, detectBrowser } from '../utils/browserDetect';
 
 /* Pick a glyph that matches the user's browser. Chrome has a Lucide brand
@@ -141,6 +143,12 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
+  // Surface the newest free issue + a short ledger of recent issues from the
+  // blog ("Against ADP"). Guest landing page → live posts only, newest first.
+  const blogPosts = getPublishedPosts();
+  const latestPost = blogPosts[0];
+  const recentPosts = blogPosts.slice(1, 4);
+
   return (
     <div className={styles.page}>
       {/* ── Screenshot lightbox ── */}
@@ -162,6 +170,9 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
         <div className={styles.navActions}>
           <button className={styles.navScrollLink} onClick={() => scrollTo('features')}>Features</button>
           <button className={styles.navScrollLink} onClick={() => scrollTo('pricing')}>Pricing</button>
+          {latestPost && (
+            <button className={styles.navScrollLink} onClick={() => scrollTo('journal')}>Journal</button>
+          )}
           <button className={styles.navLink} onClick={onSignUp}>Sign In</button>
           <button className={styles.btnPrimary} onClick={onSignUp}>
             Get Started <ChevronRight size={14} />
@@ -417,6 +428,74 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
           </table>
         </div>
       </FadeSection>
+
+      {/* ── Journal (blog) ── */}
+      {latestPost && (
+        <FadeSection id="journal" className={`${styles.section} ${styles.journal}`}>
+          <div className={styles.sectionLabel}>
+            <span className={styles.sectionNum}>04</span> From the journal
+          </div>
+          <h2 className={styles.sectionTitle}>Against ADP</h2>
+          <p className={styles.sectionSub}>
+            A weekly read on what the draft room believes — and where it's wrong. Written off
+            the same data the app runs on. No hot takes, just receipts.
+          </p>
+
+          <div className={`${styles.journalLayout} ${recentPosts.length ? '' : styles.journalLayoutSolo}`}>
+            {/* Latest issue — free to read */}
+            <a href={`/blog/${latestPost.slug}`} className={styles.journalFeature}>
+              <div className={styles.journalFeatureTop}>
+                <span className={styles.journalKicker}>Latest issue · Free to read</span>
+                {latestPost.topicTags.length > 0 && (
+                  <span className={styles.journalTags}>
+                    {latestPost.topicTags.slice(0, 3).map((t) => (
+                      <span key={t} className={styles.journalTag}>{t}</span>
+                    ))}
+                  </span>
+                )}
+              </div>
+              <h3 className={styles.journalFeatureTitle}>{latestPost.title}</h3>
+              <p className={styles.journalFeatureExcerpt}>{latestPost.excerpt}</p>
+              <div className={styles.journalMeta}>
+                <span>{formatPostDate(latestPost.date)}</span>
+                <span className={styles.journalDot} aria-hidden="true">·</span>
+                <span>{latestPost.readingTime} min read</span>
+                <span className={styles.journalReadCta}>
+                  Read it <ArrowUpRight size={15} strokeWidth={2.25} />
+                </span>
+              </div>
+            </a>
+
+            {/* Recent issues ledger */}
+            {recentPosts.length > 0 && (
+              <div className={styles.journalArchive}>
+                <div className={styles.journalArchiveHead}>
+                  <span>Recent issues</span>
+                  <span className={styles.journalArchiveLock}>
+                    <Lock size={11} strokeWidth={2.5} /> Pro
+                  </span>
+                </div>
+                <ol className={styles.journalLedger}>
+                  {recentPosts.map((p) => (
+                    <li key={p.slug}>
+                      <a href={`/blog/${p.slug}`} className={styles.journalRow}>
+                        <span className={styles.journalRowDate}>{formatPostDate(p.date)}</span>
+                        <span className={styles.journalRowTitle}>{p.title}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.journalCtaRow}>
+            <a href="/blog" className={`${styles.btnSecondary} ${styles.btnLarge}`}>
+              <BookOpen size={16} /> Browse the full journal
+            </a>
+          </div>
+        </FadeSection>
+      )}
 
       {/* ── Final CTA ── */}
       <FadeSection className={`${styles.section} ${styles.finalCta}`}>
