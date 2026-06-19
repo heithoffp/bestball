@@ -11,3 +11,4 @@
 | [ADR-007](adr-007-chromium-distribution-zip-load-unpacked-with-extension.md) | Chromium distribution: ZIP + load-unpacked, with extension-driven update notifications | Accepted | 2026-05-08 |
 | [ADR-008](adr-008-admin-side-ud-scraping-pipeline-for-draft-board-backfill.md) | Admin-side UD scraping pipeline for draft-board backfill | Superseded | 2026-05-21 |
 | [ADR-009](adr-009-participant-authorized-full-board-capture-retire-a.md) | Participant-authorized full-board capture (retire admin scraping) | Accepted | 2026-06-09 |
+| [ADR-010](adr-010-eliminator-mode-as-a-toggleable-overlay-on-the-dra.md) | Eliminator Mode as a toggleable overlay on the Draft Assistant | Proposed | 2026-06-19 |

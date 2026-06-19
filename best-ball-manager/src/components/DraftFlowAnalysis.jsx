@@ -11,6 +11,10 @@ import { SearchInput } from './filters';
 import TournamentMultiSelect from './TournamentMultiSelect';
 import { trackEvent } from '../utils/analytics';
 import TabLayout from './TabLayout';
+import EliminatorPanel from './EliminatorPanel';
+import { getEliminatorFlags } from '../utils/eliminatorModel';
+
+const ELIMINATOR_MODE_KEY = 'bbe.eliminatorMode';
 
 const HELP_ANNOTATIONS = [
   { id: 'draft-slot', label: 'Draft Slot', description: 'Set your draft position (1–12) to align the player window with your snake pick.' },
@@ -135,6 +139,9 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
   const [draftSlot, setDraftSlot] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTournaments, setSelectedTournaments] = useState([]);
+  const [eliminatorMode, setEliminatorMode] = useState(() => {
+    try { return localStorage.getItem(ELIMINATOR_MODE_KEY) === '1'; } catch { return false; }
+  });
   const playerListRef = useRef(null);
   const adpDividerRef = useRef(null);
 
@@ -156,6 +163,19 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
       }
     });
   }, [currentPicks]);
+
+  // Persist Eliminator Mode toggle
+  useEffect(() => {
+    try { localStorage.setItem(ELIMINATOR_MODE_KEY, eliminatorMode ? '1' : '0'); } catch { /* ignore */ }
+  }, [eliminatorMode]);
+
+  const toggleEliminatorMode = () => {
+    setEliminatorMode(prev => {
+      const next = !prev;
+      trackEvent('draft_eliminator_mode_toggled', { enabled: next });
+      return next;
+    });
+  };
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -799,6 +819,18 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
           </div>
         </div>
       </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={eliminatorMode}
+        className={`${styles.eliminatorToggle} ${eliminatorMode ? styles.eliminatorToggleOn : ''}`}
+        onClick={toggleEliminatorMode}
+        title="Re-tool the Draft Assistant for the Underdog Eliminator (weekly survival): roster-shape target, bye rainbow, and macro fades."
+      >
+        <Anchor size={13} />
+        <span>Eliminator Mode</span>
+        <span className={styles.eliminatorToggleState}>{eliminatorMode ? 'ON' : 'OFF'}</span>
+      </button>
     </div>
   );
 
@@ -939,6 +971,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
                 isMobile={isMobile}
                 isExpanded={expandedBreakdowns.has(p.name)}
                 onToggleBreakdown={() => toggleBreakdown(p.name)}
+                eliminatorMode={eliminatorMode}
               />
             </React.Fragment>
           );
@@ -960,6 +993,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
   const renderBoardView = () => (
     <div className={styles.boardViewMobile}>
       {renderDraftControls()}
+      {eliminatorMode && <EliminatorPanel picks={currentPicks} />}
       {renderDraftBoard()}
     </div>
   );
@@ -984,6 +1018,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
           <>
             <div className={styles.leftColumn}>
               {renderDraftControls()}
+              {eliminatorMode && <EliminatorPanel picks={currentPicks} />}
               {renderDraftBoard()}
             </div>
             <div className={styles.rightColumn}>
@@ -1001,10 +1036,56 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
 }
 
 // --- PLAYER CARD ---
-function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile = false, isExpanded = false, onToggleBreakdown }) {
+function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile = false, isExpanded = false, onToggleBreakdown, eliminatorMode = false }) {
     const color = getPosColor(player.position);
     const stackInfo = analyzeStack(player, currentPicks);
     const playoffStack = player.playoffStack || null;
+    const elimFlags = eliminatorMode ? getEliminatorFlags(player, currentPicks) : null;
+
+    const elimBadges = elimFlags ? (
+      <>
+        {Number.isFinite(elimFlags.byeWeek) && (
+          <span
+            className={`${styles.elimByeBadge} ${
+              elimFlags.isLateBye ? styles.elimByeLate
+                : elimFlags.byeTier === 'early' ? styles.elimByeEarly
+                  : styles.elimByeNeutral
+            }`}
+            title={`Bye week ${elimFlags.byeWeek}${
+              elimFlags.isLateBye ? ' — premium late bye (carries you toward the money)'
+                : elimFlags.byeTier === 'early' ? ' — early bye (risky when stacked)'
+                  : ''
+            }`}
+          >
+            BYE {elimFlags.byeWeek}
+          </span>
+        )}
+        {elimFlags.byeClash && (
+          <span
+            className={styles.elimClashBadge}
+            title={`Shares a bye (wk${elimFlags.byeClash.week}) with ${elimFlags.byeClash.players.join(', ')} — breaks the ${player.position} rainbow`}
+          >
+            <AlertTriangle size={10} /> bye clash
+          </span>
+        )}
+        {elimFlags.fade && (
+          <span
+            className={styles.elimFadeBadge}
+            title={`Eliminator macro-fade (${elimFlags.fade.reason}): ${elimFlags.fade.note}`}
+          >
+            Fade
+          </span>
+        )}
+        {elimFlags.fillsOnesieNeed && (
+          <span
+            className={styles.elimOnesieBadge}
+            title={`Still building toward your ${player.position} count (3 QB / 3–4 TE target)`}
+          >
+            onesie need
+          </span>
+        )}
+      </>
+    ) : null;
 
     const globalExp = player.globalExposure || 0;
     const corr = player.correlationScore || 0;
@@ -1064,6 +1145,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
                 <TrendingUp size={11} /> ADP Rising
               </span>
             )}
+            {elimBadges}
             {sorted.length > 0 && (
               <button
                 className={styles.mobileBreakdownToggle}
@@ -1172,6 +1254,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
                 <TrendingUp size={11} /> ADP Rising
               </div>
             )}
+            {elimBadges}
           </div>
 
           {/* Team column */}

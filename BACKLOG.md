@@ -57,6 +57,7 @@
 | TASK-239 | Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks) | In Progress | P2 | [Plan](docs/plans/TASK-239.md) | No | 2026-05-15 | 2026-05-15 |
 | TASK-250 | Ignore non-football UD slates (e.g. 'UD 2026 World Cup' soccer) in extension sync and/or web app | Todo | P2 | [Plan](docs/plans/TASK-250.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-255 | Blog SEO — per-post meta/OG, canonical, Article schema & sitemap for /blog routes | Todo | P2 | [Plan](docs/plans/TASK-255.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
+| TASK-269 | Eliminator Mode for the Draft Assistant | In Progress | P2 | [Plan](docs/plans/TASK-269.md) -- Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
