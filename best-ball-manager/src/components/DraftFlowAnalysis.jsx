@@ -1139,7 +1139,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
                 {stackInfo.type}
               </span>
             )}
-            {playoffStack && <PlayoffStackPill payload={playoffStack} />}
+            {!eliminatorMode && playoffStack && <PlayoffStackPill payload={playoffStack} />}
             {isFallingKnife && (
               <span className={styles.adpRisingBadge}>
                 <TrendingUp size={11} /> ADP Rising
@@ -1248,7 +1248,7 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
                 {stackInfo.type}
               </span>
             )}
-            {playoffStack && <PlayoffStackPill payload={playoffStack} />}
+            {!eliminatorMode && playoffStack && <PlayoffStackPill payload={playoffStack} />}
             {isFallingKnife && (
               <div className={styles.adpRisingBadge}>
                 <TrendingUp size={11} /> ADP Rising
