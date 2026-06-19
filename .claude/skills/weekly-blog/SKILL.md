@@ -1,6 +1,6 @@
 ---
 name: weekly-blog
-description: Draft a weekly best-ball blog post from the compiled knowledge base. Surveys kb/articles/, finds recently-compiled material, uses the blog-brainstormer to generate a wide angle pool then curates 3 for the developer to approve, drafts the chosen post in the "Sharp With Receipts" voice (ADR-001) guided by the craft references, runs a blog-critic + blog-reader-sim critique/revise loop, and logs it under content/blog/. Triggers - weekly blog, draft a blog post, write this week's post, blog topics, /weekly-blog.
+description: Draft a weekly best-ball blog post from the compiled knowledge base. Surveys kb/articles/, finds recently-compiled material, uses the blog-brainstormer to generate a wide angle pool then curates 3 for the developer to approve, drafts the chosen post in the "Sharp With Receipts" voice (ADR-001) guided by the craft references, runs a blog-critic + blog-reader-sim critique/revise loop, and logs it under docs/blog/. Triggers - weekly blog, draft a blog post, write this week's post, blog topics, /weekly-blog.
 ---
 
 # weekly-blog
@@ -8,23 +8,23 @@ description: Draft a weekly best-ball blog post from the compiled knowledge base
 Generate one weekly blog post from the compiled KB. Human-in-the-loop: you propose three
 topics, the developer picks one, you draft it.
 
-## Cross-project paths (BestBall project)
+## Paths (runs entirely in the BestBall project)
 
-This skill is used from two project roots. When running from the **BestBall** project
-(`C:\Software\Personal\BestBall`), the paths diverge:
+This skill runs from the **BestBall** project root (`C:\Software\Personal\BestBall`). The whole
+loop — brainstorm, draft, critique, log — lives here. The **only** resource read from outside
+this repo is the compiled KB, which remains in the `BestBall_Strategy` sister project where
+`hus-kb-compile` maintains it. Treat the KB as a read-only input; never write to it.
 
 | Resource | Path |
 |---|---|
-| KB index | `C:\Software\Personal\BestBall_Strategy\kb\index.md` |
-| KB articles | `C:\Software\Personal\BestBall_Strategy\kb\articles\**\*.md` |
-| Blog output | `C:\Software\Personal\BestBall_Strategy\content\blog\` |
-| Blog index | `C:\Software\Personal\BestBall_Strategy\content\blog\index.md` |
-| Voice reference | `C:\Software\Personal\BestBall_Strategy\content\blog\voice-reference.md` |
-| Craft skills | `.claude\skills\craft\` (local to this project — same copy) |
+| KB index (read-only input) | `C:\Software\Personal\BestBall_Strategy\kb\index.md` |
+| KB articles (read-only input) | `C:\Software\Personal\BestBall_Strategy\kb\articles\**\*.md` |
+| **Blog output (source of truth)** | `docs\blog\` — `best-ball-manager\scripts\sync-blog.mjs` copies this into `src\content\blog\` at predev/prebuild, so this is where a post must land to ship. |
+| Blog index | `docs\blog\index.md` |
+| Subagents | `.claude\agents\` (`blog-brainstormer`, `blog-critic`, `blog-reader-sim` — local to this project) |
+| Craft skills | `.claude\skills\craft\` (local to this project) |
+| Image output (referenced by posts) | `best-ball-manager\public\blog\images\` — posts reference these as `/blog/images/<name>.<ext>` |
 | **Local ADP CSVs** | `best-ball-manager\src\assets\adp\` (see ADP section below) |
-
-When running from **BestBall_Strategy** (`C:\Software\Personal\BestBall_Strategy`), all paths
-are relative to that project root as originally written.
 
 **Sourcing is two-tier (ADR-002).** The KB is the source of all *judgment* — strategy, expert
 takes, rankings, opinions all trace to `kb/articles/` and `kb/index.md`. But you **state every
@@ -55,7 +55,7 @@ Today's date is available in session context — use it as the window's end.
 ## Workflow
 
 ### Step 1 — Orient
-Read `content/blog/index.md`. Extract the titles, slugs, and topics of every post already
+Read `docs/blog/index.md`. Extract the titles, slugs, and topics of every post already
 written. If the file is missing or the table is empty, this is the first run — say so and
 continue. Hold this list; it's how you avoid repeating yourself in Step 3.
 
@@ -97,24 +97,36 @@ start drafting.** If they ask to regenerate, re-run the brainstormer for *genuin
 angles — not reworded versions of the same three.
 
 ### Step 5 — Draft the chosen post
-Write 600–900 words in the **Voice** spec below. Before drafting, read the craft references and
-apply them: `.claude/skills/craft/writing-principles/SKILL.md` (the why) and
-`.claude/skills/craft/prose-writing/SKILL.md` (the line-level how). If
-`content/blog/voice-reference.md` exists, read it too and match it. Then:
+Write 600–900 words in the **Voice** spec below. The bar is a **near-publish draft**, not a
+skeleton: real numbers in place, charts fully specified with their data, frontmatter complete.
+The only things left for the developer should be rendering the specified images and resolving
+any genuine `[STAT NEEDED]`.
+
+Before drafting:
+1. Read the craft references and apply them: `.claude/skills/craft/writing-principles/SKILL.md`
+   (the why) and `.claude/skills/craft/prose-writing/SKILL.md` (the line-level how).
+2. **Read the two most recent published posts in `docs/blog/`** (any with `status: published`)
+   as the fidelity target — match their density of concrete numbers, their inline-image cadence,
+   their tracker attribution, and their frontmatter shape. They are the house standard; the
+   draft should look like them, not like a thinner outline of them.
+
+Then:
 
 1. `date` = today (`YYYY-MM-DD`). `slug` = kebab-case of the title (collision same day → append `-2`).
-2. Save to `content/blog/YYYY-MM-DD-<slug>.md` with this frontmatter:
+2. Save to `docs/blog/YYYY-MM-DD-<slug>.md` with this frontmatter — **all fields, including
+   `image`** (the OG card; use the placeholder filename below — the developer renders it later):
    ```yaml
    ---
    title: "<title>"
    date: <YYYY-MM-DD>
    status: draft
+   image: "/blog/images/og-<slug>.png"
    kb_sources:
      - <kb/articles/...path>
    topic_tags: [<tag>, <tag>]
    ---
    ```
-3. Append one row to the `content/blog/index.md` table:
+3. Append one row to the `docs/blog/index.md` table:
    `| <date> | <title> | <slug> | draft | <comma-separated source filenames> |`
 
 #### Hard numbers (ADR-002)
@@ -129,22 +141,69 @@ never invent it. The KB still owns all strategy and opinion.
 | Advanced efficiency (YPRR, route %), strategy, takes, rankings | **KB only** | Never fetch these externally. |
 
 Rules:
-- **Cite every ADP number with the CSV filename and date**, e.g.:
-  `going at 4.2 ADP (Underdog, 2026-06-09)`.
+- **Exact numbers, not adjectives.** Pull the real ADP to one decimal from the local CSV
+  (`33.6`, not "early third"), and *compute* derived figures rather than approximating:
+  cross-platform pairs use the arrow + pick-delta format the published posts use —
+  `Underdog 53.2 → DraftKings 59.2 · 6.0 picks later` — and percentage gaps are calculated, not
+  eyeballed. "Down about 11%" is a draft that isn't done; "down 11%" with the two ADPs shown is.
+- **Attribute ADP to the tracker, with the pull date** — match published practice: ADP comes
+  from `[my own tracker](/adp-tracker)`, with the morning it was pulled stated once
+  (`both boards pulled the same morning, 2026-06-15`). The CSV filename is your provenance for
+  reading the number; the *prose* attribution is the tracker link + pull date, not the filename.
 - **Cite every external web number inline** with source + access date:
-  `12 rushing TDs in 2024 (nfl.com, accessed YYYY-MM-DD)`. Use today's date.
+  `12 rushing TDs in 2024 (nfl.com, accessed YYYY-MM-DD)`. Use today's date. Resolve these
+  during drafting (WebFetch the nfl.com stats page) — `[STAT NEEDED]` is the failure fallback,
+  not the default.
 - **`[STAT NEEDED]` fallback.** On a fetch failure, an off-whitelist need, or an ambiguous
   table cell you can't read with confidence, write `[STAT NEEDED: <what you wanted>]` and move
   on. Never fill the figure from memory. The placeholder is surfaced to the developer in Step 6.
 - Read a *specific* cell, not a row gist — dense stat tables are easy to misparse. If unsure
   which number is right, treat it as ambiguous and use `[STAT NEEDED]`.
 
-#### Image prompts
-Wherever the post would reference a concrete visual artifact — a real draft board, a screenshot,
-a stat table — do **not** narrate it vaguely ("it happened at a real table"). Insert a literal
-placeholder line instead:
-`[INSERT IMAGE: screenshot of the draft board where Allen went R2 and Lamar fell to the same team as QB2]`
-These are surfaced to the developer in Step 6 as a checklist of images to supply before publish.
+#### Internal links
+The blog is part of the web app — link relevant product surfaces the way the published posts do.
+Allowed internal targets (root-relative): `/adp-tracker` (the ADP tracker — the standard
+attribution for every ADP figure), `/blog` (the index), and any other live route the post
+genuinely points at. Write them as ordinary markdown links (`[my own tracker](/adp-tracker)`).
+Do not invent routes that don't exist.
+
+#### Images & charts
+The published posts carry 2–4 inline visuals: bespoke SVG data-viz charts (an ADP gap, a
+cross-platform comparison, a package trade-off) plus, sometimes, a real draft-board screenshot.
+Drafts must specify these to near-publish fidelity — never narrate a visual vaguely
+("it happened at a real table"). Two kinds of visual, two conventions:
+
+**1. Data-viz charts (the skill builds the full spec).** Wherever a chart sharpens the argument,
+emit the live inline image reference *immediately followed by* an HTML-comment spec carrying the
+**real data rows** (pulled from the CSV / resolved stats), so rendering the SVG is a mechanical
+step the developer (or a later generator) can execute without re-deriving anything:
+
+```
+![<alt text stating the takeaway, not "a chart">](/blog/images/<name>-<YYYY-MM-DD>.svg)
+
+<!-- CHART SPEC
+type: grouped-bar | gap-strip | scatter | comparison-bars
+data:
+  - { label: "Josh Allen",     underdog: 33.6, draftkings: 25.7 }
+  - { label: "Lamar Jackson",  underdog: 56.5, draftkings: 53.4 }
+caption: <one-line takeaway, mirrors the alt>
+source: underdog_adp_2026-06-15.csv, draftking_adp_2026-06-15.csv
+-->
+```
+
+Name the file `/blog/images/<short-slug>-<YYYY-MM-DD>.svg`; the rendered file lands in
+`best-ball-manager/public/blog/images/`. Match the chart count and placement of the published
+posts — roughly one visual per major beat, not one per paragraph.
+
+**2. Real screenshots (human-supplied placeholder).** A draft-board screenshot or app capture
+can't be auto-generated. Insert a literal placeholder line:
+`[INSERT IMAGE: screenshot of the June 10 BBM board where Allen went R3 and the highlighted column took Kyren, then Daniels in R6]`
+
+The OG card (`image:` frontmatter, `og-<slug>.png`) is also human-supplied — it's already named
+in the frontmatter, so just flag it in the Step 6 checklist.
+
+Every chart spec, screenshot placeholder, and the OG card are surfaced in Step 6 as the image
+punch-list.
 
 ### Step 5b — Critique & revise loop (before showing the developer)
 Do not present a draft you have not pressure-tested. After writing:
@@ -159,10 +218,16 @@ Do not present a draft you have not pressure-tested. After writing:
 
 ### Step 6 — Present
 Show the full revised draft inline. Briefly note what the critique loop caught and changed.
-**List every unresolved placeholder as a checklist** — each `[STAT NEEDED: …]` (a number to
-fetch or supply) and each `[INSERT IMAGE: …]` (an image to provide) — so the developer can
-resolve them before publish. Offer further revisions (tighten, re-angle, adjust the metaphor).
-Leave `status: draft` until the developer says it's done and all placeholders are resolved.
+**List the pre-publish punch-list as a checklist**, grouped, so the developer's remaining work
+is explicit and short:
+- **Numbers** — each `[STAT NEEDED: …]` (a figure to fetch or supply).
+- **Charts to render** — each `<!-- CHART SPEC -->` block, by target filename, noting its data
+  is already filled in and it just needs rendering to `best-ball-manager/public/blog/images/`.
+- **Screenshots** — each `[INSERT IMAGE: …]` the developer must capture.
+- **OG card** — the `og-<slug>.png` named in frontmatter.
+
+Offer further revisions (tighten, re-angle, adjust the metaphor). Leave `status: draft` until
+the developer says it's done and all checklist items are resolved.
 
 ---
 
