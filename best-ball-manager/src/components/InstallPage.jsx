@@ -62,19 +62,13 @@ function WhatsNew() {
       </div>
       <ul className={styles.whatsNewList}>
         <li>
-          <strong>Eliminator Mode</strong> in the Draft Assistant — a bye-week rainbow built for
-          Underdog Eliminator (weekly-survival) drafts, so you can see at a glance which players
-          share a bye. Works in the live-draft overlay and the web app.
+          <strong>Draft Boards in the Rosters tab</strong> — view the full draft board for your
+          synced drafts: every roster in the pod, your column highlighted, with per-column stats.
+          Re-sync from the extension to pull in your draft boards.
         </li>
         <li>
-          <strong>DraftKings draft boards</strong> — DK sync now captures the full pod (every
-          roster, not just yours), powering the complete Draft Board view in the Roster Viewer for
-          your DraftKings portfolios — just like Underdog.
-        </li>
-        <li>
-          <strong>Sharper Eliminator bye analysis</strong> — freshly-drafted players now resolve
-          their NFL team mid-draft, and the bye window reads your full portfolio so no drafted
-          player is dropped.
+          <strong>Eliminator Mode in the draft overlay (Pro)</strong> — a bye-week rainbow built
+          for Underdog Eliminator (weekly-survival) drafts, right in your live-draft overlay.
         </li>
       </ul>
     </section>

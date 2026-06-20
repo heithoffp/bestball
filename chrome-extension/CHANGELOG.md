@@ -7,10 +7,8 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 ## [1.3.0] - 2026-06-20
 
-- **Eliminator Mode for the Draft Assistant.** A dedicated view for Underdog Eliminator (weekly-survival) drafts: a bye-week "rainbow" across each position room surfaces shared byes so you can see at a glance which players are all off in the same week. Available in both the live-draft overlay and the web app's Draft Assistant.
-- **DraftKings full draft board capture.** DK sync now captures the entire draft board — every roster in each pod you drafted, not just your own picks — mirroring the Underdog board capture added in 1.2.0. This powers the complete Draft Board view in the Roster Viewer for your DraftKings portfolios: opponent rosters, your highlighted column, and per-column stats. Boards are read from data you're already authorized to see at sync time (ADR-009).
-- **Eliminator bye-window accuracy fixes.** Freshly-drafted players now resolve their NFL team correctly mid-draft (team data is pulled from the platform's own slate reference data), and the bye window builds its player→team and player→position maps from your full portfolio rather than a slate-filtered subset — so no drafted player is dropped from the analysis.
-- Eliminator row badges trimmed to bye-clash only (dropped the Fade and late-bye badges) for a cleaner read.
+- **Draft Boards in the Rosters tab.** View the full draft board for your synced drafts — every roster in the pod, your column highlighted, with per-column stats — right from the Rosters tab. Re-sync from the extension to pull in your draft boards.
+- **Eliminator Mode in the draft overlay (Pro).** A bye-week rainbow built for Underdog Eliminator (weekly-survival) drafts, available right in the live-draft overlay for Pro subscribers.
 
 ## [1.2.0] - 2026-06-12
 
