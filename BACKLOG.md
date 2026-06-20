@@ -90,12 +90,14 @@
 | TASK-259 | Privacy policy: note participant-captured third-party roster storage | Todo | P3 | [Plan](docs/plans/TASK-259.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
 | TASK-267 | Fix blog OG card gate for same-day-published posts | Todo | P3 | [Plan](docs/plans/TASK-267.md) -- Draft | No | 2026-06-16 | 2026-06-16 |
 | TASK-268 | Add Avg CLV column to Exposures tab | In Progress | P3 | [Plan](docs/plans/TASK-268.md) | No | 2026-06-16 | 2026-06-16 |
+| TASK-272 | Add ESLint config to the Chrome extension | Todo | P3 | [Plan](docs/plans/TASK-272.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
 | TASK-219 | Add install-funnel analytics for /install page | Todo | P4 | [Plan](docs/plans/TASK-219.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-261 | Harden getBoards/getEntries against a stale in-page bridge (fail fast, no 300s hang) | Todo | P4 | [Plan](docs/plans/TASK-261.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
 | TASK-264 | Daily rebuild so scheduled posts get OG cards on go-live date | Todo | P4 | [Plan](docs/plans/TASK-264.md) -- Draft | No | 2026-06-15 | 2026-06-15 |
+| TASK-271 | Remove orphaned Eliminator CSS and unused model exports | Todo | P4 | [Plan](docs/plans/TASK-271.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
 
 ## Completed Tasks
 
