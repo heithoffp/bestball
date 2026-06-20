@@ -14,6 +14,12 @@ import { createReconnectingObserver } from '../utils/observer.js';
 import { readEntries, readRankings, getAuthSession, signIn, signInWithGoogle, signOut, fetchTier } from '../utils/bridge.js';
 import { canonicalName } from '../utils/canonicalName.js';
 import playoffSchedule from '../data/playoff-schedule-2026.json';
+import {
+  PLAYBOOK,
+  analyzeRosterShape,
+  analyzeByeRainbow,
+  getEliminatorFlags,
+} from '../utils/eliminatorModel.js';
 
 // Playoff weeks rendered on the candidate row (TASK-232).
 const PLAYOFF_WEEKS = ['15', '16', '17'];
@@ -47,6 +53,9 @@ let corrPopupPortal = null; // Single shared popup, appended to document.body
 
 let gridObserver = null;
 let enabled = true;
+// Eliminator Mode (TASK-270, ADR-011) — additive overlay layer, default off, persisted.
+// When off the overlay behaves exactly as before. Gated to Pro like the row overlay.
+let eliminatorEnabled = false;
 let rafId = null;
 let lastUrl = window.location.href;
 let wasOnDraftPage = false;
@@ -405,6 +414,23 @@ function applyTierGate() {
     }
   }
 
+  // Eliminator Mode toggle row — Pro-gated like the overlay row (TASK-270)
+  const elimRow = document.getElementById('bbm-eliminator-row');
+  const elimToggle = document.getElementById('bbm-eliminator-toggle');
+  if (elimRow && elimToggle) {
+    if (isPro) {
+      elimRow.classList.remove('bbm-locked');
+      elimRow.removeAttribute('title');
+      elimToggle.disabled = false;
+      elimToggle.checked = eliminatorEnabled;
+    } else {
+      elimRow.classList.add('bbm-locked');
+      elimRow.setAttribute('title', 'Pro feature — upgrade to use Eliminator Mode');
+      elimToggle.disabled = true;
+      elimToggle.checked = false;
+    }
+  }
+
   // Tournament filter section — meaningless without the row overlay
   const filterWrap = document.getElementById('bbm-filter-wrap');
   if (filterWrap) {
@@ -418,6 +444,9 @@ function applyTierGate() {
   if (isPro) {
     if (adapter?.isDraftPage?.() && enabled && !gridObserver) {
       startOverlay();
+    } else {
+      // Overlay already running (or disabled) — still reconcile Eliminator UI.
+      applyEliminatorMode();
     }
   } else {
     // Tear down any active injections / observers
@@ -427,6 +456,9 @@ function applyTierGate() {
       // Even without observers, scrub any leftover injected DOM
       removeAllOverlays();
     }
+    // Eliminator Mode is Pro-only — remove its window/badges for non-Pro.
+    removeEliminatorWindow();
+    document.querySelectorAll('.bbm-eliminator-badge').forEach(el => el.remove());
   }
 }
 
@@ -793,6 +825,7 @@ function resolveCurrentPicks() {
 
   currentPicks = [...pickRegistry.values()];
   sweepRows();
+  if (eliminatorEnabled) updateEliminatorWindow();
 }
 
 /**
@@ -1001,6 +1034,7 @@ function updateRowMetrics(row) {
 
   applyStackBadge(row, resolvedName);
   applyPlayoffStackBadge(row, resolvedName);
+  applyEliminatorBadge(row, resolvedName);
 
   applyTierBreak(row, resolvedName);
 }
@@ -1365,6 +1399,9 @@ function processRow(row) {
     applyStackBadge(row, resolvedName);
     applyPlayoffStackBadge(row, resolvedName);
   }
+
+  // Eliminator Mode badges (fade / bye-clash / late-bye) — annotate only (TASK-270)
+  applyEliminatorBadge(row, resolvedName);
 
   // Inject tier break indicator if sorted by My Rank and rankings data is available
   applyTierBreak(row, resolvedName);
@@ -2158,6 +2195,201 @@ function injectStyles() {
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    /* ---- Eliminator Mode (TASK-270) ---- */
+    #bbm-eliminator-toggle {
+      cursor: pointer;
+      width: 14px;
+      height: 14px;
+      accent-color: #E8BF4A;
+    }
+    #bbm-eliminator-row.bbm-locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #bbm-eliminator-row.bbm-locked .bbm-panel-label {
+      pointer-events: none;
+    }
+    #bbm-eliminator-row.bbm-locked .bbm-lock-icon {
+      display: inline;
+    }
+    #bbm-eliminator-row.bbm-locked #bbm-eliminator-toggle {
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* Per-candidate Eliminator badge — inline pill after player name (mirrors stack pill) */
+    .bbm-eliminator-badge {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 6px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 20px;
+      border: 1px solid;
+      line-height: 1.5;
+      white-space: nowrap;
+      pointer-events: auto;
+      cursor: help;
+      opacity: 0.9;
+    }
+
+    /* Floating Eliminator window — persistent draft companion, bottom-right.
+       Below the FAB panel / popups (z 10000/10001) so it never occludes them. */
+    #bbm-eliminator-window {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      z-index: 9998;
+      width: 232px;
+      max-height: 70vh;
+      overflow-y: auto;
+      background: #0C1A30;
+      border: 1px solid #243A5C;
+      border-radius: 8px;
+      padding: 10px 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+      font-family: inherit;
+      font-size: 12px;
+      color: #E8E8E8;
+    }
+    .bbm-elim-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .bbm-elim-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #E8BF4A;
+    }
+    .bbm-elim-total {
+      font-size: 12px;
+      font-weight: 700;
+      color: #C0CCE0;
+    }
+    .bbm-elim-section {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #1a2d50;
+    }
+    .bbm-elim-section-title {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8A9BB5;
+      margin-bottom: 5px;
+    }
+    .bbm-elim-shape-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border-left: 3px solid transparent;
+      margin-bottom: 2px;
+    }
+    .bbm-elim-shape-pos {
+      font-weight: 700;
+      color: #C0CCE0;
+    }
+    .bbm-elim-shape-count {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+    .bbm-elim-shape-target {
+      color: #8A9BB5;
+      font-weight: 500;
+    }
+    .bbm-elim-status-under  { border-left-color: #8A9BB5; }
+    .bbm-elim-status-ok     { border-left-color: #3B82F6; }
+    .bbm-elim-status-ideal  { border-left-color: #10B981; }
+    .bbm-elim-status-ideal .bbm-elim-shape-count { color: #34D399; }
+    .bbm-elim-status-over   { border-left-color: #EF4444; }
+    .bbm-elim-status-over .bbm-elim-shape-count { color: #F87171; }
+
+    .bbm-elim-bye-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+    .bbm-elim-bye-pos {
+      width: 22px;
+      font-weight: 700;
+      color: #C0CCE0;
+    }
+    .bbm-elim-bye-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+    .bbm-elim-bye-chip {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 20px;
+      border: 1px solid #2c4366;
+      color: #C0CCE0;
+      background: rgba(44,67,102,0.3);
+      white-space: nowrap;
+    }
+    .bbm-elim-bye-premium { border-color: #E8BF4A; color: #F0CC5B; background: rgba(232,191,74,0.12); }
+    .bbm-elim-bye-strong  { border-color: #10B981; color: #34D399; background: rgba(16,185,129,0.12); }
+    .bbm-elim-bye-shared  { border-color: #3B82F6; color: #60A5FA; background: rgba(59,130,246,0.12); }
+    .bbm-elim-bye-early   { border-color: #EF4444; color: #F87171; background: rgba(239,68,68,0.12); }
+    .bbm-elim-warn {
+      margin-top: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .bbm-elim-warn-bad  { color: #F87171; }
+    .bbm-elim-warn-warn { color: #FBBF24; }
+    .bbm-elim-note {
+      margin-top: 4px;
+      font-size: 10px;
+      color: #8A9BB5;
+    }
+    .bbm-elim-muted { opacity: 0.75; }
+    .bbm-elim-empty {
+      font-size: 11px;
+      color: #8A9BB5;
+      font-style: italic;
+    }
+    .bbm-elim-playbook-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8A9BB5;
+    }
+    .bbm-elim-playbook-toggle:hover { color: #C0CCE0; }
+    .bbm-elim-chevron { font-size: 10px; }
+    .bbm-elim-playbook {
+      margin: 6px 0 0;
+      padding-left: 16px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #C0CCE0;
+    }
+    .bbm-elim-playbook li { margin-bottom: 4px; }
   `;
   document.head.appendChild(style);
 }
@@ -2196,6 +2428,9 @@ function startOverlay() {
 
   // Initial sweep once the grid is available
   sweepRows();
+
+  // Bring up Eliminator Mode UI if it was left enabled.
+  applyEliminatorMode();
 }
 
 /**
@@ -2214,8 +2449,197 @@ function stopOverlay() {
     cancelAnimationFrame(rafId);
     rafId = null;
   }
-  stopPicksObserver();
+  // Keep the picks observer alive when Eliminator Mode is on (and Pro) so its floating
+  // window still tracks roster shape / byes even while the row overlay is toggled off.
+  if (!(eliminatorEnabled && currentTier === 'pro')) stopPicksObserver();
   removeAllOverlays();
+}
+
+// ---------------------------------------------------------------------------
+// Eliminator Mode (TASK-270, ADR-011)
+//
+// A self-contained vanilla port of the web app's Eliminator Mode (ADR-010). Adds,
+// when enabled: (1) a small floating window with the roster-shape tracker, bye-rainbow
+// summary, and collapsible playbook; (2) per-candidate row badges (curated fade, late
+// W13/14 bye, same-position bye clash). The board is annotated, never reordered.
+//
+// Picks carry no team (resolveCurrentPicks → {name, position, round}); team is resolved
+// from playerTeamMap (portfolio-derived). Where team is unknown, bye-based annotations are
+// omitted (the model tracks unknownByeCount); fades and roster-shape are team-independent.
+// ---------------------------------------------------------------------------
+
+/** Current picks enriched with a team abbreviation resolved from portfolio data (null when unknown). */
+function picksWithTeam() {
+  return currentPicks.map(p => ({
+    name: p.name,
+    position: p.position,
+    team: playerTeamMap.get(canonicalName(p.name)) || null,
+  }));
+}
+
+/** Build the roster-shape tracker rows (QB/RB/WR/TE counts vs. the Eliminator target). */
+function buildElimShapeHtml(shape) {
+  return shape.positions.map(p => {
+    const target = p.min === p.max ? `${p.min}` : `${p.min}–${p.max}`;
+    return `<div class="bbm-elim-shape-row bbm-elim-status-${p.status}">
+      <span class="bbm-elim-shape-pos">${p.position}</span>
+      <span class="bbm-elim-shape-count">${p.count}<span class="bbm-elim-shape-target">/${target}</span></span>
+    </div>`;
+  }).join('');
+}
+
+/** Build the bye-rainbow summary (per-position bye chips + rainbow/early-stack warnings). */
+function buildElimByeHtml(rainbow) {
+  const parts = [];
+  if (rainbow.summary.length) {
+    const rows = rainbow.summary.map(s => {
+      const chips = s.weeks.map(w => {
+        const count = w.players.length > 1 ? `×${w.players.length}` : '';
+        return `<span class="bbm-elim-bye-chip bbm-elim-bye-${w.tier}" title="${escapeHtml(w.players.join(', '))}">W${w.week}${count}</span>`;
+      }).join('');
+      return `<div class="bbm-elim-bye-row"><span class="bbm-elim-bye-pos">${s.position}</span><span class="bbm-elim-bye-chips">${chips}</span></div>`;
+    }).join('');
+    parts.push(`<div class="bbm-elim-bye-grid">${rows}</div>`);
+  } else {
+    parts.push('<div class="bbm-elim-empty">No byes tracked yet</div>');
+  }
+  if (rainbow.collisions.length) {
+    const txt = rainbow.collisions.map(c => `${c.position} W${c.week}`).join(', ');
+    parts.push(`<div class="bbm-elim-warn bbm-elim-warn-bad">⚠ Rainbow break: ${escapeHtml(txt)}</div>`);
+  }
+  if (rainbow.earlyStacks.length) {
+    const txt = rainbow.earlyStacks.map(e => `W${e.week}`).join(', ');
+    parts.push(`<div class="bbm-elim-warn bbm-elim-warn-warn">⚠ Early-bye stack: ${escapeHtml(txt)}</div>`);
+  }
+  if (rainbow.lateByeCount) {
+    parts.push(`<div class="bbm-elim-note">${rainbow.lateByeCount} late bye${rainbow.lateByeCount > 1 ? 's' : ''} (W13/14)</div>`);
+  }
+  if (rainbow.unknownByeCount) {
+    parts.push(`<div class="bbm-elim-note bbm-elim-muted">${rainbow.unknownByeCount} pick${rainbow.unknownByeCount > 1 ? 's' : ''} — team unknown</div>`);
+  }
+  return parts.join('');
+}
+
+/** Create the floating Eliminator window (idempotent). */
+function createEliminatorWindow() {
+  if (document.getElementById('bbm-eliminator-window')) return;
+  const win = document.createElement('div');
+  win.id = 'bbm-eliminator-window';
+  win.innerHTML = `
+    <div class="bbm-elim-header">
+      <span class="bbm-elim-title">Eliminator</span>
+      <span class="bbm-elim-total">—</span>
+    </div>
+    <div class="bbm-elim-section">
+      <div class="bbm-elim-section-title">Roster Shape</div>
+      <div id="bbm-elim-shape"></div>
+    </div>
+    <div class="bbm-elim-section">
+      <div class="bbm-elim-section-title">Bye Rainbow</div>
+      <div id="bbm-elim-bye"></div>
+    </div>
+    <div class="bbm-elim-section bbm-elim-playbook-section">
+      <button class="bbm-elim-playbook-toggle" id="bbm-elim-playbook-toggle" type="button">
+        <span>Playbook</span><span class="bbm-elim-chevron">▸</span>
+      </button>
+      <ol class="bbm-elim-playbook" id="bbm-elim-playbook" style="display:none">${PLAYBOOK.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>
+    </div>
+  `;
+  document.body.appendChild(win);
+
+  const pbToggle = win.querySelector('#bbm-elim-playbook-toggle');
+  pbToggle.addEventListener('click', () => {
+    const pb = win.querySelector('#bbm-elim-playbook');
+    const isOpen = pb.style.display !== 'none';
+    pb.style.display = isOpen ? 'none' : 'block';
+    win.querySelector('.bbm-elim-chevron').textContent = isOpen ? '▸' : '▾';
+  });
+
+  updateEliminatorWindow();
+}
+
+/** Refresh the Eliminator window's roster-shape + bye-rainbow content from current picks. */
+function updateEliminatorWindow() {
+  const win = document.getElementById('bbm-eliminator-window');
+  if (!win) return;
+  const picks = picksWithTeam();
+  const shape = analyzeRosterShape(picks);
+  const rainbow = analyzeByeRainbow(picks);
+  win.querySelector('.bbm-elim-total').textContent = `${shape.total}/${shape.target}`;
+  win.querySelector('#bbm-elim-shape').innerHTML = buildElimShapeHtml(shape);
+  win.querySelector('#bbm-elim-bye').innerHTML = buildElimByeHtml(rainbow);
+}
+
+/** Remove the floating Eliminator window. */
+function removeEliminatorWindow() {
+  document.getElementById('bbm-eliminator-window')?.remove();
+}
+
+/**
+ * Reconcile Eliminator UI with current state. Self-guarding: shows the window + per-row
+ * badges only when Eliminator is enabled, on a draft page, and Pro; otherwise tears them down.
+ * Safe to call redundantly (all sub-steps are idempotent).
+ */
+function applyEliminatorMode() {
+  const onDraft = !!adapter?.isDraftPage?.();
+  if (eliminatorEnabled && onDraft && currentTier === 'pro') {
+    createEliminatorWindow();
+    startPicksObserver();        // idempotent — feeds the window even if the row overlay is off
+    updateEliminatorWindow();
+    if (enabled) sweepRows();    // per-row Eliminator badges only when the row overlay is active
+  } else {
+    removeEliminatorWindow();
+    document.querySelectorAll('.bbm-eliminator-badge').forEach(el => el.remove());
+  }
+}
+
+/**
+ * Inject (or refresh) the per-candidate Eliminator badges on a row: curated macro-fade,
+ * same-position bye clash, or premium late bye. Annotates only — never reorders the board.
+ *
+ * @param {Element} row
+ * @param {string|null} playerName  resolved (portfolio) name when available, else the display name
+ */
+function applyEliminatorBadge(row, playerName) {
+  row.querySelectorAll('.bbm-eliminator-badge').forEach(el => el.remove());
+  if (!eliminatorEnabled || !playerName) return;
+
+  const key = resolvePlayerKey(playerName);
+  const candidate = {
+    name: playerName,
+    position: (key && playerPositionMap.get(key)) || null,
+    team: (key && playerTeamMap.get(key)) || null,
+  };
+  const flags = getEliminatorFlags(candidate, picksWithTeam());
+  if (!flags) return;
+
+  const pills = [];
+  if (flags.fade) {
+    pills.push({ text: 'FADE', color: '#EF4444', title: `Eliminator fade (${flags.fade.reason}): ${flags.fade.note}` });
+  }
+  if (flags.byeClash) {
+    pills.push({
+      text: `BYE×${flags.byeClash.players.length + 1}`,
+      color: '#F59E0B',
+      title: `Same-position bye collision (Week ${flags.byeClash.week}) with ${flags.byeClash.players.join(', ')} — breaks the rainbow`,
+    });
+  } else if (flags.isLateBye) {
+    pills.push({ text: `BYE ${flags.byeWeek}`, color: '#10B981', title: `Premium late bye (Week ${flags.byeWeek})` });
+  }
+  if (pills.length === 0) return;
+
+  const target = row.querySelector(adapter.selectors.stackPillTargetSelector);
+  if (!target) return;
+  pills.forEach(p => {
+    const pill = document.createElement('span');
+    pill.className = 'bbm-eliminator-badge bbm-inline-overlay';
+    pill.textContent = p.text;
+    pill.style.color = p.color;
+    pill.style.borderColor = p.color;
+    pill.style.background = `${p.color}1A`;
+    pill.title = p.title;
+    target.appendChild(pill);
+  });
 }
 
 /**
@@ -2261,6 +2685,13 @@ function injectFloatingButton() {
       </label>
       <input type="checkbox" id="bbm-overlay-toggle" />
     </div>
+    <div class="bbm-panel-row" id="bbm-eliminator-row">
+      <label class="bbm-panel-label" for="bbm-eliminator-toggle">
+        Eliminator Mode
+        <span class="bbm-lock-icon" aria-hidden="true">\u{1F512}</span>
+      </label>
+      <input type="checkbox" id="bbm-eliminator-toggle" />
+    </div>
     <hr class="bbm-panel-divider" />
     <div class="bbm-panel-status">
       <span class="bbm-status-dot"></span>
@@ -2276,6 +2707,9 @@ function injectFloatingButton() {
 
   const toggle = panel.querySelector('#bbm-overlay-toggle');
   toggle.checked = enabled;
+
+  const elimToggle = panel.querySelector('#bbm-eliminator-toggle');
+  elimToggle.checked = eliminatorEnabled;
 
   // Retry on error state click
   const statusRow = panel.querySelector('.bbm-panel-status');
@@ -2317,6 +2751,17 @@ function injectFloatingButton() {
     }
   });
 
+  elimToggle.addEventListener('change', () => {
+    // Pro-gated like the overlay toggle; guard defensively against keyboard/AT events.
+    if (currentTier !== 'pro') {
+      elimToggle.checked = false;
+      return;
+    }
+    eliminatorEnabled = elimToggle.checked;
+    chrome.storage.local.set({ eliminatorEnabled });
+    applyEliminatorMode();
+  });
+
   document.body.appendChild(fab);
   document.body.appendChild(panel);
 }
@@ -2328,6 +2773,7 @@ function injectFloatingButton() {
 function removeFloatingButton() {
   document.getElementById('bbm-fab')?.remove();
   document.getElementById('bbm-panel')?.remove();
+  removeEliminatorWindow();
   removeStyles();
 }
 
@@ -2348,12 +2794,15 @@ function handleUrlChange() {
   const isOnDraft = wasOnDraftPage;
 
   if (!wasOnDraft && isOnDraft) {
-    refreshTier().then(() => { if (enabled && currentTier === 'pro') startOverlay(); });
+    refreshTier().then(() => { if (enabled && currentTier === 'pro') startOverlay(); applyEliminatorMode(); });
   } else if (wasOnDraft && !isOnDraft) {
     stopOverlay();
+    // Leaving the draft — tear down the Eliminator window and release picks.
+    removeEliminatorWindow();
+    stopPicksObserver();
   } else if (wasOnDraft && isOnDraft) {
     stopOverlay();
-    refreshTier().then(() => { if (enabled && currentTier === 'pro') startOverlay(); });
+    refreshTier().then(() => { if (enabled && currentTier === 'pro') startOverlay(); applyEliminatorMode(); });
   }
 }
 
@@ -2388,8 +2837,9 @@ export function initDraftOverlay(platformAdapter, onSync = null) {
   adapter = platformAdapter;
   syncCallback = onSync;
 
-  chrome.storage.local.get(['overlayEnabled', 'tournamentFilter'], (result) => {
+  chrome.storage.local.get(['overlayEnabled', 'tournamentFilter', 'eliminatorEnabled'], (result) => {
     enabled = result.overlayEnabled !== false; // default to true
+    eliminatorEnabled = result.eliminatorEnabled === true; // default to false (TASK-270)
     selectedTournaments = new Set(result.tournamentFilter ?? []);
 
     wasOnDraftPage = adapter.isDraftPage();
@@ -2407,6 +2857,8 @@ export function initDraftOverlay(platformAdapter, onSync = null) {
       } else {
         loadPortfolioData();
       }
+      // Reconcile Eliminator UI for the case the row overlay is off but Eliminator is on.
+      applyEliminatorMode();
     });
 
     // Close panel when clicking outside the FAB/panel
@@ -2434,5 +2886,6 @@ export function initDraftOverlay(platformAdapter, onSync = null) {
     } else {
       stopOverlay();
     }
+    applyEliminatorMode();
   });
 }

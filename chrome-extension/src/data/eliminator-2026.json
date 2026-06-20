@@ -1,0 +1,56 @@
+{
+  "_README": "Eliminator-format reference data for the Chrome extension's Eliminator Mode (ADR-011, TASK-270). This is the EXTENSION's own copy — a duplicate of best-ball-manager/src/data/eliminator-2026.json (ADR-010, TASK-269). Per ADR-011 the extension is self-contained (no shared build); refresh BOTH copies in lockstep for August roster news. Bye weeks keyed by team abbreviation (player.team is already an abbreviation in the extension). Source: ../BestBall_Strategy/analysis/eliminator/ + verified 2026 NFL schedule.",
+  "as_of": "2026-06-19",
+  "contest": "Underdog Eliminator (weekly survival, 6-of-12 Week-1 pod → H2H)",
+  "byeWeeks": {
+    "ARI": 14, "DAL": 14,
+    "BAL": 13, "IND": 13, "LV": 13, "NYJ": 13,
+    "ATL": 11, "CLE": 11, "GB": 11, "LAR": 11, "NE": 11, "SEA": 11,
+    "TB": 10, "CHI": 10, "DEN": 10, "PHI": 10,
+    "PIT": 9, "TEN": 9,
+    "HOU": 8, "NO": 8, "NYG": 8, "SF": 8,
+    "BUF": 7, "JAX": 7, "JAC": 7, "LAC": 7, "WAS": 7,
+    "CIN": 6, "DET": 6, "MIA": 6, "MIN": 6,
+    "CAR": 5, "KC": 5
+  },
+  "byeTiers": {
+    "premium": [14],
+    "strong": [13],
+    "shared": [11],
+    "neutral": [9, 10],
+    "early": [5, 6, 7, 8]
+  },
+  "bymageddonWeek": 11,
+  "noByeWeeks": [4, 12],
+  "rosterShape": {
+    "total": 18,
+    "positions": {
+      "QB": { "min": 3, "max": 3, "ideal": 3, "note": "Insurance, not upside — 3 startable arms with staggered byes." },
+      "RB": { "min": 5, "max": 5, "ideal": 5, "note": "Most projectable Week-1 volume — anchor your floor here." },
+      "WR": { "min": 6, "max": 7, "ideal": 7, "note": "Where your variance lives; trim to fund the 3rd QB / 4th TE." },
+      "TE": { "min": 3, "max": 4, "ideal": 3, "note": "Same onesie logic as QB; go to 4 only if late TEs out-floor your fringe WR/RB." }
+    },
+    "winningShapes": ["3-5-7-3", "3-5-6-4"]
+  },
+  "fades": [
+    { "name": "Omarion Hampton", "reason": "rookie", "note": "value lands after the elimination weeks" },
+    { "name": "Jeremiyah Love", "reason": "rookie", "note": "rookie/contingent — late value" },
+    { "name": "Jonathon Brooks", "reason": "contingent", "note": "injury-return / conditional volume" },
+    { "name": "Jordyn Tyson", "reason": "rookie", "note": "late-developing rookie" },
+    { "name": "Rico Dowdle", "reason": "contingent", "note": "conditional Week-1 role" },
+    { "name": "Kenneth Gainwell", "reason": "contingent", "note": "committee / conditional volume" },
+    { "name": "J.K. Dobbins", "reason": "contingent", "note": "conditional Week-1 role" }
+  ],
+  "playbook": [
+    "RB-lean early (R1–4): projectable Week-1 volume is your floor anchor.",
+    "Spend ceiling at RB/WR; take QB/TE on value + bye in their round window (don't pay early capital for an onesie).",
+    "Back-weight byes: prefer Week-13/14 teams (ARI, DAL, BAL, IND, LV, NYJ) in the mid/late rounds.",
+    "Build the rainbow: no two players in the same position room share a bye.",
+    "Never stack an early bye; protect your early-bye anchors with scoring runway that week.",
+    "Tolerate Week-11 (bymageddon) overlap — the field shares it.",
+    "Skinny stacks only (QB + 1); pick a winner between overlapping teammates.",
+    "3 QBs, staggered byes; use an ambiguous room (vet now / rookie later) to fill your gap.",
+    "Check your QB1/anchor's Week-1 matchup — Week 1 is the 6-of-12 gate.",
+    "No dead picks late — every pick needs a plausible Week-1 role; don't close on four rookie zeros."
+  ]
+}
