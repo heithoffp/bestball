@@ -825,7 +825,7 @@ export default function DraftFlowAnalysis({ rosterData = [], masterPlayers = [],
         aria-checked={eliminatorMode}
         className={`${styles.eliminatorToggle} ${eliminatorMode ? styles.eliminatorToggleOn : ''}`}
         onClick={toggleEliminatorMode}
-        title="Re-tool the Draft Assistant for the Underdog Eliminator (weekly survival): roster-shape target, bye rainbow, and macro fades."
+        title="Re-tool the Draft Assistant for the Underdog Eliminator (weekly survival): bye rainbow and macro fades."
       >
         <Anchor size={13} />
         <span>Eliminator Mode</span>
@@ -1042,20 +1042,15 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
     const playoffStack = player.playoffStack || null;
     const elimFlags = eliminatorMode ? getEliminatorFlags(player, currentPicks) : null;
 
+    // Minimal badge set (mirrors the Chrome extension — ADR-011): a premium late-bye flag,
+    // a same-position bye-clash flag, and the macro-fade flag. The per-player bye badge for
+    // non-late byes and the onesie-need badge were dropped to reduce on-card noise.
     const elimBadges = elimFlags ? (
       <>
-        {Number.isFinite(elimFlags.byeWeek) && (
+        {elimFlags.isLateBye && Number.isFinite(elimFlags.byeWeek) && (
           <span
-            className={`${styles.elimByeBadge} ${
-              elimFlags.isLateBye ? styles.elimByeLate
-                : elimFlags.byeTier === 'early' ? styles.elimByeEarly
-                  : styles.elimByeNeutral
-            }`}
-            title={`Bye week ${elimFlags.byeWeek}${
-              elimFlags.isLateBye ? ' — premium late bye (carries you toward the money)'
-                : elimFlags.byeTier === 'early' ? ' — early bye (risky when stacked)'
-                  : ''
-            }`}
+            className={`${styles.elimByeBadge} ${styles.elimByeLate}`}
+            title={`Bye week ${elimFlags.byeWeek} — premium late bye (carries you toward the money)`}
           >
             BYE {elimFlags.byeWeek}
           </span>
@@ -1074,14 +1069,6 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
             title={`Eliminator macro-fade (${elimFlags.fade.reason}): ${elimFlags.fade.note}`}
           >
             Fade
-          </span>
-        )}
-        {elimFlags.fillsOnesieNeed && (
-          <span
-            className={styles.elimOnesieBadge}
-            title={`Still building toward your ${player.position} count (3 QB / 3–4 TE target)`}
-          >
-            onesie need
           </span>
         )}
       </>

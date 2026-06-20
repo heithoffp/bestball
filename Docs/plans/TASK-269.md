@@ -13,6 +13,15 @@ intelligence, macro-fade flags, and an in-context Eliminator playbook. Website o
 Chrome extension). Grounded in `../BestBall_Strategy` Eliminator analysis. Default off; persisted
 to `localStorage`; zero behavior change when off.
 
+## Refinement (developer feedback, 2026-06-20)
+After the Chrome-extension port (TASK-270/ADR-011), the developer preferred the extension's leaner
+surface and asked the website to match. The `EliminatorPanel` was reduced to the **bye rainbow
+only** (bye week[s] per position; shared weeks flagged, players shown on hover) — the roster-shape
+tracker, the rainbow-break / early-bye warning blocks, the collapsible playbook, and the data-as-of
+footnote were removed. Per-candidate badges were trimmed to **late-bye + bye-clash + macro-fade**
+(the per-player non-late bye badge and the onesie-need badge were dropped). The toggle, persistence,
+and annotate-not-reorder behavior are unchanged. See ADR-010's refinement note.
+
 ## Decision
 Per **ADR-010** (Proposed, drafted in this run): Eliminator support ships as a **toggleable
 overlay** inside the existing Draft Assistant — not a separate tab, and the candidate board is

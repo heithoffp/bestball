@@ -40,16 +40,22 @@ drafted **by round window, not by value rank.**
 
 Ship Eliminator support as a **toggleable overlay inside the existing Draft Assistant tab**,
 persisted to `localStorage`. When the toggle is **off**, the tab behaves exactly as it does today.
-When **on**, it overlays four format-specific aids:
+When **on**, it overlays format-specific aids:
 
-1. An **Eliminator roster-shape construction tracker** (3 QB / 5 RB / 6–7 WR / 3–4 TE), which
-   replaces the season-long RB/QB/TE archetype cards.
-2. A **bye-rainbow panel** plus per-candidate **bye badges** — late byes (Week 13/14) highlighted as
+1. A **bye-rainbow panel** plus per-candidate **bye badges** — late byes (Week 13/14) highlighted as
    premium, and same-position bye **collisions** flagged as rainbow violations.
-3. **Macro-fade flags** drawn from a curated rookie / contingent-back list.
-4. A collapsible **in-context Eliminator playbook** (the live-draft quick reference).
+2. **Macro-fade flags** drawn from a curated rookie / contingent-back list.
 
 The candidate list keeps its existing ADP-window sort and is **annotated, not reordered**.
+
+> **Refinement (2026-06-20, ADR-011).** After the Chrome-extension port (ADR-011) the developer
+> preferred the extension's leaner surface and asked the website to converge on it. The website
+> panel was reduced to the **bye rainbow only** (bye week[s] per position room; shared weeks flagged
+> with the players revealed on hover); the **roster-shape construction tracker, the rainbow-break /
+> early-bye warnings, and the collapsible playbook were removed**, and the per-candidate badge set
+> was trimmed to the late-bye flag, the bye-clash flag, and the macro-fade flag (the per-player
+> non-late bye badge and the onesie-need badge were dropped). The toggle, persistence, annotate-not-
+> reorder principle, and self-contained data/model modules are unchanged.
 
 New, self-contained modules carry the logic and data: `src/data/eliminator-2026.json`
 (team→bye map + metadata snapshot) and `src/utils/eliminatorModel.js` (pure analysis functions),
