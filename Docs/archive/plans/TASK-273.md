@@ -1,4 +1,4 @@
-<!-- Completed: 2026-06-20 | Commit: pending-v1.3.0-release -->
+<!-- Completed: 2026-06-20 | Commit: 28675fc -->
 # TASK-273 — Trim Eliminator row badges to bye-clash only (drop Fade + late-bye)
 
 **Status:** Approved

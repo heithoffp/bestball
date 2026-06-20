@@ -1,4 +1,4 @@
-<!-- Completed: 2026-06-20 | Commit: pending-v1.3.0-release -->
+<!-- Completed: 2026-06-20 | Commit: 28675fc -->
 # TASK-274: Capture full draft board at DraftKings sync (mirror UD board capture)
 
 **Status:** Pending Approval

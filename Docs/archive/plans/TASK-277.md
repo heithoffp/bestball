@@ -1,4 +1,4 @@
-<!-- Completed: 2026-06-20 | Commit: pending-v1.3.0-release -->
+<!-- Completed: 2026-06-20 | Commit: 28675fc -->
 # TASK-277: Fix Eliminator bye window — build playerTeamMap/playerPositionMap from all rosters
 
 **Status:** Approved (Level 3 auto-executed)

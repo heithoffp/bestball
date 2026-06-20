@@ -1,4 +1,4 @@
-<!-- Completed: 2026-06-20 | Commit: pending-v1.3.0-release -->
+<!-- Completed: 2026-06-20 | Commit: 28675fc -->
 # TASK-275: Fix Eliminator bye window dropping freshly-drafted Underdog players
 
 **Status:** Approved
