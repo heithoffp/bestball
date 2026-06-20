@@ -43,10 +43,13 @@ Port Eliminator Mode into the extension as a **self-contained vanilla-JS overlay
    the model and data; no import from `best-ball-manager/`.
 2. **Annotate, not reorder** (ADR-010 carried forward): Eliminator adds row **badges only** — the
    board is never re-sorted.
-3. **A small separate floating window** carries the "extra info" (roster-shape tracker, bye-rainbow
-   summary, collapsible playbook), distinct from the FAB confidence-hub panel. It is gated by a new
-   toggle in the FAB panel, **default off**, persisted to `chrome.storage.local`, and produces
-   **zero behavior change when off**.
+3. **A small separate floating window** carries the "extra info", distinct from the FAB
+   confidence-hub panel. It is gated by a new toggle in the FAB panel, **default off**, persisted to
+   `chrome.storage.local`, and produces **zero behavior change when off**. Per developer feedback
+   (2026-06-20) the window is **drag-and-drop movable** (position persisted) and was scoped down to
+   show the **bye rainbow only** — bye week(s) per position, with a hover popup naming the players
+   who share a bye; the roster-shape tracker, warning lines, and playbook were removed, and the
+   **W15/16/17 playoff-stack badges are suppressed while Eliminator Mode is on**.
 4. **Graceful degradation on unknown teams:** where a player's team can't be resolved, bye-based
    annotations are simply omitted (the model already tracks `unknownByeCount`); name-based fade
    flags and position-only roster-shape counting always work.

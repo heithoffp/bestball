@@ -15,8 +15,6 @@ import { readEntries, readRankings, getAuthSession, signIn, signInWithGoogle, si
 import { canonicalName } from '../utils/canonicalName.js';
 import playoffSchedule from '../data/playoff-schedule-2026.json';
 import {
-  PLAYBOOK,
-  analyzeRosterShape,
   analyzeByeRainbow,
   getEliminatorFlags,
 } from '../utils/eliminatorModel.js';
@@ -1203,7 +1201,9 @@ function analyzePlayoffStackOverlay(playerName) {
  * @param {string} playerName
  */
 function applyPlayoffStackBadge(row, playerName) {
-  const info = (currentTier === 'pro') ? analyzePlayoffStackOverlay(playerName) : null;
+  // Suppressed in Eliminator Mode — W15/16/17 playoff stacks are irrelevant to weekly survival
+  // (mirrors the website's TASK-269 behavior).
+  const info = (currentTier === 'pro' && !eliminatorEnabled) ? analyzePlayoffStackOverlay(playerName) : null;
   const sig = info ? JSON.stringify(info) : '';
   const existing = row.querySelector('.bbm-playoff-pill');
 
@@ -2258,9 +2258,16 @@ function injectStyles() {
     }
     .bbm-elim-header {
       display: flex;
-      align-items: baseline;
-      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
       margin-bottom: 8px;
+      cursor: move;
+      user-select: none;
+    }
+    .bbm-elim-grip {
+      color: #5A6B85;
+      font-size: 12px;
+      line-height: 1;
     }
     .bbm-elim-title {
       font-size: 11px;
@@ -2269,51 +2276,10 @@ function injectStyles() {
       letter-spacing: 0.08em;
       color: #E8BF4A;
     }
-    .bbm-elim-total {
-      font-size: 12px;
-      font-weight: 700;
-      color: #C0CCE0;
+    #bbm-eliminator-window.bbm-elim-dragging {
+      opacity: 0.92;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.6);
     }
-    .bbm-elim-section {
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #1a2d50;
-    }
-    .bbm-elim-section-title {
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #8A9BB5;
-      margin-bottom: 5px;
-    }
-    .bbm-elim-shape-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 2px 6px;
-      border-radius: 4px;
-      border-left: 3px solid transparent;
-      margin-bottom: 2px;
-    }
-    .bbm-elim-shape-pos {
-      font-weight: 700;
-      color: #C0CCE0;
-    }
-    .bbm-elim-shape-count {
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-    }
-    .bbm-elim-shape-target {
-      color: #8A9BB5;
-      font-weight: 500;
-    }
-    .bbm-elim-status-under  { border-left-color: #8A9BB5; }
-    .bbm-elim-status-ok     { border-left-color: #3B82F6; }
-    .bbm-elim-status-ideal  { border-left-color: #10B981; }
-    .bbm-elim-status-ideal .bbm-elim-shape-count { color: #34D399; }
-    .bbm-elim-status-over   { border-left-color: #EF4444; }
-    .bbm-elim-status-over .bbm-elim-shape-count { color: #F87171; }
 
     .bbm-elim-bye-row {
       display: flex;
@@ -2340,56 +2306,17 @@ function injectStyles() {
       color: #C0CCE0;
       background: rgba(44,67,102,0.3);
       white-space: nowrap;
+      cursor: help;
     }
     .bbm-elim-bye-premium { border-color: #E8BF4A; color: #F0CC5B; background: rgba(232,191,74,0.12); }
     .bbm-elim-bye-strong  { border-color: #10B981; color: #34D399; background: rgba(16,185,129,0.12); }
     .bbm-elim-bye-shared  { border-color: #3B82F6; color: #60A5FA; background: rgba(59,130,246,0.12); }
     .bbm-elim-bye-early   { border-color: #EF4444; color: #F87171; background: rgba(239,68,68,0.12); }
-    .bbm-elim-warn {
-      margin-top: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      line-height: 1.3;
-    }
-    .bbm-elim-warn-bad  { color: #F87171; }
-    .bbm-elim-warn-warn { color: #FBBF24; }
-    .bbm-elim-note {
-      margin-top: 4px;
-      font-size: 10px;
-      color: #8A9BB5;
-    }
-    .bbm-elim-muted { opacity: 0.75; }
     .bbm-elim-empty {
       font-size: 11px;
       color: #8A9BB5;
       font-style: italic;
     }
-    .bbm-elim-playbook-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      background: none;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #8A9BB5;
-    }
-    .bbm-elim-playbook-toggle:hover { color: #C0CCE0; }
-    .bbm-elim-chevron { font-size: 10px; }
-    .bbm-elim-playbook {
-      margin: 6px 0 0;
-      padding-left: 16px;
-      font-size: 11px;
-      line-height: 1.4;
-      color: #C0CCE0;
-    }
-    .bbm-elim-playbook li { margin-bottom: 4px; }
   `;
   document.head.appendChild(style);
 }
@@ -2459,13 +2386,15 @@ function stopOverlay() {
 // Eliminator Mode (TASK-270, ADR-011)
 //
 // A self-contained vanilla port of the web app's Eliminator Mode (ADR-010). Adds,
-// when enabled: (1) a small floating window with the roster-shape tracker, bye-rainbow
-// summary, and collapsible playbook; (2) per-candidate row badges (curated fade, late
-// W13/14 bye, same-position bye clash). The board is annotated, never reordered.
+// when enabled: (1) a small DRAGGABLE floating window showing the bye rainbow only —
+// bye week(s) per position, no roster-shape tracker, warnings, or playbook (TASK-270
+// refinement); (2) per-candidate row badges (curated fade, late W13/14 bye, same-position
+// bye clash). Playoff-stack (W15/16/17) badges are suppressed while Eliminator is on.
+// The board is annotated, never reordered.
 //
 // Picks carry no team (resolveCurrentPicks → {name, position, round}); team is resolved
-// from playerTeamMap (portfolio-derived). Where team is unknown, bye-based annotations are
-// omitted (the model tracks unknownByeCount); fades and roster-shape are team-independent.
+// from playerTeamMap (portfolio-derived). Where team is unknown, bye annotations are
+// omitted (the model tracks unknownByeCount); fades are team-independent.
 // ---------------------------------------------------------------------------
 
 /** Current picks enriched with a team abbreviation resolved from portfolio data (null when unknown). */
@@ -2477,97 +2406,125 @@ function picksWithTeam() {
   }));
 }
 
-/** Build the roster-shape tracker rows (QB/RB/WR/TE counts vs. the Eliminator target). */
-function buildElimShapeHtml(shape) {
-  return shape.positions.map(p => {
-    const target = p.min === p.max ? `${p.min}` : `${p.min}–${p.max}`;
-    return `<div class="bbm-elim-shape-row bbm-elim-status-${p.status}">
-      <span class="bbm-elim-shape-pos">${p.position}</span>
-      <span class="bbm-elim-shape-count">${p.count}<span class="bbm-elim-shape-target">/${target}</span></span>
-    </div>`;
+/** Build the bye-rainbow rows: one per position, each a row of bye-week chips. Bye weeks only —
+ *  no warnings/notes (TASK-270 refinement). Chips with shared byes carry the player list for the
+ *  hover popup wired by attachByeChipHovers(). */
+function buildElimByeHtml(rainbow) {
+  if (!rainbow.summary.length) {
+    return '<div class="bbm-elim-empty">No byes tracked yet</div>';
+  }
+  return rainbow.summary.map(s => {
+    const chips = s.weeks.map(w => {
+      const count = w.players.length > 1 ? `×${w.players.length}` : '';
+      const playersAttr = escapeHtml(w.players.join('|'));
+      return `<span class="bbm-elim-bye-chip bbm-elim-bye-${w.tier}"`
+        + ` data-bye-players="${playersAttr}" data-bye-week="${w.week}" data-bye-pos="${escapeHtml(s.position)}"`
+        + ` title="${escapeHtml(w.players.join(', '))}">W${w.week}${count}</span>`;
+    }).join('');
+    return `<div class="bbm-elim-bye-row"><span class="bbm-elim-bye-pos">${s.position}</span><span class="bbm-elim-bye-chips">${chips}</span></div>`;
   }).join('');
 }
 
-/** Build the bye-rainbow summary (per-position bye chips + rainbow/early-stack warnings). */
-function buildElimByeHtml(rainbow) {
-  const parts = [];
-  if (rainbow.summary.length) {
-    const rows = rainbow.summary.map(s => {
-      const chips = s.weeks.map(w => {
-        const count = w.players.length > 1 ? `×${w.players.length}` : '';
-        return `<span class="bbm-elim-bye-chip bbm-elim-bye-${w.tier}" title="${escapeHtml(w.players.join(', '))}">W${w.week}${count}</span>`;
-      }).join('');
-      return `<div class="bbm-elim-bye-row"><span class="bbm-elim-bye-pos">${s.position}</span><span class="bbm-elim-bye-chips">${chips}</span></div>`;
-    }).join('');
-    parts.push(`<div class="bbm-elim-bye-grid">${rows}</div>`);
-  } else {
-    parts.push('<div class="bbm-elim-empty">No byes tracked yet</div>');
-  }
-  if (rainbow.collisions.length) {
-    const txt = rainbow.collisions.map(c => `${c.position} W${c.week}`).join(', ');
-    parts.push(`<div class="bbm-elim-warn bbm-elim-warn-bad">⚠ Rainbow break: ${escapeHtml(txt)}</div>`);
-  }
-  if (rainbow.earlyStacks.length) {
-    const txt = rainbow.earlyStacks.map(e => `W${e.week}`).join(', ');
-    parts.push(`<div class="bbm-elim-warn bbm-elim-warn-warn">⚠ Early-bye stack: ${escapeHtml(txt)}</div>`);
-  }
-  if (rainbow.lateByeCount) {
-    parts.push(`<div class="bbm-elim-note">${rainbow.lateByeCount} late bye${rainbow.lateByeCount > 1 ? 's' : ''} (W13/14)</div>`);
-  }
-  if (rainbow.unknownByeCount) {
-    parts.push(`<div class="bbm-elim-note bbm-elim-muted">${rainbow.unknownByeCount} pick${rainbow.unknownByeCount > 1 ? 's' : ''} — team unknown</div>`);
-  }
-  return parts.join('');
+/** Wire a hover popup on each bye chip listing the players sharing that position's bye week. */
+function attachByeChipHovers(container) {
+  container.querySelectorAll('.bbm-elim-bye-chip').forEach(chip => {
+    const playersRaw = chip.getAttribute('data-bye-players');
+    if (!playersRaw) return;
+    const week = chip.getAttribute('data-bye-week');
+    const pos = chip.getAttribute('data-bye-pos');
+    chip.addEventListener('mouseenter', () => {
+      ensureCorrPopupPortal();
+      const rows = playersRaw.split('|').map(n =>
+        `<div class="bbm-corr-popup-row"><span class="bbm-corr-popup-name">${escapeHtml(titleCase(n))}</span></div>`
+      ).join('');
+      corrPopupPortal.innerHTML = `<div class="bbm-corr-popup-title">${escapeHtml(pos)} · Week ${escapeHtml(week)} bye</div>${rows}`;
+      const rect = chip.getBoundingClientRect();
+      corrPopupPortal.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 220))}px`;
+      corrPopupPortal.style.top = `${rect.bottom + 4}px`;
+      corrPopupPortal.style.display = 'block';
+    });
+    chip.addEventListener('mouseleave', () => {
+      if (corrPopupPortal) corrPopupPortal.style.display = 'none';
+    });
+  });
 }
 
-/** Create the floating Eliminator window (idempotent). */
+/** Make the Eliminator window draggable by its header; persist the position to chrome.storage. */
+function makeEliminatorWindowDraggable(win, handle) {
+  let startX = 0, startY = 0, originLeft = 0, originTop = 0, dragging = false;
+
+  const onMove = (e) => {
+    if (!dragging) return;
+    const left = Math.max(0, Math.min(originLeft + (e.clientX - startX), window.innerWidth - win.offsetWidth));
+    const top = Math.max(0, Math.min(originTop + (e.clientY - startY), window.innerHeight - win.offsetHeight));
+    win.style.left = `${left}px`;
+    win.style.top = `${top}px`;
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    win.classList.remove('bbm-elim-dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    chrome.storage.local.set({ eliminatorWindowPos: { left: win.style.left, top: win.style.top } });
+  };
+  handle.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    const rect = win.getBoundingClientRect();
+    // Pin to explicit left/top (the default uses bottom/right) before dragging.
+    win.style.left = `${rect.left}px`;
+    win.style.top = `${rect.top}px`;
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    originLeft = rect.left;
+    originTop = rect.top;
+    startX = e.clientX;
+    startY = e.clientY;
+    dragging = true;
+    win.classList.add('bbm-elim-dragging');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
+  });
+}
+
+/** Create the floating Eliminator window (idempotent): a draggable bye-rainbow widget. */
 function createEliminatorWindow() {
   if (document.getElementById('bbm-eliminator-window')) return;
   const win = document.createElement('div');
   win.id = 'bbm-eliminator-window';
   win.innerHTML = `
-    <div class="bbm-elim-header">
-      <span class="bbm-elim-title">Eliminator</span>
-      <span class="bbm-elim-total">—</span>
+    <div class="bbm-elim-header" id="bbm-elim-drag">
+      <span class="bbm-elim-grip" aria-hidden="true">⠿</span>
+      <span class="bbm-elim-title">Eliminator · Byes</span>
     </div>
-    <div class="bbm-elim-section">
-      <div class="bbm-elim-section-title">Roster Shape</div>
-      <div id="bbm-elim-shape"></div>
-    </div>
-    <div class="bbm-elim-section">
-      <div class="bbm-elim-section-title">Bye Rainbow</div>
-      <div id="bbm-elim-bye"></div>
-    </div>
-    <div class="bbm-elim-section bbm-elim-playbook-section">
-      <button class="bbm-elim-playbook-toggle" id="bbm-elim-playbook-toggle" type="button">
-        <span>Playbook</span><span class="bbm-elim-chevron">▸</span>
-      </button>
-      <ol class="bbm-elim-playbook" id="bbm-elim-playbook" style="display:none">${PLAYBOOK.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>
-    </div>
+    <div id="bbm-elim-bye"></div>
   `;
   document.body.appendChild(win);
 
-  const pbToggle = win.querySelector('#bbm-elim-playbook-toggle');
-  pbToggle.addEventListener('click', () => {
-    const pb = win.querySelector('#bbm-elim-playbook');
-    const isOpen = pb.style.display !== 'none';
-    pb.style.display = isOpen ? 'none' : 'block';
-    win.querySelector('.bbm-elim-chevron').textContent = isOpen ? '▸' : '▾';
+  // Restore a previously dragged position, if any.
+  chrome.storage.local.get(['eliminatorWindowPos'], (res) => {
+    const pos = res.eliminatorWindowPos;
+    if (pos && pos.left && pos.top && document.body.contains(win)) {
+      win.style.left = pos.left;
+      win.style.top = pos.top;
+      win.style.right = 'auto';
+      win.style.bottom = 'auto';
+    }
   });
 
+  makeEliminatorWindowDraggable(win, win.querySelector('#bbm-elim-drag'));
   updateEliminatorWindow();
 }
 
-/** Refresh the Eliminator window's roster-shape + bye-rainbow content from current picks. */
+/** Refresh the Eliminator window's bye-rainbow content from current picks. */
 function updateEliminatorWindow() {
   const win = document.getElementById('bbm-eliminator-window');
   if (!win) return;
-  const picks = picksWithTeam();
-  const shape = analyzeRosterShape(picks);
-  const rainbow = analyzeByeRainbow(picks);
-  win.querySelector('.bbm-elim-total').textContent = `${shape.total}/${shape.target}`;
-  win.querySelector('#bbm-elim-shape').innerHTML = buildElimShapeHtml(shape);
-  win.querySelector('#bbm-elim-bye').innerHTML = buildElimByeHtml(rainbow);
+  const rainbow = analyzeByeRainbow(picksWithTeam());
+  const byeEl = win.querySelector('#bbm-elim-bye');
+  byeEl.innerHTML = buildElimByeHtml(rainbow);
+  attachByeChipHovers(byeEl);
 }
 
 /** Remove the floating Eliminator window. */
@@ -2590,6 +2547,8 @@ function applyEliminatorMode() {
   } else {
     removeEliminatorWindow();
     document.querySelectorAll('.bbm-eliminator-badge').forEach(el => el.remove());
+    // Re-sweep so playoff-stack badges (suppressed while Eliminator was on) are restored.
+    if (enabled && currentTier === 'pro') sweepRows();
   }
 }
 

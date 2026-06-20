@@ -8,10 +8,18 @@
 
 ## Objective
 Mirror website TASK-269/ADR-010 in the vanilla-JS Chrome extension: a toggle in the FAB
-confidence-hub panel, a small floating draft window with Eliminator-format extra info
-(roster-shape tracker 3 QB / 5 RB / 6–7 WR / 3–4 TE, bye-rainbow summary, collapsible playbook),
-and per-candidate row badges (curated macro-fade flags, late-bye W13/14 indicator, same-position
-bye-clash). Default off; persisted to `chrome.storage.local`; zero behavior change when off.
+confidence-hub panel, a small **draggable** floating draft window showing the **bye rainbow only**
+(bye week[s] per position), and per-candidate row badges (curated macro-fade flags, late-bye
+W13/14 indicator, same-position bye-clash). Default off; persisted to `chrome.storage.local`;
+zero behavior change when off.
+
+## Refinement (developer feedback, 2026-06-20)
+After the first cut the developer scoped the window down: (a) the floating window is
+**drag-and-drop movable** with its position persisted; (b) the **roster-shape tracker is removed**;
+(c) the window shows **only the bye rainbow** — no warning lines (rainbow breaks, early-bye stacks,
+late-bye/unknown notes) and **no playbook**; (d) **W15/16/17 playoff-stack badges are suppressed**
+while Eliminator Mode is on (matching the website's TASK-269 behavior); (e) hovering a shared-bye
+chip (`×2`/`×3`) shows a popup of the players sharing that position's bye week.
 
 ## Decision
 Per **ADR-011** (Proposed, drafted in this run): the extension gets a **self-contained vanilla-JS
@@ -31,14 +39,20 @@ and degrades gracefully on unknown teams.
 ## Files to Change
 - **NEW** `chrome-extension/src/data/eliminator-2026.json` — copy of the web-app snapshot (bye-week
   map keyed by team abbr + roster-shape targets + fade list + playbook), with an `_README` noting
-  it is the extension's own copy (refresh in lockstep with the web-app copy).
+  it is the extension's own copy (refresh in lockstep with the web-app copy). The model file imports
+  the whole snapshot; the window now renders only the bye data, but the file is kept verbatim from
+  the web-app copy for lockstep refresh.
 - **NEW** `chrome-extension/src/utils/eliminatorModel.js` — self-contained vanilla ESM port:
   `getByeWeek` (abbr-direct), `getByeTier`, `isLateBye`, `getFadeInfo`, `analyzeRosterShape`,
-  `analyzeByeRainbow`, `getEliminatorFlags`, plus exported constants.
+  `analyzeByeRainbow`, `getEliminatorFlags`, plus exported constants. (The window only consumes
+  `analyzeByeRainbow`; `getEliminatorFlags` drives the row badges.)
 - **EDIT** `chrome-extension/src/content/draft-overlay.js` — `eliminatorEnabled` state (persisted);
-  Eliminator toggle row in `injectFloatingButton`; Pro-gating in `applyTierGate`; floating window
-  create/update/remove; per-candidate badge in `processRow`; window refresh in `resolveCurrentPicks`;
-  lifecycle hooks in `startOverlay`/`stopOverlay`/`handleUrlChange`/`initDraftOverlay`; injected CSS.
+  Eliminator toggle row in `injectFloatingButton`; Pro-gating in `applyTierGate`; **draggable**
+  bye-rainbow window (create/update/remove + `makeEliminatorWindowDraggable` + persisted
+  `eliminatorWindowPos` + `attachByeChipHovers` shared-bye popup); per-candidate badge in
+  `processRow`/`updateRowMetrics`; **playoff-stack suppression** in `applyPlayoffStackBadge` when
+  Eliminator is on; window refresh in `resolveCurrentPicks`; lifecycle hooks in
+  `startOverlay`/`stopOverlay`/`handleUrlChange`/`initDraftOverlay`; injected CSS.
 
 ## Verification
 Deterministic:
