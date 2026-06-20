@@ -4,14 +4,24 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 
 
+
+## [1.3.0] - 2026-06-20
+
+- **Eliminator Mode for the Draft Assistant.** A dedicated view for Underdog Eliminator (weekly-survival) drafts: a bye-week "rainbow" across each position room surfaces shared byes so you can see at a glance which players are all off in the same week. Available in both the live-draft overlay and the web app's Draft Assistant.
+- **DraftKings full draft board capture.** DK sync now captures the entire draft board — every roster in each pod you drafted, not just your own picks — mirroring the Underdog board capture added in 1.2.0. This powers the complete Draft Board view in the Roster Viewer for your DraftKings portfolios: opponent rosters, your highlighted column, and per-column stats. Boards are read from data you're already authorized to see at sync time (ADR-009).
+- **Eliminator bye-window accuracy fixes.** Freshly-drafted players now resolve their NFL team correctly mid-draft (team data is pulled from the platform's own slate reference data), and the bye window builds its player→team and player→position maps from your full portfolio rather than a slate-filtered subset — so no drafted player is dropped from the analysis.
+- Eliminator row badges trimmed to bye-clash only (dropped the Fade and late-bye badges) for a cleaner read.
+
 ## [1.2.0] - 2026-06-12
 
 - Underdog sync now captures the **full draft board** — all 12 rosters in each pod you drafted, not just your own picks. This powers the complete Draft Board view in the Roster Viewer (opponent rosters, your highlighted column, per-column stats). Boards are read from data you're already authorized to see at sync time (ADR-009).
 - **Board backfill:** each sync also fills in boards for up to 100 of your previously-synced drafts that don't yet have one, shown as a "Backfilling boards X / Y" progress step. If more remain, the sync result prompts you to reload and Sync again — repeated syncs converge until your whole portfolio has full boards. Incomplete legacy boards are repaired automatically.
 
+
 ## [1.1.1] - 2026-05-22
 
 - Fix DK overlay returning 0% exposure for abbreviated player names that share both position and team. When a portfolio contained two players sharing the same first initial, last name, position, and NFL team (e.g., Bijan Robinson and Brian Robinson Jr., both RB ATL after Brian's 2026 offseason move to the Falcons), the name resolver could not disambiguate and returned null, hiding all exposure stats for both players. The resolver now adds an ADP-proximity tiebreak: when position + team narrowing leaves multiple candidates and the row exposes an ADP value, it picks the candidate whose median portfolio pick is closest to the row's displayed ADP. DK adapter row reads ADP via a three-strategy fallback (`data-key` attribute → header-column-index match → last `NumberCell`), since react-base-table does not reliably put `data-key` on body cells. Underdog flow unchanged.
+
 
 
 ## [1.1.0] - 2026-05-20
@@ -21,9 +31,11 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 
 
+
 ## [1.0.11] - 2026-05-15
 
 - Playoff game-stack pill now labels itself with the actual playoff week(s) instead of the generic "PLAYOFFS" word. A candidate whose hits land in W15 shows `W15`; one with hits in W15 and W17 shows `W15/17`; etc. The count badge and the per-week hover popup are unchanged. Helps later in drafts when several candidates carry playoff correlations and disambiguating by week matters more than the count.
+
 
 
 
@@ -39,9 +51,11 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 
 
+
 ## [1.0.9] - 2026-05-10
 
 - Fix Firefox content-script auth + portfolio load: bypass supabase's default `navigator.locks`-based token-refresh lock with a no-op lock function. In Firefox content scripts, `navigator` is Xray-wrapped from the page compartment and `navigator.locks.request(...)` returns a privileged-compartment Promise the content sandbox cannot `.then` on, throwing "Permission denied to access property 'then'" on every `supabase.auth.getSession()` / `supabase.from(...)` call. Each tab has its own client and there's no concurrent refresh to serialize, so a no-op lock is safe.
+
 
 
 
@@ -49,6 +63,7 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 - Fix Firefox Google sign-in from the FAB auth panel: wrap `chrome.runtime.sendMessage({ type: 'GOOGLE_OAUTH' })` in a sandbox-owned Promise via the callback form. v1.0.6 covered `chrome.storage.*` but missed this one chrome.* await in `signInWithGoogle`, so the Google button silently failed in Firefox with "Permission denied to access property 'then'". Email/password sign-in was already working post-1.0.6.
 - Sync popup version string to manifest (was still showing v1.0.6).
+
 
 
 
@@ -61,6 +76,7 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 
 
+
 ## [1.0.6] - 2026-05-09
 
 - Fix Firefox content-script auth panel: switch `chrome.storage.local` calls used in content-script context (Supabase auth storage adapter, post-sync writes) to callback form so Firefox's Xray vision doesn't block `.then` access on cross-compartment Promises.
@@ -69,9 +85,11 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 
 
+
 ## [1.0.5] - 2026-05-08
 
 - Add Chromium self-hosted auto-update via top-level `update_url` (TASK-213). Resolves Edge "unknown source" install warning that grayed out the enable toggle when dragging a self-hosted `.crx` onto `edge://extensions`.
+
 
 
 
