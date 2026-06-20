@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Chrome, Globe, Download, Copy, Check, ArrowLeft, Info } from 'lucide-react';
+import { Chrome, Globe, Download, Copy, Check, ArrowLeft, Info, Sparkles } from 'lucide-react';
 import { detectBrowser } from '../utils/browserDetect';
 import BrandLogo from './BrandLogo';
 import styles from './InstallPage.module.css';
 
-const VERSION = '1.1.1';
+const VERSION = '1.3.0';
 const ZIP_HREF = `/extension/bestballexposures-extension-${VERSION}.zip`;
 const XPI_HREF = `/extension/bestballexposures-extension-${VERSION}.xpi`;
 
@@ -45,9 +45,39 @@ export default function InstallPage() {
 
         {isUpdate && <UpdateBanner />}
 
+        <WhatsNew />
+
         <div className={styles.viewWrap}>{view}</div>
       </main>
     </div>
+  );
+}
+
+function WhatsNew() {
+  return (
+    <section className={styles.whatsNew} aria-label={`What's new in version ${VERSION}`}>
+      <div className={styles.whatsNewHeader}>
+        <Sparkles size={18} />
+        <span>New in v{VERSION}</span>
+      </div>
+      <ul className={styles.whatsNewList}>
+        <li>
+          <strong>Eliminator Mode</strong> in the Draft Assistant — a bye-week rainbow built for
+          Underdog Eliminator (weekly-survival) drafts, so you can see at a glance which players
+          share a bye. Works in the live-draft overlay and the web app.
+        </li>
+        <li>
+          <strong>DraftKings draft boards</strong> — DK sync now captures the full pod (every
+          roster, not just yours), powering the complete Draft Board view in the Roster Viewer for
+          your DraftKings portfolios — just like Underdog.
+        </li>
+        <li>
+          <strong>Sharper Eliminator bye analysis</strong> — freshly-drafted players now resolve
+          their NFL team mid-draft, and the bye window reads your full portfolio so no drafted
+          player is dropped.
+        </li>
+      </ul>
+    </section>
   );
 }
 
