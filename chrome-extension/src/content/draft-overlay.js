@@ -2425,27 +2425,41 @@ function buildElimByeHtml(rainbow) {
   }).join('');
 }
 
-/** Wire a hover popup on each bye chip listing the players sharing that position's bye week. */
+/**
+ * Wire a hover popup on any element listing player names. Reuses the shared correlation-popup
+ * portal so it escapes the draft board's overflow/stacking contexts. Used by both the window's
+ * bye chips and the per-candidate BYE×n row badge (a native title alone is unreliable on the
+ * draft page — TASK-270 feedback).
+ *
+ * @param {Element} el            the hover anchor
+ * @param {string}  titleText     popup heading
+ * @param {string[]} players      player names to list
+ */
+function attachByePopup(el, titleText, players) {
+  el.addEventListener('mouseenter', () => {
+    ensureCorrPopupPortal();
+    const rows = players.map(n =>
+      `<div class="bbm-corr-popup-row"><span class="bbm-corr-popup-name">${escapeHtml(titleCase(n))}</span></div>`
+    ).join('');
+    corrPopupPortal.innerHTML = `<div class="bbm-corr-popup-title">${escapeHtml(titleText)}</div>${rows}`;
+    const rect = el.getBoundingClientRect();
+    corrPopupPortal.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 220))}px`;
+    corrPopupPortal.style.top = `${rect.bottom + 4}px`;
+    corrPopupPortal.style.display = 'block';
+  });
+  el.addEventListener('mouseleave', () => {
+    if (corrPopupPortal) corrPopupPortal.style.display = 'none';
+  });
+}
+
+/** Wire a hover popup on each window bye chip listing the players sharing that position's bye. */
 function attachByeChipHovers(container) {
   container.querySelectorAll('.bbm-elim-bye-chip').forEach(chip => {
     const playersRaw = chip.getAttribute('data-bye-players');
     if (!playersRaw) return;
     const week = chip.getAttribute('data-bye-week');
     const pos = chip.getAttribute('data-bye-pos');
-    chip.addEventListener('mouseenter', () => {
-      ensureCorrPopupPortal();
-      const rows = playersRaw.split('|').map(n =>
-        `<div class="bbm-corr-popup-row"><span class="bbm-corr-popup-name">${escapeHtml(titleCase(n))}</span></div>`
-      ).join('');
-      corrPopupPortal.innerHTML = `<div class="bbm-corr-popup-title">${escapeHtml(pos)} · Week ${escapeHtml(week)} bye</div>${rows}`;
-      const rect = chip.getBoundingClientRect();
-      corrPopupPortal.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 220))}px`;
-      corrPopupPortal.style.top = `${rect.bottom + 4}px`;
-      corrPopupPortal.style.display = 'block';
-    });
-    chip.addEventListener('mouseleave', () => {
-      if (corrPopupPortal) corrPopupPortal.style.display = 'none';
-    });
+    attachByePopup(chip, `${pos} · Week ${week} bye`, playersRaw.split('|'));
   });
 }
 
@@ -2577,10 +2591,16 @@ function applyEliminatorBadge(row, playerName) {
     pills.push({ text: 'FADE', color: '#EF4444', title: `Eliminator fade (${flags.fade.reason}): ${flags.fade.note}` });
   }
   if (flags.byeClash) {
+    // `popup` drives a hover popup listing the rostered players this candidate would share a bye
+    // with (a native title alone is unreliable on the draft page — TASK-270 feedback).
     pills.push({
       text: `BYE×${flags.byeClash.players.length + 1}`,
       color: '#F59E0B',
       title: `Same-position bye collision (Week ${flags.byeClash.week}) with ${flags.byeClash.players.join(', ')} — breaks the rainbow`,
+      popup: {
+        title: `${candidate.position || ''} · shares Week ${flags.byeClash.week} bye`.trim(),
+        players: flags.byeClash.players,
+      },
     });
   } else if (flags.isLateBye) {
     pills.push({ text: `BYE ${flags.byeWeek}`, color: '#10B981', title: `Premium late bye (Week ${flags.byeWeek})` });
@@ -2597,6 +2617,7 @@ function applyEliminatorBadge(row, playerName) {
     pill.style.borderColor = p.color;
     pill.style.background = `${p.color}1A`;
     pill.title = p.title;
+    if (p.popup) attachByePopup(pill, p.popup.title, p.popup.players);
     target.appendChild(pill);
   });
 }
