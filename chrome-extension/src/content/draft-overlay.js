@@ -60,8 +60,14 @@ let wasOnDraftPage = false;
 
 // Portfolio data for metric computation
 let playerIndexMap = new Map();  // canonicalName -> Set<rosterIndex>
-let playerTeamMap = new Map();   // canonicalName -> team abbreviation
+let playerTeamMap = new Map();   // canonicalName -> team abbreviation (portfolio-derived)
 let playerPositionMap = new Map(); // canonicalName -> position
+// TASK-275: live-draft team map sourced from the page bridge's reference data.
+// Covers every player in the current draft's slate — including freshly-drafted
+// players not yet in the synced portfolio — so the Eliminator bye window can
+// resolve their bye weeks. Takes precedence over playerTeamMap for live picks.
+let draftTeamMap = new Map();     // canonicalName -> team abbreviation (live draft)
+let draftTeamsRequested = false;  // guard: fetch the live map once per draft
 let abbreviatedNameMap = new Map(); // "j. jefferson" -> canonicalName (for DK-style abbreviated display)
 let totalRosters = 0;
 let currentPicks = [];           // [{name, position, round}, ...]
@@ -300,10 +306,27 @@ function applyPortfolioFilter() {
     ? allEntries
     : allEntries.filter(e => selectedTournaments.has(e.tournamentTitle));
 
-  totalRosters = filtered.length;
-  playerIndexMap = new Map();
+  // Player team + position are slate-INDEPENDENT reference data: a player's NFL team
+  // and position are the same in every tournament. Build them from ALL synced rosters,
+  // not the slate-filtered set, so the Eliminator bye window can resolve a live pick's
+  // bye even when the selected slate has few/no completed drafts (TASK-277). The live
+  // bridge map (draftTeamMap, TASK-275) is the primary source; this is the fallback.
   playerTeamMap = new Map();
   playerPositionMap = new Map();
+  allEntries.forEach(entry => {
+    (entry.players ?? []).forEach(p => {
+      if (!p.name) return;
+      const key = canonicalName(p.name);
+      if (!key) return;
+      if (p.team && !playerTeamMap.has(key)) playerTeamMap.set(key, p.team);
+      if (p.position && !playerPositionMap.has(key)) playerPositionMap.set(key, p.position);
+    });
+  });
+
+  // Exposure data (roster membership, pick samples, total count) IS slate-specific —
+  // it reflects only the tournaments the user has selected.
+  totalRosters = filtered.length;
+  playerIndexMap = new Map();
   abbreviatedNameMap = new Map();
   // Per-player pick samples for ambiguous-abbrev tiebreak (e.g., Bijan vs Brian Robinson)
   const pickSamplesByKey = new Map();
@@ -314,8 +337,6 @@ function applyPortfolioFilter() {
       if (!key) return;
       if (!playerIndexMap.has(key)) playerIndexMap.set(key, new Set());
       playerIndexMap.get(key).add(rosterIdx);
-      if (p.team && !playerTeamMap.has(key)) playerTeamMap.set(key, p.team);
-      if (p.position && !playerPositionMap.has(key)) playerPositionMap.set(key, p.position);
       const pickNum = Number(p.pick);
       if (Number.isFinite(pickNum) && pickNum > 0) {
         if (!pickSamplesByKey.has(key)) pickSamplesByKey.set(key, []);
@@ -864,6 +885,9 @@ function stopPicksObserver() {
   }
   currentPicks = [];
   pickRegistry.clear();
+  // TASK-275: drop the live-draft team map so a different draft re-fetches its own slate.
+  draftTeamMap = new Map();
+  draftTeamsRequested = false;
 }
 
 /**
@@ -1400,7 +1424,7 @@ function processRow(row) {
     applyPlayoffStackBadge(row, resolvedName);
   }
 
-  // Eliminator Mode badges (fade / bye-clash / late-bye) — annotate only (TASK-270)
+  // Eliminator Mode badge (same-position bye clash only) — annotate only (TASK-273)
   applyEliminatorBadge(row, resolvedName);
 
   // Inject tier break indicator if sorted by My Rank and rankings data is available
@@ -2388,22 +2412,54 @@ function stopOverlay() {
 // A self-contained vanilla port of the web app's Eliminator Mode (ADR-010). Adds,
 // when enabled: (1) a small DRAGGABLE floating window showing the bye rainbow only —
 // bye week(s) per position, no roster-shape tracker, warnings, or playbook (TASK-270
-// refinement); (2) per-candidate row badges (curated fade, late W13/14 bye, same-position
-// bye clash). Playoff-stack (W15/16/17) badges are suppressed while Eliminator is on.
-// The board is annotated, never reordered.
+// refinement); (2) a per-candidate row badge for the same-position bye clash only
+// (TASK-273 dropped the curated-fade and late-W13/14-bye pills). Playoff-stack
+// (W15/16/17) badges are suppressed while Eliminator is on. The board is annotated,
+// never reordered.
 //
 // Picks carry no team (resolveCurrentPicks → {name, position, round}); team is resolved
-// from playerTeamMap (portfolio-derived). Where team is unknown, bye annotations are
-// omitted (the model tracks unknownByeCount); fades are team-independent.
+// from playerTeamMap (portfolio-derived). Where team is unknown, the bye-clash
+// annotation is omitted (the model tracks unknownByeCount).
 // ---------------------------------------------------------------------------
 
-/** Current picks enriched with a team abbreviation resolved from portfolio data (null when unknown). */
+/**
+ * Current picks enriched with a team abbreviation (null when unknown).
+ * Prefers the live-draft team map (covers all slate players); falls back to
+ * portfolio-derived teams for anything the bridge couldn't resolve (TASK-275).
+ */
 function picksWithTeam() {
-  return currentPicks.map(p => ({
-    name: p.name,
-    position: p.position,
-    team: playerTeamMap.get(canonicalName(p.name)) || null,
-  }));
+  return currentPicks.map(p => {
+    const key = canonicalName(p.name);
+    return {
+      name: p.name,
+      position: p.position,
+      team: draftTeamMap.get(key) || playerTeamMap.get(key) || null,
+    };
+  });
+}
+
+/**
+ * TASK-275: fetch the live-draft player→team map from the page bridge (Underdog)
+ * and populate draftTeamMap. Best-effort and fire-and-forget — runs once per draft
+ * (guarded by draftTeamsRequested), refreshing the bye window once teams land.
+ */
+async function loadDraftTeamMap() {
+  if (draftTeamsRequested || !adapter?.getDraftPlayerTeams) return;
+  draftTeamsRequested = true;
+  try {
+    const list = await adapter.getDraftPlayerTeams();
+    const next = new Map();
+    (list ?? []).forEach(({ name, team }) => {
+      const key = canonicalName(name);
+      if (key && team && !next.has(key)) next.set(key, String(team).toUpperCase());
+    });
+    if (next.size > 0) {
+      draftTeamMap = next;
+      if (eliminatorEnabled) updateEliminatorWindow();
+    }
+  } catch {
+    // best-effort — the overlay falls back to portfolio-derived teams
+  }
 }
 
 /** Build the bye-rainbow rows: one per position, each a row of bye-week chips. Bye weeks only —
@@ -2556,6 +2612,7 @@ function applyEliminatorMode() {
   if (eliminatorEnabled && onDraft && currentTier === 'pro') {
     createEliminatorWindow();
     startPicksObserver();        // idempotent — feeds the window even if the row overlay is off
+    loadDraftTeamMap();          // TASK-275: resolve live-draft teams (once per draft)
     updateEliminatorWindow();
     if (enabled) sweepRows();    // per-row Eliminator badges only when the row overlay is active
   } else {
@@ -2567,8 +2624,9 @@ function applyEliminatorMode() {
 }
 
 /**
- * Inject (or refresh) the per-candidate Eliminator badges on a row: curated macro-fade,
- * same-position bye clash, or premium late bye. Annotates only — never reorders the board.
+ * Inject (or refresh) the per-candidate Eliminator badge on a row: the same-position
+ * bye clash only (TASK-273 dropped the macro-fade and premium late-bye pills). Annotates
+ * only — never reorders the board.
  *
  * @param {Element} row
  * @param {string|null} playerName  resolved (portfolio) name when available, else the display name
@@ -2578,18 +2636,17 @@ function applyEliminatorBadge(row, playerName) {
   if (!eliminatorEnabled || !playerName) return;
 
   const key = resolvePlayerKey(playerName);
+  const canon = canonicalName(playerName);
   const candidate = {
     name: playerName,
     position: (key && playerPositionMap.get(key)) || null,
-    team: (key && playerTeamMap.get(key)) || null,
+    // Prefer the live-draft team map; fall back to portfolio-derived teams (TASK-275).
+    team: draftTeamMap.get(canon) || (key && playerTeamMap.get(key)) || null,
   };
   const flags = getEliminatorFlags(candidate, picksWithTeam());
   if (!flags) return;
 
   const pills = [];
-  if (flags.fade) {
-    pills.push({ text: 'FADE', color: '#EF4444', title: `Eliminator fade (${flags.fade.reason}): ${flags.fade.note}` });
-  }
   if (flags.byeClash) {
     // `popup` drives a hover popup listing the rostered players this candidate would share a bye
     // with (a native title alone is unreliable on the draft page — TASK-270 feedback).
@@ -2602,8 +2659,6 @@ function applyEliminatorBadge(row, playerName) {
         players: flags.byeClash.players,
       },
     });
-  } else if (flags.isLateBye) {
-    pills.push({ text: `BYE ${flags.byeWeek}`, color: '#10B981', title: `Premium late bye (Week ${flags.byeWeek})` });
   }
   if (pills.length === 0) return;
 

@@ -1042,36 +1042,17 @@ function PlayerCard({ player, currentPicks = [], onSelect, _stratName, isMobile 
     const playoffStack = player.playoffStack || null;
     const elimFlags = eliminatorMode ? getEliminatorFlags(player, currentPicks) : null;
 
-    // Minimal badge set (mirrors the Chrome extension — ADR-011): a premium late-bye flag,
-    // a same-position bye-clash flag, and the macro-fade flag. The per-player bye badge for
-    // non-late byes and the onesie-need badge were dropped to reduce on-card noise.
-    const elimBadges = elimFlags ? (
-      <>
-        {elimFlags.isLateBye && Number.isFinite(elimFlags.byeWeek) && (
-          <span
-            className={`${styles.elimByeBadge} ${styles.elimByeLate}`}
-            title={`Bye week ${elimFlags.byeWeek} — premium late bye (carries you toward the money)`}
-          >
-            BYE {elimFlags.byeWeek}
-          </span>
-        )}
-        {elimFlags.byeClash && (
-          <span
-            className={styles.elimClashBadge}
-            title={`Shares a bye (wk${elimFlags.byeClash.week}) with ${elimFlags.byeClash.players.join(', ')} — breaks the ${player.position} rainbow`}
-          >
-            <AlertTriangle size={10} /> bye clash
-          </span>
-        )}
-        {elimFlags.fade && (
-          <span
-            className={styles.elimFadeBadge}
-            title={`Eliminator macro-fade (${elimFlags.fade.reason}): ${elimFlags.fade.note}`}
-          >
-            Fade
-          </span>
-        )}
-      </>
+    // Minimal badge set (mirrors the Chrome extension — ADR-011): a same-position
+    // bye-clash flag only. The premium late-bye and macro-fade badges were dropped
+    // (TASK-273); the per-player non-late bye badge and onesie-need badge were dropped
+    // earlier to reduce on-card noise. Eliminator now annotates only the bye conflict.
+    const elimBadges = elimFlags?.byeClash ? (
+      <span
+        className={styles.elimClashBadge}
+        title={`Shares a bye (wk${elimFlags.byeClash.week}) with ${elimFlags.byeClash.players.join(', ')} — breaks the ${player.position} rainbow`}
+      >
+        <AlertTriangle size={10} /> bye clash
+      </span>
     ) : null;
 
     const globalExp = player.globalExposure || 0;

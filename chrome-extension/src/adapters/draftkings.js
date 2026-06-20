@@ -30,6 +30,79 @@ function deriveDkSlate(contestName) {
 }
 
 /**
+ * Normalize a DraftKings `draftStatus.draftBoard[]` (every pick by every user
+ * in the pod) into the shared full-board shape consumed by the web app's
+ * DraftBoardModal. Mirrors underdog-bridge.js `normalizeBoard` (ADR-009 /
+ * TASK-258) so DK and UD boards are interchangeable downstream.
+ *
+ * Seat/column derivation: DK does not expose an explicit seat index on a pick,
+ * but in a snake draft each user's first-round pick fixes their column. We rank
+ * the first-round picks by `overallSelectionNumber` and assign 1-indexed slots,
+ * then stamp that slot onto every pick by the same `userKey`. Ranking (rather
+ * than using the raw selection number) keeps slots a contiguous 1..entryCount
+ * regardless of whether DK numbers picks/rounds 0- or 1-based.
+ *
+ * The board is keyed by `draftId` = the syncing user's LineupId so it matches
+ * that entry's `entry_id` in `extension_entries` — the web app lights up the
+ * Board action via `boardIds.has(roster.entry_id)`, so the keys must align
+ * (UD has the same identity: entryId === draft.id).
+ *
+ * Returns null (board omitted) if any pick's player name is unresolved or any
+ * seat can't be derived — a nameless or column-less board is useless to the
+ * web app and must not be persisted.
+ *
+ * @param {Array<{draftableId:number, userKey:string, overallSelectionNumber:number, roundNumber:number, teamPositionId:number}>} draftBoard
+ * @param {{ didToInfo: Record<number, {position:string|null, team:string|null, displayName:string|null}>, slateTitle: string|null, draftId: string }} ctx
+ * @returns {object|null}
+ */
+function normalizeDkBoard(draftBoard, { didToInfo, slateTitle, draftId }) {
+  if (!Array.isArray(draftBoard) || draftBoard.length === 0) return null;
+
+  const minRound = Math.min(...draftBoard.map(p => p.roundNumber));
+  const maxRound = Math.max(...draftBoard.map(p => p.roundNumber));
+  const rounds = maxRound - minRound + 1;
+
+  // First-round picks fix each user's seat. Rank by selection number → slot.
+  const slotByUserKey = {};
+  draftBoard
+    .filter(p => p.roundNumber === minRound)
+    .sort((a, b) => a.overallSelectionNumber - b.overallSelectionNumber)
+    .forEach((p, i) => { slotByUserKey[p.userKey] = i + 1; });
+  const entryCount = Object.keys(slotByUserKey).length;
+  if (entryCount === 0) return null;
+
+  let unresolved = 0;
+  const picks = draftBoard.map((p) => {
+    const info = didToInfo[p.draftableId] ?? {};
+    const name = info.displayName ?? null;
+    if (!name) unresolved++;
+    const slot = slotByUserKey[p.userKey] ?? null;
+    if (slot == null) unresolved++;
+    const position = TEAM_POS_MAP[p.teamPositionId] ?? info.position ?? null;
+    return {
+      pick:         p.overallSelectionNumber,
+      round:        p.roundNumber - minRound + 1,
+      slot,
+      draftEntryId: String(p.userKey),
+      userId:       String(p.userKey),
+      name,
+      position:     position ? String(position).toUpperCase() : null,
+      team:         info.team ?? null,
+    };
+  });
+
+  if (unresolved > 0) return null;
+
+  return {
+    draftId:    String(draftId),
+    slateTitle: slateTitle ?? null,
+    entryCount,
+    rounds,
+    picks,
+  };
+}
+
+/**
  * Read the ADP value from a DK player row. react-base-table doesn't reliably
  * put data-key on body cells, so we try several strategies in order:
  *   1) Direct [data-key="averageDraftPosition"] on the row.
@@ -165,11 +238,12 @@ const draftkingsAdapter = {
    *   2. /contest/mycontests — maps LineupId → ContestId + UserContestId
    *   3. Draftables API — real positions and team abbreviations (public)
    *
-   * Then fetches draftStatus per entry for real pick order and positions.
-   * Falls back gracefully: if draftStatus fails, uses draftables positions
-   * with slot-order picks.
+   * Then fetches draftStatus per entry for real pick order and positions, and
+   * captures the full pod board (all rosters) from the same draftStatus payload
+   * (ADR-009 / TASK-274). Falls back gracefully: if draftStatus fails, uses
+   * draftables positions with slot-order picks and the draft yields no board.
    *
-   * @returns {Promise<import('./interface.js').Entry[]>}
+   * @returns {Promise<{ newEntries: import('./interface.js').Entry[], currentDraftIds: string[], boards: object[] }>}
    */
   async getEntries() {
     if (!window.location.pathname.startsWith('/mycontests')) {
@@ -232,11 +306,15 @@ const draftkingsAdapter = {
     // Step 4: Fetch draftStatus for entries with contest mapping (real pick order)
     // draftableId → { pick, round, position } per lineup
     const draftStatusMap = new Map();
+    // Full pod boards keyed by LineupId (ADR-009 / TASK-274). draftBoard[]
+    // already carries every user's picks; we keep the whole pod, not just the
+    // syncing user's, and normalize it into the shared board shape.
+    const boardMap = new Map();
     const statusFetches = nflLineups
       .filter(lineup => contestMap.has(String(lineup.LineupId)))
       .map(lineup => {
         const lid = String(lineup.LineupId);
-        const { contestId, userContestId } = contestMap.get(lid);
+        const { contestId, userContestId, contestName } = contestMap.get(lid);
         return fetch(
           `https://api.draftkings.com/drafts/v1/${contestId}/entries/${userContestId}/draftStatus?format=json`,
           { credentials: 'include' }
@@ -264,6 +342,15 @@ const draftkingsAdapter = {
               });
             }
             draftStatusMap.set(lid, pickMap);
+
+            // Capture the full pod board (all rosters), keyed by LineupId so it
+            // matches this entry's entry_id in the web app's board lookup.
+            const board = normalizeDkBoard(ds.draftBoard, {
+              didToInfo,
+              slateTitle: contestName ?? null,
+              draftId: lid,
+            });
+            if (board) boardMap.set(lid, board);
           })
           .catch(e => console.warn(`[BBM] DK draftStatus failed for lineup ${lid}:`, e.message));
       });
@@ -271,7 +358,7 @@ const draftkingsAdapter = {
     await Promise.allSettled(statusFetches);
 
     // Step 5: Build entries with best available data
-    return nflLineups.map(lineup => {
+    const newEntries = nflLineups.map(lineup => {
       const lid = String(lineup.LineupId);
       const contest = contestMap.get(lid);
       const pickMap = draftStatusMap.get(lid);
@@ -298,6 +385,17 @@ const draftkingsAdapter = {
         }),
       };
     });
+
+    // Return the incremental shape so content.js routes boards through
+    // writeBoards and writeEntries uses its incremental path. DK re-fetches
+    // every lineup each sync, so currentDraftIds = all entry ids reproduces the
+    // prior full-replace semantics (every entry re-upserted; withdrawn drafts
+    // pruned as stale ids).
+    return {
+      newEntries,
+      currentDraftIds: newEntries.map(e => e.entryId),
+      boards: [...boardMap.values()],
+    };
   },
 
   isDraftPage() {

@@ -138,6 +138,9 @@ if (!window.__BBM_initialized) {
     const fetches = [
       statsFetch('/v1/slates/' + slateId + '/players').then(data => {
         (data.players ?? []).forEach(p => { window.__BBM.players[p.id] = p; });
+        // statsFetch bypasses the passive XHR interceptor, so capture any teams
+        // array here too — team_id → abbreviation resolution depends on it (TASK-275).
+        (data.teams ?? []).forEach(t => { window.__BBM.teams[t.id] = t; });
       }).catch(() => {}),
     ];
 
@@ -145,6 +148,7 @@ if (!window.__BBM_initialized) {
       fetches.push(
         statsFetch('/v1/slates/' + slateId + '/scoring_types/' + scoringTypeId + '/appearances').then(data => {
           (data.appearances ?? []).forEach(a => { window.__BBM.appearances[a.id] = a; });
+          (data.teams ?? []).forEach(t => { window.__BBM.teams[t.id] = t; });
         }).catch(() => {})
       );
     }
@@ -381,12 +385,63 @@ if (!window.__BBM_initialized) {
     return boards;
   }
 
+  // ── Live-draft player→team map ────────────────────────────────────────────
+  // TASK-275: returns [{ name, team }] for every player in the current draft's
+  // slate, resolved from the cached reference data (mirrors normalizePick's
+  // player_id → team_id → abbreviation chain). The Eliminator bye window uses
+  // this to resolve teams for freshly-drafted players that aren't in the user's
+  // synced portfolio. Best-effort: players whose team can't be resolved are
+  // omitted (same as the prior portfolio-only behavior — no regression).
+
+  async function buildDraftTeams() {
+    // Resolve the current draft's slate so its players/appearances/teams are cached.
+    const m = window.location.pathname.match(/\/draft\/([a-f0-9-]+)/i);
+    if (m && window.__BBM.token) {
+      try {
+        const data    = await apiFetch('https://' + window.__BBM.apiHost + '/v2/drafts/' + m[1]);
+        const draft   = data.draft ?? data;
+        const slateId = draft.slate_id ?? draft.slateId;
+        if (slateId) await ensureSlateLoaded(slateId);
+      } catch {}
+    }
+
+    const players = window.__BBM.players ?? {};
+    const out = [];
+    for (const id of Object.keys(players)) {
+      const pl = players[id];
+      if (!pl) continue;
+      const firstName = pl.first_name ?? pl.firstName ?? '';
+      const lastName  = pl.last_name  ?? pl.lastName  ?? '';
+      const name = (firstName + ' ' + lastName).trim();
+      if (!name) continue;
+      const teamId = pl.team_id ?? pl.teamId;
+      const team   = window.__BBM.teams[teamId] ?? {};
+      const abbr   = team.abbr ?? team.abbreviation ?? '';
+      if (!abbr) continue;
+      out.push({ name, team: abbr });
+    }
+    console.debug('[BBM] draft teams resolved ' + out.length + '/' + Object.keys(players).length);
+    return out;
+  }
+
   // ── Message listener ──────────────────────────────────────────────────────
 
   window.addEventListener('message', async (event) => {
     if (event.source !== window) return;
     const type = event.data?.type;
-    if (type !== 'BBM_SYNC_REQUEST' && type !== 'BBM_BOARDS_REQUEST') return;
+    if (type !== 'BBM_SYNC_REQUEST' && type !== 'BBM_BOARDS_REQUEST' && type !== 'BBM_DRAFT_TEAMS_REQUEST') return;
+
+    // Live-draft team map is best-effort and works from cached data, so it does
+    // not require a token (and never blocks on the sign-in error path below).
+    if (type === 'BBM_DRAFT_TEAMS_REQUEST') {
+      try {
+        const players = await buildDraftTeams();
+        window.postMessage({ type: 'BBM_DRAFT_TEAMS_RESULT', players }, '*');
+      } catch (err) {
+        window.postMessage({ type: 'BBM_DRAFT_TEAMS_ERROR', error: err.message }, '*');
+      }
+      return;
+    }
 
     if (!window.__BBM.token) {
       window.postMessage({

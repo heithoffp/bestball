@@ -98,6 +98,7 @@
 | TASK-261 | Harden getBoards/getEntries against a stale in-page bridge (fail fast, no 300s hang) | Todo | P4 | [Plan](docs/plans/TASK-261.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
 | TASK-264 | Daily rebuild so scheduled posts get OG cards on go-live date | Todo | P4 | [Plan](docs/plans/TASK-264.md) -- Draft | No | 2026-06-15 | 2026-06-15 |
 | TASK-271 | Remove orphaned Eliminator CSS and unused model exports | Todo | P4 | [Plan](docs/plans/TASK-271.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
+| TASK-276 | DraftBoardModal: use platform-correct ADP/proj maps for DK boards | Todo | P4 | [Plan](docs/plans/TASK-276.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
 
 ## Completed Tasks
 
@@ -105,6 +106,10 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-273 | Trim Eliminator row badges to bye-clash only (drop Fade + late-bye) | Done | P3 | [Plan](docs/archive/plans/TASK-273.md) | No | 2026-06-20 |
+| TASK-275 | Fix Eliminator bye window dropping freshly-drafted players (preserve pick team) | Done | P2 | [Plan](docs/archive/plans/TASK-275.md) | No | 2026-06-20 |
+| TASK-277 | Fix Eliminator bye window: build playerTeamMap/playerPositionMap from all rosters, not the slate-filtered set | Done | P2 | [Plan](docs/archive/plans/TASK-277.md) | No | 2026-06-20 |
+| TASK-274 | Capture full draft board at DraftKings sync (mirror UD board capture) | Done | P3 | [Plan](docs/archive/plans/TASK-274.md) | Yes | 2026-06-20 |
 | TASK-269 | Eliminator Mode for the Draft Assistant | Done | P2 | [Plan](docs/archive/plans/TASK-269.md) | No | 2026-06-20 |
 | TASK-270 | Port Eliminator Mode into the Chrome extension | Done | P2 | [Plan](docs/archive/plans/TASK-270.md) | No | 2026-06-20 |
 | TASK-266 | Tap/click-to-zoom lightbox for blog figures | Done | P2 | [Plan](docs/archive/plans/TASK-266.md) | Yes | 2026-06-15 |

@@ -111,6 +111,40 @@ const underdogAdapter = {
   },
 
   /**
+   * TASK-275: fetch a name→team map for every player in the current draft's slate,
+   * resolved by the page bridge from Underdog's own reference data. The Eliminator
+   * bye window uses this to resolve teams for freshly-drafted players that aren't in
+   * the user's synced portfolio. Best-effort: resolves [] on timeout/error so the
+   * overlay falls back to portfolio-derived teams.
+   *
+   * @returns {Promise<Array<{name: string, team: string}>>}
+   */
+  getDraftPlayerTeams() {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        window.removeEventListener('message', handler);
+        resolve([]);
+      }, 15_000);
+
+      function handler(event) {
+        if (event.source !== window) return;
+        if (event.data?.type === 'BBM_DRAFT_TEAMS_RESULT') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          resolve(event.data.players ?? []);
+        } else if (event.data?.type === 'BBM_DRAFT_TEAMS_ERROR') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          resolve([]);
+        }
+      }
+
+      window.addEventListener('message', handler);
+      window.postMessage({ type: 'BBM_DRAFT_TEAMS_REQUEST' }, '*');
+    });
+  },
+
+  /**
    * Returns the virtualized grid container for overlay injection.
    */
   getInjectionTarget() {
