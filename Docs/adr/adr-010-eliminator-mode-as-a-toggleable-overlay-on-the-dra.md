@@ -1,11 +1,10 @@
 # ADR-010: Eliminator Mode as a toggleable overlay on the Draft Assistant
 
 **Date:** 2026-06-19
-**Status:** Proposed
+**Status:** Accepted
 
-> Drafted in-loop by an autonomous **Level 3 (run-scoped)** hus-goal run (TASK-269).
-> Status is **Proposed** pending the developer's end-of-run confirm/revise — it was **not**
-> self-accepted.
+> Drafted in-loop by an autonomous **Level 3 (run-scoped)** hus-goal run (TASK-269) and
+> **accepted by the developer on 2026-06-20** (with the refinement noted in the Decision).
 
 ---
 
@@ -113,7 +112,7 @@ Reproduce the Python value-space model in JS and re-sort the board.
 
 ## Related
 - Tasks: TASK-269
-- ADRs: —
+- ADRs: ADR-011 (the Chrome-extension port this converged with)
 
 ---
-*Drafted autonomously (run-scoped L3); awaiting developer confirm/revise.*
+*Drafted autonomously (run-scoped L3); accepted by the developer 2026-06-20.*

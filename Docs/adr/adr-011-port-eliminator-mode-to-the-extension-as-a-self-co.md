@@ -1,11 +1,10 @@
 # ADR-011: Port Eliminator Mode to the extension as a self-contained vanilla-JS overlay
 
 **Date:** 2026-06-20
-**Status:** Proposed
+**Status:** Accepted
 
-> Drafted in-loop by an autonomous **Level 3 (run-scoped)** hus-goal run (TASK-270).
-> Status is **Proposed** pending the developer's end-of-run confirm/revise — it was **not**
-> self-accepted.
+> Drafted in-loop by an autonomous **Level 3 (run-scoped)** hus-goal run (TASK-270) and
+> **accepted by the developer on 2026-06-20**.
 
 ---
 
@@ -115,4 +114,4 @@ Render the roster-shape/bye/playbook inside the existing confidence-hub panel.
 - ADRs: ADR-010 (the web-app Eliminator Mode this mirrors)
 
 ---
-*Drafted autonomously (run-scoped L3); awaiting developer confirm/revise.*
+*Drafted autonomously (run-scoped L3); accepted by the developer 2026-06-20.*
