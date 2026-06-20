@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-20 | Commit: 0d5435b -->
 # TASK-270: Port Eliminator Mode into the Chrome extension
 
 **Status:** Approved (Level 3 auto-executed — run-scoped elevation)

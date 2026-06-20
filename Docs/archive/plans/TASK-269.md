@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-20 | Commit: bb6e300 -->
 # TASK-269: Eliminator Mode for the Draft Assistant
 
 **Status:** Approved (Level 3 auto-executed — run-scoped elevation)
