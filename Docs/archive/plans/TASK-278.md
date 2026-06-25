@@ -1,4 +1,4 @@
-<!-- Completed: 2026-06-25 | Commit: PENDING -->
+<!-- Completed: 2026-06-25 | Commit: be67675 -->
 # TASK-278: Robust ADP snapshot date parsing + fix underscore-dated 06-25 files and scraper output
 
 **Status:** Approved

@@ -1,4 +1,4 @@
-<!-- Completed: 2026-06-25 | Commit: PENDING -->
+<!-- Completed: 2026-06-25 | Commit: be67675 -->
 # TASK-279: Cross-platform name reconciliation: nickname aliases so renamed players keep ADP
 
 **Status:** Approved (implementation gated on ADR — matching strategy)
