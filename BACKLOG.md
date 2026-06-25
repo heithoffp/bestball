@@ -106,22 +106,13 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-263 | Scheduled blog publishing + author preview gate | Done | P2 | [Plan](docs/archive/plans/TASK-263.md) | Yes | 2026-06-15 |
+| TASK-262 | Draft-board hero image for The Allen Tax blog post (two-column fork) | Done | P2 | [Plan](docs/archive/plans/TASK-262.md) | Yes | 2026-06-15 |
 | TASK-273 | Trim Eliminator row badges to bye-clash only (drop Fade + late-bye) | Done | P3 | [Plan](docs/archive/plans/TASK-273.md) | No | 2026-06-20 |
 | TASK-275 | Fix Eliminator bye window dropping freshly-drafted players (preserve pick team) | Done | P2 | [Plan](docs/archive/plans/TASK-275.md) | No | 2026-06-20 |
 | TASK-277 | Fix Eliminator bye window: build playerTeamMap/playerPositionMap from all rosters, not the slate-filtered set | Done | P2 | [Plan](docs/archive/plans/TASK-277.md) | No | 2026-06-20 |
 | TASK-274 | Capture full draft board at DraftKings sync (mirror UD board capture) | Done | P3 | [Plan](docs/archive/plans/TASK-274.md) | Yes | 2026-06-20 |
 | TASK-269 | Eliminator Mode for the Draft Assistant | Done | P2 | [Plan](docs/archive/plans/TASK-269.md) | No | 2026-06-20 |
 | TASK-270 | Port Eliminator Mode into the Chrome extension | Done | P2 | [Plan](docs/archive/plans/TASK-270.md) | No | 2026-06-20 |
-| TASK-266 | Tap/click-to-zoom lightbox for blog figures | Done | P2 | [Plan](docs/archive/plans/TASK-266.md) | Yes | 2026-06-15 |
-| TASK-265 | Hide archive lock icon for users who can read the post (Pro/author) | Done | P3 | [Plan](docs/archive/plans/TASK-265.md) | Yes | 2026-06-15 |
-| TASK-263 | Scheduled blog publishing + author preview gate | Done | P2 | [Plan](docs/archive/plans/TASK-263.md) | Yes | 2026-06-15 |
-| TASK-253 | ADP Tracker — % change / raw ADP calculation toggle | Done | P3 | [Plan](docs/archive/plans/TASK-253.md) | Yes | 2026-06-09 |
-| TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy (Won't Do: Moot per ADR-009: draft_boards_admin is being dropped (TASK-252); no authenticated read policy/grant will ever be added.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-247.md) | No | 2026-06-09 |
-| TASK-251 | Admin scraper — negative-cache 404 draft IDs to stop re-fetching dead drafts (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to negative-cache 404s.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-251.md) | No | 2026-06-09 |
-| TASK-244 | Admin scraper — scheduled background runs via chrome.alarms (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to schedule.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-244.md) | No | 2026-06-09 |
-| TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available (Won't Do: Moot per ADR-009: admin-scraping retired (ownership-gated API). No admin-scraped board to prefer; full-board capture is now participant-authorized via TASK-240.) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-243.md) | No | 2026-06-09 |
-| TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Done | P3 | [Plan](docs/archive/plans/TASK-242.md) | Yes | 2026-06-09 |
-| TASK-241 | Admin draft-board scraper — periodic UD fetch by draft_id | Done | P3 | [Plan](docs/archive/plans/TASK-241.md) | Yes | 2026-06-09 |
-| TASK-260 | Backfill draft boards for already-synced UD drafts (bounded re-fetch) | Done | P3 | [Plan](docs/archive/plans/TASK-260.md) | Yes | 2026-06-12 |
-| TASK-258 | Chrome extension: capture full draft board at UD sync (ADR-009) and switch web read path off draft_boards_admin | Done | P3 | [Plan](docs/archive/plans/TASK-258.md) | Yes | 2026-06-12 |
-| TASK-262 | Draft-board hero image for The Allen Tax blog post (two-column fork) | Done | P2 | [Plan](docs/archive/plans/TASK-262.md) | Yes | 2026-06-15 |
+| TASK-279 | Cross-platform name reconciliation: nickname aliases so renamed players keep ADP | Done | P2 | [Plan](docs/archive/plans/TASK-279.md) | Yes | 2026-06-25 |
+| TASK-278 | Robust ADP snapshot date parsing + fix underscore-dated 06-25 files and scraper output | Done | P2 | [Plan](docs/archive/plans/TASK-278.md) | Yes | 2026-06-25 |

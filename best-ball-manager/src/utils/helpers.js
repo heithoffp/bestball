@@ -1,5 +1,6 @@
 // src/utils/helpers.js
 import { NFL_TEAMS } from './nflTeams.js';
+import { applyAlias } from './playerAliases.js';
 
 /**
  * Expand a team abbreviation to its full name.
@@ -15,13 +16,14 @@ export function expandTeam(raw = '') {
 /**
  * Canonical player name key for cross-platform matching.
  * Strips generational suffixes (Jr., Sr., II–V), removes periods from
- * initials (D.J. → DJ), normalizes whitespace, and lowercases.
+ * initials (D.J. → DJ), normalizes whitespace, and lowercases. Finally
+ * reconciles known cross-platform renames via the alias map (ADR-012).
  * Use for map keys and comparisons — NOT for display.
  */
 const SUFFIX_RE = /\s+(jr\.?|sr\.?|ii|iii|iv|v)\s*$/i;
 
 export function canonicalName(name = '') {
-  return String(name)
+  const canonical = String(name)
     .trim()
     .replace(/^"|"$/g, '')
     .replace(SUFFIX_RE, '')
@@ -29,6 +31,7 @@ export function canonicalName(name = '') {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+  return applyAlias(canonical);
 }
 
 /**

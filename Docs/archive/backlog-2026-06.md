@@ -1,6 +1,6 @@
 # Backlog Archive -- June 2026
 
-Archived from `BACKLOG.md`. Last updated 2026-06-15. Contains completed tasks through TASK-256.
+Archived from `BACKLOG.md`. Last updated 2026-06-25. Contains completed tasks through TASK-266.
 
 ## Completed Tasks
 
@@ -28,3 +28,14 @@ Archived from `BACKLOG.md`. Last updated 2026-06-15. Contains completed tasks th
 | TASK-246 | Supabase migration grants: update template, existing migrations, and CLAUDE.md | Done | P2 | [Plan](../plans/TASK-246.md) | Yes | 2026-05-28 |
 | TASK-256 | Per-route Open Graph metadata + hero images for blog posts (build-time prerender) | Done | P2 | [Plan](../plans/TASK-256.md) | Yes | 2026-06-09 |
 | TASK-249 | Publish weekly blog content to website — blog index + article pages | Done | P1 | [Plan](../plans/TASK-249.md) | Yes | 2026-06-09 |
+| TASK-253 | ADP Tracker — % change / raw ADP calculation toggle | Done | P3 | [Plan](../plans/TASK-253.md) | Yes | 2026-06-09 |
+| TASK-247 | draft_boards_admin: include explicit GRANT when adding authenticated read policy (Won't Do: Moot per ADR-009: draft_boards_admin is being dropped (TASK-252); no authenticated read policy/grant will ever be added.) | Won't Do | P3 | [Plan](../plans/TASK-247.md) | No | 2026-06-09 |
+| TASK-251 | Admin scraper — negative-cache 404 draft IDs to stop re-fetching dead drafts (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to negative-cache 404s.) | Won't Do | P3 | [Plan](../plans/TASK-251.md) | No | 2026-06-09 |
+| TASK-244 | Admin scraper — scheduled background runs via chrome.alarms (Won't Do: Moot per ADR-009: admin scraper retired; no run loop to schedule.) | Won't Do | P3 | [Plan](../plans/TASK-244.md) | No | 2026-06-09 |
+| TASK-243 | RosterViewer — prefer admin-scraped draft board over per-user when available (Won't Do: Moot per ADR-009: admin-scraping retired (ownership-gated API). No admin-scraped board to prefer; full-board capture is now participant-authorized via TASK-240.) | Won't Do | P3 | [Plan](../plans/TASK-243.md) | No | 2026-06-09 |
+| TASK-242 | ADR: Admin-side UD scraping pipeline for draft-board backfill | Done | P3 | [Plan](../plans/TASK-242.md) | Yes | 2026-06-09 |
+| TASK-241 | Admin draft-board scraper — periodic UD fetch by draft_id | Done | P3 | [Plan](../plans/TASK-241.md) | Yes | 2026-06-09 |
+| TASK-260 | Backfill draft boards for already-synced UD drafts (bounded re-fetch) | Done | P3 | [Plan](../plans/TASK-260.md) | Yes | 2026-06-12 |
+| TASK-258 | Chrome extension: capture full draft board at UD sync (ADR-009) and switch web read path off draft_boards_admin | Done | P3 | [Plan](../plans/TASK-258.md) | Yes | 2026-06-12 |
+| TASK-266 | Tap/click-to-zoom lightbox for blog figures | Done | P2 | [Plan](../plans/TASK-266.md) | Yes | 2026-06-15 |
+| TASK-265 | Hide archive lock icon for users who can read the post (Pro/author) | Done | P3 | [Plan](../plans/TASK-265.md) | Yes | 2026-06-15 |

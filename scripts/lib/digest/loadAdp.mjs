@@ -17,7 +17,10 @@ import { canonicalName, parseAdpString } from '../../../best-ball-manager/src/ut
 
 // Filename prefix -> canonical platform key used everywhere downstream.
 const PLATFORM_PREFIX = { underdog: 'underdog', draftking: 'draftkings' };
-const FILE_RE = /^(underdog|draftking)_adp_(\d{4}-\d{2}-\d{2})\.csv$/;
+// Accept dash- or underscore-separated dates; the date is normalized to dashes
+// below so a malformed filename (e.g. _2026_06_25) is still loaded, not silently
+// skipped (TASK-278).
+const FILE_RE = /^(underdog|draftking)_adp_(\d{4}[-_]\d{2}[-_]\d{2})\.csv$/;
 
 // League-mover noise floor: ignore tiny absolute moves at the very top of the
 // board (e.g. 1.0 -> 1.2) that would otherwise dominate a percentage metric.
@@ -52,7 +55,7 @@ export function loadAdpData(adpDir) {
     const m = FILE_RE.exec(file);
     if (!m) continue; // skips superflex_adp.csv and anything undated
     const platform = PLATFORM_PREFIX[m[1]];
-    const date = m[2];
+    const date = m[2].replace(/_/g, '-');
     const text = readFileSync(join(adpDir, file), 'utf8');
     const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
     byPlatform[platform].push({ date, platform, rows: data });

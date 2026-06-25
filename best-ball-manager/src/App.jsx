@@ -76,7 +76,11 @@ async function loadBundledAdp() {
     const text = await resolver();
     const parts = filePath.split('/');
     const fileName = parts[parts.length - 1];
-    const dateMatch = fileName.match(/(\d{4}-\d{2}-\d{2})/);
+    // Normalize underscore date separators (e.g. 2026_06_25) to dashes before
+    // matching, so a malformed filename never falls back to the raw string and
+    // corrupts snapshot date sorting / timeline alignment (TASK-278).
+    const normalized = fileName.replace(/(\d{4})_(\d{2})_(\d{2})/, '$1-$2-$3');
+    const dateMatch = normalized.match(/(\d{4}-\d{2}-\d{2})/);
     const isSuperflex = /^superflex_adp/.test(fileName);
     // Superflex has different scoring; never let it win the global "latest" fallback
     // used for slates that don't resolve to a specific platform.
