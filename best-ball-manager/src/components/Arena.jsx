@@ -7,10 +7,12 @@
 import React, { useState } from 'react';
 import { Swords, X } from 'lucide-react';
 import ArenaVote from './arena/ArenaVote';
+import ArenaMyTeams from './arena/ArenaMyTeams';
 import css from './Arena.module.css';
 
 const NAV = [
   { key: 'vote', label: 'Vote' },
+  { key: 'myteams', label: 'My Teams' },
 ];
 
 function ArenaHelp({ onClose }) {
@@ -27,7 +29,7 @@ function ArenaHelp({ onClose }) {
   );
 }
 
-export default function Arena({ helpOpen, onHelpToggle }) {
+export default function Arena({ rosterData, helpOpen, onHelpToggle }) {
   const [view, setView] = useState('vote');
 
   return (
@@ -53,7 +55,8 @@ export default function Arena({ helpOpen, onHelpToggle }) {
       {helpOpen && <ArenaHelp onClose={onHelpToggle} />}
 
       <div className={css.body}>
-        {view === 'vote' && <ArenaVote />}
+        {view === 'vote' && <ArenaVote onGoToMyTeams={() => setView('myteams')} />}
+        {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} />}
       </div>
     </div>
   );
