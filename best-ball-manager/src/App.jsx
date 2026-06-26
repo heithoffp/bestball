@@ -20,7 +20,7 @@ import { trackEvent } from './utils/analytics';
 import BrandLogo from './components/BrandLogo';
 import FeedbackButton from './components/FeedbackButton';
 import InstallExtensionButton from './components/InstallExtensionButton';
-import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network, BookOpen } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network, BookOpen, Swords } from 'lucide-react';
 
 const TAB_PATHS = {
   dashboard: '/',
@@ -30,6 +30,7 @@ const TAB_PATHS = {
   combo: '/combos',
   rankings: '/rankings',
   draftflow: '/draft-assistant',
+  arena: '/arena',
 };
 
 const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_PATHS).map(([k, v]) => [v, k]));
@@ -42,6 +43,7 @@ const tabs = [
   { key: 'combo', label: 'Combos', icon: Network },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
+  { key: 'arena', label: 'Arena', icon: Swords, isNew: true },
 ];
 
 // Lazy-loaded tab components (P2: code splitting)
@@ -53,6 +55,7 @@ const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
 // HelpGuide tab removed — contextual help is now per-tab via global Help button
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
+const Arena = lazy(() => import('./components/Arena'));
 // DISABLED for performance — keep source file intact
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
@@ -510,6 +513,8 @@ export default function App() {
                 ? <ComboAnalysis rosterData={rosterData} masterPlayers={masterPlayers} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Combo Analysis" onSignUp={() => setShowAuthModal(true)} />
             )}
+            {/* Arena is guest-accessible (view + vote free); enrolling teams is gated inside the tab. */}
+            {activeTab === 'arena' && <Arena rosterData={rosterData} masterPlayers={masterPlayers} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
           </Suspense>
         </div>
       </div>
