@@ -36,7 +36,7 @@
 | TASK-238 | L5 config-update loop design (gated on TASK-234) | Todo | P1 | [Plan](docs/plans/TASK-238.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-188 | Weekly portfolio digest email — retention loop | In Progress | P1 | [Plan](docs/plans/TASK-188.md) | No | 2026-06-03 | 2026-06-03 |
 | TASK-280 | Arena: data model & Supabase migrations | In Progress | P1 | [Plan](docs/plans/TASK-280.md) | No | 2026-06-26 | 2026-06-26 |
-| TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | Todo | P1 | [Plan](docs/plans/TASK-281.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
+| TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | In Progress | P1 | [Plan](docs/plans/TASK-281.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | Todo | P1 | [Plan](docs/plans/TASK-282.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |

@@ -1,0 +1,16 @@
+# Supabase project configuration.
+#
+# This file was added for the Best Ball Arena (ADR-013 / TASK-281). The Arena
+# voting functions must accept GUEST (unauthenticated) callers as part of the
+# free, viral top-of-funnel — so JWT verification is disabled for them at the
+# gateway. They do their own identity handling: a missing/invalid JWT is treated
+# as a guest voter, and integrity is enforced by signed single-use pairing tokens
+# + the arena_matches.pairing_id unique constraint (see supabase/functions/_shared/arena.ts).
+#
+# All other functions keep the default (verify_jwt = true).
+
+[functions.arena-pair]
+verify_jwt = false
+
+[functions.arena-vote]
+verify_jwt = false
