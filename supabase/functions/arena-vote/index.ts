@@ -14,9 +14,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   corsHeaders,
+  getClientIp,
   GUEST_VOTE_CAP,
+  inMemoryRateLimit,
   json,
   N_PROVISIONAL,
+  RATE_LIMIT_VOTES_PER_MIN,
+  RATE_LIMIT_WINDOW_MS,
   resolveVoter,
   updatedElo,
   verifyToken,
@@ -42,6 +46,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
+  // Anti-abuse (TASK-285): cheap per-IP throttle before any work.
+  const ip = getClientIp(req);
+  if (!inMemoryRateLimit(`vote:${ip}`, RATE_LIMIT_VOTES_PER_MIN, RATE_LIMIT_WINDOW_MS)) {
+    console.warn(`[arena-vote] ip rate limited ip=${ip}`);
+    return json({ error: "rate_limited" }, 429);
+  }
+
   let body: { token?: string; winner?: string; guestId?: string | null };
   try {
     body = await req.json();
@@ -59,6 +70,7 @@ Deno.serve(async (req) => {
   try {
     payload = await verifyToken(token, ARENA_TOKEN_SECRET);
   } catch (e) {
+    console.warn(`[arena-vote] invalid token: ${(e as Error).message}`);
     return json({ error: "invalid_token", detail: (e as Error).message }, 401);
   }
 
@@ -71,6 +83,27 @@ Deno.serve(async (req) => {
   // For guests the cap is keyed by the guest id baked into the token at pair time
   // (tamper-proof), falling back to the body only if absent.
   const guestId = isGuest ? (payload.guest ?? body.guestId ?? null) : null;
+
+  // 2b. Durable per-voter vote-rate limit (TASK-285) — the load-bearing limiter
+  // (gates state mutation; survives cold starts unlike the in-memory IP check).
+  const rlKeyCol = voterId ? "voter_id" : (guestId ? "voter_guest_id" : null);
+  const rlKeyVal = voterId ?? guestId;
+  if (rlKeyCol && rlKeyVal) {
+    const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const { count, error: rlErr } = await supabaseAdmin
+      .from("arena_matches")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", since)
+      .eq(rlKeyCol, rlKeyVal);
+    if (rlErr) {
+      console.error("[arena-vote] rate check failed:", rlErr);
+      return json({ error: "rate_check_failed" }, 500);
+    }
+    if ((count ?? 0) >= RATE_LIMIT_VOTES_PER_MIN) {
+      console.warn(`[arena-vote] voter rate limited key=${rlKeyVal}`);
+      return json({ error: "rate_limited" }, 429);
+    }
+  }
 
   // 3. Load both teams (service_role) for owner check + current Elo.
   const { data: teamRows, error: teamErr } = await supabaseAdmin
@@ -87,6 +120,7 @@ Deno.serve(async (req) => {
 
   // 4. Self-vote exclusion.
   if (voterId && (teamA.user_id === voterId || teamB.user_id === voterId)) {
+    console.warn(`[arena-vote] self-vote blocked voter=${voterId}`);
     return json({ error: "self_vote" }, 403);
   }
 
@@ -111,6 +145,7 @@ Deno.serve(async (req) => {
         return json({ error: "guest_count_failed" }, 500);
       }
       counted = (count ?? 0) < GUEST_VOTE_CAP;
+      if (!counted) console.log(`[arena-vote] guest cap reached guest=${guestId} (recorded, not counted)`);
     }
   }
 
@@ -181,6 +216,10 @@ Deno.serve(async (req) => {
       return json({ error: "standings_update_failed" }, 500);
     }
   }
+
+  // Observability (TASK-285): one structured line per recorded vote for volume
+  // tracking + anomaly spotting in the Supabase function logs.
+  console.log(`[arena-vote] recorded pairing=${payload.pid} winner=${winner} counted=${counted} guest=${isGuest}`);
 
   return json({
     counted,

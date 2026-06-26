@@ -18,6 +18,13 @@ export const TOKEN_TTL_SECONDS = 600; // pairing token lifetime (10 min)
 export const ELO_WINDOW = 200; // preferred Elo distance for a "comparable" opponent
 export const POOL_SAMPLE_LIMIT = 200; // max eligible teams pulled for in-memory matchmaking
 
+// Anti-abuse rate limits (TASK-285). The durable per-voter vote limit is the
+// load-bearing one (it gates state mutation); the in-memory per-IP limits are a
+// cheap best-effort backstop (per-isolate, reset on cold start).
+export const RATE_LIMIT_PAIRS_PER_MIN = 40; // pairing requests per IP per minute
+export const RATE_LIMIT_VOTES_PER_MIN = 20; // votes per voter (or IP) per minute
+export const RATE_LIMIT_WINDOW_MS = 60_000;
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -113,6 +120,29 @@ export async function verifyToken(token: string, secret: string): Promise<Pairin
     throw new Error("expired_token");
   }
   return payload;
+}
+
+// Best-guess client IP from proxy headers (Supabase sits behind a proxy).
+export function getClientIp(req: Request): string {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
+// In-memory sliding-window limiter (TASK-285). Best-effort only: state lives in
+// the isolate, so it resets on cold start and is not shared across instances.
+// Durable limiting (the vote path) is done via arena_matches counts.
+const rateBuckets = new Map<string, number[]>();
+export function inMemoryRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const hits = (rateBuckets.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (hits.length >= limit) {
+    rateBuckets.set(key, hits);
+    return false; // limited
+  }
+  hits.push(now);
+  rateBuckets.set(key, hits);
+  return true; // allowed
 }
 
 // Resolve the caller's identity from the request. Returns an authenticated user id

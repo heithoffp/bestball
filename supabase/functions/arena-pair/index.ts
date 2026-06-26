@@ -8,9 +8,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   corsHeaders,
   ELO_WINDOW,
+  getClientIp,
+  inMemoryRateLimit,
   json,
   type PairingPayload,
   POOL_SAMPLE_LIMIT,
+  RATE_LIMIT_PAIRS_PER_MIN,
+  RATE_LIMIT_WINDOW_MS,
   resolveVoter,
   signToken,
   TOKEN_TTL_SECONDS,
@@ -35,6 +39,14 @@ interface PoolTeam {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  // Anti-abuse (TASK-285): cheap per-IP throttle on pairing requests. Pairings
+  // mutate no state, so this is a best-effort backstop against compute spam.
+  const ip = getClientIp(req);
+  if (!inMemoryRateLimit(`pair:${ip}`, RATE_LIMIT_PAIRS_PER_MIN, RATE_LIMIT_WINDOW_MS)) {
+    console.warn(`[arena-pair] rate limited ip=${ip}`);
+    return json({ error: "rate_limited" }, 429);
+  }
 
   let body: { guestId?: string | null } = {};
   try {
