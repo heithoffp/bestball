@@ -63,7 +63,7 @@
 | TASK-283 | Arena: leaderboard view | In Progress | P2 | [Plan](docs/plans/TASK-283.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-284 | Arena: enrollment toggle + paid-tier gating | In Progress | P2 | [Plan](docs/plans/TASK-284.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | In Progress | P2 | [Plan](docs/plans/TASK-285.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
-| TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | Todo | P2 | [Plan](docs/plans/TASK-286.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
+| TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | In Progress | P2 | [Plan](docs/plans/TASK-286.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
