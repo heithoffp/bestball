@@ -158,3 +158,26 @@
 **Status:** In Progress
 **Description:** Auto-detect and parse Sleeper and DraftKings CSV export formats alongside Underdog. No user selection required — format detection is automatic per the Zero-Config Insights principle.
 **Tasks:** TASK-141, TASK-142, TASK-143, TASK-144, TASK-145, TASK-160, TASK-174, TASK-176, TASK-177, TASK-195
+
+---
+
+## EPIC-07: Best Ball Arena
+**Goal:** Add a new competitive/social product pillar — an LLM-arena-style head-to-head roster voting game with a hidden server-computed Elo per eligible team and an opt-in public leaderboard — to drive engagement, virality (top-of-funnel signups), and off-season retention.
+**Verification:** A visitor can vote on blind head-to-head roster matchups for free; votes update a tamper-proof server-side Elo; a paid user can enroll their own teams; enrolled teams appear ranked on a public leaderboard; opt-in is the default and no un-enrolled team's identity is ever exposed.
+**Status:** Not Started
+**ADRs:** ADR-013
+
+### FEAT-024: Arena Backend & Integrity
+**Status:** Not Started
+**Description:** Server-side foundation for the Arena per ADR-013 — Supabase data model (team eligibility/enrollment + hidden Elo, vote/match records, arena_eligibility_mode config flag), tamper-proof Elo (service_role-write only), and two Edge Functions (signed single-use pairing tokens + comparable matchmaking; vote ingestion with dedupe, self-vote exclusion, and provisional-K Elo update). Includes anti-abuse hardening (rate limiting, token replay protection) and the guest-vote weighting decision.
+**Tasks:** TASK-280, TASK-281, TASK-285
+
+### FEAT-025: Arena Experience
+**Status:** Not Started
+**Description:** The user-facing Arena per ADR-013 — the blind head-to-head voting screen (new /arena route/tab, arenaClient, reuse RosterViewer display), the opt-in public leaderboard (Elo rank, W/L, win%, movement, platform filter, "your rank"), and the enroll/unenroll toggle on a user's own rosters gated to the paid tier (viewing + voting free).
+**Tasks:** TASK-282, TASK-283, TASK-284
+
+### FEAT-026: Arena Product Positioning
+**Status:** Not Started
+**Description:** Governance and positioning for the pivot per ADR-013 — update Vision_and_Scope.md to add the Arena pillar and amend the three relaxed boundaries (social features, server-side backend, Mirror-Not-Advisor scope), and add the Best_Ball_Arena.md Feature Spec.
+**Tasks:** TASK-286

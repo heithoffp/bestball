@@ -14,3 +14,4 @@
 | [ADR-010](adr-010-eliminator-mode-as-a-toggleable-overlay-on-the-dra.md) | Eliminator Mode as a toggleable overlay on the Draft Assistant | Accepted | 2026-06-19 |
 | [ADR-011](adr-011-port-eliminator-mode-to-the-extension-as-a-self-co.md) | Port Eliminator Mode to the extension as a self-contained vanilla-JS overlay | Accepted | 2026-06-20 |
 | [ADR-012](adr-012-reconcile-cross-platform-player-renames-via-an-exp.md) | Reconcile cross-platform player renames via an explicit alias map in canonicalName | Accepted | 2026-06-25 |
+| [ADR-013](adr-013-introduce-best-ball-arena-a-server-backed-competit.md) | Introduce Best Ball Arena — a server-backed competitive social layer | Accepted | 2026-06-26 |
