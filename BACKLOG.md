@@ -60,7 +60,7 @@
 | TASK-239 | Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks) | In Progress | P2 | [Plan](docs/plans/TASK-239.md) | No | 2026-05-15 | 2026-05-15 |
 | TASK-250 | Ignore non-football UD slates (e.g. 'UD 2026 World Cup' soccer) in extension sync and/or web app | Todo | P2 | [Plan](docs/plans/TASK-250.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-255 | Blog SEO — per-post meta/OG, canonical, Article schema & sitemap for /blog routes | Todo | P2 | [Plan](docs/plans/TASK-255.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
-| TASK-283 | Arena: leaderboard view | Todo | P2 | [Plan](docs/plans/TASK-283.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
+| TASK-283 | Arena: leaderboard view | In Progress | P2 | [Plan](docs/plans/TASK-283.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-284 | Arena: enrollment toggle + paid-tier gating | In Progress | P2 | [Plan](docs/plans/TASK-284.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | In Progress | P2 | [Plan](docs/plans/TASK-285.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | Todo | P2 | [Plan](docs/plans/TASK-286.md) -- Draft | No | 2026-06-26 | 2026-06-26 |

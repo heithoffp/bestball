@@ -7,11 +7,13 @@
 import React, { useState } from 'react';
 import { Swords, X } from 'lucide-react';
 import ArenaVote from './arena/ArenaVote';
+import ArenaLeaderboard from './arena/ArenaLeaderboard';
 import ArenaMyTeams from './arena/ArenaMyTeams';
 import css from './Arena.module.css';
 
 const NAV = [
   { key: 'vote', label: 'Vote' },
+  { key: 'leaderboard', label: 'Leaderboard' },
   { key: 'myteams', label: 'My Teams' },
 ];
 
@@ -56,6 +58,7 @@ export default function Arena({ rosterData, helpOpen, onHelpToggle }) {
 
       <div className={css.body}>
         {view === 'vote' && <ArenaVote onGoToMyTeams={() => setView('myteams')} />}
+        {view === 'leaderboard' && <ArenaLeaderboard />}
         {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} />}
       </div>
     </div>
