@@ -35,6 +35,40 @@ export async function fetchAvailableBoardIds() {
 }
 
 /**
+ * Fetch many participant-captured boards at once for Arena auto-registration
+ * (ADR-014 / TASK-288). Only `source='extension'` boards are eligible (guardrail #3),
+ * so we filter server-side — this also skips the rejected admin-scraped / mock boards
+ * before we ever build teams from them. Chunked `IN` queries keep each response sane.
+ *
+ * @param {string[]} draftIds
+ * @returns {Promise<Array<{draftId, slateTitle, entryCount, rounds, picks}>>}
+ */
+export async function fetchExtensionBoards(draftIds) {
+  if (!supabase || !draftIds?.length) return [];
+  const ids = [...new Set(draftIds.map(String))];
+  const CHUNK = 50;
+  const out = [];
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const { data, error } = await supabase
+      .from('draft_boards_admin')
+      .select('draft_id, slate_title, entry_count, rounds, picks')
+      .eq('source', 'extension')
+      .in('draft_id', ids.slice(i, i + CHUNK));
+    if (error || !data) continue; // best-effort
+    for (const d of data) {
+      out.push({
+        draftId: String(d.draft_id),
+        slateTitle: d.slate_title ?? null,
+        entryCount: d.entry_count ?? 12,
+        rounds: d.rounds ?? Math.ceil((d.picks?.length ?? 0) / (d.entry_count ?? 12)),
+        picks: d.picks ?? [],
+      });
+    }
+  }
+  return out;
+}
+
+/**
  * Fetch one full draft board.
  *
  * @param {string} draftId

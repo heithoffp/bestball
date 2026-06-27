@@ -123,6 +123,36 @@ export async function registerArenaTeams({ ownedTeams = [], boardTeams = [] }) {
   return data;
 }
 
+/**
+ * Register a full portfolio in bounded batches. A heavy account produces thousands
+ * of owned + board teams; a single request would blow the function's per-request cap
+ * and the Edge Function body limit, so we split into sequential batches and sum the
+ * results. Owned and board teams are batched separately for simplicity.
+ * @param {{ownedTeams: Array, boardTeams: Array}} payload
+ * @param {number} batchSize teams per request
+ */
+export async function registerAllArenaTeams({ ownedTeams = [], boardTeams = [] }, batchSize = 300) {
+  const totals = { ownedWritten: 0, boardWritten: 0, boardRejected: 0, batches: 0 };
+  if (!ARENA_AVAILABLE) return totals;
+
+  const batches = [];
+  for (let i = 0; i < ownedTeams.length; i += batchSize) {
+    batches.push({ ownedTeams: ownedTeams.slice(i, i + batchSize), boardTeams: [] });
+  }
+  for (let i = 0; i < boardTeams.length; i += batchSize) {
+    batches.push({ ownedTeams: [], boardTeams: boardTeams.slice(i, i + batchSize) });
+  }
+
+  for (const b of batches) {
+    const r = await registerArenaTeams(b); // sequential — keeps each request small
+    totals.ownedWritten += r.ownedWritten ?? 0;
+    totals.boardWritten += r.boardWritten ?? 0;
+    totals.boardRejected += r.boardRejected ?? 0;
+    totals.batches += 1;
+  }
+  return totals;
+}
+
 /** The current user's arena rows (enrolled state + standings per entry). */
 export async function getMyArenaTeams() {
   if (!supabase) return [];

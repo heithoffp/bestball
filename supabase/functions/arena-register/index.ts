@@ -28,7 +28,8 @@ const ARENA_TOKEN_SECRET = Deno.env.get("ARENA_TOKEN_SECRET")!;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SB_SERVICE_ROLE_KEY);
 
-const MAX_TEAMS = 1000; // generous cap; a portfolio is far smaller
+const MAX_TEAMS = 2000; // per-request batch cap — the client batches large portfolios
+                        // (a heavy account yields thousands of owned + board teams).
 
 interface OwnedTeam {
   entryId: string;
@@ -95,46 +96,35 @@ Deno.serve(async (req) => {
   let boardRejected = 0;
 
   // ── Owned teams ──────────────────────────────────────────────────────────
+  // Insert-new-only: existing teams keep their frozen snapshot (cheap re-runs — no
+  // per-row UPDATE storm across a large portfolio).
   if (ownedIn.length > 0) {
-    // Which (entry_id, platform) already exist for this user? Update those, insert the rest.
     const { data: existing, error: selErr } = await supabaseAdmin
       .from("arena_teams")
-      .select("id, entry_id, platform")
+      .select("entry_id, platform")
       .eq("user_id", voterId)
       .eq("source", "owned");
     if (selErr) {
       console.error("[arena-register] owned select failed:", selErr);
       return json({ error: "owned_select_failed" }, 500);
     }
-    const existingById = new Map<string, string>(); // `${entry_id}::${platform}` -> row id
-    for (const r of existing ?? []) existingById.set(`${r.entry_id}::${r.platform}`, r.id);
+    const seen = new Set<string>();
+    for (const r of existing ?? []) seen.add(`${r.entry_id}::${r.platform}`);
 
     const toInsert: Record<string, unknown>[] = [];
     for (const t of ownedIn) {
       const k = `${t.entryId}::${t.platform}`;
-      const id = existingById.get(k);
-      if (id) {
-        const { error } = await supabaseAdmin
-          .from("arena_teams")
-          .update({
-            display_snapshot: t.snapshot,
-            draft_id: t.draftId ?? t.entryId,
-            enrolled: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", id);
-        if (!error) ownedWritten++;
-      } else {
-        toInsert.push({
-          user_id: voterId,
-          entry_id: t.entryId,
-          platform: t.platform,
-          source: "owned",
-          draft_id: t.draftId ?? t.entryId,
-          display_snapshot: t.snapshot,
-          enrolled: true,
-        });
-      }
+      if (seen.has(k)) continue; // already registered
+      seen.add(k); // also dedupe within this batch
+      toInsert.push({
+        user_id: voterId,
+        entry_id: t.entryId,
+        platform: t.platform,
+        source: "owned",
+        draft_id: t.draftId ?? t.entryId,
+        display_snapshot: t.snapshot,
+        enrolled: true,
+      });
     }
     if (toInsert.length > 0) {
       const { error } = await supabaseAdmin.from("arena_teams").insert(toInsert);
@@ -169,48 +159,36 @@ Deno.serve(async (req) => {
     }
 
     if (eligible.length > 0) {
-      // Which board refs already exist? Update those, insert the rest.
+      // Insert-new-only (same rationale as owned). Dedupe by board_entry_ref.
       const refs = [...new Set(eligible.map((t) => t.boardEntryRef))];
       const { data: existing, error: selErr } = await supabaseAdmin
         .from("arena_teams")
-        .select("id, board_entry_ref, platform")
+        .select("board_entry_ref, platform")
         .eq("source", "board")
         .in("board_entry_ref", refs);
       if (selErr) {
         console.error("[arena-register] board select failed:", selErr);
         return json({ error: "board_select_failed" }, 500);
       }
-      const existingById = new Map<string, string>(); // `${ref}::${platform}` -> row id
-      for (const r of existing ?? []) existingById.set(`${r.board_entry_ref}::${r.platform}`, r.id);
+      const seen = new Set<string>();
+      for (const r of existing ?? []) seen.add(`${r.board_entry_ref}::${r.platform}`);
 
       const toInsert: Record<string, unknown>[] = [];
       for (const t of eligible) {
         const k = `${t.boardEntryRef}::${t.platform}`;
-        const id = existingById.get(k);
-        if (id) {
-          const { error } = await supabaseAdmin
-            .from("arena_teams")
-            .update({
-              display_snapshot: t.snapshot,
-              draft_id: t.draftId,
-              enrolled: true,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", id);
-          if (!error) boardWritten++;
-        } else {
-          toInsert.push({
-            user_id: null,
-            entry_id: null,
-            platform: t.platform,
-            source: "board",
-            draft_id: t.draftId,
-            board_entry_ref: t.boardEntryRef,
-            board_user_hash: t.userId ? await hashUserId(String(t.userId)) : null,
-            display_snapshot: t.snapshot,
-            enrolled: true,
-          });
-        }
+        if (seen.has(k)) continue; // already registered
+        seen.add(k); // also dedupe within this batch
+        toInsert.push({
+          user_id: null,
+          entry_id: null,
+          platform: t.platform,
+          source: "board",
+          draft_id: t.draftId,
+          board_entry_ref: t.boardEntryRef,
+          board_user_hash: t.userId ? await hashUserId(String(t.userId)) : null,
+          display_snapshot: t.snapshot,
+          enrolled: true,
+        });
       }
       if (toInsert.length > 0) {
         const { error } = await supabaseAdmin.from("arena_teams").insert(toInsert);

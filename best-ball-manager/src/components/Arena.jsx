@@ -15,8 +15,8 @@ import ArenaMyTeams from './arena/ArenaMyTeams';
 import { useAuth } from '../contexts/AuthContext';
 import { isArenaBetaUser } from '../utils/arenaBeta';
 import { buildEnrollableTeams, buildBoardTeams, playerNameKey } from '../utils/arenaSnapshot';
-import { fetchDraftBoard } from '../utils/draftBoards';
-import { registerArenaTeams, ARENA_AVAILABLE } from '../utils/arenaClient';
+import { fetchExtensionBoards } from '../utils/draftBoards';
+import { registerAllArenaTeams, ARENA_AVAILABLE } from '../utils/arenaClient';
 import css from './Arena.module.css';
 
 const NAV = [
@@ -63,22 +63,22 @@ function useAutoRegister(user, rosterData) {
           entryId: t.entryId, platform: t.platform, draftId: t.entryId, snapshot: t.snapshot,
         }));
 
-        // Board teams: fetch each synced pod's board, excluding the user's own seat
-        // (matched by player-name fingerprint).
+        // Board teams: fetch each synced pod's participant-captured board, excluding
+        // the user's own seat (matched by player-name fingerprint).
         const draftIds = [...new Set(rosterData.map((r) => r.entry_id).filter(Boolean))];
         const ownKeyByDraft = {};
         draftIds.forEach((id) => {
           ownKeyByDraft[id] = playerNameKey(rosterData.filter((r) => r.entry_id === id));
         });
-        const boards = await Promise.all(draftIds.map((id) => fetchDraftBoard(id)));
+        const boards = await fetchExtensionBoards(draftIds);
         const boardTeams = [];
         boards.forEach((board) => {
-          if (board) boardTeams.push(...buildBoardTeams(board, ownKeyByDraft[board.draftId]));
+          boardTeams.push(...buildBoardTeams(board, ownKeyByDraft[board.draftId]));
         });
 
         if (cancelled) return;
         if (ownedTeams.length || boardTeams.length) {
-          await registerArenaTeams({ ownedTeams, boardTeams });
+          await registerAllArenaTeams({ ownedTeams, boardTeams });
         }
         try { sessionStorage.setItem(sessionKey, '1'); } catch { /* ignore */ }
       } catch {
