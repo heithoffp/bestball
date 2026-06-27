@@ -14,3 +14,6 @@
 | [ADR-010](adr-010-eliminator-mode-as-a-toggleable-overlay-on-the-dra.md) | Eliminator Mode as a toggleable overlay on the Draft Assistant | Accepted | 2026-06-19 |
 | [ADR-011](adr-011-port-eliminator-mode-to-the-extension-as-a-self-co.md) | Port Eliminator Mode to the extension as a self-contained vanilla-JS overlay | Accepted | 2026-06-20 |
 | [ADR-012](adr-012-reconcile-cross-platform-player-renames-via-an-exp.md) | Reconcile cross-platform player renames via an explicit alias map in canonicalName | Accepted | 2026-06-25 |
+| [ADR-013](adr-013-introduce-best-ball-arena-a-server-backed-competit.md) | Introduce Best Ball Arena — a server-backed competitive social layer | Accepted | 2026-06-26 |
+| [ADR-014](adr-014-best-ball-arena-opt-out-enrollment-with-participan.md) | Best Ball Arena opt-out enrollment with participant-captured board teams | Accepted | 2026-06-26 |
+| [ADR-015](adr-015-launch-best-ball-arena-as-a-private-beta-behind-a.md) | Launch Best Ball Arena as a private beta behind a server-enforced email-allowlist gate | Accepted | 2026-06-27 |

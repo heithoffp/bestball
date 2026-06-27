@@ -9,6 +9,7 @@ import { useAuth } from './contexts/AuthContext';
 import { supabase } from './utils/supabaseClient';
 import { useSubscription } from './contexts/SubscriptionContext';
 import { canAccessFeature } from './utils/featureAccess';
+import { isArenaBetaUser } from './utils/arenaBeta';
 import AuthButton from './components/AuthButton';
 import LockedFeature from './components/LockedFeature';
 import AuthModal from './components/AuthModal';
@@ -20,7 +21,7 @@ import { trackEvent } from './utils/analytics';
 import BrandLogo from './components/BrandLogo';
 import FeedbackButton from './components/FeedbackButton';
 import InstallExtensionButton from './components/InstallExtensionButton';
-import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network, BookOpen } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network, BookOpen, Swords } from 'lucide-react';
 
 const TAB_PATHS = {
   dashboard: '/',
@@ -30,6 +31,7 @@ const TAB_PATHS = {
   combo: '/combos',
   rankings: '/rankings',
   draftflow: '/draft-assistant',
+  arena: '/arena',
 };
 
 const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_PATHS).map(([k, v]) => [v, k]));
@@ -42,6 +44,7 @@ const tabs = [
   { key: 'combo', label: 'Combos', icon: Network },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
+  { key: 'arena', label: 'Arena', icon: Swords, isNew: true },
 ];
 
 // Lazy-loaded tab components (P2: code splitting)
@@ -53,6 +56,7 @@ const PlayerRankings = lazy(() => import('./components/PlayerRankings'));
 // HelpGuide tab removed — contextual help is now per-tab via global Help button
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ComboAnalysis = lazy(() => import('./components/ComboAnalysis'));
+const Arena = lazy(() => import('./components/Arena'));
 // DISABLED for performance — keep source file intact
 // const RosterConstruction = lazy(() => import('./components/RosterConstruction'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
@@ -106,6 +110,9 @@ export default function App() {
   const [rankingsByPlatform, setRankingsByPlatform] = useState({});
   const { isMobile } = useMediaQuery();
   const { user, loading: authLoading, recoveryMode } = useAuth();
+  // Arena is in private beta (ADR-015) — gate the tab + /arena route to allowlisted
+  // accounts. Convenience gate only; the server (Edge Functions + RLS) is the real boundary.
+  const arenaBeta = isArenaBetaUser(user?.email);
   const { tier, loading: subLoading, openPlanPicker } = useSubscription();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMessage, setAuthModalMessage] = useState('');
@@ -131,6 +138,12 @@ export default function App() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, authLoading]);
+
+  // Redirect away from /arena for non-allowlisted users during the private beta.
+  useEffect(() => {
+    if (authLoading) return;
+    if (activeTab === 'arena' && !arenaBeta) navigate(TAB_PATHS.dashboard, { replace: true });
+  }, [activeTab, arenaBeta, authLoading, navigate]);
 
   useEffect(() => {
     if (recoveryMode) setShowAuthModal(true);
@@ -406,7 +419,7 @@ export default function App() {
       <BetaBanner />
       <div className="card">
         <div className="tab-bar">
-          {tabs.map(({ key, label, icon: Icon, isNew }) => {
+          {tabs.filter(({ key }) => key !== 'arena' || arenaBeta).map(({ key, label, icon: Icon, isNew }) => {
             const locked = !subLoading && !canAccessFeature(tier, key);
             return (
               <button
@@ -510,6 +523,8 @@ export default function App() {
                 ? <ComboAnalysis rosterData={rosterData} masterPlayers={masterPlayers} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Combo Analysis" onSignUp={() => setShowAuthModal(true)} />
             )}
+            {/* Arena is in private beta (ADR-015) — visible only to allowlisted accounts. */}
+            {activeTab === 'arena' && arenaBeta && <Arena rosterData={rosterData} masterPlayers={masterPlayers} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
           </Suspense>
         </div>
       </div>

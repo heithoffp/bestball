@@ -1149,7 +1149,7 @@ td { padding: 1.25rem; border-bottom: 1px solid var(--border-subtle); }
     border-bottom: none;
     border-top: 1px solid var(--border-subtle);
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0;
     padding: 0.25rem;
     padding-bottom: calc(0.25rem + env(safe-area-inset-bottom));

@@ -10,6 +10,8 @@ const FEATURE_ACCESS = {
   rankings:     'pro',
   combo:        'pro',
   construction: 'pro',
+  arena:        'guest',   // viewing + voting are free (viral top-of-funnel)
+  arena_enroll: 'pro',     // entering your own teams to be ranked is paid (ADR-013)
 };
 
 const TIER_LEVEL = { guest: 0, free: 1, pro: 2 };
