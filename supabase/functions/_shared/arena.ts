@@ -145,6 +145,91 @@ export function inMemoryRateLimit(key: string, limit: number, windowMs: number):
   return true; // allowed
 }
 
+// ---------------------------------------------------------------------------
+// Private-beta gate (ADR-015). While arena_config.beta_mode is true, every Arena
+// surface is restricted to allowlisted accounts; guests are not allowed. The
+// allowlist is the security boundary at the data layer — this helper is how the
+// Edge Functions enforce it. Fails CLOSED: if the config read fails during beta,
+// nobody is allowed.
+// ---------------------------------------------------------------------------
+
+// Canonicalize an email for allowlist comparison: lowercase + strip a "+tag" from
+// the local part. Mirrors src/utils/authorPreview.js normalizeEmail and the SQL
+// arena_normalize_email() so all three layers agree.
+export function normalizeArenaEmail(email: string | null | undefined): string {
+  if (!email || typeof email !== "string") return "";
+  const lower = email.trim().toLowerCase();
+  const at = lower.lastIndexOf("@");
+  if (at <= 0) return "";
+  const local = lower.slice(0, at);
+  const domain = lower.slice(at + 1);
+  const plus = local.indexOf("+");
+  const base = plus === -1 ? local : local.slice(0, plus);
+  if (!base || !domain) return "";
+  return `${base}@${domain}`;
+}
+
+export interface BetaGateResult {
+  betaMode: boolean;
+  allowed: boolean; // (not beta) OR (beta AND an allowlisted authenticated email)
+  voterId: string | null;
+  email: string | null;
+  isGuest: boolean;
+}
+
+// Resolve the caller (id + email) and decide whether they may use the Arena under
+// the current beta_mode. `admin` is a service_role client used to read arena_config.
+export async function betaGate(
+  req: Request,
+  supabaseUrl: string,
+  anonKey: string,
+  // deno-lint-ignore no-explicit-any
+  createClient: (url: string, key: string, opts?: unknown) => any,
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+): Promise<BetaGateResult> {
+  let voterId: string | null = null;
+  let email: string | null = null;
+  let isGuest = true;
+
+  const authHeader = req.headers.get("authorization");
+  if (authHeader) {
+    try {
+      const client = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+      const { data: { user } } = await client.auth.getUser();
+      if (user?.id) {
+        voterId = user.id;
+        email = user.email ?? null;
+        isGuest = false;
+      }
+    } catch {
+      // fall through to guest
+    }
+  }
+
+  let betaMode = true;
+  let allowlist: string[] = [];
+  try {
+    const { data } = await admin
+      .from("arena_config")
+      .select("beta_mode, beta_allowlist")
+      .eq("id", true)
+      .single();
+    if (data) {
+      betaMode = data.beta_mode ?? true;
+      allowlist = data.beta_allowlist ?? [];
+    }
+  } catch {
+    // fail closed: betaMode stays true, allowlist stays empty → nobody allowed
+  }
+
+  const allowed = betaMode
+    ? (!!email && allowlist.includes(normalizeArenaEmail(email)))
+    : true;
+
+  return { betaMode, allowed, voterId, email, isGuest };
+}
+
 // Resolve the caller's identity from the request. Returns an authenticated user id
 // when a valid JWT is present, otherwise treats the caller as a guest. Never throws —
 // a missing/invalid token simply means "guest".

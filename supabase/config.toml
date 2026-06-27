@@ -14,3 +14,10 @@ verify_jwt = false
 
 [functions.arena-vote]
 verify_jwt = false
+
+# arena-register also handles its own identity: it reads the caller's JWT email for
+# the ADR-015 private-beta allowlist and treats a missing/invalid token as "denied"
+# (fails closed). verify_jwt stays false so the function — not the gateway — returns
+# the 403, keeping the gate logic in one place.
+[functions.arena-register]
+verify_jwt = false

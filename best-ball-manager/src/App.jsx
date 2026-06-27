@@ -9,6 +9,7 @@ import { useAuth } from './contexts/AuthContext';
 import { supabase } from './utils/supabaseClient';
 import { useSubscription } from './contexts/SubscriptionContext';
 import { canAccessFeature } from './utils/featureAccess';
+import { isArenaBetaUser } from './utils/arenaBeta';
 import AuthButton from './components/AuthButton';
 import LockedFeature from './components/LockedFeature';
 import AuthModal from './components/AuthModal';
@@ -109,6 +110,9 @@ export default function App() {
   const [rankingsByPlatform, setRankingsByPlatform] = useState({});
   const { isMobile } = useMediaQuery();
   const { user, loading: authLoading, recoveryMode } = useAuth();
+  // Arena is in private beta (ADR-015) — gate the tab + /arena route to allowlisted
+  // accounts. Convenience gate only; the server (Edge Functions + RLS) is the real boundary.
+  const arenaBeta = isArenaBetaUser(user?.email);
   const { tier, loading: subLoading, openPlanPicker } = useSubscription();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMessage, setAuthModalMessage] = useState('');
@@ -134,6 +138,12 @@ export default function App() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, authLoading]);
+
+  // Redirect away from /arena for non-allowlisted users during the private beta.
+  useEffect(() => {
+    if (authLoading) return;
+    if (activeTab === 'arena' && !arenaBeta) navigate(TAB_PATHS.dashboard, { replace: true });
+  }, [activeTab, arenaBeta, authLoading, navigate]);
 
   useEffect(() => {
     if (recoveryMode) setShowAuthModal(true);
@@ -409,7 +419,7 @@ export default function App() {
       <BetaBanner />
       <div className="card">
         <div className="tab-bar">
-          {tabs.map(({ key, label, icon: Icon, isNew }) => {
+          {tabs.filter(({ key }) => key !== 'arena' || arenaBeta).map(({ key, label, icon: Icon, isNew }) => {
             const locked = !subLoading && !canAccessFeature(tier, key);
             return (
               <button
@@ -513,8 +523,8 @@ export default function App() {
                 ? <ComboAnalysis rosterData={rosterData} masterPlayers={masterPlayers} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Combo Analysis" onSignUp={() => setShowAuthModal(true)} />
             )}
-            {/* Arena is guest-accessible (view + vote free); enrolling teams is gated inside the tab. */}
-            {activeTab === 'arena' && <Arena rosterData={rosterData} masterPlayers={masterPlayers} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
+            {/* Arena is in private beta (ADR-015) — visible only to allowlisted accounts. */}
+            {activeTab === 'arena' && arenaBeta && <Arena rosterData={rosterData} masterPlayers={masterPlayers} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
           </Suspense>
         </div>
       </div>

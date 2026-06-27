@@ -1,8 +1,8 @@
 # Vision and Scope
 ## Best Ball Exposures (BBE)
 
-**Version:** 2.0
-**Last revised:** 2026-05-07
+**Version:** 2.1
+**Last revised:** 2026-06-26
 
 ---
 
@@ -93,6 +93,9 @@ The single opinionated tab. Live-draft data companion that surfaces exposure %, 
 #### 2.2.8 Help (contextual overlay)
 Per-tab Help overlay (`HelpOverlay.jsx`) toggled from a global Help button in the tab bar. Replaces the original standalone Help Guide tab.
 
+#### 2.2.9 Best Ball Arena
+A new competitive/social pillar (see ADR-013). Visitors vote on blind head-to-head roster matchups ("which team would you rather have?"); each vote updates a hidden, server-computed Elo per eligible team, and an opt-in public leaderboard ranks enrolled teams. Viewing and voting are **free and guest-accessible** (a top-of-funnel for signups); **entering your own teams is a paid-tier feature**. This is the one place the product makes a cross-user, crowd-judged comparison — a conscious, bounded relaxation of the social-features, server-side, and Mirror-Not-Advisor boundaries (see §2.3 #1, §2.4, §3.2 and ADR-013). The analytics tabs remain single-user, client-only mirrors. See `docs/Feature_Specs/Best_Ball_Arena.md`.
+
 ### 2.3 Design Principles
 
 These principles govern all product decisions. When in doubt, refer back here.
@@ -100,11 +103,12 @@ These principles govern all product decisions. When in doubt, refer back here.
 #### 1. Mirror, Not Advisor
 The app describes portfolio state. It does not prescribe actions or judge a portfolio as "good" or "bad." Show facts; let the user draw conclusions. Avoid computed opinions (health scores, letter grades, red/green good/bad indicators) on portfolio-level views. The moment you show a "B+" you are implying you know what "A" looks like — and you are asking the user to trust your model over their own judgment.
 
-Computed opinions are permitted in two places only:
+Computed opinions are permitted in three places only:
 - **Roster Viewer** — single-roster grading is evaluating *one finished thing*, not commenting on the portfolio.
 - **Draft Assistant** — a live-draft decision tool requires opinionated ranking by definition.
+- **Best Ball Arena** — an explicitly carved-out competitive zone where *crowd* opinion is the product (a server-computed Elo and a ranked leaderboard). This is not the app forming an opinion on your behalf; it is the field voting. See ADR-013.
 
-This principle is enforced unconditionally — see ADR-002.
+For the analytics tabs (Dashboard, Exposures, ADP Tracker, Combos, Rankings) this principle remains **unconditional** — see ADR-002. ADR-013 clarifies the carve-out (two → three places); it does not weaken the rule for the mirror tabs.
 
 #### 2. Zero-Config Insights
 Every feature must be useful immediately after sync, with no additional setup. No personal targets, no preference wizards, no watchlists. Features that require configuration will be underutilized.
@@ -126,7 +130,7 @@ Show the work. When displaying a metric, make its source clear. Users who unders
 | Assumption / Dependency | Notes |
 |------------------------|-------|
 | Underdog and DraftKings export formats remain reasonably stable | Primary data sources via Chrome extension; flexible parsing handles known column-name variations |
-| Client-side processing is sufficient | All analytics computation runs in the browser; Supabase is auth + storage + Stripe webhooks only |
+| Client-side processing is sufficient for analytics | All **analytics** computation runs in the browser; Supabase is auth + storage + Stripe webhooks. ADR-013 adds a **bounded** server-side path for the Arena only (Elo, matchmaking, vote ingestion in Edge Functions) — it does not authorize a general server-side analytics backend |
 | Supabase + Stripe remain operational | Required for paid-tier features; guest tier degrades gracefully |
 | ADP snapshots are manually collected and bundled at build time | Date-stamped CSVs in `src/assets/adp/`; no live API feed |
 | Users have 10+ rosters for portfolio analytics to be meaningful | Single-roster users get limited value from exposure/archetype views |
@@ -147,10 +151,10 @@ Things this product will **not** do. These are deliberate decisions, not deferre
 | Exclusion | Rationale |
 |-----------|-----------|
 | User-configured exposure targets or "optimal portfolio" prescriptions | Violates *Zero-Config Insights* and *Mirror, Not Advisor* |
-| Portfolio health scores or letter grades on the dashboard | Violates *Mirror, Not Advisor* (ADR-002). Computed opinions are reserved to Draft Assistant and Roster Viewer |
-| Social features (sharing portfolios, comparing with other users) | Out of scope for a portfolio awareness tool |
+| Portfolio health scores or letter grades on the dashboard | Violates *Mirror, Not Advisor* (ADR-002). Computed opinions are reserved to Draft Assistant, Roster Viewer, and the Best Ball Arena (ADR-013) |
+| Social / cross-user comparison features — **except the Best Ball Arena** | Out of scope for the portfolio-awareness tabs. **Relaxed, bounded to the Arena pillar** by ADR-013: blind head-to-head voting + an opt-in public leaderboard. The analytics tabs remain single-user |
 | Live draft API integration | Platform APIs are unstable / unofficial. Roster sync via Chrome extension is reliable and platform-aware |
-| Server-side analytics backend | Client-only architecture keeps deployment simple. Browser performance is sufficient for the data volumes involved |
+| Server-side analytics backend — **except the bounded Arena compute path** | Analytics stay client-only (simple deployment, sufficient browser performance). **Relaxed, bounded** by ADR-013: Elo, matchmaking, and vote ingestion run server-side in Supabase Edge Functions (ratings are `service_role`-write only). This does **not** authorize a general server-side analytics backend |
 | Multi-sport support | Best-ball football only |
 | Bankroll management or contest entry optimization | Different product |
 | Roster Construction tab | Built but currently disabled in `App.jsx` for performance reasons. Source preserved; may be re-enabled if optimized |

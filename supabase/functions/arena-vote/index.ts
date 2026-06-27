@@ -13,6 +13,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+  betaGate,
   corsHeaders,
   getClientIp,
   GUEST_VOTE_CAP,
@@ -35,7 +36,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SB_SERVICE_ROLE_KEY);
 
 interface TeamRow {
   id: string;
-  user_id: string;
+  user_id: string | null; // null for ownerless board teams (ADR-014)
   elo: number;
   matches: number;
   wins: number;
@@ -51,6 +52,13 @@ Deno.serve(async (req) => {
   if (!inMemoryRateLimit(`vote:${ip}`, RATE_LIMIT_VOTES_PER_MIN, RATE_LIMIT_WINDOW_MS)) {
     console.warn(`[arena-vote] ip rate limited ip=${ip}`);
     return json({ error: "rate_limited" }, 429);
+  }
+
+  // Private-beta gate (ADR-015): only allowlisted authenticated accounts may vote
+  // while beta_mode is true. Guest voting (TASK-285) is suspended during beta.
+  const gate = await betaGate(req, SUPABASE_URL, SUPABASE_ANON_KEY, createClient, supabaseAdmin);
+  if (!gate.allowed) {
+    return json({ error: "beta_closed" }, 403);
   }
 
   let body: { token?: string; winner?: string; guestId?: string | null };

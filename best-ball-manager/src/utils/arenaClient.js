@@ -84,7 +84,9 @@ export async function submitVote({ token, winner }) {
 }
 
 /**
- * Public leaderboard — enrolled teams ranked by Elo.
+ * Leaderboard — teams ranked by Elo. Under opt-out (ADR-014) every registered team
+ * is shown by default, so there is no `enrolled` filter; visibility is governed by
+ * RLS (during the private beta, allowlisted accounts only — ADR-015).
  * @param {{platform?: 'all'|'underdog'|'draftkings', limit?: number}} opts
  */
 export async function getLeaderboard({ platform = 'all', limit = 200 } = {}) {
@@ -92,13 +94,33 @@ export async function getLeaderboard({ platform = 'all', limit = 200 } = {}) {
   let q = supabase
     .from('arena_teams')
     .select('id, platform, elo, wins, losses, matches, provisional, display_snapshot, user_id')
-    .eq('enrolled', true)
     .order('elo', { ascending: false })
     .limit(limit);
   if (platform !== 'all') q = q.eq('platform', platform);
   const { data, error } = await q;
   if (error) throw error;
   return data ?? [];
+}
+
+/**
+ * Auto-register the user's own + participant-captured board teams into the opt-out
+ * pool (ADR-014 / TASK-288). Goes through the arena-register Edge Function because
+ * board rows are service-role-only. Beta-gated server-side (403 if not allowlisted).
+ * @param {{ownedTeams: Array, boardTeams: Array}} payload
+ * @returns {Promise<{ownedWritten, boardWritten, boardRejected}>}
+ */
+export async function registerArenaTeams({ ownedTeams = [], boardTeams = [] }) {
+  if (!ARENA_AVAILABLE) return { ownedWritten: 0, boardWritten: 0, boardRejected: 0 };
+  const res = await fetch(`${FUNCTIONS_URL}/arena-register`, {
+    method: 'POST',
+    headers: await functionHeaders(),
+    body: JSON.stringify({ ownedTeams, boardTeams }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw Object.assign(new Error(data.error || 'register_failed'), { status: res.status, data });
+  }
+  return data;
 }
 
 /** The current user's arena rows (enrolled state + standings per entry). */

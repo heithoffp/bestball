@@ -165,7 +165,7 @@
 **Goal:** Add a new competitive/social product pillar — an LLM-arena-style head-to-head roster voting game with a hidden server-computed Elo per eligible team and an opt-in public leaderboard — to drive engagement, virality (top-of-funnel signups), and off-season retention.
 **Verification:** A visitor can vote on blind head-to-head roster matchups for free; votes update a tamper-proof server-side Elo; a paid user can enroll their own teams; enrolled teams appear ranked on a public leaderboard; opt-in is the default and no un-enrolled team's identity is ever exposed.
 **Status:** Not Started
-**ADRs:** ADR-013
+**ADRs:** ADR-013, ADR-014
 
 ### FEAT-024: Arena Backend & Integrity
 **Status:** Not Started
