@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-28 | Commit: 8943358 -->
 # TASK-287: Arena migration 012 + private-beta build (lead/consolidated plan)
 
 **Status:** Pending Approval

@@ -1,17 +1,40 @@
-// ArenaRosterCard — renders one anonymized team snapshot for the blind matchup.
-// No owner identity is ever shown. Mirrors the position/archetype visual idiom
-// from RosterViewer (shared position colors + archetype metadata) so the Arena
-// feels native, while staying self-contained on the snapshot payload.
+// ArenaRosterCard — one anonymized contender in the blind matchup, styled as a
+// fighter's corner (ADR-013). No owner identity is ever shown. The red/blue corner
+// is purely POSITIONAL (the server already randomizes left/right), so it carries no
+// owner signal and blind fairness holds. Per-player CLV + a position-colored monogram
+// give the snap judgment real signal without a headshot dependency (headshots: TASK-298).
 
 import React from 'react';
 import { posColor } from '../../utils/positionColors';
-import { ARCHETYPE_METADATA } from '../../utils/rosterArchetypes';
+import { compactTournamentName } from '../../utils/helpers';
 import css from '../Arena.module.css';
 
 const POS_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DEF'];
 
 function platformLabel(platform) {
   return platform === 'draftkings' ? 'DraftKings' : 'Underdog';
+}
+
+// First + last initial, e.g. "Justin Jefferson" -> "JJ". Defensive states/teams
+// (e.g. "Eagles") fall back to a single letter.
+function initials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0][0] || '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase();
+}
+
+// CLV → text + sign class + bar magnitude (0–1). ±15% reads as a full half-bar.
+function clvView(clv) {
+  if (clv == null) return { text: '—', cls: css.clvNeutral, mag: 0, pos: true };
+  const pos = clv >= 0;
+  return {
+    text: `${pos ? '+' : ''}${clv.toFixed(1)}%`,
+    cls: pos ? css.clvPos : css.clvNeg,
+    mag: Math.min(1, Math.abs(clv) / 15),
+    pos,
+  };
 }
 
 function PosSnapshot({ posSnap }) {
@@ -25,7 +48,7 @@ function PosSnapshot({ posSnap }) {
         <span
           key={pos}
           className={css.posChip}
-          style={{ color: posColor(pos), background: `${posColor(pos)}22`, borderColor: `${posColor(pos)}55` }}
+          style={{ color: posColor(pos), background: `${posColor(pos)}1f`, borderColor: `${posColor(pos)}55` }}
         >
           {posSnap[pos]}{pos}
         </span>
@@ -34,43 +57,24 @@ function PosSnapshot({ posSnap }) {
   );
 }
 
-function ArchetypePills({ path }) {
-  if (!path) return null;
-  const keys = [path.rb, path.qb, path.te].filter((k) => ARCHETYPE_METADATA[k]);
-  return (
-    <div className={css.archetypes}>
-      {keys.map((k) => {
-        const meta = ARCHETYPE_METADATA[k];
-        const color = meta.color || '#6b7280';
-        return (
-          <span
-            key={k}
-            className={css.archetypePill}
-            title={meta.desc}
-            style={{ color, background: `${color}1a`, borderColor: `${color}44` }}
-          >
-            {meta.name}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
 /**
  * @param {object} props
- * @param {object} props.snapshot  display_snapshot payload
- * @param {string} props.sideLabel e.g. "Team A"
- * @param {'idle'|'win'|'loss'|null} props.outcome  reveal state
+ * @param {object} props.snapshot   display_snapshot payload
+ * @param {'red'|'blue'|'neutral'} props.corner  positional corner (random per matchup);
+ *   'neutral' drops the fight tint (used outside the matchup, e.g. leaderboard expansion)
+ * @param {string} props.cornerLabel e.g. "Red Corner"
+ * @param {'win'|'loss'|null} props.outcome  reveal state
  * @param {number|null} props.delta  Elo delta to reveal
  */
-export default function ArenaRosterCard({ snapshot, sideLabel, outcome = null, delta = null }) {
+export default function ArenaRosterCard({ snapshot, corner = 'red', cornerLabel, outcome = null, delta = null }) {
   if (!snapshot) return null;
-  const { players = [], posSnap = {}, path, count, platform } = snapshot;
+  const { players = [], posSnap = {}, count, platform, tournamentTitle, slateTitle } = snapshot;
   const isDk = platform === 'draftkings';
+  const context = tournamentTitle || slateTitle;
 
   const cardClass = [
     css.card,
+    corner === 'blue' ? css.cardBlue : corner === 'red' ? css.cardRed : '',
     outcome === 'win' ? css.cardWin : '',
     outcome === 'loss' ? css.cardLoss : '',
   ].filter(Boolean).join(' ');
@@ -84,7 +88,8 @@ export default function ArenaRosterCard({ snapshot, sideLabel, outcome = null, d
       )}
 
       <div className={css.cardHead}>
-        <span className={css.sideLabel}>{sideLabel}</span>
+        <span className={css.cornerDot} />
+        <span className={css.sideLabel}>{cornerLabel}</span>
         <span
           className={css.platformChip}
           style={{
@@ -97,23 +102,45 @@ export default function ArenaRosterCard({ snapshot, sideLabel, outcome = null, d
         <span className={css.pickCount}>{count} picks</span>
       </div>
 
-      <ArchetypePills path={path} />
+      {context && <div className={css.contextLine} title={context}>{compactTournamentName(context)}</div>}
+
       <PosSnapshot posSnap={posSnap} />
 
       <ol className={css.playerList}>
-        {players.map((p, i) => (
-          <li key={`${p.name}-${i}`} className={css.playerRow}>
-            <span className={css.pickNo}>{p.pick || '—'}</span>
-            <span
-              className={css.posBadge}
-              style={{ color: posColor(p.position), background: `${posColor(p.position)}22`, borderColor: `${posColor(p.position)}55` }}
-            >
-              {p.position}
-            </span>
-            <span className={css.playerName}>{p.name}</span>
-            <span className={css.playerTeam}>{p.team}</span>
-          </li>
-        ))}
+        {players.map((p, i) => {
+          const clv = clvView(p.clv);
+          const color = posColor(p.position);
+          return (
+            <li key={`${p.name}-${i}`} className={css.playerRow}>
+              <span
+                className={css.avatar}
+                style={{ color, background: `${color}24`, borderColor: `${color}66` }}
+                aria-hidden="true"
+              >
+                {initials(p.name)}
+              </span>
+              <span className={css.playerMain}>
+                <span className={css.playerName}>{p.name}</span>
+                <span className={css.playerMeta}>
+                  <span style={{ color }}>{p.position}</span> · {p.team || '—'}{p.pick ? ` · ${p.pick}` : ''}
+                </span>
+              </span>
+              <span className={`${css.clvCell} ${clv.cls}`}>
+                <span className={css.clvVal}>{clv.text}</span>
+                <span className={css.clvBar}>
+                  {clv.mag > 0 && (
+                    <span
+                      className={css.clvBarFill}
+                      style={clv.pos
+                        ? { left: '50%', width: `${clv.mag * 50}%` }
+                        : { right: '50%', width: `${clv.mag * 50}%` }}
+                    />
+                  )}
+                </span>
+              </span>
+            </li>
+          );
+        })}
       </ol>
     </div>
   );

@@ -14,11 +14,7 @@
 - TASK-188: Weekly portfolio digest email — retention loop
 - TASK-240: Roster Viewer — full Draft Board view (Underdog)
 - TASK-268: Add Avg CLV column to Exposures tab
-- TASK-287: Arena migration 012: arena_teams ownership model for board teams
-- TASK-288: Arena auto-registration of synced + board teams (opt-out ingestion)
-- TASK-289: Arena default leaderboard visibility (drop enrolled filter)
-- TASK-293: Arena opt-out launch switch (flip arena_eligibility_mode)
-- TASK-294: Arena private-beta allowlist gate (ADR-015)
+- TASK-297: Arena 'Tale of the Tape' redesign + CLV + perf
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -69,13 +65,9 @@
 | TASK-284 | Arena: enrollment toggle + paid-tier gating | In Progress | P2 | [Plan](docs/plans/TASK-284.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | In Progress | P2 | [Plan](docs/plans/TASK-285.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | In Progress | P2 | [Plan](docs/plans/TASK-286.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
-| TASK-287 | Arena migration 012: arena_teams ownership model for board teams | In Progress | P2 | [Plan](docs/plans/TASK-287.md) | No | 2026-06-26 | 2026-06-27 |
-| TASK-288 | Arena auto-registration of synced + board teams (opt-out ingestion) | In Progress | P2 | [Plan](docs/plans/TASK-288.md) | No | 2026-06-26 | 2026-06-27 |
-| TASK-289 | Arena default leaderboard visibility (drop enrolled filter) | In Progress | P2 | [Plan](docs/plans/TASK-289.md) | No | 2026-06-26 | 2026-06-27 |
 | TASK-290 | Arena board-team takedown/removal path | Todo | P2 | [Plan](docs/plans/TASK-290.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-291 | Arena privacy policy + ToS update for public ranking | Todo | P2 | [Plan](docs/plans/TASK-291.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
-| TASK-293 | Arena opt-out launch switch (flip arena_eligibility_mode) | In Progress | P2 | [Plan](docs/plans/TASK-293.md) | No | 2026-06-26 | 2026-06-27 |
-| TASK-294 | Arena private-beta allowlist gate (ADR-015) | In Progress | P2 | [Plan](docs/plans/TASK-294.md) | No | 2026-06-27 | 2026-06-27 |
+| TASK-297 | Arena 'Tale of the Tape' redesign + CLV + perf | In Progress | P2 | [Plan](docs/plans/TASK-297.md) | No | 2026-06-29 | 2026-06-29 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -111,6 +103,9 @@
 | TASK-268 | Add Avg CLV column to Exposures tab | In Progress | P3 | [Plan](docs/plans/TASK-268.md) | No | 2026-06-16 | 2026-06-16 |
 | TASK-272 | Add ESLint config to the Chrome extension | Todo | P3 | [Plan](docs/plans/TASK-272.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
 | TASK-292 | Arena monetization-funnel rework (post opt-out) | Todo | P3 | [Plan](docs/plans/TASK-292.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
+| TASK-295 | Arena beta presentation & smoothness refinement | Todo | P3 | [Plan](docs/plans/TASK-295.md) -- Draft | No | 2026-06-27 | 2026-06-27 |
+| TASK-296 | Arena public-launch data hardening (dedup + server-built snapshots) | Todo | P3 | [Plan](docs/plans/TASK-296.md) -- Draft | No | 2026-06-27 | 2026-06-27 |
+| TASK-298 | Arena player headshots (external image source) | Todo | P3 | [Plan](docs/plans/TASK-298.md) -- Draft | No | 2026-06-29 | 2026-06-29 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
@@ -126,6 +121,11 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-294 | Arena private-beta allowlist gate (ADR-015) | Done | P2 | [Plan](docs/archive/plans/TASK-294.md) | Yes | 2026-06-28 |
+| TASK-293 | Arena opt-out launch switch (flip arena_eligibility_mode) | Done | P2 | [Plan](docs/archive/plans/TASK-293.md) | Yes | 2026-06-28 |
+| TASK-289 | Arena default leaderboard visibility (drop enrolled filter) | Done | P2 | [Plan](docs/archive/plans/TASK-289.md) | Yes | 2026-06-28 |
+| TASK-288 | Arena auto-registration of synced + board teams (opt-out ingestion) | Done | P2 | [Plan](docs/archive/plans/TASK-288.md) | Yes | 2026-06-28 |
+| TASK-287 | Arena migration 012: arena_teams ownership model for board teams | Done | P2 | [Plan](docs/archive/plans/TASK-287.md) | Yes | 2026-06-28 |
 | TASK-263 | Scheduled blog publishing + author preview gate | Done | P2 | [Plan](docs/archive/plans/TASK-263.md) | Yes | 2026-06-15 |
 | TASK-262 | Draft-board hero image for The Allen Tax blog post (two-column fork) | Done | P2 | [Plan](docs/archive/plans/TASK-262.md) | Yes | 2026-06-15 |
 | TASK-273 | Trim Eliminator row badges to bye-clash only (drop Fade + late-bye) | Done | P3 | [Plan](docs/archive/plans/TASK-273.md) | No | 2026-06-20 |

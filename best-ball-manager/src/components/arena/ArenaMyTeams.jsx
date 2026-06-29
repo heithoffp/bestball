@@ -16,12 +16,15 @@ const keyOf = (entryId, platform) => `${entryId}::${platform}`;
 
 function platformLabel(p) { return p === 'draftkings' ? 'DraftKings' : 'Underdog'; }
 
-export default function ArenaMyTeams({ rosterData }) {
+export default function ArenaMyTeams({ rosterData, masterPlayers }) {
   const { user } = useAuth();
   const { tier, openPlanPicker } = useSubscription();
   const canEnroll = canAccessFeature(tier, 'arena_enroll');
 
-  const teams = useMemo(() => buildEnrollableTeams(rosterData), [rosterData]);
+  const teams = useMemo(
+    () => buildEnrollableTeams(rosterData, masterPlayers),
+    [rosterData, masterPlayers],
+  );
   const [arenaRows, setArenaRows] = useState(null);
   const [busy, setBusy] = useState({});
   const [error, setError] = useState(null);

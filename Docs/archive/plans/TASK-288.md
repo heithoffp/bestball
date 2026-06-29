@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-28 | Commit: 8943358 -->
 # TASK-288: Arena auto-registration of synced + board teams (opt-out ingestion)
 
 **Status:** Pending Approval

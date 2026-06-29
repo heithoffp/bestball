@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-28 | Commit: 8943358 -->
 # TASK-294: Arena private-beta allowlist gate (ADR-015)
 
 **Status:** Pending Approval

@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-28 | Commit: 8943358 -->
 # TASK-289: Arena default leaderboard visibility (drop enrolled filter)
 
 **Status:** Pending Approval

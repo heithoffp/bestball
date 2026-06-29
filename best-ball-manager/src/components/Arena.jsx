@@ -7,14 +7,14 @@
 // and on mount we auto-register the user's own + participant-captured board teams
 // into the opt-out pool (ADR-014 / TASK-288), once per session.
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, X } from 'lucide-react';
 import ArenaVote from './arena/ArenaVote';
 import ArenaLeaderboard from './arena/ArenaLeaderboard';
 import ArenaMyTeams from './arena/ArenaMyTeams';
 import { useAuth } from '../contexts/AuthContext';
 import { isArenaBetaUser } from '../utils/arenaBeta';
-import { buildEnrollableTeams, buildBoardTeams, playerNameKey } from '../utils/arenaSnapshot';
+import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
 import { fetchExtensionBoards } from '../utils/draftBoards';
 import { registerAllArenaTeams, ARENA_AVAILABLE } from '../utils/arenaClient';
 import css from './Arena.module.css';
@@ -42,7 +42,7 @@ function ArenaHelp({ onClose }) {
 // Auto-register the user's own + board teams into the opt-out pool, once per session.
 // Best-effort: failures are swallowed and retried next session. Board rows are written
 // service-side (arena-register); the server re-checks the beta gate + guardrail #3.
-function useAutoRegister(user, rosterData) {
+function useAutoRegister(user, rosterData, masterPlayers) {
   const ref = useRef(false);
   useEffect(() => {
     if (ref.current) return;
@@ -59,7 +59,8 @@ function useAutoRegister(user, rosterData) {
 
     (async () => {
       try {
-        const ownedTeams = buildEnrollableTeams(rosterData).map((t) => ({
+        const adpLookup = buildAdpLookup(masterPlayers);
+        const ownedTeams = buildEnrollableTeams(rosterData, masterPlayers).map((t) => ({
           entryId: t.entryId, platform: t.platform, draftId: t.entryId, snapshot: t.snapshot,
         }));
 
@@ -73,7 +74,7 @@ function useAutoRegister(user, rosterData) {
         const boards = await fetchExtensionBoards(draftIds);
         const boardTeams = [];
         boards.forEach((board) => {
-          boardTeams.push(...buildBoardTeams(board, ownKeyByDraft[board.draftId]));
+          boardTeams.push(...buildBoardTeams(board, ownKeyByDraft[board.draftId], adpLookup));
         });
 
         if (cancelled) return;
@@ -87,13 +88,18 @@ function useAutoRegister(user, rosterData) {
     })();
 
     return () => { cancelled = true; };
-  }, [user, rosterData]);
+  }, [user, rosterData, masterPlayers]);
 }
 
-export default function Arena({ rosterData, helpOpen, onHelpToggle }) {
+export default function Arena({ rosterData, masterPlayers, helpOpen, onHelpToggle }) {
   const [view, setView] = useState('vote');
   const { user } = useAuth();
-  useAutoRegister(user, rosterData);
+  useAutoRegister(user, rosterData, masterPlayers);
+
+  // The viewer's own ADP, used to compute CLV at display time for every matchup —
+  // stored snapshots are frozen insert-new-only, so live computation is what makes
+  // Team/player CLV reliably appear (see enrichSnapshotCLV).
+  const adpLookup = useMemo(() => buildAdpLookup(masterPlayers), [masterPlayers]);
 
   return (
     <div className={css.root}>
@@ -118,9 +124,9 @@ export default function Arena({ rosterData, helpOpen, onHelpToggle }) {
       {helpOpen && <ArenaHelp onClose={onHelpToggle} />}
 
       <div className={css.body}>
-        {view === 'vote' && <ArenaVote onGoToMyTeams={() => setView('myteams')} />}
-        {view === 'leaderboard' && <ArenaLeaderboard />}
-        {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} />}
+        {view === 'vote' && <ArenaVote adpLookup={adpLookup} onGoToMyTeams={() => setView('myteams')} />}
+        {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} />}
+        {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} masterPlayers={masterPlayers} />}
       </div>
     </div>
   );

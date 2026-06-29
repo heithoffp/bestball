@@ -8,6 +8,7 @@ import { Trophy, RefreshCw, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLeaderboard, ARENA_AVAILABLE } from '../../utils/arenaClient';
 import { ARCHETYPE_METADATA } from '../../utils/rosterArchetypes';
+import { enrichSnapshotCLV } from '../../utils/arenaSnapshot';
 import ArenaRosterCard from './ArenaRosterCard';
 import css from '../Arena.module.css';
 
@@ -65,7 +66,7 @@ function Movement({ delta }) {
   return <span className={css.moveFlat}>—</span>;
 }
 
-export default function ArenaLeaderboard() {
+export default function ArenaLeaderboard({ adpLookup }) {
   const { user } = useAuth();
   const [platform, setPlatform] = useState('all');
   const [rows, setRows] = useState(null); // null = loading
@@ -180,7 +181,7 @@ export default function ArenaLeaderboard() {
                 </button>
                 {isOpen && (
                   <div className={css.lbExpand}>
-                    <ArenaRosterCard snapshot={r.display_snapshot} sideLabel={`Rank #${rank}`} />
+                    <ArenaRosterCard snapshot={enrichSnapshotCLV(r.display_snapshot, adpLookup)} corner="neutral" cornerLabel={`Rank #${rank}`} />
                   </div>
                 )}
               </div>

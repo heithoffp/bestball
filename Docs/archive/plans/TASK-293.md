@@ -1,3 +1,4 @@
+<!-- Completed: 2026-06-28 | Commit: 8943358 -->
 # TASK-293: Arena opt-out launch switch (flip arena_eligibility_mode)
 
 **Status:** Pending Approval

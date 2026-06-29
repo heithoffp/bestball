@@ -175,7 +175,7 @@
 ### FEAT-025: Arena Experience
 **Status:** Not Started
 **Description:** The user-facing Arena per ADR-013 — the blind head-to-head voting screen (new /arena route/tab, arenaClient, reuse RosterViewer display), the opt-in public leaderboard (Elo rank, W/L, win%, movement, platform filter, "your rank"), and the enroll/unenroll toggle on a user's own rosters gated to the paid tier (viewing + voting free).
-**Tasks:** TASK-282, TASK-283, TASK-284
+**Tasks:** TASK-282, TASK-283, TASK-284, TASK-297, TASK-298
 
 ### FEAT-026: Arena Product Positioning
 **Status:** Not Started
