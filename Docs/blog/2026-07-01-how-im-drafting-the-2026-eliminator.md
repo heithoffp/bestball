@@ -186,7 +186,7 @@ The third tight end and third quarterback exist for one reason: to keep me off a
 
 ### Pick 16 · overall 185 — Malik Washington (WR, MIA · bye 6)
 
-`ADP 192.3 · Eliminator move -3 · still there: Jaydon Blue, Germie Bernard`
+`ADP 192.3 · still there: Jaydon Blue, Germie Bernard`
 
 ![strip:Bye board after pick 16](/blog/images/eliminator-byeboard-16.svg)
 
@@ -194,7 +194,7 @@ Even at receiver depth I want a defined role over a lottery ticket, and Washingt
 
 ### Pick 17 · overall 200 — Deshaun Watson (QB, CLE · bye 11)
 
-`ADP 213.4 · Eliminator move -8 · value at 200 · the only arms left after this: Michael Penix, Kirk Cousins`
+`ADP 213.4 · the only arms left after this: Michael Penix, Kirk Cousins`
 
 ![strip:Bye board after pick 17](/blog/images/eliminator-byeboard-17.svg)
 
@@ -202,7 +202,7 @@ With Mahomes on 5 and Dak on 14, my third quarterback only has to cover the midd
 
 ### Pick 18 · overall 209 — Brandon Aiyuk (WR, FA · proj. bye 7)
 
-`ADP 191.6 · Eliminator move +9 · fell to my last pick at 209 · an unsigned free agent who may not play in 2026`
+`ADP 191.6 ·  an unsigned free agent who may not play in 2026`
 
 ![strip:Bye board after pick 18](/blog/images/eliminator-byeboard-18.svg)
 
