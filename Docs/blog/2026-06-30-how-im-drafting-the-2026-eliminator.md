@@ -1,6 +1,6 @@
 ---
 title: "How I Draft the 2026 Eliminator, Pick by Pick"
-date: 2026-07-01
+date: 2026-06-30
 status: published
 image: "/blog/images/og-how-im-drafting-the-2026-eliminator.png"
 kb_sources:
@@ -98,7 +98,7 @@ The harder call was Jacobs or Rashee Rice, still on the board and the more gifte
 
 ![strip:Bye board after pick 4](/blog/images/eliminator-byeboard-04.svg)
 
-Two receivers and two backs through four picks is the balance I want, and Wilson rounds it out cleanly. The Week 13 bye is as much of the draw as the talent. It's a second late one to set beside Lamb's 14, and this is where I start back-weighting in earnest, steering my mid-round picks toward Week 13 and 14 teams so the lineup keeps breathing through the most expensive survival weeks. I don't feel pressed to add a third back yet, either. The RB tier here is long and flat, a run from David Montgomery down through Bucky Irving and Treveyon Henderson, and plenty of them will still be on the board a round or two from now. So I take the receiver I rate and circle back to the position later.
+Two receivers and two backs through four picks is the balance I want, and Wilson rounds it out cleanly. The Week 13 bye is as much of the draw as the talent. It's a second late one to set beside Lamb's 14, and this is where I start back-weighting in earnest, steering my mid-round picks toward Week 13 and 14 teams so the lineup keeps breathing through the most expensive survival weeks. I don't feel pressed to add a third back yet, either. The RB tier here is long and flat, a run from David Montgomery down through Bucky Irving and Treveyon Henderson, and a tier that deep means I can take the receiver I rate now and still expect to land one of those backs at the next turn or two.
 
 It helps that the two names I'm passing on, Malik Nabers and Cam Skattebo, are both coming off injury, a profile I fade hard in a one-and-done format. When a single bad Week 1 ends the tournament, I don't want a starter whose floor still hinges on how a body holds up in September. Nabers especially is one I'm off almost entirely this year. Wilson raises none of those questions, so he's the easy pick.
 
@@ -108,9 +108,9 @@ It helps that the two names I'm passing on, Malik Nabers and Cam Skattebo, are b
 
 ![strip:Bye board after pick 5](/blog/images/eliminator-byeboard-05.svg)
 
-This is the noisy June ADP working in my favor, and it's a pure value pick. I don't have a hole to fill at this spot, so I'm free to take whoever the board has mispriced worst, and that's Loveland. Rooms correctly bump backs up, which shoves a tight end like him below where he belongs, and he slid ten spots into my lap at 56. An elite tight end is one of the few players who can win you a week single-handedly, the rare position-busting score the guy across from you can't match at the spot, and that ceiling is a real plus this early. I don't force elite TE every draft. I take it when the market hands it to me.
+The back I was hoping would slide back to me here never did. But the board didn't leave me empty-handed. This is the noisy June ADP working in my favor: a pure value pick. With no hole I'm forced to fill, I'm free to take whoever the board has mispriced worst, and that's Loveland. Rooms correctly bump backs up, which shoves a tight end like him below where he belongs, and he slid ten spots into my lap at 56. An elite tight end is one of the few players who can win you a week single-handedly, the rare position-busting score the guy across from you can't match at the spot, and that ceiling is a real plus this early. I don't force elite TE every draft. I take it when the market hands it to me.
 
-The flip side is sitting right there in Jameson Williams, who keeps sliding, and for two reasons worth understanding. One, his Week 6 bye drops him onto the same minefield half the early board already sits on, so he's hard to slot cleanly. Two, his profile is the opposite of what this format rewards: big spikes stacked on a floor that falls out from under him, with seven games under 7 full-PPR points. In a survival contest, where one quiet week ends your run, that boom-bust shape is exactly the profile to be wary of.
+The flip side is sitting right there in Jameson Williams, who keeps sliding, and for two reasons worth understanding. One, his Week 6 bye drops him onto the same minefield half the early board already sits on, so he's hard to slot cleanly. Two, his profile is the opposite of what this format rewards: big spikes stacked on a floor that falls out from under him, with seven games under 7 full-PPR points in 2025. In a survival contest, where one quiet week ends your run, that boom-bust shape is exactly the profile to be wary of.
 
 ### Pick 6 · overall 65 — Jaylen Warren (RB, PIT · bye 9)
 
@@ -166,7 +166,7 @@ Pearsall opens Week 8 on my receiver board; Tracy shares that Week 8, but he's a
 
 ![strip:Bye board after pick 12](/blog/images/eliminator-byeboard-12.svg)
 
-Now the rookie fade, and its one exception. Late-developing rookies are wrong for Eliminator because their value lands in November, after most entries are already gone. Closing a draft with a stack of them is the fanciest way to take four zeros. The exception is a rookie with a locked Week 1 role, and that's the only reason Concepcion is here: I need him to profile as a Week 1 contributor in Cleveland, not as an October thesis. If his snap share read murky to me, I'd pass. It's a calculated bet, and I'll call it a bet. His Week 11 bye lands on byemageddon, the overlap I said I'd gladly take.
+Now the rookie fade, and its one exception. Late-developing rookies are wrong for Eliminator because their value lands in November, after most entries are already gone. Closing a draft with a stack of them is the fanciest way to take four zeros. The exception is a rookie with a locked Week 1 role, and that's the only reason Concepcion is here: I need him to profile as a Week 1 contributor in Cleveland, not as an October thesis. Price is the other half of it. Carnell Tate would have charged me a sixth-round pick to take on rookie uncertainty, too steep for me; Concepcion asks a twelfth-rounder for the same kind of risk, and six rounds cheaper I'll wear it far more readily. If his snap share read murky to me, I'd pass. It's a calculated bet, and I'll call it a bet. His Week 11 bye lands on byemageddon, the overlap I said I'd gladly take.
 
 ### Pick 13 · overall 152 — Tyler Allgeier (RB, ARI · bye 14)
 
@@ -174,7 +174,7 @@ Now the rookie fade, and its one exception. Late-developing rookies are wrong fo
 
 ![strip:Bye board after pick 13](/blog/images/eliminator-byeboard-13.svg)
 
-Lamb and Dak already give me the Week 14 bye twice, so why reach for a third? Because a Week 14 back costs nothing to stash: his only blank is the free week after the lock, which means he's guaranteed to be active in every week that can actually eliminate me. Tyjae Spears was the better standalone back sitting there. Allgeier was the better Eliminator pick.
+Lamb and Dak already give me the Week 14 bye twice, so why reach for a third? Because a Week 14 back costs nothing to stash: his only blank is the free week after the lock, which means he's guaranteed to be active in every week that can meaningfully eliminate me. Tyjae Spears was the better standalone back sitting there. Allgeier was the better Eliminator pick.
 
 ### Picks 14 & 15 · Hunter Henry (TE, NE · bye 11) and Gunnar Helm (TE, TEN · bye 9)
 
@@ -198,7 +198,7 @@ Even at receiver depth I want a defined role over a lottery ticket, and Washingt
 
 ![strip:Bye board after pick 17](/blog/images/eliminator-byeboard-17.svg)
 
-With Mahomes on 5 and Dak on 14, my third quarterback only has to cover the middle of the calendar, and Watson's Week 11 bye does exactly that. Three QB byes on 5, 11, and 14, fully staggered. This is also where I lean into an edge instead of fighting it: late quarterback rooms are messy, Cleveland's especially, and the third QB slot is the one place that ambiguity is a feature rather than a bug. It's insurance, so I take the arm whose bye fills my last open week and don't sweat the depth-chart noise the way I would for a starter. The board forced the timing too, with the QB shelf about to empty. I'll still confirm the Week 1 picture in August.
+With Mahomes on 5 and Dak on 14, my third quarterback only has to cover the middle of the calendar, and Watson's Week 11 bye does exactly that. Three QB byes on 5, 11, and 14, fully staggered. This is also where I lean into an edge instead of fighting it: late quarterback rooms are messy, Cleveland's especially, and the third QB slot is the one place that ambiguity is a feature rather than a bug. It's insurance, so I take the arm whose bye fills my last open week and don't sweat the depth-chart noise the way I would for a starter. He's a better pick here than in Best Ball Mania, too, where a quarterback who could lose his job by midseason is close to dead weight. In the Eliminator I only ask two things of a QB3, and Watson covers both: he's Cleveland's projected Week 1 starter, a live body when the gate slams, and even if the job slips away from him later, the week I most want the extra arm, Mahomes's Week 5 bye, comes long before any benching would. The board forced the timing too, with the QB shelf about to empty. 
 
 ### Pick 18 · overall 209 — Brandon Aiyuk (WR, FA · proj. bye 7)
 
@@ -216,6 +216,6 @@ That rainbow is the plan made visible, and you can watch your own fill in the sa
 
 Step back and the finished board reads the way the table at the top promised: a clean rainbow from Week 5 to Week 14, no two players in a room sharing a week, my best players (Lamb, Garrett Wilson, Dak, Allgeier) on the two latest byes. The only loose thread is Aiyuk's Week 7, which holds if he signs where I expect. That is back-weight and stagger run across eighteen picks, and the 3-5-7-3 shape it produced is the build that won last year, reached by following the rules instead of forcing a template.
 
-Here's where I could be wrong, and I'm not going to talk myself out of it. This whole build is a June bet on Week 1 roles that haven't settled. Concepcion has to actually win the Cleveland job. Pearsall has to be healthy and on the field, and Aiyuk has to sign somewhere with a real Week 1 role at all. Tracy's early-down work has to hold. If two or three of those break the wrong way by September, the floor I drafted for isn't really there, and a thin June board is exactly where that risk hides. So re-pull in August, and confirm your contest, because a tighter cut than 6-of-12 tips the math back toward ceiling and inverts a good chunk of this plan.
+Here's where I could be wrong, and I'm not going to talk myself out of it. This whole build is a June bet on Week 1 roles that haven't settled. Concepcion has to actually win the Cleveland job. Pearsall has to be healthy and on the field, and Aiyuk has to sign somewhere with a real Week 1 role at all. Tracy's early-down work has to hold. If two or three of those break the wrong way by September, the floor I drafted for isn't really there, and a thin June board is exactly where that risk hides. 
 
 The spine holds either way: survive Week 1, reach Week 14, never own a hole you can't afford. Get those three right and the staggered byes do the rest, keeping a full lineup alive into the weeks where the money actually sits.
