@@ -39,9 +39,12 @@ function buildLookupsFromRows(rows) {
   return { adpMap, teamLookup, projPointsMap };
 }
 
-/** Infer draft platform from slate title string. Returns 'superflex', 'underdog', 'draftkings', or null. */
+/** Infer draft platform from slate title string. Returns 'eliminator', 'superflex', 'underdog', 'draftkings', or null. */
 function detectPlatformFromSlate(slateTitle) {
   const t = (slateTitle || '').toLowerCase();
+  // Eliminator first: the UD Eliminator slate title ("UD 2026 Eliminator Season") also
+  // contains "ud", which the underdog branch below would otherwise claim.
+  if (t.includes('eliminator')) return 'eliminator';
   if (t.includes('superflex')) return 'superflex';
   if (t.includes('draftkings') || t.startsWith('dk ') || t === 'dk') return 'draftkings';
   if (t.includes('ud')) return 'underdog';

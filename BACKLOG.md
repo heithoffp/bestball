@@ -15,6 +15,7 @@
 - TASK-240: Roster Viewer — full Draft Board view (Underdog)
 - TASK-268: Add Avg CLV column to Exposures tab
 - TASK-297: Arena 'Tale of the Tape' redesign + CLV + perf
+- TASK-299: Wire Eliminator ADP into roster enrichment (eliminator_adp.csv for Eliminator slate)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -68,6 +69,7 @@
 | TASK-290 | Arena board-team takedown/removal path | Todo | P2 | [Plan](docs/plans/TASK-290.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-291 | Arena privacy policy + ToS update for public ranking | Todo | P2 | [Plan](docs/plans/TASK-291.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-297 | Arena 'Tale of the Tape' redesign + CLV + perf | In Progress | P2 | [Plan](docs/plans/TASK-297.md) | No | 2026-06-29 | 2026-06-29 |
+| TASK-299 | Wire Eliminator ADP into roster enrichment (eliminator_adp.csv for Eliminator slate) | In Progress | P2 | [Plan](docs/plans/TASK-299.md) | No | 2026-06-30 | 2026-06-30 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
