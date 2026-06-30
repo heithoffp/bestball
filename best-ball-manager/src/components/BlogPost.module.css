@@ -211,6 +211,16 @@
   border: 1px solid var(--rule);
 }
 
+/* Inline progress strips (e.g. the running bye-board ledger under each pick).
+   Rendered bare — no figure frame, zoom affordance, or caption. Scales down on
+   narrow screens; the colored cells carry their own rounding. */
+.inlineStrip {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0 1.6rem;
+}
+
 /* Click/tap-to-zoom affordance for raster figures (the wide draft board, etc.). */
 .zoomFigure {
   display: block;
@@ -269,12 +279,16 @@
   max-height: 100%;
   overflow: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
   -webkit-overflow-scrolling: touch;
 }
+/* Center the image with auto margins rather than flex `align/justify: center`.
+   Auto margins absorb free space when the image fits (centering it), but collapse
+   to zero when it overflows — pinning it to the top-left so every edge stays
+   reachable by scroll. Flex centering instead pushes the overflow equally past the
+   top edge, where a scroll container can never reach it (the top gets cut off). */
 .lightboxImg {
   display: block;
+  margin: auto;
   max-width: 100%;
   max-height: 84vh;
   width: auto;

@@ -19,13 +19,16 @@ import styles from './BlogPost.module.css';
 // Turn the authoring placeholder `[INSERT IMAGE: desc]` into an image node we
 // can render as a styled figure frame (src sentinel detected in the img map).
 const IMG_SENTINEL = '#insert-image';
+// Inline progress strips (bye-board ledgers) opt out of the figure chrome via a
+// `strip:` prefix on their alt text — see the img renderer below.
+const STRIP_PREFIX = 'strip:';
 function preprocess(markdown) {
-  return markdown.replace(/\[INSERT IMAGE:\s*([^\]]*)\]/gi, (_, desc) => `![${desc.trim()}](${IMG_SENTINEL})`);
+  return markdown
+    // Strip HTML comments (e.g. authoring `<!-- CHART SPEC … -->` blocks) so they
+    // never leak as visible text in a rendered or author-previewed post.
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\[INSERT IMAGE:\s*([^\]]*)\]/gi, (_, desc) => `![${desc.trim()}](${IMG_SENTINEL})`);
 }
-
-// Raster images can't survive being shrunk into the 720px column — they get a
-// click/tap-to-zoom affordance. Vector (SVG) figures scale crisply and render as-is.
-const isRaster = (src) => /\.(png|jpe?g|webp|gif)$/i.test(src || '');
 
 // Built per-render so the img renderer can call back into component state.
 function makeComponents(onZoom) {
@@ -54,27 +57,35 @@ function makeComponents(onZoom) {
           </span>
         );
       }
-      if (isRaster(src)) {
+      // Inline progress strips render bare — no figure frame, zoom, or caption.
+      // The `strip:` prefix is dropped; the remainder stays as the a11y label.
+      if (alt && alt.startsWith(STRIP_PREFIX)) {
         return (
-          <span className={styles.figure}>
-            <button
-              type="button"
-              className={styles.zoomFigure}
-              onClick={() => onZoom({ src, alt: alt || '' })}
-              aria-label={alt ? `Enlarge: ${alt}` : 'Enlarge image'}
-            >
-              <img src={src} alt={alt || ''} loading="lazy" />
-              <span className={styles.zoomHint} aria-hidden="true">
-                <Maximize2 size={12} strokeWidth={2.5} /> Enlarge
-              </span>
-            </button>
-            {alt ? <span className={styles.figureCaption}>{alt}</span> : null}
-          </span>
+          <img
+            className={styles.inlineStrip}
+            src={src}
+            alt={alt.slice(STRIP_PREFIX.length).trim()}
+            loading="lazy"
+          />
         );
       }
+      // Every real figure — raster screenshots and vector charts alike — gets a
+      // click/tap-to-zoom affordance into the lightbox. SVGs scale crisply inline,
+      // but the dense ones (bye boards, draft boards) still want a full-screen read
+      // on mobile, where the 720px column shrinks their labels below legibility.
       return (
         <span className={styles.figure}>
-          <img src={src} alt={alt || ''} loading="lazy" />
+          <button
+            type="button"
+            className={styles.zoomFigure}
+            onClick={() => onZoom({ src, alt: alt || '' })}
+            aria-label={alt ? `Enlarge: ${alt}` : 'Enlarge image'}
+          >
+            <img src={src} alt={alt || ''} loading="lazy" />
+            <span className={styles.zoomHint} aria-hidden="true">
+              <Maximize2 size={12} strokeWidth={2.5} /> Enlarge
+            </span>
+          </button>
           {alt ? <span className={styles.figureCaption}>{alt}</span> : null}
         </span>
       );

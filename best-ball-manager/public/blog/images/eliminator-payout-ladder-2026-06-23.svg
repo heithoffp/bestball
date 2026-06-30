@@ -1,42 +1,107 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace">
-  <rect width="720" height="360" fill="#0b1626"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace">
+  <rect width="720" height="520" fill="#0b1626"/>
 
   <text x="32" y="40" font-family="Georgia, 'Times New Roman', serif" font-size="20" fill="#ece7da">The money sits at the back</text>
-  <text x="32" y="60" font-size="10" letter-spacing="1.5" fill="#5d6b82">UNDERDOG ELIMINATOR PAYOUTS · 2026</text>
+  <text x="32" y="60" font-size="10" letter-spacing="1.5" fill="#5d6b82">UNDERDOG ELIMINATOR · WHAT YOU LOCK BY REACHING EACH WEEK · 2026</text>
 
-  <!-- Gridlines (x = 200 + dollars * 0.00225) -->
-  <line x1="312.5" y1="100" x2="312.5" y2="300" stroke="#1a2d50" stroke-width="1"/>
-  <line x1="425" y1="100" x2="425" y2="300" stroke="#1a2d50" stroke-width="1"/>
-  <line x1="537.5" y1="100" x2="537.5" y2="300" stroke="#1a2d50" stroke-width="1"/>
-  <line x1="650" y1="100" x2="650" y2="300" stroke="#1a2d50" stroke-width="1"/>
-  <text x="312.5" y="92" font-size="9" letter-spacing="1" fill="#5d6b82" text-anchor="middle">$50K</text>
-  <text x="425" y="92" font-size="9" letter-spacing="1" fill="#5d6b82" text-anchor="middle">$100K</text>
-  <text x="537.5" y="92" font-size="9" letter-spacing="1" fill="#5d6b82" text-anchor="middle">$150K</text>
-  <text x="650" y="92" font-size="9" letter-spacing="1" fill="#5d6b82" text-anchor="middle">$200K</text>
+  <!-- Money-week zone (reach Wk 12 -> Final 3 / Wk 17), log scale: x = 72 + (i+0.5)*39.25, baseline y=430, top y=120 -->
+  <rect x="464.5" y="120" width="235.5" height="310" fill="#e8bf4a" opacity="0.06"/>
+  <text x="582" y="112" font-size="9" letter-spacing="2" fill="#e8bf4a" text-anchor="middle">MONEY WEEKS</text>
 
-  <!-- Baseline -->
-  <line x1="200" y1="100" x2="200" y2="300" stroke="#243a5c" stroke-width="1"/>
+  <!-- Log gridlines + axis labels -->
+  <line x1="72" y1="352.7" x2="700" y2="352.7" stroke="#16243d" stroke-width="1"/>
+  <line x1="72" y1="282.2" x2="700" y2="282.2" stroke="#16243d" stroke-width="1"/>
+  <line x1="72" y1="211.7" x2="700" y2="211.7" stroke="#16243d" stroke-width="1"/>
+  <line x1="72" y1="141.2" x2="700" y2="141.2" stroke="#16243d" stroke-width="1"/>
+  <text x="66" y="426" font-size="8.5" fill="#5d6b82" text-anchor="end">$10</text>
+  <text x="66" y="356" font-size="8.5" fill="#5d6b82" text-anchor="end">$100</text>
+  <text x="66" y="285.5" font-size="8.5" fill="#5d6b82" text-anchor="end">$1K</text>
+  <text x="66" y="215" font-size="8.5" fill="#5d6b82" text-anchor="end">$10K</text>
+  <text x="66" y="144.5" font-size="8.5" fill="#5d6b82" text-anchor="end">$100K</text>
 
-  <!-- Reach Week 14 — $10,000 (the lock) -->
-  <text x="24" y="134" font-size="12" fill="#ece7da">Reach Week 14</text>
-  <rect x="200" y="117" width="22.5" height="26" fill="#34d399"/>
-  <text x="230.5" y="134" font-size="12" fill="#34d399">$10,000</text>
-  <text x="300" y="134" font-size="9" letter-spacing="1.5" fill="#34d399">LOCKED — ANY SCORE</text>
+  <!-- Axes -->
+  <line x1="72" y1="120" x2="72" y2="430" stroke="#243a5c" stroke-width="1"/>
+  <line x1="72" y1="430" x2="700" y2="430" stroke="#243a5c" stroke-width="1"/>
 
-  <!-- Reach Week 15 — $30,000 -->
-  <text x="24" y="182" font-size="12" fill="#ece7da">Reach Week 15</text>
-  <rect x="200" y="165" width="67.5" height="26" fill="#e8bf4a"/>
-  <text x="275.5" y="182" font-size="12" fill="#e8bf4a">$30,000</text>
+  <!-- Reach Wk 2 & 3: survived, but $0 -->
+  <rect x="80.6" y="428" width="22" height="2" fill="#2a3f5f"/>
+  <rect x="119.9" y="428" width="22" height="2" fill="#2a3f5f"/>
+  <text x="111.3" y="407" font-size="8.5" letter-spacing="1" fill="#5d6b82" text-anchor="middle">$0 · JUST SURVIVE</text>
 
-  <!-- 3rd place — $130,000 -->
-  <text x="24" y="230" font-size="12" fill="#ece7da">3rd place</text>
-  <rect x="200" y="213" width="292.5" height="26" fill="#e8bf4a"/>
-  <text x="500.5" y="230" font-size="12" fill="#e8bf4a">$130,000</text>
+  <!-- The cheap climb: reach Wk 4-11 (blue) -->
+  <rect x="159.1" y="423.2" width="22" height="6.8" fill="#4a78aa"/>
+  <text x="170.1" y="418.2" font-size="9" fill="#9db8d6" text-anchor="middle">$10</text>
+  <rect x="198.4" y="401.9" width="22" height="28.1" fill="#4a78aa"/>
+  <text x="209.4" y="396.9" font-size="9" fill="#9db8d6" text-anchor="middle">$20</text>
+  <rect x="237.6" y="388.5" width="22" height="41.5" fill="#4a78aa"/>
+  <text x="248.6" y="383.5" font-size="9" fill="#9db8d6" text-anchor="middle">$31</text>
+  <rect x="276.9" y="372.7" width="22" height="57.3" fill="#4a78aa"/>
+  <text x="287.9" y="367.7" font-size="9" fill="#9db8d6" text-anchor="middle">$52</text>
+  <rect x="316.1" y="352.1" width="22" height="77.9" fill="#4a78aa"/>
+  <text x="327.1" y="347.1" font-size="9" fill="#9db8d6" text-anchor="middle">$102</text>
+  <rect x="355.4" y="331.5" width="22" height="98.5" fill="#4a78aa"/>
+  <text x="366.4" y="326.5" font-size="9" fill="#9db8d6" text-anchor="middle">$200</text>
+  <rect x="394.6" y="303.4" width="22" height="126.6" fill="#4a78aa"/>
+  <text x="405.6" y="298.4" font-size="9" fill="#9db8d6" text-anchor="middle">$500</text>
+  <rect x="433.9" y="282.2" width="22" height="147.8" fill="#4a78aa"/>
+  <text x="444.9" y="277.2" font-size="9" fill="#9db8d6" text-anchor="middle">$1K</text>
 
-  <!-- 1st place — $200,000 -->
-  <text x="24" y="278" font-size="12" fill="#ece7da">1st place</text>
-  <rect x="200" y="261" width="450" height="26" fill="#e8bf4a"/>
-  <text x="642" y="278" font-size="12" fill="#0b1626" text-anchor="end" font-weight="bold">$200,000</text>
+  <!-- Money weeks begin: reach Wk 12 ($2K) & Wk 13 ($5K), gold -->
+  <rect x="473.1" y="261.0" width="22" height="169.0" fill="#e8bf4a"/>
+  <text x="484.1" y="256.0" font-size="9" fill="#e8bf4a" text-anchor="middle">$2K</text>
+  <rect x="512.4" y="232.9" width="22" height="197.1" fill="#e8bf4a"/>
+  <text x="523.4" y="227.9" font-size="9" fill="#e8bf4a" text-anchor="middle">$5K</text>
 
-  <text x="32" y="350" font-size="9" letter-spacing="1" fill="#5d6b82">SOURCE: BEST BALL EXPOSURES · STRUCTURE ILLUSTRATIVE — CONFIRM YOUR CONTEST</text>
+  <!-- Reach Wk 14: $10K (gold) -->
+  <rect x="551.6" y="211.7" width="22" height="218.3" fill="#e8bf4a"/>
+  <text x="562.6" y="206.7" font-size="9.5" font-weight="bold" fill="#e8bf4a" text-anchor="middle">$10K</text>
+
+  <!-- Reach Wk 15, Wk 16: money (gold) -->
+  <rect x="590.9" y="190.5" width="22" height="239.5" fill="#e8bf4a"/>
+  <text x="601.9" y="185.5" font-size="9.5" font-weight="bold" fill="#e8bf4a" text-anchor="middle">$20K</text>
+  <rect x="630.1" y="162.4" width="22" height="267.6" fill="#e8bf4a"/>
+  <text x="641.1" y="157.4" font-size="9.5" font-weight="bold" fill="#e8bf4a" text-anchor="middle">$50K</text>
+
+  <!-- Reach Wk 17 = Final 3: solid to $76K floor (3rd), dashed upside to $200K (1st) -->
+  <rect x="669.4" y="149.6" width="22" height="280.4" fill="#e8bf4a"/>
+  <rect x="669.4" y="120" width="22" height="29.6" fill="#e8bf4a" opacity="0.18" stroke="#e8bf4a" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <!-- X-axis: week numbers (reach-week framing) -->
+  <text x="91.6" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">2</text>
+  <text x="130.9" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">3</text>
+  <text x="170.1" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">4</text>
+  <text x="209.4" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">5</text>
+  <text x="248.6" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">6</text>
+  <text x="287.9" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">7</text>
+  <text x="327.1" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">8</text>
+  <text x="366.4" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">9</text>
+  <text x="405.6" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">10</text>
+  <text x="444.9" y="445" font-size="10" fill="#5d6b82" text-anchor="middle">11</text>
+  <text x="484.1" y="445" font-size="10" fill="#e8bf4a" text-anchor="middle">12</text>
+  <text x="523.4" y="445" font-size="10" fill="#e8bf4a" text-anchor="middle">13</text>
+  <text x="562.6" y="445" font-size="10" fill="#e8bf4a" text-anchor="middle">14</text>
+  <text x="601.9" y="445" font-size="10" fill="#e8bf4a" text-anchor="middle">15</text>
+  <text x="641.1" y="445" font-size="10" fill="#e8bf4a" text-anchor="middle">16</text>
+  <text x="680.4" y="445" font-size="10" fill="#e8bf4a" text-anchor="middle">17</text>
+
+  <!-- Final 3 callout (the column can't show three tiers legibly) -->
+  <rect x="88" y="150" width="212" height="64" rx="8" fill="#0f1f38" stroke="#243a5c" stroke-width="1"/>
+  <text x="100" y="170" font-size="11" font-weight="bold" letter-spacing="0.5" fill="#e8bf4a">REACH WK 17 → FINAL 3</text>
+  <text x="100" y="190" font-size="10" fill="#ece7da">1st  $200,000      ·      2nd  $100,000</text>
+  <text x="100" y="206" font-size="10" fill="#ece7da">3rd  $76,000  <tspan fill="#5d6b82">(the locked floor)</tspan></text>
+
+  <!-- 150-max ROI callout, pointing at the Wk 12 ($2,000) bar -->
+  <text x="314" y="180" font-size="10" font-weight="bold" letter-spacing="0.5" fill="#e8bf4a">150-MAX: POSITIVE ROI</text>
+  <text x="314" y="196" font-size="9" fill="#b9c4d6">one entry to Wk 12 ($2,000)</text>
+  <text x="314" y="210" font-size="9" fill="#b9c4d6">clears a full 150-max buy-in</text>
+  <line x1="462" y1="204" x2="484" y2="259" stroke="#e8bf4a" stroke-width="1" stroke-dasharray="3 2" opacity="0.55"/>
+  <circle cx="484.1" cy="261" r="2.5" fill="#e8bf4a"/>
+
+  <!-- Legend -->
+  <rect x="72" y="458" width="12" height="12" rx="2" fill="#4a78aa"/>
+  <text x="89" y="468" font-size="9" fill="#5d6b82">Wk 4–11: the cheap climb</text>
+  <rect x="235" y="458" width="12" height="12" rx="2" fill="#e8bf4a"/>
+  <text x="252" y="468" font-size="9" fill="#5d6b82">Wk 12–17: the money weeks</text>
+
+  <text x="32" y="500" font-size="9" letter-spacing="1" fill="#5d6b82">SOURCE: BEST BALL EXPOSURES · UNDERDOG ELIMINATOR PAYOUT STRUCTURE · 2026</text>
 </svg>

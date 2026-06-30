@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace">
+<defs><linearGradient id="byescale" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0%" stop-color="#e0573e"/><stop offset="50%" stop-color="#e6c34a"/><stop offset="100%" stop-color="#46c06a"/>
+</linearGradient></defs>
+<rect width="720" height="480" fill="#0b1626"/>
+<text x="32" y="42" font-family="Georgia, 'Times New Roman', serif" font-size="20" fill="#ece7da">The early board piles onto two byes</text>
+<text x="32" y="62" font-size="10" letter-spacing="1.5" fill="#5d6b82">BYE WEEKS OF THE TOP 36 BY ADP · THE FIRST THREE ROUNDS · UNDERDOG 2026</text>
+<rect x="572.8" y="150" width="127.2" height="250" fill="#e8bf4a" opacity="0.06"/>
+<text x="636.4" y="144" font-size="9" letter-spacing="1.5" fill="#e8bf4a" text-anchor="middle">MONEY-WEEK BYES</text>
+<line x1="64" y1="344" x2="700" y2="344" stroke="#16243d" stroke-width="1"/>
+<line x1="64" y1="288" x2="700" y2="288" stroke="#16243d" stroke-width="1"/>
+<line x1="64" y1="232" x2="700" y2="232" stroke="#16243d" stroke-width="1"/>
+<line x1="64" y1="400" x2="700" y2="400" stroke="#243a5c" stroke-width="1"/>
+<text x="56" y="404.0" font-size="9" fill="#5d6b82" text-anchor="end">0</text>
+<text x="56" y="348.0" font-size="9" fill="#5d6b82" text-anchor="end">2</text>
+<text x="56" y="292.0" font-size="9" fill="#5d6b82" text-anchor="end">4</text>
+<text x="56" y="236.0" font-size="9" fill="#5d6b82" text-anchor="end">6</text>
+<text x="56" y="152.0" font-size="8.5" fill="#5d6b82" text-anchor="end">players</text>
+<rect x="74.8" y="344.0" width="42" height="56.0" rx="3" fill="#e0573e"/>
+<text x="95.8" y="336.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">2</text>
+<text x="95.8" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">5</text>
+<rect x="138.4" y="232.0" width="42" height="168.0" rx="3" fill="#e16f41"/>
+<text x="159.4" y="224.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">6</text>
+<text x="159.4" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">6</text>
+<rect x="202.0" y="316.0" width="42" height="84.0" rx="3" fill="#e38743"/>
+<text x="223.0" y="308.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">3</text>
+<text x="223.0" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">7</text>
+<rect x="265.6" y="288.0" width="42" height="112.0" rx="3" fill="#e49f46"/>
+<text x="286.6" y="280.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">4</text>
+<text x="286.6" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">8</text>
+<text x="350.2" y="393.0" font-size="11" fill="#33425c" text-anchor="middle">0</text>
+<text x="350.2" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">9</text>
+<rect x="392.8" y="316.0" width="42" height="84.0" rx="3" fill="#d4c34e"/>
+<text x="413.8" y="308.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">3</text>
+<text x="413.8" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">10</text>
+<rect x="456.4" y="204.0" width="42" height="196.0" rx="3" fill="#b1c255"/>
+<text x="477.4" y="196.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">7</text>
+<text x="477.4" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">11</text>
+<text x="541.0" y="393.0" font-size="11" fill="#33425c" text-anchor="middle">0</text>
+<text x="541.0" y="420" font-size="11" fill="#5d6b82" text-anchor="middle">12</text>
+<rect x="583.6" y="232.0" width="42" height="168.0" rx="3" fill="#6ac163"/>
+<text x="604.6" y="224.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">6</text>
+<text x="604.6" y="420" font-size="11" fill="#e8bf4a" text-anchor="middle">13</text>
+<rect x="647.2" y="260.0" width="42" height="140.0" rx="3" fill="#46c06a"/>
+<text x="668.2" y="252.0" font-size="13" font-weight="bold" fill="#ece7da" text-anchor="middle">5</text>
+<text x="668.2" y="420" font-size="11" fill="#e8bf4a" text-anchor="middle">14</text>
+<text x="541.0" y="432" font-size="7.5" fill="#33425c" text-anchor="middle">no NFL byes</text>
+<text x="70" y="100" font-size="11" font-weight="bold" letter-spacing="0.5" fill="#e0573e">① WEEK 6 — THE EARLY MINEFIELD</text>
+<text x="70" y="115" font-size="9" fill="#b9c4d6">six here; doubling an early bye = two zeros you can't yet afford</text>
+<line x1="159.4" y1="124" x2="159.4" y2="230.0" stroke="#e0573e" stroke-width="1" stroke-dasharray="3 2" opacity="0.6"/>
+<circle cx="159.4" cy="232.0" r="2.5" fill="#e0573e"/>
+<text x="430" y="100" font-size="11" font-weight="bold" letter-spacing="0.5" fill="#b1c255">② WEEK 11 — BYEMAGEDDON</text>
+<text x="430" y="115" font-size="9" fill="#b9c4d6">seven, the most — but the whole field shares it</text>
+<line x1="477.4" y1="124" x2="477.4" y2="202.0" stroke="#b1c255" stroke-width="1" stroke-dasharray="3 2" opacity="0.6"/>
+<circle cx="477.4" cy="204.0" r="2.5" fill="#b1c255"/>
+<text x="32" y="451" font-size="9.5" fill="#e0573e">early · bad</text>
+<rect x="108" y="442" width="150" height="11" rx="2" fill="url(#byescale)"/>
+<text x="266" y="451" font-size="9.5" fill="#46c06a">late · good</text>
+<text x="360" y="451" font-size="9" letter-spacing="0.5" fill="#5d6b82">bar color = bye week</text>
+<text x="32" y="474" font-size="8.5" letter-spacing="1" fill="#5d6b82">SOURCE: BEST BALL EXPOSURES TRACKER · BYES 2026-06-19 · TOP 36 BY UNDERDOG ADP</text>
+</svg>
