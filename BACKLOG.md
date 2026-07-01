@@ -40,6 +40,7 @@
 | TASK-280 | Arena: data model & Supabase migrations | In Progress | P1 | [Plan](docs/plans/TASK-280.md) | No | 2026-06-26 | 2026-06-26 |
 | TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | In Progress | P1 | [Plan](docs/plans/TASK-281.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | In Progress | P1 | [Plan](docs/plans/TASK-282.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
+| TASK-300 | Arena: fix pairing pool starvation (own-team exclusion at query level) | Todo | P1 | [Plan](docs/plans/TASK-300.md) -- Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No | 2026-04-08 | 2026-04-08 |
@@ -70,6 +71,9 @@
 | TASK-291 | Arena privacy policy + ToS update for public ranking | Todo | P2 | [Plan](docs/plans/TASK-291.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-297 | Arena 'Tale of the Tape' redesign + CLV + perf | In Progress | P2 | [Plan](docs/plans/TASK-297.md) | No | 2026-06-29 | 2026-06-29 |
 | TASK-299 | Wire Eliminator ADP into roster enrichment (eliminator_adp.csv for Eliminator slate) | In Progress | P2 | [Plan](docs/plans/TASK-299.md) | No | 2026-06-30 | 2026-06-30 |
+| TASK-301 | Arena: featured-tournament scoping - Best Ball Mania pool + leaderboard filter | Todo | P2 | [Plan](docs/plans/TASK-301.md) -- Draft | No |
+| TASK-302 | Arena: voting fun layer - keyboard voting, session streaks, upset badges, instant advance | Todo | P2 | [Plan](docs/plans/TASK-302.md) -- Draft | No |
+| TASK-303 | Arena: leaderboard Elo visualization + your-team placement upgrade | Todo | P2 | [Plan](docs/plans/TASK-303.md) -- Draft | No |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
