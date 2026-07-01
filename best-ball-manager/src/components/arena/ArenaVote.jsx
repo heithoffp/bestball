@@ -9,6 +9,7 @@ import { Swords, Trophy, RefreshCw, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPairing, submitVote } from '../../utils/arenaClient';
 import { enrichSnapshotCLV } from '../../utils/arenaSnapshot';
+import { compactTournamentName } from '../../utils/helpers';
 import ArenaRosterCard from './ArenaRosterCard';
 import ArenaTape from './ArenaTape';
 import css from '../Arena.module.css';
@@ -20,18 +21,21 @@ function platformLabel(platform) {
 }
 
 // Shared context above the tape. Platform is always shared (pairing enforces it); the
-// slate is shown only when both contenders are from the same one (else it'd mislead).
+// tournament/slate is shown only when both contenders share it (else it'd mislead).
 function ContextBar({ pairing }) {
   const a = pairing?.team_a?.display_snapshot;
   const b = pairing?.team_b?.display_snapshot;
   const platform = a?.platform || b?.platform;
+  const sharedTournament = a?.tournamentTitle && a.tournamentTitle === b?.tournamentTitle
+    ? a.tournamentTitle : null;
   const sharedSlate = a?.slateTitle && a.slateTitle === b?.slateTitle ? a.slateTitle : null;
+  const context = sharedTournament ? compactTournamentName(sharedTournament) : sharedSlate;
   return (
     <div className={css.contextBar}>
       <span className={css.ctxBrand}><Swords size={13} /> Blind Matchup</span>
       {platform && <span className={css.ctxDot} />}
       {platform && <span className={css.ctxPlatform}>{platformLabel(platform)}</span>}
-      {sharedSlate && <><span className={css.ctxDot} /><span className={css.ctxSlate} title={sharedSlate}>{sharedSlate}</span></>}
+      {context && <><span className={css.ctxDot} /><span className={css.ctxSlate} title={sharedTournament || sharedSlate}>{context}</span></>}
     </div>
   );
 }

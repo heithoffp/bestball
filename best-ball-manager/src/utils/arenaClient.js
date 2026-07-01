@@ -6,6 +6,7 @@
 // so enrollment only ever sets enrolled + display_snapshot on the owner's own rows.
 
 import { supabase } from './supabaseClient';
+import { FEATURED_TOURNAMENT } from './arenaFeatured';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
@@ -87,9 +88,9 @@ export async function submitVote({ token, winner }) {
  * Leaderboard — teams ranked by Elo. Under opt-out (ADR-014) every registered team
  * is shown by default, so there is no `enrolled` filter; visibility is governed by
  * RLS (during the private beta, allowlisted accounts only — ADR-015).
- * @param {{platform?: 'all'|'underdog'|'draftkings', limit?: number}} opts
+ * @param {{platform?: 'all'|'underdog'|'draftkings', tournament?: 'featured'|'all', limit?: number}} opts
  */
-export async function getLeaderboard({ platform = 'all', limit = 200 } = {}) {
+export async function getLeaderboard({ platform = 'all', tournament = 'all', limit = 200 } = {}) {
   if (!supabase) return [];
   let q = supabase
     .from('arena_teams')
@@ -97,6 +98,7 @@ export async function getLeaderboard({ platform = 'all', limit = 200 } = {}) {
     .order('elo', { ascending: false })
     .limit(limit);
   if (platform !== 'all') q = q.eq('platform', platform);
+  if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
   const { data, error } = await q;
   if (error) throw error;
   return data ?? [];

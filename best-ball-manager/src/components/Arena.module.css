@@ -554,7 +554,8 @@
 /* ── Leaderboard ───────────────────────────────────────────────────────── */
 .lbWrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-md); }
 .lbBar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; }
-.lbFilters { display: inline-flex; gap: 6px; }
+.lbFilters { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.lbFilterSplit { width: 1px; height: 18px; background: var(--border-subtle); margin: 0 4px; }
 .lbChip {
   background: transparent;
   border: 1px solid var(--border-subtle);

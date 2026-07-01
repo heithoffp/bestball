@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Trophy, RefreshCw, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLeaderboard, ARENA_AVAILABLE } from '../../utils/arenaClient';
+import { FEATURED_TOURNAMENT } from '../../utils/arenaFeatured';
 import { ARCHETYPE_METADATA } from '../../utils/rosterArchetypes';
 import { enrichSnapshotCLV } from '../../utils/arenaSnapshot';
 import ArenaRosterCard from './ArenaRosterCard';
@@ -16,6 +17,13 @@ const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'underdog', label: 'Underdog' },
   { key: 'draftkings', label: 'DraftKings' },
+];
+
+// Featured tournament first (TASK-301) — the default view matches where pairing
+// concentrates the votes, so the rankings people see are the ones they shape.
+const TOURNAMENTS = [
+  { key: 'featured', label: FEATURED_TOURNAMENT.label },
+  { key: 'all', label: 'All tournaments' },
 ];
 
 const RANK_STORE_KEY = 'bbe_arena_lb_ranks';
@@ -69,6 +77,7 @@ function Movement({ delta }) {
 export default function ArenaLeaderboard({ adpLookup }) {
   const { user } = useAuth();
   const [platform, setPlatform] = useState('all');
+  const [tournament, setTournament] = useState('featured');
   const [rows, setRows] = useState(null); // null = loading
   const [moves, setMoves] = useState({});
   const [error, setError] = useState(null);
@@ -81,17 +90,17 @@ export default function ArenaLeaderboard({ adpLookup }) {
     let ignore = false;
     (async () => {
       try {
-        const data = await getLeaderboard({ platform });
+        const data = await getLeaderboard({ platform, tournament });
         if (ignore) return;
         setRows(data);
-        setMoves(computeMovement(data, platform));
+        setMoves(computeMovement(data, `${tournament}:${platform}`));
         setError(null);
       } catch {
         if (!ignore) { setRows([]); setError('Couldn’t load the leaderboard.'); }
       }
     })();
     return () => { ignore = true; };
-  }, [platform]);
+  }, [platform, tournament]);
 
   const yourBest = useMemo(() => {
     if (!user || !rows) return null;
@@ -113,6 +122,16 @@ export default function ArenaLeaderboard({ adpLookup }) {
     <div className={css.lbWrap}>
       <div className={css.lbBar}>
         <div className={css.lbFilters}>
+          {TOURNAMENTS.map((t) => (
+            <button
+              key={t.key}
+              className={`${css.lbChip} ${tournament === t.key ? css.lbChipActive : ''}`}
+              onClick={() => setTournament(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+          <span className={css.lbFilterSplit} aria-hidden="true" />
           {FILTERS.map((f) => (
             <button
               key={f.key}
