@@ -65,8 +65,9 @@ function PosSnapshot({ posSnap }) {
  * @param {string} props.cornerLabel e.g. "Red Corner"
  * @param {'win'|'loss'|null} props.outcome  reveal state
  * @param {number|null} props.delta  Elo delta to reveal
+ * @param {string|null} props.stamp  post-reveal scorecard stamp (e.g. "Upset") — TASK-302
  */
-export default function ArenaRosterCard({ snapshot, corner = 'red', cornerLabel, outcome = null, delta = null }) {
+export default function ArenaRosterCard({ snapshot, corner = 'red', cornerLabel, outcome = null, delta = null, stamp = null }) {
   if (!snapshot) return null;
   const { players = [], posSnap = {}, count, platform, tournamentTitle, slateTitle } = snapshot;
   const isDk = platform === 'draftkings';
@@ -86,6 +87,7 @@ export default function ArenaRosterCard({ snapshot, corner = 'red', cornerLabel,
           {delta >= 0 ? '+' : '−'}{Math.abs(Math.round(delta))} Elo
         </div>
       )}
+      {stamp && <div className={css.stamp}>{stamp}</div>}
 
       <div className={css.cardHead}>
         <span className={css.cornerDot} />

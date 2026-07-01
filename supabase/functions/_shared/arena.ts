@@ -25,6 +25,20 @@ export const RATE_LIMIT_PAIRS_PER_MIN = 40; // pairing requests per IP per minut
 export const RATE_LIMIT_VOTES_PER_MIN = 20; // votes per voter (or IP) per minute
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 
+// ---------------------------------------------------------------------------
+// Featured tournament (TASK-301). With a small daily audience, votes spread
+// across every synced tournament dilute the Elo signal; pairing concentrates on
+// one featured queue and falls back to the full pool only when the featured pool
+// is too small. Matched against the frozen display_snapshot's tournamentTitle OR
+// slateTitle (board teams carry only a slate title). Keep in sync with the
+// browser-side constant in best-ball-manager/src/utils/arenaFeatured.js.
+// PostgREST or() syntax: `*` is the wildcard for ilike in URL filter strings.
+// ---------------------------------------------------------------------------
+export const FEATURED_TOURNAMENT_LABEL = "Best Ball Mania";
+export const FEATURED_TOURNAMENT_OR_FILTER =
+  "display_snapshot->>tournamentTitle.ilike.*best ball mania*," +
+  "display_snapshot->>slateTitle.ilike.*best ball mania*";
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -143,6 +157,19 @@ export function inMemoryRateLimit(key: string, limit: number, windowMs: number):
   hits.push(now);
   rateBuckets.set(key, hits);
   return true; // allowed
+}
+
+// Order-independent roster fingerprint: sorted, normalized player names joined
+// with '|'. PINNED to playerNameKey in best-ball-manager/src/utils/arenaSnapshot.js
+// (Deno cannot import the Vite module) — the two must stay byte-identical, since
+// claim-on-sync (ADR-016) matches client-built snapshots against stored ones.
+export function playerNameKey(players: unknown): string {
+  const arr = Array.isArray(players) ? players : [];
+  return arr
+    .map((p) => String((p as { name?: unknown })?.name ?? "").trim().replace(/\s+/g, " ").toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join("|");
 }
 
 // ---------------------------------------------------------------------------

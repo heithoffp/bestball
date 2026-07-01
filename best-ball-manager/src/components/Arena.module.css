@@ -106,6 +106,38 @@
   width: 100%;
 }
 
+/* Top row: balanced grid so the context bar stays centered while the session
+   scorecard (TASK-302) rides the right edge. */
+.topRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.topSpacer { min-width: 0; }
+.scoreStrip {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.statChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.statChip svg { color: var(--accent); }
+.statChip strong { color: var(--text-primary); font-weight: 800; }
+
 /* Context strip — platform + (shared) slate, the broadcast lower-third. */
 .contextBar {
   display: flex;
@@ -512,6 +544,94 @@
 }
 .skipBtn:hover:not(:disabled) { color: var(--text-primary); }
 .revealNote { color: var(--text-secondary); font-size: var(--text-sm); text-align: center; }
+
+/* Reveal footer (TASK-302): note + auto-advance countdown + Next. */
+.advanceRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.advanceTrack {
+  position: relative;
+  width: 140px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.advanceFill {
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-accent);
+  transform-origin: left;
+  animation: drainBar linear forwards;
+}
+@keyframes drainBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.nextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast), transform var(--duration-fast);
+}
+.nextBtn:hover { background: rgba(232, 191, 74, 0.22); transform: translateY(-1px); }
+
+/* Keyboard hints (desktop only). */
+.kbdRow {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.kbdRow kbd {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* Post-reveal scorecard stamp (TASK-302): the upset payoff. */
+.stamp {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-7deg);
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: var(--text-lg);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  padding: 5px 14px;
+  background: rgba(10, 14, 22, 0.7);
+  box-shadow: 0 0 28px var(--accent-glow);
+  animation: stampIn 320ms var(--ease-default) both;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes stampIn {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(-7deg) scale(1.8); }
+  to { opacity: 1; transform: translate(-50%, -50%) rotate(-7deg) scale(1); }
+}
 .linkBtn {
   background: none; border: none; color: var(--accent); cursor: pointer;
   font: inherit; padding: 0; text-decoration: underline;
@@ -554,7 +674,8 @@
 /* ── Leaderboard ───────────────────────────────────────────────────────── */
 .lbWrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-md); }
 .lbBar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; }
-.lbFilters { display: inline-flex; gap: 6px; }
+.lbFilters { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.lbFilterSplit { width: 1px; height: 18px; background: var(--border-subtle); margin: 0 4px; }
 .lbChip {
   background: transparent;
   border: 1px solid var(--border-subtle);
@@ -573,8 +694,112 @@
   border-color: var(--accent);
   color: var(--accent);
 }
-.lbYou { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); }
-.lbYou strong { color: var(--accent); }
+/* Your-team banner (TASK-303) — the viewer's placement as a first-class moment. */
+.lbBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  background: var(--surface-1);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+  box-shadow: 0 0 18px rgba(232, 191, 74, 0.1);
+}
+.lbBannerMain { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.lbBannerRank {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: 1.45rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.lbBannerText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lbBannerTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.lbBannerMeta { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); }
+.lbFindBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+.lbFindBtn:hover { background: rgba(232, 191, 74, 0.22); }
+
+/* Podium strip (TASK-303) — the top 3 as champion cards above the table. */
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+.podiumCard {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  min-width: 0;
+  transition: transform var(--duration-fast), border-color var(--duration-fast);
+}
+.podiumCard:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.podiumFirst {
+  border-color: rgba(247, 211, 106, 0.55);
+  box-shadow: 0 0 20px rgba(232, 191, 74, 0.12);
+  padding-top: 1rem;
+  padding-bottom: 0.9rem;
+}
+.podiumHead { display: flex; align-items: center; gap: 8px; }
+.podiumPlatform { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-muted); }
+.podiumElo { font-family: var(--font-mono); font-weight: 900; font-size: 1.3rem; color: var(--text-primary); }
+.podiumArche {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.podiumRec { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-muted); }
+
+/* Elo distribution bars (TASK-303) — scaled to the visible min–max range. */
+.eloWrap { display: flex; flex-direction: column; align-items: flex-end; width: 100%; gap: 3px; }
+.eloTrack {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.eloFill { display: block; height: 100%; background: var(--gradient-accent); border-radius: 2px; }
+
+.rowFlash { animation: lbRowFlash 1.8s var(--ease-default); }
+@keyframes lbRowFlash {
+  0%, 55% { background: var(--accent-muted); box-shadow: inset 3px 0 0 var(--accent); }
+  100% { background: transparent; }
+}
 
 .lbTableWrap { display: flex; flex-direction: column; }
 .lbRow {
@@ -714,6 +939,11 @@
   .playerList { max-height: none; }
   /* No sideways clash when the contenders are stacked vertically. */
   .sideCol:first-child, .sideCol:last-child { --clash-from: 0; }
+  /* Touch layout: no keyboard hints; scorecard centers under the context bar. */
+  .kbdRow { display: none; }
+  .topRow { grid-template-columns: 1fr; justify-items: center; }
+  .topSpacer { display: none; }
+  .scoreStrip { justify-content: center; }
 }
 
 @media (max-width: 599px) {
@@ -721,6 +951,9 @@
   .lbRow { grid-template-columns: 36px 1fr 54px 50px 58px; gap: 6px; padding: 0.6rem 0.4rem; }
   .cPct { display: none; }
   .myRow { flex-wrap: wrap; }
+  /* Podium stacks with the champion first. */
+  .podium { grid-template-columns: 1fr; align-items: stretch; }
+  .podiumFirst { order: -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -730,4 +963,9 @@
   .skelHead, .skelMeta, .skelRow, .skelBtn, .skelVs { animation: none; }
   .cardWin { transform: none; }
   .pickBtn:hover:not(:disabled) { transform: none; }
+  .stamp { animation: none; }
+  .advanceFill { animation: none; transform: scaleX(1); }
+  .nextBtn:hover { transform: none; }
+  .podiumCard:hover { transform: none; }
+  .rowFlash { animation: none; }
 }

@@ -15,7 +15,7 @@ import ArenaMyTeams from './arena/ArenaMyTeams';
 import { useAuth } from '../contexts/AuthContext';
 import { isArenaBetaUser } from '../utils/arenaBeta';
 import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
-import { fetchExtensionBoards } from '../utils/draftBoards';
+import { fetchDraftBoards } from '../utils/draftBoards';
 import { registerAllArenaTeams, ARENA_AVAILABLE } from '../utils/arenaClient';
 import css from './Arena.module.css';
 
@@ -64,14 +64,14 @@ function useAutoRegister(user, rosterData, masterPlayers) {
           entryId: t.entryId, platform: t.platform, draftId: t.entryId, snapshot: t.snapshot,
         }));
 
-        // Board teams: fetch each synced pod's participant-captured board, excluding
-        // the user's own seat (matched by player-name fingerprint).
+        // Board teams: fetch each synced pod's stored board (any source — ADR-016),
+        // excluding the user's own seat (matched by player-name fingerprint).
         const draftIds = [...new Set(rosterData.map((r) => r.entry_id).filter(Boolean))];
         const ownKeyByDraft = {};
         draftIds.forEach((id) => {
           ownKeyByDraft[id] = playerNameKey(rosterData.filter((r) => r.entry_id === id));
         });
-        const boards = await fetchExtensionBoards(draftIds);
+        const boards = await fetchDraftBoards(draftIds);
         const boardTeams = [];
         boards.forEach((board) => {
           boardTeams.push(...buildBoardTeams(board, ownKeyByDraft[board.draftId], adpLookup));

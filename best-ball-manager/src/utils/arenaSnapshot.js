@@ -7,8 +7,11 @@
 //   - buildBoardTeams(board, ownKey)   — the other 11 pod rosters (ADR-014 / TASK-288),
 //     from a draft_boards_admin board, excluding the user's own seat.
 
-import { classifyRosterPath } from './rosterArchetypes';
-import { calcCLV } from './clvHelpers';
+// Explicit .js extensions: this module (and its two deps) is pure ESM with no
+// Vite-isms, and scripts/arena-backfill-pool.mjs imports it directly under Node,
+// which refuses extensionless specifiers. Keep this chain Node-loadable.
+import { classifyRosterPath } from './rosterArchetypes.js';
+import { calcCLV } from './clvHelpers.js';
 
 function normName(s) {
   return (s || '').trim().replace(/\s+/g, ' ').toLowerCase();

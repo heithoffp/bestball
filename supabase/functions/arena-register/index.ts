@@ -9,17 +9,23 @@
 //
 // Integrity:
 //   - Private-beta gate (ADR-015): only allowlisted authenticated accounts (403 else).
-//   - Guardrail #3: a board team is registered ONLY if its draft_id has a
-//     draft_boards_admin row with source='extension' (participant-authorized capture);
-//     residual admin-scraped or fabricated boards are refused.
+//   - Board existence check: a board team is registered only if its draft_id exists
+//     in draft_boards_admin — ANY source ('extension' or 'admin_scraper'; ADR-016
+//     retired ADR-014's guardrail #3). Fabricated draft ids are still refused.
+//   - Claim-on-sync (ADR-016): an incoming owned team that matches an existing
+//     ownerless board row (exact board_entry_ref, else per-draft roster fingerprint)
+//     CLAIMS that row — it converts to source='owned' under the caller, keeping its
+//     Elo history — instead of inserting a duplicate.
+//   - Account-level enrollment (ADR-016): new owned rows honor the caller's
+//     arena_user_prefs.enrolled switch (missing row = enrolled).
 //   - Rating columns are never written here — they keep their server defaults and
-//     change only via arena-vote.
+//     change only via arena-vote (claims deliberately leave them untouched).
 //
 // Clients NEVER write board rows directly (no column grant + owner-only RLS scoped to
 // source='owned'); this function is the only board-row writer.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { betaGate, corsHeaders, json } from "../_shared/arena.ts";
+import { betaGate, corsHeaders, json, playerNameKey } from "../_shared/arena.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -92,12 +98,15 @@ Deno.serve(async (req) => {
   }
 
   let ownedWritten = 0;
+  let ownedClaimed = 0;
   let boardWritten = 0;
   let boardRejected = 0;
 
   // ── Owned teams ──────────────────────────────────────────────────────────
   // Insert-new-only: existing teams keep their frozen snapshot (cheap re-runs — no
-  // per-row UPDATE storm across a large portfolio).
+  // per-row UPDATE storm across a large portfolio). New teams first try to CLAIM a
+  // matching ownerless board row (ADR-016) so a roster that entered the pool via a
+  // captured board keeps its Elo history when its owner shows up.
   if (ownedIn.length > 0) {
     const { data: existing, error: selErr } = await supabaseAdmin
       .from("arena_teams")
@@ -111,11 +120,78 @@ Deno.serve(async (req) => {
     const seen = new Set<string>();
     for (const r of existing ?? []) seen.add(`${r.entry_id}::${r.platform}`);
 
+    // Account-level enrollment switch (ADR-016): missing pref row = enrolled.
+    const { data: pref } = await supabaseAdmin
+      .from("arena_user_prefs")
+      .select("enrolled")
+      .eq("user_id", voterId)
+      .maybeSingle();
+    const enrolledDefault = pref?.enrolled ?? true;
+
+    // Claim candidates: ownerless board rows reachable by exact seat ref (UD
+    // draftEntryId can equal the entry id) or by pod id for fingerprint matching.
+    // One batched query; matching happens in memory.
+    const quote = (v: string) => `"${String(v).replaceAll('"', '')}"`;
+    const entryIds = [...new Set(ownedIn.map((t) => quote(t.entryId)))].join(",");
+    const draftIds = [...new Set(ownedIn.map((t) => quote(t.draftId ?? t.entryId)))].join(",");
+    const { data: candidates, error: candErr } = await supabaseAdmin
+      .from("arena_teams")
+      .select("id, platform, draft_id, board_entry_ref, display_snapshot")
+      .eq("source", "board")
+      .or(`board_entry_ref.in.(${entryIds}),draft_id.in.(${draftIds})`);
+    if (candErr) {
+      console.error("[arena-register] claim candidate select failed:", candErr);
+      return json({ error: "claim_select_failed" }, 500);
+    }
+    const openCandidates = [...(candidates ?? [])];
+    const fingerprintOf = (snapshot: unknown) =>
+      playerNameKey((snapshot as { players?: unknown })?.players);
+
     const toInsert: Record<string, unknown>[] = [];
     for (const t of ownedIn) {
       const k = `${t.entryId}::${t.platform}`;
       if (seen.has(k)) continue; // already registered
       seen.add(k); // also dedupe within this batch
+
+      // Claim: exact ref match first, then roster fingerprint within the same pod.
+      const draftId = String(t.draftId ?? t.entryId);
+      let idx = openCandidates.findIndex(
+        (c) => c.platform === t.platform && String(c.board_entry_ref) === String(t.entryId),
+      );
+      if (idx === -1) {
+        const fp = fingerprintOf(t.snapshot);
+        if (fp) {
+          idx = openCandidates.findIndex(
+            (c) =>
+              c.platform === t.platform &&
+              String(c.draft_id) === draftId &&
+              fingerprintOf(c.display_snapshot) === fp,
+          );
+        }
+      }
+      if (idx !== -1) {
+        const [cand] = openCandidates.splice(idx, 1); // one claim per board row
+        const { error: claimErr } = await supabaseAdmin
+          .from("arena_teams")
+          .update({
+            user_id: voterId,
+            entry_id: t.entryId,
+            source: "owned",
+            display_snapshot: t.snapshot, // owned snapshot carries tournamentTitle
+            enrolled: enrolledDefault,
+            updated_at: new Date().toISOString(),
+            // elo/matches/wins/losses/provisional intentionally untouched;
+            // board_entry_ref/board_user_hash kept for provenance/takedown.
+          })
+          .eq("id", cand.id);
+        if (claimErr) {
+          console.error("[arena-register] claim update failed:", claimErr);
+          return json({ error: "claim_update_failed" }, 500);
+        }
+        ownedClaimed += 1;
+        continue;
+      }
+
       toInsert.push({
         user_id: voterId,
         entry_id: t.entryId,
@@ -123,7 +199,7 @@ Deno.serve(async (req) => {
         source: "owned",
         draft_id: t.draftId ?? t.entryId,
         display_snapshot: t.snapshot,
-        enrolled: true,
+        enrolled: enrolledDefault,
       });
     }
     if (toInsert.length > 0) {
@@ -138,14 +214,13 @@ Deno.serve(async (req) => {
 
   // ── Board teams ──────────────────────────────────────────────────────────
   if (boardIn.length > 0) {
-    // Guardrail #3: only register board teams whose pod was participant-captured
-    // (draft_boards_admin.source='extension'). Refuse admin-scraped / fabricated.
+    // Existence check: the pod must be a real stored board (any source — ADR-016
+    // retired the source='extension' restriction). Fabricated draft ids are refused.
     const draftIds = [...new Set(boardIn.map((t) => t.draftId))];
     const { data: okBoards, error: bErr } = await supabaseAdmin
       .from("draft_boards_admin")
       .select("draft_id")
-      .in("draft_id", draftIds)
-      .eq("source", "extension");
+      .in("draft_id", draftIds);
     if (bErr) {
       console.error("[arena-register] board verify failed:", bErr);
       return json({ error: "board_verify_failed" }, 500);
@@ -155,7 +230,7 @@ Deno.serve(async (req) => {
     const eligible = boardIn.filter((t) => allowedDrafts.has(String(t.draftId)));
     boardRejected = boardIn.length - eligible.length;
     if (boardRejected > 0) {
-      console.log(`[arena-register] rejected ${boardRejected} board teams (no source='extension' board)`);
+      console.log(`[arena-register] rejected ${boardRejected} board teams (draft_id not in draft_boards_admin)`);
     }
 
     if (eligible.length > 0) {
@@ -201,6 +276,6 @@ Deno.serve(async (req) => {
     }
   }
 
-  console.log(`[arena-register] voter=${voterId} owned=${ownedWritten} board=${boardWritten} rejected=${boardRejected}`);
-  return json({ ownedWritten, boardWritten, boardRejected }, 200);
+  console.log(`[arena-register] voter=${voterId} owned=${ownedWritten} claimed=${ownedClaimed} board=${boardWritten} rejected=${boardRejected}`);
+  return json({ ownedWritten, ownedClaimed, boardWritten, boardRejected }, 200);
 });

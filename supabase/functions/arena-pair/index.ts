@@ -9,6 +9,7 @@ import {
   betaGate,
   corsHeaders,
   ELO_WINDOW,
+  FEATURED_TOURNAMENT_OR_FILTER,
   getClientIp,
   inMemoryRateLimit,
   json,
@@ -64,73 +65,91 @@ Deno.serve(async (req) => {
   const { voterId, isGuest } = gate;
   const guestId = isGuest ? (body.guestId ?? null) : null;
 
-  // Eligibility mode governs the pool. opt_in (launch default): enrolled teams only.
-  const { data: cfg } = await supabaseAdmin
-    .from("arena_config")
-    .select("arena_eligibility_mode")
-    .eq("id", true)
-    .single();
-  const mode = cfg?.arena_eligibility_mode ?? "opt_in";
-
   // Pull a bounded eligible sample, biased toward teams with the FEWEST matches so
-  // provisional teams converge quickly.
-  let query = supabaseAdmin
-    .from("arena_teams")
-    .select("id, user_id, platform, elo, matches, display_snapshot")
-    .order("matches", { ascending: true })
-    .limit(POOL_SAMPLE_LIMIT);
-  if (mode === "opt_in") query = query.eq("enrolled", true);
+  // provisional teams converge quickly. The caller's own teams are excluded IN THE
+  // QUERY — filtering after the LIMIT starves the pool when the caller owns most of
+  // the low-match sample (their own never-voted teams pin matches=0 and crowd out
+  // every votable team). A plain `.neq("user_id", voterId)` would also drop board
+  // rows (`NULL <> x` is NULL in Postgres), so the filter explicitly keeps NULLs.
+  const fetchVotablePool = async (featuredOnly: boolean) => {
+    let query = supabaseAdmin
+      .from("arena_teams")
+      .select("id, user_id, platform, elo, matches, display_snapshot")
+      .order("matches", { ascending: true })
+      .limit(POOL_SAMPLE_LIMIT);
+    // ADR-016: enrollment is account-level and `enrolled` is its materialized
+    // per-row state, so the pool ALWAYS respects it. The old arena_config
+    // arena_eligibility_mode flag is retired in place — the pool is opt-out
+    // (everything in the database) minus unenrolled accounts.
+    query = query.eq("enrolled", true);
+    if (voterId) query = query.or(`user_id.is.null,user_id.neq.${voterId}`);
+    if (featuredOnly) query = query.or(FEATURED_TOURNAMENT_OR_FILTER);
 
-  const { data: pool, error } = await query;
-  if (error) {
-    console.error("arena-pair pool query failed:", error);
+    const { data: pool, error } = await query;
+    if (error) return { teams: null, error };
+    // Defense-in-depth: re-apply the own-team exclusion in memory (keeps ownerless
+    // board teams — only rows owned by the caller are removed).
+    const teams = ((pool ?? []) as PoolTeam[]).filter(
+      (t) => !voterId || t.user_id !== voterId,
+    );
+    return { teams, error: null };
+  };
+
+  // Select a matchup from a pool: team A from the lowest-matches third (the pool is
+  // sorted ascending, so newer teams get exposure), then a comparable opponent B.
+  // Returns null when the pool cannot produce a valid pair.
+  const selectPair = (teams: PoolTeam[]): [PoolTeam, PoolTeam] | null => {
+    if (teams.length < 2) return null;
+    const headSize = Math.max(2, Math.ceil(teams.length / 3));
+    const head = teams.slice(0, headSize);
+    const teamA = head[Math.floor(Math.random() * head.length)];
+
+    // Candidate opponents: same platform, not team A, and not the SAME real owner.
+    // The owner check must ignore NULLs — board teams all have user_id = null, and
+    // `null !== null` is false, which would wrongly treat every pair of board teams
+    // as same-owner and exclude them. Only exclude when both are owned by one user.
+    const candidates = teams.filter(
+      (t) =>
+        t.id !== teamA.id &&
+        t.platform === teamA.platform &&
+        !(t.user_id != null && teamA.user_id != null && t.user_id === teamA.user_id),
+    );
+    if (candidates.length === 0) return null;
+
+    // Prefer opponents within ELO_WINDOW; fall back to the single nearest by Elo.
+    const within = candidates.filter((t) => Math.abs(t.elo - teamA.elo) <= ELO_WINDOW);
+    const teamB = within.length > 0
+      ? within[Math.floor(Math.random() * within.length)]
+      : candidates.reduce((best, t) =>
+        Math.abs(t.elo - teamA.elo) < Math.abs(best.elo - teamA.elo) ? t : best);
+
+    // Randomize left/right so position carries no signal.
+    return Math.random() < 0.5 ? [teamA, teamB] : [teamB, teamA];
+  };
+
+  // Featured tournament first (TASK-301) — concentrates a small audience's votes on
+  // one comparable queue. Fall back to the FULL pool whenever the featured pool can't
+  // produce a valid pair (too small, or no same-platform / cross-owner candidate), so
+  // scoping never reintroduces "No matchups yet". A query error never falls through
+  // to fallback — it surfaces as pool_query_failed.
+  const featured = await fetchVotablePool(true);
+  if (featured.error) {
+    console.error("arena-pair pool query failed:", featured.error);
     return json({ error: "pool_query_failed" }, 500);
   }
-
-  // Exclude the caller's OWN teams in memory. A SQL `.neq("user_id", voterId)`
-  // would drop board (NULL user_id) rows too — Postgres `<>` is NULL for NULLs —
-  // which would hide every board team from any logged-in voter. Filtering here
-  // keeps ownerless board teams in the pool while still removing the caller's own.
-  const teams = ((pool ?? []) as PoolTeam[]).filter(
-    (t) => !voterId || t.user_id !== voterId,
-  );
-  if (teams.length < 2) {
+  let pair = selectPair(featured.teams ?? []);
+  if (!pair) {
+    const full = await fetchVotablePool(false);
+    if (full.error) {
+      console.error("arena-pair pool query failed:", full.error);
+      return json({ error: "pool_query_failed" }, 500);
+    }
+    pair = selectPair(full.teams ?? []);
+  }
+  if (!pair) {
     return json({ pairing: null, reason: "insufficient_pool" }, 200);
   }
-
-  // Pick team A from the lowest-matches third (these are sorted ascending) so
-  // newer teams get exposure, then pick a comparable opponent B.
-  const headSize = Math.max(2, Math.ceil(teams.length / 3));
-  const head = teams.slice(0, headSize);
-  const teamA = head[Math.floor(Math.random() * head.length)];
-
-  // Candidate opponents: same platform, not team A, and not the SAME real owner.
-  // The owner check must ignore NULLs — board teams all have user_id = null, and
-  // `null !== null` is false, which would wrongly treat every pair of board teams
-  // as same-owner and exclude them. Only exclude when both are owned by one user.
-  const candidates = teams.filter(
-    (t) =>
-      t.id !== teamA.id &&
-      t.platform === teamA.platform &&
-      !(t.user_id != null && teamA.user_id != null && t.user_id === teamA.user_id),
-  );
-  if (candidates.length === 0) {
-    return json({ pairing: null, reason: "insufficient_pool" }, 200);
-  }
-
-  // Prefer opponents within ELO_WINDOW; fall back to the single nearest by Elo.
-  const within = candidates.filter((t) => Math.abs(t.elo - teamA.elo) <= ELO_WINDOW);
-  let teamB: PoolTeam;
-  if (within.length > 0) {
-    teamB = within[Math.floor(Math.random() * within.length)];
-  } else {
-    teamB = candidates.reduce((best, t) =>
-      Math.abs(t.elo - teamA.elo) < Math.abs(best.elo - teamA.elo) ? t : best
-    );
-  }
-
-  // Randomize left/right so position carries no signal.
-  const [first, second] = Math.random() < 0.5 ? [teamA, teamB] : [teamB, teamA];
+  const [first, second] = pair;
 
   const pairingId = crypto.randomUUID();
   const payload: PairingPayload = {
