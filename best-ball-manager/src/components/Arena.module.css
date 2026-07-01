@@ -694,8 +694,112 @@
   border-color: var(--accent);
   color: var(--accent);
 }
-.lbYou { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); }
-.lbYou strong { color: var(--accent); }
+/* Your-team banner (TASK-303) — the viewer's placement as a first-class moment. */
+.lbBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  background: var(--surface-1);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+  box-shadow: 0 0 18px rgba(232, 191, 74, 0.1);
+}
+.lbBannerMain { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.lbBannerRank {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: 1.45rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.lbBannerText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lbBannerTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.lbBannerMeta { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); }
+.lbFindBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+.lbFindBtn:hover { background: rgba(232, 191, 74, 0.22); }
+
+/* Podium strip (TASK-303) — the top 3 as champion cards above the table. */
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+.podiumCard {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  min-width: 0;
+  transition: transform var(--duration-fast), border-color var(--duration-fast);
+}
+.podiumCard:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.podiumFirst {
+  border-color: rgba(247, 211, 106, 0.55);
+  box-shadow: 0 0 20px rgba(232, 191, 74, 0.12);
+  padding-top: 1rem;
+  padding-bottom: 0.9rem;
+}
+.podiumHead { display: flex; align-items: center; gap: 8px; }
+.podiumPlatform { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-muted); }
+.podiumElo { font-family: var(--font-mono); font-weight: 900; font-size: 1.3rem; color: var(--text-primary); }
+.podiumArche {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.podiumRec { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-muted); }
+
+/* Elo distribution bars (TASK-303) — scaled to the visible min–max range. */
+.eloWrap { display: flex; flex-direction: column; align-items: flex-end; width: 100%; gap: 3px; }
+.eloTrack {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.eloFill { display: block; height: 100%; background: var(--gradient-accent); border-radius: 2px; }
+
+.rowFlash { animation: lbRowFlash 1.8s var(--ease-default); }
+@keyframes lbRowFlash {
+  0%, 55% { background: var(--accent-muted); box-shadow: inset 3px 0 0 var(--accent); }
+  100% { background: transparent; }
+}
 
 .lbTableWrap { display: flex; flex-direction: column; }
 .lbRow {
@@ -847,6 +951,9 @@
   .lbRow { grid-template-columns: 36px 1fr 54px 50px 58px; gap: 6px; padding: 0.6rem 0.4rem; }
   .cPct { display: none; }
   .myRow { flex-wrap: wrap; }
+  /* Podium stacks with the champion first. */
+  .podium { grid-template-columns: 1fr; align-items: stretch; }
+  .podiumFirst { order: -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -859,4 +966,6 @@
   .stamp { animation: none; }
   .advanceFill { animation: none; transform: scaleX(1); }
   .nextBtn:hover { transform: none; }
+  .podiumCard:hover { transform: none; }
+  .rowFlash { animation: none; }
 }

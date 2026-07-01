@@ -24,17 +24,33 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
 ## User-Facing Behavior
 
 ### Views (sub-nav within the Arena tab)
-- **Vote** — two anonymized rosters side by side with a gold **VS medallion** between
-  them. "Pick this team" under each, plus Skip. On vote: instant reveal — the winner card
-  gets a victory glow, both Elo deltas animate in (`+12` / `−12`), then auto-advance to the
-  next matchup (~2s). Free + guest.
-- **Leaderboard** — enrolled teams ranked by Elo with rank (gold/silver/bronze podium
-  chips for the top 3), W–L, win%, and a movement indicator. Platform filter
-  (All / Underdog / DraftKings). The signed-in owner's own teams are highlighted with a
-  "You" tag and a "your best rank" summary. Rows expand to the full roster card.
+- **Vote** — two anonymized rosters ("Red Corner" / "Blue Corner") flanking the
+  Tale-of-the-Tape spine with the gold **VS medallion** (TASK-297). "Pick Red"/"Pick
+  Blue" under each, plus Skip. On vote: instant reveal — victory glow, Elo deltas, a
+  1.5s auto-advance with a visible countdown bar, and a **Next** control (TASK-302).
+  **Keyboard voting**: ← / → pick, S or ↓ skips, Space/Enter advances during the
+  reveal (hints shown on desktop only). A **session scorecard** (matchups judged +
+  upset picks, sessionStorage) rides the top-right; picking the lower-rated team
+  stamps the card **"Upset"** post-reveal — pre-vote ratings are never shown, so
+  blindness holds. Free + guest.
+- **Leaderboard** — teams ranked by Elo with a **podium strip** (top 3 as champion
+  cards), per-row **Elo distribution bars** scaled to the visible range, W–L, win%,
+  and a movement indicator. **Tournament filter** (Featured = Best Ball Mania,
+  default / All tournaments — TASK-301) plus the platform filter. Signed-in owners
+  get a **your-team banner** with true rank + percentile computed by server count
+  queries (correct beyond the fetched 200-row page) and a "Find my team"
+  scroll-and-flash action (TASK-303). Rows expand to the full roster card.
 - **My Teams** — the Pro enrollment panel: the user's synced teams with an enter/withdraw
   toggle, plus each entered team's hidden Elo and record. Guests see a sign-in prompt;
   non-Pro users see an Upgrade-to-Pro CTA.
+
+### Featured tournament (TASK-301)
+Pairing tries a **featured-tournament pool** first (constant pattern matched against
+the snapshot's `tournamentTitle`/`slateTitle`; currently *Best Ball Mania*) and falls
+back to the full pool whenever the featured pool cannot produce a valid pair, so
+scoping never creates an artificial "No matchups yet". The featured pattern lives in
+`supabase/functions/_shared/arena.ts` (`FEATURED_TOURNAMENT_OR_FILTER`) and
+`src/utils/arenaFeatured.js` (`FEATURED_TOURNAMENT`) — keep them in sync.
 
 ### Blindness & privacy
 - Owner identity is **never shown** while voting; the matchup uses an anonymized
@@ -62,7 +78,10 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
 ## Server-side contract (the bounded compute path)
 - **`POST /arena-pair`** → `{ pairing_id, token, team_a, team_b }`. Selects a comparable
   matchup (same platform, nearby Elo) from the eligible pool (opt-in → enrolled only),
-  excludes the caller's own teams, returns anonymized snapshots + a signed single-use token.
+  excludes the caller's own teams **at query level** (`or(user_id.is.null,user_id.neq.…)`
+  — filtering after the LIMIT starved the pool for heavy portfolios; TASK-300), tries the
+  featured-tournament pool first with full-pool fallback (TASK-301), returns anonymized
+  snapshots + a signed single-use token.
 - **`POST /arena-vote`** with `{ token, winner, guestId }` → validates the HMAC token
   (signature + expiry), binds it to the live caller, rejects self-votes, dedupes on
   `pairing_id` (unique), applies the Elo update (provisional higher-K for a team's first N

@@ -105,6 +105,46 @@ export async function getLeaderboard({ platform = 'all', tournament = 'all', lim
 }
 
 /**
+ * The viewer's highest-Elo team under the given filters (TASK-303). Returns null
+ * for guests or when no team matches the filters.
+ */
+export async function getMyBestArenaTeam({ platform = 'all', tournament = 'all' } = {}) {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  let q = supabase
+    .from('arena_teams')
+    .select('id, platform, elo, wins, losses, matches, provisional')
+    .eq('user_id', user.id)
+    .order('elo', { ascending: false })
+    .limit(1);
+  if (platform !== 'all') q = q.eq('platform', platform);
+  if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
+/**
+ * True rank of an Elo value under the given filters (TASK-303): teams strictly
+ * above it + 1, plus the total pool size. Two head-only count queries under the
+ * same RLS the leaderboard reads with — no schema change, works past the 200-row
+ * leaderboard page.
+ */
+export async function getArenaRank({ elo, platform = 'all', tournament = 'all' } = {}) {
+  if (!supabase || !Number.isFinite(elo)) return null;
+  const build = () => {
+    let q = supabase.from('arena_teams').select('id', { count: 'exact', head: true });
+    if (platform !== 'all') q = q.eq('platform', platform);
+    if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
+    return q;
+  };
+  const [above, total] = await Promise.all([build().gt('elo', elo), build()]);
+  if (above.error || total.error) throw (above.error || total.error);
+  return { rank: (above.count ?? 0) + 1, total: total.count ?? 0 };
+}
+
+/**
  * Auto-register the user's own + participant-captured board teams into the opt-out
  * pool (ADR-014 / TASK-288). Goes through the arena-register Edge Function because
  * board rows are service-role-only. Beta-gated server-side (403 if not allowlisted).
