@@ -106,6 +106,38 @@
   width: 100%;
 }
 
+/* Top row: balanced grid so the context bar stays centered while the session
+   scorecard (TASK-302) rides the right edge. */
+.topRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.topSpacer { min-width: 0; }
+.scoreStrip {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.statChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.statChip svg { color: var(--accent); }
+.statChip strong { color: var(--text-primary); font-weight: 800; }
+
 /* Context strip — platform + (shared) slate, the broadcast lower-third. */
 .contextBar {
   display: flex;
@@ -512,6 +544,94 @@
 }
 .skipBtn:hover:not(:disabled) { color: var(--text-primary); }
 .revealNote { color: var(--text-secondary); font-size: var(--text-sm); text-align: center; }
+
+/* Reveal footer (TASK-302): note + auto-advance countdown + Next. */
+.advanceRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.advanceTrack {
+  position: relative;
+  width: 140px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.advanceFill {
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-accent);
+  transform-origin: left;
+  animation: drainBar linear forwards;
+}
+@keyframes drainBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.nextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast), transform var(--duration-fast);
+}
+.nextBtn:hover { background: rgba(232, 191, 74, 0.22); transform: translateY(-1px); }
+
+/* Keyboard hints (desktop only). */
+.kbdRow {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.kbdRow kbd {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* Post-reveal scorecard stamp (TASK-302): the upset payoff. */
+.stamp {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-7deg);
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: var(--text-lg);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  padding: 5px 14px;
+  background: rgba(10, 14, 22, 0.7);
+  box-shadow: 0 0 28px var(--accent-glow);
+  animation: stampIn 320ms var(--ease-default) both;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes stampIn {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(-7deg) scale(1.8); }
+  to { opacity: 1; transform: translate(-50%, -50%) rotate(-7deg) scale(1); }
+}
 .linkBtn {
   background: none; border: none; color: var(--accent); cursor: pointer;
   font: inherit; padding: 0; text-decoration: underline;
@@ -715,6 +835,11 @@
   .playerList { max-height: none; }
   /* No sideways clash when the contenders are stacked vertically. */
   .sideCol:first-child, .sideCol:last-child { --clash-from: 0; }
+  /* Touch layout: no keyboard hints; scorecard centers under the context bar. */
+  .kbdRow { display: none; }
+  .topRow { grid-template-columns: 1fr; justify-items: center; }
+  .topSpacer { display: none; }
+  .scoreStrip { justify-content: center; }
 }
 
 @media (max-width: 599px) {
@@ -731,4 +856,7 @@
   .skelHead, .skelMeta, .skelRow, .skelBtn, .skelVs { animation: none; }
   .cardWin { transform: none; }
   .pickBtn:hover:not(:disabled) { transform: none; }
+  .stamp { animation: none; }
+  .advanceFill { animation: none; transform: scaleX(1); }
+  .nextBtn:hover { transform: none; }
 }

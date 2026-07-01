@@ -5,7 +5,7 @@
 // reveal window so advancing feels instant; a skeleton (not a spinner) covers cold loads.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Swords, Trophy, RefreshCw, ArrowRight } from 'lucide-react';
+import { Swords, Trophy, RefreshCw, ArrowRight, Gavel, Zap } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPairing, submitVote } from '../../utils/arenaClient';
 import { enrichSnapshotCLV } from '../../utils/arenaSnapshot';
@@ -14,7 +14,19 @@ import ArenaRosterCard from './ArenaRosterCard';
 import ArenaTape from './ArenaTape';
 import css from '../Arena.module.css';
 
-const REVEAL_MS = 2000;
+const REVEAL_MS = 1500;
+
+// Session scorecard (TASK-302): votes judged + upset picks this browser session.
+// Momentum feedback only — the durable record lives server-side in arena_matches.
+const SESSION_STATS_KEY = 'bbe_arena_session_stats';
+
+function readSessionStats() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SESSION_STATS_KEY));
+    if (s && Number.isFinite(s.judged) && Number.isFinite(s.upsets)) return s;
+  } catch { /* fresh session */ }
+  return { judged: 0, upsets: 0 };
+}
 
 function platformLabel(platform) {
   return platform === 'draftkings' ? 'DraftKings' : 'Underdog';
@@ -72,6 +84,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup }) {
   const [pairing, setPairing] = useState(null);
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [stats, setStats] = useState(readSessionStats);
   const advanceTimer = useRef(null);
   const nextRef = useRef(null);        // a prefetched pairing, ready for instant advance
   const prefetching = useRef(false);
@@ -125,7 +138,18 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup }) {
     setSubmitting(true);
     try {
       const data = await submitVote({ token: pairing.token, winner });
-      setResult({ winner, ...data });
+      // Upset = the picked team carried the LOWER pre-vote Elo. Ratings only come
+      // back with the vote response, so blindness holds until after the pick.
+      const pickedBefore = winner === 'a' ? data?.team_a?.before : data?.team_b?.before;
+      const otherBefore = winner === 'a' ? data?.team_b?.before : data?.team_a?.before;
+      const upset = Number.isFinite(pickedBefore) && Number.isFinite(otherBefore) &&
+        pickedBefore < otherBefore;
+      setResult({ winner, upset, ...data });
+      setStats((s) => {
+        const next = { judged: s.judged + 1, upsets: s.upsets + (upset ? 1 : 0) };
+        try { sessionStorage.setItem(SESSION_STATS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+        return next;
+      });
       setStatus('revealed');
       advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
     } catch (e) {
@@ -140,6 +164,25 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup }) {
       setSubmitting(false);
     }
   }, [submitting, status, pairing, fetchNext]);
+
+  // Keyboard voting (TASK-302): ← picks red/left, → picks blue/right, S/↓ skips,
+  // Space/Enter advances during the reveal. Inert in every other state.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
+      if (status === 'voting' && !submitting) {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); vote('a'); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); vote('b'); }
+        else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') { e.preventDefault(); fetchNext(); }
+      } else if (status === 'revealed') {
+        if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); fetchNext(); }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [status, submitting, vote, fetchNext]);
 
   // ── Non-matchup states ──────────────────────────────────────────────────
   if (status === 'loading') return <MatchupSkeleton />;
@@ -197,7 +240,18 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup }) {
 
   return (
     <div className={css.arena}>
-      <ContextBar pairing={pairing} />
+      <div className={css.topRow}>
+        <span className={css.topSpacer} aria-hidden="true" />
+        <ContextBar pairing={pairing} />
+        <div className={css.scoreStrip} aria-label="Session scorecard">
+          <span className={css.statChip} title="Matchups you've judged this session">
+            <Gavel size={12} /> <strong>{stats.judged}</strong> judged
+          </span>
+          <span className={css.statChip} title="Times you picked the lower-rated team">
+            <Zap size={12} /> <strong>{stats.upsets}</strong> upsets
+          </span>
+        </div>
+      </div>
 
       <div className={css.matchup} key={pairing.pairing_id}>
         <div className={css.sideCol}>
@@ -207,6 +261,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup }) {
             cornerLabel="Red Corner"
             outcome={outcome('a')}
             delta={revealed ? result?.team_a?.delta : null}
+            stamp={revealed && result?.upset && result?.winner === 'a' ? 'Upset' : null}
           />
           <button
             className={`${css.pickBtn} ${css.pickRed}`}
@@ -228,6 +283,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup }) {
             cornerLabel="Blue Corner"
             outcome={outcome('b')}
             delta={revealed ? result?.team_b?.delta : null}
+            stamp={revealed && result?.upset && result?.winner === 'b' ? 'Upset' : null}
           />
           <button
             className={`${css.pickBtn} ${css.pickBlue}`}
@@ -244,14 +300,33 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup }) {
           <button className={css.skipBtn} onClick={fetchNext} disabled={submitting}>
             Skip <ArrowRight size={15} />
           </button>
-        ) : guestCapped ? (
-          <p className={css.revealNote}>
-            That’s your last counted guest vote — keep voting freely, but new picks no longer move the rankings.
-            {onGoToMyTeams && <> <button className={css.linkBtn} onClick={onGoToMyTeams}>Enter your own teams</button></>}
-          </p>
         ) : (
-          <p className={css.revealNote}>Vote counted — next up.</p>
+          <div className={css.advanceRow}>
+            {guestCapped ? (
+              <p className={css.revealNote}>
+                That’s your last counted guest vote — keep voting freely, but new picks no longer move the rankings.
+                {onGoToMyTeams && <> <button className={css.linkBtn} onClick={onGoToMyTeams}>Enter your own teams</button></>}
+              </p>
+            ) : (
+              <p className={css.revealNote}>
+                {result?.upset ? 'Upset pick — the ratings had it the other way.' : 'Vote counted — next up.'}
+              </p>
+            )}
+            <span className={css.advanceTrack}>
+              <span className={css.advanceFill} style={{ animationDuration: `${REVEAL_MS}ms` }} />
+            </span>
+            <button className={css.nextBtn} onClick={fetchNext}>
+              Next <ArrowRight size={14} />
+            </button>
+          </div>
         )}
+      </div>
+
+      <div className={css.kbdRow} aria-hidden="true">
+        <span><kbd>←</kbd> Pick Red</span>
+        <span>Pick Blue <kbd>→</kbd></span>
+        <span><kbd>S</kbd> Skip</span>
+        <span><kbd>Space</kbd> Next</span>
       </div>
     </div>
   );
