@@ -159,6 +159,19 @@ export function inMemoryRateLimit(key: string, limit: number, windowMs: number):
   return true; // allowed
 }
 
+// Order-independent roster fingerprint: sorted, normalized player names joined
+// with '|'. PINNED to playerNameKey in best-ball-manager/src/utils/arenaSnapshot.js
+// (Deno cannot import the Vite module) — the two must stay byte-identical, since
+// claim-on-sync (ADR-016) matches client-built snapshots against stored ones.
+export function playerNameKey(players: unknown): string {
+  const arr = Array.isArray(players) ? players : [];
+  return arr
+    .map((p) => String((p as { name?: unknown })?.name ?? "").trim().replace(/\s+/g, " ").toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join("|");
+}
+
 // ---------------------------------------------------------------------------
 // Private-beta gate (ADR-015). While arena_config.beta_mode is true, every Arena
 // surface is restricted to allowlisted accounts; guests are not allowed. The

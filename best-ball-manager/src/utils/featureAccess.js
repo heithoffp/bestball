@@ -10,8 +10,9 @@ const FEATURE_ACCESS = {
   rankings:     'pro',
   combo:        'pro',
   construction: 'pro',
-  arena:        'guest',   // viewing + voting are free (viral top-of-funnel)
-  arena_enroll: 'pro',     // entering your own teams to be ranked is paid (ADR-013)
+  arena:        'guest',   // viewing + voting are free (viral top-of-funnel);
+                           // enrollment is universal + free under ADR-016 (the
+                           // per-team Pro 'arena_enroll' hook was retired)
 };
 
 const TIER_LEVEL = { guest: 0, free: 1, pro: 2 };

@@ -18,8 +18,11 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
 
 ## Monetization
 - **Viewing + voting are free and guest-accessible** — the viral top-of-funnel.
-- **Entering your own teams is a paid (Pro) feature**, gated via `featureAccess.js`
-  (`arena_enroll: 'pro'`; the tab itself is `arena: 'guest'`).
+- **Enrollment is universal and free** (ADR-016): every synced team is in the Arena by
+  default, so there is no paid entry action. The former per-team Pro hook
+  (`arena_enroll`) is retired; the tab itself remains `arena: 'guest'`. The Arena's
+  monetization funnel must live elsewhere (e.g., advanced leaderboard analytics) —
+  open product follow-up from ADR-014/016.
 
 ## User-Facing Behavior
 
@@ -40,9 +43,11 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
   get a **your-team banner** with true rank + percentile computed by server count
   queries (correct beyond the fetched 200-row page) and a "Find my team"
   scroll-and-flash action (TASK-303). Rows expand to the full roster card.
-- **My Teams** — the Pro enrollment panel: the user's synced teams with an enter/withdraw
-  toggle, plus each entered team's hidden Elo and record. Guests see a sign-in prompt;
-  non-Pro users see an Upgrade-to-Pro CTA.
+- **My Teams** — the user's synced teams as **read-only standings** (each team's hidden
+  Elo, W–L, provisional badge) plus the single **account-level enrollment switch**
+  (ADR-016): "Leave the Arena" removes ALL of the user's teams from the pool +
+  leaderboard, "Rejoin the Arena" returns them; there is no per-team selection, and
+  ratings are kept while unenrolled. Guests see a sign-in prompt.
 
 ### Featured tournament (TASK-301)
 Pairing tries a **featured-tournament pool** first (constant pattern matched against
@@ -58,10 +63,15 @@ scoping never creates an artificial "No matchups yet". The featured pattern live
 - A voter is never shown their own teams (excluded at pairing time).
 - On the leaderboard, only the **viewer's own** rows are flagged; no other user's identity
   is exposed (`user_id` is used only for the self-match check, never rendered).
-- **Opt-in by default**: a team enters the pool + leaderboard only when its owner enrolls
-  it (explicit consent to public ranking). The eligibility mode is a single config flag
-  (`arena_eligibility_mode`) so a future opt-out mode needs no schema change (ToS update +
-  its own review required — out of scope for v1).
+- **Opt-out, full-database pool** (ADR-014 → ADR-016): every roster stored in the
+  database is in the pool + leaderboard by default — the user's own synced teams
+  (`extension_entries`) and ALL captured board teams (`draft_boards_admin`, both
+  `'extension'` and `'admin_scraper'` sources; ADR-014's guardrail #3 is retired).
+  Publication is identity-free (guardrail #1) and the escape hatches are the
+  account-level enrollment switch (owners) and the takedown path (non-users,
+  TASK-290 — launch-blocking). During the private beta (ADR-015) all of this is
+  visible only to allowlisted accounts. The old `arena_eligibility_mode` flag is
+  retired in place.
 
 ### Visual treatment
 - Cohesive with the navy/gold dashboard, with a "scoreboard" personality: JetBrains Mono
@@ -77,11 +87,21 @@ scoping never creates an artificial "No matchups yet". The featured pattern live
 
 ## Server-side contract (the bounded compute path)
 - **`POST /arena-pair`** → `{ pairing_id, token, team_a, team_b }`. Selects a comparable
-  matchup (same platform, nearby Elo) from the eligible pool (opt-in → enrolled only),
-  excludes the caller's own teams **at query level** (`or(user_id.is.null,user_id.neq.…)`
-  — filtering after the LIMIT starved the pool for heavy portfolios; TASK-300), tries the
-  featured-tournament pool first with full-pool fallback (TASK-301), returns anonymized
-  snapshots + a signed single-use token.
+  matchup (same platform, nearby Elo) from the pool (`enrolled = true` always — the
+  materialized state of the account-level switch, ADR-016), excludes the caller's own
+  teams **at query level** (`or(user_id.is.null,user_id.neq.…)` — filtering after the
+  LIMIT starved the pool for heavy portfolios; TASK-300), tries the featured-tournament
+  pool first with full-pool fallback (TASK-301), returns anonymized snapshots + a signed
+  single-use token.
+- **`POST /arena-register`** with `{ ownedTeams, boardTeams }` →
+  `{ ownedWritten, ownedClaimed, boardWritten, boardRejected }`. Auto-registration
+  ingestion (ADR-014/016), called once per session on Arena load: owned teams are
+  insert-new-only under the caller's `arena_user_prefs.enrolled` switch; a new owned
+  team that matches an existing ownerless board row (exact `board_entry_ref`, else
+  per-draft roster fingerprint via `playerNameKey`) **claims** it — the row converts
+  to `source='owned'` keeping its Elo history (`ownedClaimed`). Board teams register
+  when their `draft_id` exists in `draft_boards_admin` (any source — guardrail #3
+  retired); fabricated draft ids are rejected (`boardRejected`).
 - **`POST /arena-vote`** with `{ token, winner, guestId }` → validates the HMAC token
   (signature + expiry), binds it to the live caller, rejects self-votes, dedupes on
   `pairing_id` (unique), applies the Elo update (provisional higher-K for a team's first N
@@ -104,19 +124,36 @@ Standard Elo, server-computed. `expected = 1/(1+10^((opp−self)/400))`;
 - Per-IP and durable per-voter **rate limiting**; structured anomaly/volume logging.
 
 ## Computations & Data Dependencies
-**Arena props:** `rosterData`, `helpOpen`, `onHelpToggle` (My Teams builds enrollable
-teams from `rosterData`; the snapshot is built client-side at enroll time and frozen).
+**Arena props:** `rosterData`, `helpOpen`, `onHelpToggle` (My Teams builds team
+standings from `rosterData`; snapshots are built at registration time and frozen —
+insert-new-only — with ADP/CLV enriched live at display time via `enrichSnapshotCLV`).
 
-**Tables (migration `011_create_arena_schema.sql`):** `arena_teams` (anonymized snapshot +
-hidden Elo standings; rating columns `service_role`-write only via column-scoped grants),
-`arena_matches` (one row per recorded vote; `pairing_id` unique), `arena_config` (singleton
-`arena_eligibility_mode`, default `opt_in`).
+**Pool composition (ADR-016):** the pool is the FULL database, populated two ways:
+- **Auto-registration** — once per session on Arena load, the client posts the user's
+  own teams + their pods' board teams to `arena-register` (claim-on-sync converts
+  matching board rows instead of duplicating).
+- **Backfill** — `scripts/arena-backfill-pool.mjs` (service-role, dry-run by default,
+  re-runnable) enrolls every `draft_boards_admin` seat (both sources) and every
+  `extension_entries` roster, with three-layer dedup (owned key, board ref, roster
+  fingerprint), claim, and owned/board merge. It reuses `arenaSnapshot.js` directly
+  (the module chain is Node-loadable on purpose) and must run only AFTER claim-on-sync
+  is deployed. Requires `ARENA_TOKEN_SECRET` matching the Edge Function secret.
+
+**Claim lifecycle:** a roster can enter the pool as an ownerless board row before its
+owner ever signs up; when that owner syncs, claim-on-sync hands them the row — Elo,
+record, and all. Unenrolling later hides the row but keeps the rating history.
+
+**Tables (migrations `011`–`013`):** `arena_teams` (anonymized snapshot + hidden Elo
+standings; `source` 'owned'|'board'; rating columns `service_role`-write only via
+column-scoped grants), `arena_matches` (one row per recorded vote; `pairing_id`
+unique), `arena_config` (beta gate; `arena_eligibility_mode` retired in place),
+`arena_user_prefs` (the account-level enrollment switch, missing row = enrolled).
 
 ## Key Files
 - `src/components/Arena.jsx` — container + sub-nav + contextual help
 - `src/components/arena/ArenaVote.jsx` — blind voting + reveal + states
 - `src/components/arena/ArenaLeaderboard.jsx` — ranked leaderboard + filter + your-rank
-- `src/components/arena/ArenaMyTeams.jsx` — enrollment + paid gating
+- `src/components/arena/ArenaMyTeams.jsx` — standings + account-level enrollment switch
 - `src/components/arena/ArenaRosterCard.jsx` — anonymized roster card (shared)
 - `src/components/Arena.module.css` — scoped styles
 - `src/utils/arenaClient.js` — Edge Function calls + leaderboard/enroll reads + guest id
@@ -137,5 +174,7 @@ hidden Elo standings; rating columns `service_role`-write only via column-scoped
   `docs/plans/TASK-281.md`.
 
 ## Related
-- ADR-013 (the pivot); ADR-001 (Edge Function pattern, extended here); ADR-002 (Mirror-Not-
-  Advisor, scope clarified). Epic EPIC-07; tasks TASK-280…286.
+- ADR-013 (the pivot); ADR-014 (opt-out + board teams); ADR-015 (private beta);
+  ADR-016 (full-database pool, claim-on-sync, account-level enrollment); ADR-001
+  (Edge Function pattern, extended here); ADR-002 (Mirror-Not-Advisor, scope
+  clarified). Epic EPIC-07; tasks TASK-280…286, TASK-288…303, TASK-304…306.

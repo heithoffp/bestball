@@ -170,12 +170,12 @@
 ### FEAT-024: Arena Backend & Integrity
 **Status:** Not Started
 **Description:** Server-side foundation for the Arena per ADR-013 — Supabase data model (team eligibility/enrollment + hidden Elo, vote/match records, arena_eligibility_mode config flag), tamper-proof Elo (service_role-write only), and two Edge Functions (signed single-use pairing tokens + comparable matchmaking; vote ingestion with dedupe, self-vote exclusion, and provisional-K Elo update). Includes anti-abuse hardening (rate limiting, token replay protection) and the guest-vote weighting decision.
-**Tasks:** TASK-280, TASK-281, TASK-285
+**Tasks:** TASK-280, TASK-281, TASK-285, TASK-305, TASK-306
 
 ### FEAT-025: Arena Experience
 **Status:** Not Started
 **Description:** The user-facing Arena per ADR-013 — the blind head-to-head voting screen (new /arena route/tab, arenaClient, reuse RosterViewer display), the opt-in public leaderboard (Elo rank, W/L, win%, movement, platform filter, "your rank"), and the enroll/unenroll toggle on a user's own rosters gated to the paid tier (viewing + voting free).
-**Tasks:** TASK-282, TASK-283, TASK-284, TASK-297, TASK-298
+**Tasks:** TASK-282, TASK-283, TASK-284, TASK-297, TASK-298, TASK-304
 
 ### FEAT-026: Arena Product Positioning
 **Status:** Not Started

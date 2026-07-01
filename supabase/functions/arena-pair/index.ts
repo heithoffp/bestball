@@ -65,14 +65,6 @@ Deno.serve(async (req) => {
   const { voterId, isGuest } = gate;
   const guestId = isGuest ? (body.guestId ?? null) : null;
 
-  // Eligibility mode governs the pool. opt_in (launch default): enrolled teams only.
-  const { data: cfg } = await supabaseAdmin
-    .from("arena_config")
-    .select("arena_eligibility_mode")
-    .eq("id", true)
-    .single();
-  const mode = cfg?.arena_eligibility_mode ?? "opt_in";
-
   // Pull a bounded eligible sample, biased toward teams with the FEWEST matches so
   // provisional teams converge quickly. The caller's own teams are excluded IN THE
   // QUERY — filtering after the LIMIT starves the pool when the caller owns most of
@@ -85,7 +77,11 @@ Deno.serve(async (req) => {
       .select("id, user_id, platform, elo, matches, display_snapshot")
       .order("matches", { ascending: true })
       .limit(POOL_SAMPLE_LIMIT);
-    if (mode === "opt_in") query = query.eq("enrolled", true);
+    // ADR-016: enrollment is account-level and `enrolled` is its materialized
+    // per-row state, so the pool ALWAYS respects it. The old arena_config
+    // arena_eligibility_mode flag is retired in place — the pool is opt-out
+    // (everything in the database) minus unenrolled accounts.
+    query = query.eq("enrolled", true);
     if (voterId) query = query.or(`user_id.is.null,user_id.neq.${voterId}`);
     if (featuredOnly) query = query.or(FEATURED_TOURNAMENT_OR_FILTER);
 

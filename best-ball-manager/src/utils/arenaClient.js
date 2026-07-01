@@ -85,9 +85,11 @@ export async function submitVote({ token, winner }) {
 }
 
 /**
- * Leaderboard — teams ranked by Elo. Under opt-out (ADR-014) every registered team
- * is shown by default, so there is no `enrolled` filter; visibility is governed by
- * RLS (during the private beta, allowlisted accounts only — ADR-015).
+ * Leaderboard — teams ranked by Elo. Under opt-out (ADR-014/016) every registered
+ * team is shown by default; `enrolled=false` marks accounts that flipped the
+ * account-level switch off (ADR-016), so those rows are excluded everywhere.
+ * Visibility is otherwise governed by RLS (during the private beta, allowlisted
+ * accounts only — ADR-015).
  * @param {{platform?: 'all'|'underdog'|'draftkings', tournament?: 'featured'|'all', limit?: number}} opts
  */
 export async function getLeaderboard({ platform = 'all', tournament = 'all', limit = 200 } = {}) {
@@ -95,6 +97,7 @@ export async function getLeaderboard({ platform = 'all', tournament = 'all', lim
   let q = supabase
     .from('arena_teams')
     .select('id, platform, elo, wins, losses, matches, provisional, display_snapshot, user_id')
+    .eq('enrolled', true)
     .order('elo', { ascending: false })
     .limit(limit);
   if (platform !== 'all') q = q.eq('platform', platform);
@@ -116,6 +119,7 @@ export async function getMyBestArenaTeam({ platform = 'all', tournament = 'all' 
     .from('arena_teams')
     .select('id, platform, elo, wins, losses, matches, provisional')
     .eq('user_id', user.id)
+    .eq('enrolled', true)
     .order('elo', { ascending: false })
     .limit(1);
   if (platform !== 'all') q = q.eq('platform', platform);
@@ -134,7 +138,7 @@ export async function getMyBestArenaTeam({ platform = 'all', tournament = 'all' 
 export async function getArenaRank({ elo, platform = 'all', tournament = 'all' } = {}) {
   if (!supabase || !Number.isFinite(elo)) return null;
   const build = () => {
-    let q = supabase.from('arena_teams').select('id', { count: 'exact', head: true });
+    let q = supabase.from('arena_teams').select('id', { count: 'exact', head: true }).eq('enrolled', true);
     if (platform !== 'all') q = q.eq('platform', platform);
     if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
     return q;
@@ -209,45 +213,58 @@ export async function getMyArenaTeams() {
 }
 
 /**
- * Enroll (or re-enroll + refresh snapshot) one of the user's own teams.
- * Uses explicit select-then-insert/update (NOT upsert) to respect the
- * column-scoped grants: INSERT may set only (user_id, entry_id, platform,
- * display_snapshot, enrolled); UPDATE only (display_snapshot, enrolled, updated_at).
+ * The user's account-level Arena enrollment state (ADR-016). A missing pref row
+ * means enrolled — being in the Arena is the opt-out default.
  */
-export async function enrollTeam({ entryId, platform, snapshot }) {
+export async function getArenaEnrollment() {
+  if (!supabase) return true;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return true;
+  const { data, error } = await supabase
+    .from('arena_user_prefs')
+    .select('enrolled')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.enrolled ?? true;
+}
+
+/**
+ * Flip the account-level enrollment switch (ADR-016): persist the pref, then bulk-
+ * apply it to every one of the user's arena_teams rows (RLS confines the update to
+ * the caller's own source='owned' rows — board rows are untouchable). Uses explicit
+ * select-then-insert/update (NOT upsert) to respect the column-scoped grants:
+ * INSERT may set only (user_id, enrolled); UPDATE only (enrolled, updated_at).
+ * Elo history is kept either way — unenrolling just leaves the pool + leaderboard.
+ */
+export async function setArenaEnrollment(enrolled) {
   if (!supabase) throw new Error('unavailable');
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('not_authenticated');
 
   const { data: existing, error: selErr } = await supabase
-    .from('arena_teams')
-    .select('id')
-    .match({ user_id: user.id, entry_id: entryId, platform })
+    .from('arena_user_prefs')
+    .select('user_id')
+    .eq('user_id', user.id)
     .maybeSingle();
   if (selErr) throw selErr;
 
   if (existing) {
     const { error } = await supabase
-      .from('arena_teams')
-      .update({ display_snapshot: snapshot, enrolled: true, updated_at: new Date().toISOString() })
-      .eq('id', existing.id);
+      .from('arena_user_prefs')
+      .update({ enrolled, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id);
     if (error) throw error;
   } else {
     const { error } = await supabase
-      .from('arena_teams')
-      .insert({ user_id: user.id, entry_id: entryId, platform, display_snapshot: snapshot, enrolled: true });
+      .from('arena_user_prefs')
+      .insert({ user_id: user.id, enrolled });
     if (error) throw error;
   }
-}
 
-/** Unenroll — removes the team from the pool + leaderboard but keeps its Elo history. */
-export async function unenrollTeam({ entryId, platform }) {
-  if (!supabase) throw new Error('unavailable');
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('not_authenticated');
-  const { error } = await supabase
+  const { error: teamsErr } = await supabase
     .from('arena_teams')
-    .update({ enrolled: false, updated_at: new Date().toISOString() })
-    .match({ user_id: user.id, entry_id: entryId, platform });
-  if (error) throw error;
+    .update({ enrolled, updated_at: new Date().toISOString() })
+    .eq('user_id', user.id);
+  if (teamsErr) throw teamsErr;
 }
