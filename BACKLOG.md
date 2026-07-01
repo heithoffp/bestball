@@ -40,7 +40,7 @@
 | TASK-280 | Arena: data model & Supabase migrations | In Progress | P1 | [Plan](docs/plans/TASK-280.md) | No | 2026-06-26 | 2026-06-26 |
 | TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | In Progress | P1 | [Plan](docs/plans/TASK-281.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | In Progress | P1 | [Plan](docs/plans/TASK-282.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
-| TASK-300 | Arena: fix pairing pool starvation (own-team exclusion at query level) | Todo | P1 | [Plan](docs/plans/TASK-300.md) -- Draft | No |
+| TASK-300 | Arena: fix pairing pool starvation (own-team exclusion at query level) | In Progress | P1 | [Plan](docs/plans/TASK-300.md) -- Draft | No |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No | 2026-04-08 | 2026-04-08 |

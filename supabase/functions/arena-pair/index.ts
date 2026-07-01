@@ -73,13 +73,18 @@ Deno.serve(async (req) => {
   const mode = cfg?.arena_eligibility_mode ?? "opt_in";
 
   // Pull a bounded eligible sample, biased toward teams with the FEWEST matches so
-  // provisional teams converge quickly.
+  // provisional teams converge quickly. The caller's own teams are excluded IN THE
+  // QUERY — filtering after the LIMIT starves the pool when the caller owns most of
+  // the low-match sample (their own never-voted teams pin matches=0 and crowd out
+  // every votable team). A plain `.neq("user_id", voterId)` would also drop board
+  // rows (`NULL <> x` is NULL in Postgres), so the filter explicitly keeps NULLs.
   let query = supabaseAdmin
     .from("arena_teams")
     .select("id, user_id, platform, elo, matches, display_snapshot")
     .order("matches", { ascending: true })
     .limit(POOL_SAMPLE_LIMIT);
   if (mode === "opt_in") query = query.eq("enrolled", true);
+  if (voterId) query = query.or(`user_id.is.null,user_id.neq.${voterId}`);
 
   const { data: pool, error } = await query;
   if (error) {
@@ -87,10 +92,8 @@ Deno.serve(async (req) => {
     return json({ error: "pool_query_failed" }, 500);
   }
 
-  // Exclude the caller's OWN teams in memory. A SQL `.neq("user_id", voterId)`
-  // would drop board (NULL user_id) rows too — Postgres `<>` is NULL for NULLs —
-  // which would hide every board team from any logged-in voter. Filtering here
-  // keeps ownerless board teams in the pool while still removing the caller's own.
+  // Defense-in-depth: re-apply the own-team exclusion in memory (keeps ownerless
+  // board teams — only rows owned by the caller are removed).
   const teams = ((pool ?? []) as PoolTeam[]).filter(
     (t) => !voterId || t.user_id !== voterId,
   );
