@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: f5bb972 (verified shipped in 2026-07-02 launch review) -->
 # TASK-305: Arena registration rework — retire guardrail #3 + claim-on-sync (ADR-016)
 
 **Status:** Approved (developer, 2026-07-01)

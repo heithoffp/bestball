@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: f5bb972 (verified shipped in 2026-07-02 launch review) -->
 # TASK-304: Account-level Arena enrollment (ADR-016)
 
 **Status:** Approved (developer, 2026-07-01)

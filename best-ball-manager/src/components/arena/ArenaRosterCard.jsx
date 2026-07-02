@@ -280,7 +280,7 @@ export default function ArenaRosterCard({
       {outcome && (rating || delta != null) && (() => {
         const d = Math.round(rating ? rating.delta : delta);
         return (
-          <div className={`${css.deltaRibbon} ${d >= 0 ? css.deltaUp : css.deltaDown}`}>
+          <div className={`${css.deltaRibbon} ${d > 0 ? css.deltaUp : d < 0 ? css.deltaDown : ''}`}>
             {rating ? (
               <>
                 <RatingTicker before={rating.before} after={rating.after} />
@@ -290,7 +290,7 @@ export default function ArenaRosterCard({
                 </span>
               </>
             ) : (
-              <>{d >= 0 ? '+' : '−'}{Math.abs(d)} Elo</>
+              <>{d === 0 ? '±0' : `${d > 0 ? '+' : '−'}${Math.abs(d)}`} Elo</>
             )}
           </div>
         );

@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: f5bb972 (verified shipped in 2026-07-02 launch review) -->
 # TASK-299: Wire Eliminator ADP into roster enrichment (eliminator_adp.csv for Eliminator slate)
 
 **Status:** Pending Approval

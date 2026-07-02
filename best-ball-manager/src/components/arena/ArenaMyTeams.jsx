@@ -42,6 +42,7 @@ export default function ArenaMyTeams({ rosterData, masterPlayers }) {
       rows.forEach((r) => { map[keyOf(r.entry_id, r.platform)] = r; });
       setArenaRows(map);
       setEnrolled(isEnrolled);
+      setError(null);
     } catch {
       setError('Couldn’t load your Arena status.');
     }

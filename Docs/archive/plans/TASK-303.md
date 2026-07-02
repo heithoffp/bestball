@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: f5bb972 (verified shipped in 2026-07-02 launch review) -->
 # TASK-303: Arena: leaderboard Elo visualization + your-team placement upgrade
 
 **Status:** Approved (Level 3 auto-executed)

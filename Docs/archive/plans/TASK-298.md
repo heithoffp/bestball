@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: f5bb972 (verified shipped in 2026-07-02 launch review) -->
 # TASK-298: Arena player headshots (external image source)
 
 **Status:** Draft

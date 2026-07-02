@@ -30,6 +30,15 @@ const MIN_REVEAL_WITH_DATA_MS = 1400;
 // Momentum feedback only — the durable record lives server-side in arena_matches.
 const SESSION_STATS_KEY = 'bbe_arena_session_stats';
 
+// Guest vote cap: once the server stops counting this guest's votes, the notice
+// must stand for the rest of the session — a per-reveal flash can be missed
+// entirely when a slow response lands after the user advanced.
+const GUEST_CAP_KEY = 'bbe_arena_guest_capped';
+
+function readGuestCapped() {
+  try { return sessionStorage.getItem(GUEST_CAP_KEY) === '1'; } catch { return false; }
+}
+
 // Scouting-lens preferences persist across sessions — a voter who scouts by
 // projections shouldn't have to re-flip the lens every visit.
 const LENS_KEY = 'bbe_arena_lens';
@@ -104,6 +113,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   // 'revealed' upgrades them with the server's Elo payload when it arrives.
   const [pick, setPick] = useState(null);
   const [stats, setStats] = useState(readSessionStats);
+  const [capReached, setCapReached] = useState(readGuestCapped);
   const [lens, setLens] = useState(readLens);
   const [showStacks, setShowStacks] = useState(readShowStacks);
   // Mobile deck (TASK-308): which contender card is snapped into view.
@@ -187,6 +197,12 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
         try { sessionStorage.setItem(SESSION_STATS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
         return next;
       });
+      // Record the guest cap BEFORE the stale-response guard: a slow capped
+      // response must still flip the standing notice even when its reveal is dropped.
+      if (isGuest && data?.counted === false) {
+        setCapReached(true);
+        try { sessionStorage.setItem(GUEST_CAP_KEY, '1'); } catch { /* ignore */ }
+      }
       // The user may have hit Next before the vote resolved — the vote still
       // counted (stats above), but don't let a stale reveal clobber the new matchup.
       if (pairingIdRef.current !== pid) return;
@@ -210,7 +226,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
         setStatus('error');
       }
     }
-  }, [status, pairing, fetchNext]);
+  }, [status, pairing, fetchNext, isGuest]);
 
   // Scouting lens (this pass): which stat rides each roster row (CLV vs projected
   // points), plus the team-color stack layer. Both persist across sessions.
@@ -255,9 +271,10 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
 
   // Reveal payoff on mobile: bring the picked card into view so its stamp and
   // (once the server responds) Elo delta are actually visible. Fires on the
-  // optimistic pick, so it's immediate.
+  // optimistic pick only — re-firing on the picked→revealed transition would
+  // yank the deck back if the user swiped to the other card mid-reveal.
   useEffect(() => {
-    if ((status === 'picked' || status === 'revealed') && pick && !isDesktop) {
+    if (status === 'picked' && pick && !isDesktop) {
       scrollDeckTo(pick === 'a' ? 0 : 1);
     }
   }, [status, pick, isDesktop, scrollDeckTo]);
@@ -359,7 +376,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const showOutcome = revealed || status === 'picked';
   const pickedSide = result?.winner ?? pick;
   const outcome = (side) => (!showOutcome ? null : pickedSide === side ? 'win' : 'loss');
-  const guestCapped = revealed && result && result.counted === false && isGuest;
+  const guestCapped = isGuest && capReached;
 
   // Reveal payload per side: the before→after Elo roll (RatingTicker) and the
   // scorecard stamp. The winner is always stamped; an underdog pick upgrades the
@@ -380,8 +397,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
     <div className={css.advanceRow}>
       {guestCapped ? (
         <p className={css.revealNote}>
-          That’s your last counted guest vote — keep voting freely, but new picks no longer move the rankings.
-          {onGoToMyTeams && <> <button className={css.linkBtn} onClick={onGoToMyTeams}>Enter your own teams</button></>}
+          Guest voting limit reached — keep playing, but picks no longer move the ratings.
+          {onGoToMyTeams && <> <button className={css.linkBtn} onClick={onGoToMyTeams}>Sign in to enter your teams</button></>}
         </p>
       ) : (
         <p className={css.revealNote}>

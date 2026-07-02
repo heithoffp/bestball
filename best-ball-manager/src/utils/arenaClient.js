@@ -90,9 +90,11 @@ export async function submitVote({ token, winner }) {
  * account-level switch off (ADR-016), so those rows are excluded everywhere.
  * Visibility is otherwise governed by RLS (during the private beta, allowlisted
  * accounts only — ADR-015).
+ * Defaults to the featured (BBM7) scope while that's the whole presentation — a
+ * call site must opt IN to the full pool, not accidentally fall into it.
  * @param {{platform?: 'all'|'underdog'|'draftkings', tournament?: 'featured'|'all', limit?: number}} opts
  */
-export async function getLeaderboard({ platform = 'all', tournament = 'all', limit = 200 } = {}) {
+export async function getLeaderboard({ platform = 'all', tournament = 'featured', limit = 200 } = {}) {
   if (!supabase) return [];
   let q = supabase
     .from('arena_teams')
@@ -111,7 +113,7 @@ export async function getLeaderboard({ platform = 'all', tournament = 'all', lim
  * The viewer's highest-Elo team under the given filters (TASK-303). Returns null
  * for guests or when no team matches the filters.
  */
-export async function getMyBestArenaTeam({ platform = 'all', tournament = 'all' } = {}) {
+export async function getMyBestArenaTeam({ platform = 'all', tournament = 'featured' } = {}) {
   if (!supabase) return null;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -135,7 +137,7 @@ export async function getMyBestArenaTeam({ platform = 'all', tournament = 'all' 
  * same RLS the leaderboard reads with — no schema change, works past the 200-row
  * leaderboard page.
  */
-export async function getArenaRank({ elo, platform = 'all', tournament = 'all' } = {}) {
+export async function getArenaRank({ elo, platform = 'all', tournament = 'featured' } = {}) {
   if (!supabase || !Number.isFinite(elo)) return null;
   const build = () => {
     let q = supabase.from('arena_teams').select('id', { count: 'exact', head: true }).eq('enrolled', true);

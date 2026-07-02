@@ -181,11 +181,15 @@ export default function ArenaLeaderboard({ adpLookup }) {
       {rows === null ? (
         <div className={css.stateBox}><RefreshCw size={26} className={css.stateSpin} /><p>Loading rankings…</p></div>
       ) : rows.length === 0 ? (
-        <div className={css.stateBox}>
-          <Trophy size={32} className={css.stateIcon} />
-          <h3>No ranked teams yet</h3>
-          <p>Once teams are entered and votes come in, the leaderboard fills in here.</p>
-        </div>
+        // A failed fetch also lands here with rows=[] — show only the error note
+        // above, not a contradictory "no teams yet" message.
+        error ? null : (
+          <div className={css.stateBox}>
+            <Trophy size={32} className={css.stateIcon} />
+            <h3>No ranked teams yet</h3>
+            <p>Once teams are entered and votes come in, the leaderboard fills in here.</p>
+          </div>
+        )
       ) : (
         <>
           {rows.length >= 3 && (

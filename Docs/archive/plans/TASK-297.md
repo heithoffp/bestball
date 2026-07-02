@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: f5bb972 (verified shipped in 2026-07-02 launch review) -->
 # TASK-297: Arena 'Tale of the Tape' redesign + CLV + perf
 
 **Status:** Approved (developer pre-approved via /frontend-design session 2026-06-29)

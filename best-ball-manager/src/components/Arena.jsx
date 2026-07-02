@@ -35,7 +35,7 @@ function ArenaHelp({ onClose }) {
       <ul>
         <li><strong>Vote</strong> — two real Best Ball Mania VII teams, shown blind (no owners). Pick the one you’d rather have. Your vote nudges each team’s hidden Elo rating.</li>
         <li><strong>Blind &amp; fair</strong> — owner identity is never shown while voting, and you’ll never be shown your own teams.</li>
-        <li><strong>Free to play</strong> — anyone can vote. Entering your own teams to be ranked is a Pro feature.</li>
+        <li><strong>Free to play</strong> — anyone can vote. Your synced teams enter the Arena automatically; you can leave (and rejoin) any time from My Teams.</li>
         <li><strong>BBM7 season</strong> — the Arena runs on Best Ball Mania VII for now. More slates and platforms come later.</li>
       </ul>
     </div>

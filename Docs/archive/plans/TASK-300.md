@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: f5bb972 (verified shipped in 2026-07-02 launch review) -->
 # TASK-300: Arena: fix pairing pool starvation (own-team exclusion at query level)
 
 **Status:** Approved (Level 3 auto-executed)

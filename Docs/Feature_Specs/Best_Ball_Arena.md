@@ -141,7 +141,13 @@ surface gets it).
 - **No matchups yet** — the featured (BBM7) pool can't produce a pair (CTA to sync
   your teams).
 - **Rate limited** — friendly "slow down" with a retry.
-- **No ranked teams yet** — empty leaderboard.
+- **No ranked teams yet** — empty leaderboard (suppressed when the fetch failed — a
+  load error shows only the error note, never the contradictory empty state).
+- **Guest cap reached** — once the server stops counting a guest's votes
+  (`counted:false`), a standing notice rides the reveal footer for the rest of the
+  session ("keep playing, but picks no longer move the ratings" + sign-in CTA); it
+  persists via sessionStorage so a slow response landing after an advance still
+  surfaces it.
 
 ## Server-side contract (the bounded compute path)
 - **`POST /arena-pair`** → `{ pairing_id, token, team_a, team_b }`. Selects a comparable

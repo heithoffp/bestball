@@ -47,3 +47,19 @@ time). This task adds the rate-limit backstop against guest-id resets.
 ## Known v1 limitations / revisit (ADR-013)
 - In-memory IP limiter is per-isolate (not shared); durable cross-instance limiting would need a table or Redis. The durable per-voter `arena_matches` count is the real guard.
 - Guest cap + rate count are not transactional with the insert; a determined guest racing distinct pairings could exceed the cap slightly. Revisit (auth-only voting / reputation weighting) if abuse appears, per ADR-013.
+
+## 2026-07-02 launch-review findings — REOPENS this task before beta_mode=false
+The public-launch code review found the guest path insufficient once guests are real
+(both "durable" guards key on the client-invented `guestId`):
+1. **Rotating `guestId` resets everything.** The 5-counted-vote cap and the durable
+   20/min limit are keyed on `voter_guest_id`; a guest who mints a fresh random id per
+   pairing bypasses both. Only the per-isolate in-memory IP throttle remains — it
+   resets on cold start and is not shared across instances. Sustained public-leaderboard
+   Elo manipulation is feasible on day one.
+2. **Guest self-votes.** `arena-pair` excludes own teams only `if (voterId)` and
+   `arena-vote`'s self-vote check is likewise auth-only, so a team owner in a
+   logged-out tab can be paired with — and vote for — their own rosters.
+Direction to decide (this is ADR-013's "vote manipulation" revisit condition firing):
+key the durable cap/rate limit on a hashed IP stored per match (in addition to
+guestId), and/or require auth for *counted* votes while keeping guest voting
+frictionless-but-uncounted. Launch-gating alongside TASK-290/296/310.
