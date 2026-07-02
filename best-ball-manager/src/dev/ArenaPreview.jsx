@@ -199,20 +199,17 @@ export default function ArenaPreview() {
                 </div>
                 <div className={css.deck} ref={deckRef} onScroll={onDeckScroll} aria-label="Contender rosters">
                   <div className={css.deckItem}>
-                    <ArenaRosterCard snapshot={FIXTURE.a} corner="red" cornerLabel="Red Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} />
+                    <ArenaRosterCard snapshot={FIXTURE.a} corner="red" cornerLabel="Red Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} pickable onPick={() => (deckIndex === 0 ? undefined : scrollDeckTo(0))} />
                   </div>
                   <div className={css.deckItem}>
-                    <ArenaRosterCard snapshot={FIXTURE.b} corner="blue" cornerLabel="Blue Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} />
+                    <ArenaRosterCard snapshot={FIXTURE.b} corner="blue" cornerLabel="Blue Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} pickable onPick={() => (deckIndex === 1 ? undefined : scrollDeckTo(1))} />
                   </div>
                 </div>
               </div>
 
               <div className={css.pickDock}>
-                <div className={css.dockPicks}>
-                  <button className={`${css.pickBtn} ${css.pickRed}`}>Pick Red</button>
-                  <button className={`${css.pickBtn} ${css.pickBlue}`}>Pick Blue</button>
-                </div>
-                <div className={css.skipRow}>
+                <div className={css.dockRow}>
+                  <span className={css.dockHint}>Tap the roster you prefer</span>
                   <button className={css.skipBtn}>Skip <ArrowRight size={15} /></button>
                 </div>
               </div>

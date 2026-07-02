@@ -441,9 +441,11 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
         </>
       ) : (
         /* Mobile (TASK-308): tape up top for the at-a-glance comparison, then a
-           snap-scrolled contender deck (the other card's edge peeks in), a corner
-           toggle synced to the deck, and a sticky pick dock so voting never
-           requires scrolling. */
+           snap-scrolled contender deck (the other card's edge peeks in) and a
+           corner toggle synced to the deck. The card itself is the vote target
+           (tap to pick, like desktop); tapping the peeking card only snaps it
+           into view so a stray edge-tap can't cast a vote. A slim sticky dock
+           carries the tap hint + Skip. */
         <>
           <div className={css.mobileMatchup} key={pairing.pairing_id}>
             <div className={css.mobileTape}>
@@ -477,6 +479,9 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   lens={lens}
                   showStacks={showStacks}
                   maxProj={maxProj}
+                  pickable={!revealed && !submitting}
+                  picked={revealed && result?.winner === 'a'}
+                  onPick={() => (deckIndex === 0 ? vote('a') : scrollDeckTo(0))}
                 />
               </div>
               <div className={css.deckItem}>
@@ -490,6 +495,9 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   lens={lens}
                   showStacks={showStacks}
                   maxProj={maxProj}
+                  pickable={!revealed && !submitting}
+                  picked={revealed && result?.winner === 'b'}
+                  onPick={() => (deckIndex === 1 ? vote('b') : scrollDeckTo(1))}
                 />
               </div>
             </div>
@@ -497,29 +505,12 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
 
           <div className={css.pickDock}>
             {!revealed ? (
-              <>
-                <div className={css.dockPicks}>
-                  <button
-                    className={`${css.pickBtn} ${css.pickRed}`}
-                    onClick={() => vote('a')}
-                    disabled={submitting}
-                  >
-                    Pick Red
-                  </button>
-                  <button
-                    className={`${css.pickBtn} ${css.pickBlue}`}
-                    onClick={() => vote('b')}
-                    disabled={submitting}
-                  >
-                    Pick Blue
-                  </button>
-                </div>
-                <div className={css.skipRow}>
-                  <button className={css.skipBtn} onClick={fetchNext} disabled={submitting}>
-                    Skip <ArrowRight size={15} />
-                  </button>
-                </div>
-              </>
+              <div className={css.dockRow}>
+                <span className={css.dockHint}>Tap the roster you prefer</span>
+                <button className={css.skipBtn} onClick={fetchNext} disabled={submitting}>
+                  Skip <ArrowRight size={15} />
+                </button>
+              </div>
             ) : advanceContent}
           </div>
         </>

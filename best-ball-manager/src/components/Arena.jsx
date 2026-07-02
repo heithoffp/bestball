@@ -13,6 +13,7 @@ import ArenaVote from './arena/ArenaVote';
 import ArenaLeaderboard from './arena/ArenaLeaderboard';
 import ArenaMyTeams from './arena/ArenaMyTeams';
 import { useAuth } from '../contexts/AuthContext';
+import useMediaQuery from '../hooks/useMediaQuery';
 import { isArenaBetaUser } from '../utils/arenaBeta';
 import { canonicalName } from '../utils/helpers';
 import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
@@ -95,6 +96,10 @@ function useAutoRegister(user, rosterData, masterPlayers) {
 export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOpen, onHelpToggle }) {
   const [view, setView] = useState('vote');
   const { user } = useAuth();
+  // On mobile the toolbar moves INSIDE the scrolling .body so it scrolls away
+  // with the content instead of permanently eating vertical space; on desktop
+  // it stays pinned above as part of the app frame.
+  const { isDesktop } = useMediaQuery();
   useAutoRegister(user, rosterData, masterPlayers);
 
   // The viewer's own ADP, used to compute CLV at display time for every matchup —
@@ -113,29 +118,34 @@ export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOp
     };
   }, [adpByPlatform]);
 
+  const toolbar = (
+    <div className={css.toolbar}>
+      <div className={css.brand}>
+        <Swords size={18} />
+        <span>Best Ball Arena</span>
+      </div>
+      <nav className={css.subnav} aria-label="Arena sections">
+        {NAV.map(({ key, label }) => (
+          <button
+            key={key}
+            className={`${css.subnavBtn} ${view === key ? css.subnavActive : ''}`}
+            onClick={() => setView(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+
   return (
     <div className={css.root}>
-      <div className={css.toolbar}>
-        <div className={css.brand}>
-          <Swords size={18} />
-          <span>Best Ball Arena</span>
-        </div>
-        <nav className={css.subnav} aria-label="Arena sections">
-          {NAV.map(({ key, label }) => (
-            <button
-              key={key}
-              className={`${css.subnavBtn} ${view === key ? css.subnavActive : ''}`}
-              onClick={() => setView(key)}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      {isDesktop && toolbar}
 
       {helpOpen && <ArenaHelp onClose={onHelpToggle} />}
 
       <div className={css.body}>
+        {!isDesktop && toolbar}
         {view === 'vote' && <ArenaVote adpLookup={adpLookup} projLookup={projLookup} onGoToMyTeams={() => setView('myteams')} />}
         {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} />}
         {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} masterPlayers={masterPlayers} />}
