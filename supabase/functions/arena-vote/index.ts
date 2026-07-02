@@ -154,20 +154,25 @@ Deno.serve(async (req) => {
   const loserTeam = winner === "a" ? teamB : teamA;
 
   // 5. Decide whether this vote counts toward Elo. Authenticated: always. Guest:
-  // only the first GUEST_VOTE_CAP counted votes per guest (keyed on guestId OR the
-  // IP hash) count; the rest are recorded but not counted. Guests with no id were
-  // already rejected above, so a guest here always has at least the guestId key.
+  // only the first GUEST_VOTE_CAP counted votes per guest PER UTC CALENDAR DAY
+  // (keyed on guestId OR the IP hash) count; the rest are recorded but not
+  // counted. Guests with no id were already rejected above, so a guest here
+  // always has at least the guestId key.
   let counted = true;
   if (isGuest) {
-    // Hybrid cap (TASK-285): count this guest's prior COUNTED votes across BOTH
-    // durable keys (guestId OR ipHash). Rotating the guestId no longer resets the
-    // cap because the shared ipHash still accumulates. Over the cap → recorded but
-    // not counted; the client surfaces that as a "sign in to keep counting" nudge.
+    // Hybrid cap (TASK-285, day-scoped): count this guest's prior COUNTED votes
+    // since the start of the current UTC day, across BOTH durable keys (guestId
+    // OR ipHash). Rotating the guestId no longer resets the cap because the
+    // shared ipHash still accumulates. Over the cap → recorded but not counted;
+    // the client surfaces that as a "sign in to keep counting" nudge.
     const capClauses = [`voter_guest_id.eq.${guestId}`, ...(ipHash ? [`voter_ip_hash.eq.${ipHash}`] : [])];
+    const utcDayStart = new Date();
+    utcDayStart.setUTCHours(0, 0, 0, 0);
     const { count, error: cntErr } = await supabaseAdmin
       .from("arena_matches")
       .select("id", { count: "exact", head: true })
       .eq("counted", true)
+      .gte("created_at", utcDayStart.toISOString())
       .or(capClauses.join(","));
     if (cntErr) {
       console.error("arena-vote guest count failed:", cntErr);

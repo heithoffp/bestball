@@ -8,12 +8,13 @@
 // ---------------------------------------------------------------------------
 // Tunable constants (the guest-vote sub-decision from TASK-285 is resolved here:
 // guest votes count EQUALLY toward Elo, but only the first GUEST_VOTE_CAP of them
-// per guest are counted; the rest are recorded with counted = false).
+// per guest are counted per UTC calendar day; the rest are recorded with
+// counted = false).
 // ---------------------------------------------------------------------------
 export const N_PROVISIONAL = 10; // a team's first N matches use the higher K
 export const K_PROVISIONAL = 40;
 export const K_STABLE = 20;
-export const GUEST_VOTE_CAP = 5; // counted votes allowed per guest id
+export const GUEST_VOTE_CAP = 25; // counted votes allowed per guest id per UTC day
 export const TOKEN_TTL_SECONDS = 600; // pairing token lifetime (10 min)
 export const ELO_WINDOW = 200; // preferred Elo distance for a "comparable" opponent
 export const POOL_SAMPLE_LIMIT = 200; // max eligible teams pulled for in-memory matchmaking
