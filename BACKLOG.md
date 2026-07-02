@@ -71,7 +71,6 @@
 | TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | In Progress | P2 | [Plan](docs/plans/TASK-285.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | In Progress | P2 | [Plan](docs/plans/TASK-286.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-290 | Arena board-team takedown/removal path | Todo | P2 | [Plan](docs/plans/TASK-290.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
-| TASK-291 | Arena privacy policy + ToS update for public ranking | Todo | P2 | [Plan](docs/plans/TASK-291.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-297 | Arena 'Tale of the Tape' redesign + CLV + perf | In Progress | P2 | [Plan](docs/plans/TASK-297.md) | No | 2026-06-29 | 2026-06-29 |
 | TASK-299 | Wire Eliminator ADP into roster enrichment (eliminator_adp.csv for Eliminator slate) | In Progress | P2 | [Plan](docs/plans/TASK-299.md) | No | 2026-06-30 | 2026-06-30 |
 | TASK-301 | Arena: featured-tournament scoping - Best Ball Mania pool + leaderboard filter | In Progress | P2 | [Plan](docs/plans/TASK-301.md) -- Draft | No | 2026-07-01 | 2026-07-01 |
@@ -110,7 +109,6 @@
 | TASK-252 | Retire admin-extension and draft_boards_admin (per ADR-009) | Todo | P3 | [Plan](docs/plans/TASK-252.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-254 | Server-side enforcement for Pro-locked blog archive (RLS-gated delivery) | Todo | P3 | [Plan](docs/plans/TASK-254.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-257 | Teach /weekly-blog skill to set image: frontmatter + generate hero card per post | Todo | P3 | [Plan](docs/plans/TASK-257.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
-| TASK-259 | Privacy policy: note participant-captured third-party roster storage | Todo | P3 | [Plan](docs/plans/TASK-259.md) -- Draft | No | 2026-06-12 | 2026-06-12 |
 | TASK-267 | Fix blog OG card gate for same-day-published posts | Todo | P3 | [Plan](docs/plans/TASK-267.md) -- Draft | No | 2026-06-16 | 2026-06-16 |
 | TASK-268 | Add Avg CLV column to Exposures tab | In Progress | P3 | [Plan](docs/plans/TASK-268.md) | No | 2026-06-16 | 2026-06-16 |
 | TASK-272 | Add ESLint config to the Chrome extension | Todo | P3 | [Plan](docs/plans/TASK-272.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
@@ -135,6 +133,8 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-259 | Privacy policy: note participant-captured third-party roster storage | Done | P3 | [Plan](docs/archive/plans/TASK-259.md) | Yes | 2026-07-02 |
+| TASK-291 | Arena privacy policy + ToS update for public ranking | Done | P2 | [Plan](docs/archive/plans/TASK-291.md) | Yes | 2026-07-02 |
 | TASK-308 | Arena mobile matchup comparison UX — swipeable contender deck with quick-toggle and sticky pick bar | Done | P2 | [Plan](docs/archive/plans/TASK-308.md) | Yes | 2026-07-02 |
 | TASK-294 | Arena private-beta allowlist gate (ADR-015) | Done | P2 | [Plan](docs/archive/plans/TASK-294.md) | Yes | 2026-06-28 |
 | TASK-293 | Arena opt-out launch switch (flip arena_eligibility_mode) | Done | P2 | [Plan](docs/archive/plans/TASK-293.md) | Yes | 2026-06-28 |

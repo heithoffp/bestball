@@ -3,6 +3,11 @@
 // Shows two anonymized contenders flanking a central comparison spine, takes a pick,
 // reveals the Elo deltas, and auto-advances. The next matchup is PREFETCHED during the
 // reveal window so advancing feels instant; a skeleton (not a spinner) covers cold loads.
+//
+// The pick is OPTIMISTIC: the tapped card flips to its win state and the reveal clock
+// starts the moment the user taps — the vote submits during the reveal window, and the
+// Elo ticker/stamp data lands mid-reveal when the server responds. The user never
+// waits on the network to see their pick register.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, Trophy, RefreshCw, ArrowRight, Gavel, Zap, Link2 } from 'lucide-react';
@@ -16,6 +21,10 @@ import ArenaTape from './ArenaTape';
 import css from '../Arena.module.css';
 
 const REVEAL_MS = 2000;
+// If a slow vote response lands late in the reveal window, hold the reveal at
+// least this long past the response so the Elo ticker (420ms hold + 850ms roll)
+// finishes before auto-advance. Fast responses never trigger this.
+const MIN_REVEAL_WITH_DATA_MS = 1400;
 
 // Session scorecard (TASK-302): votes judged + upset picks this browser session.
 // Momentum feedback only — the durable record lives server-side in arena_matches.
@@ -87,10 +96,13 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   // <900px swaps the three-column matchup for the swipeable contender deck
   // (TASK-308); matches the stylesheet's 899px breakpoint.
   const { isDesktop } = useMediaQuery();
-  const [status, setStatus] = useState('loading'); // loading|voting|revealed|empty|unavailable|rate_limited|error
+  const [status, setStatus] = useState('loading'); // loading|voting|picked|revealed|empty|unavailable|rate_limited|error
   const [pairing, setPairing] = useState(null);
   const [result, setResult] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  // Optimistic pick: set synchronously on tap, before the vote round-trips.
+  // 'picked' status shows the win/loss card states from local state alone;
+  // 'revealed' upgrades them with the server's Elo payload when it arrives.
+  const [pick, setPick] = useState(null);
   const [stats, setStats] = useState(readSessionStats);
   const [lens, setLens] = useState(readLens);
   const [showStacks, setShowStacks] = useState(readShowStacks);
@@ -100,6 +112,9 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const advanceTimer = useRef(null);
   const nextRef = useRef(null);        // a prefetched pairing, ready for instant advance
   const prefetching = useRef(false);
+  // The pairing currently on screen — lets a slow vote response detect that the
+  // user already advanced (via Next/Space) and skip stale UI writes.
+  const pairingIdRef = useRef(null);
 
   // Warm the next matchup in the background. Pairing requests mutate no state, so this
   // is safe; it just trades one extra request for an instant-feeling advance.
@@ -117,11 +132,13 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const fetchNext = useCallback(async () => {
     clearTimeout(advanceTimer.current);
     setResult(null);
+    setPick(null);
 
     // Instant advance when a prefetched matchup is ready — no spinner, no wait.
     if (nextRef.current) {
       const p = nextRef.current;
       nextRef.current = null;
+      pairingIdRef.current = p.pairing_id;
       setPairing(p);
       setStatus('voting');
       prefetch();
@@ -131,6 +148,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
     setStatus('loading');
     const r = await getPairing();
     if (r.pairing) {
+      pairingIdRef.current = r.pairing.pairing_id;
       setPairing(r.pairing);
       setStatus('voting');
       prefetch();
@@ -146,8 +164,16 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   }, [fetchNext]);
 
   const vote = useCallback(async (winner) => {
-    if (submitting || status !== 'voting' || !pairing) return;
-    setSubmitting(true);
+    if (status !== 'voting' || !pairing) return;
+    const pid = pairing.pairing_id;
+    // Optimistic confirmation: the picked card flips and the reveal clock starts
+    // NOW. The network round trip happens inside the reveal window instead of
+    // in front of it, so the tap-to-feedback latency is one render, not one RTT.
+    setPick(winner);
+    setStatus('picked');
+    clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
+    const revealDeadline = performance.now() + REVEAL_MS;
     try {
       const data = await submitVote({ token: pairing.token, winner });
       // Upset = the picked team carried the LOWER pre-vote Elo. Ratings only come
@@ -156,15 +182,26 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
       const otherBefore = winner === 'a' ? data?.team_b?.before : data?.team_a?.before;
       const upset = Number.isFinite(pickedBefore) && Number.isFinite(otherBefore) &&
         pickedBefore < otherBefore;
-      setResult({ winner, upset, ...data });
       setStats((s) => {
         const next = { judged: s.judged + 1, upsets: s.upsets + (upset ? 1 : 0) };
         try { sessionStorage.setItem(SESSION_STATS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
         return next;
       });
+      // The user may have hit Next before the vote resolved — the vote still
+      // counted (stats above), but don't let a stale reveal clobber the new matchup.
+      if (pairingIdRef.current !== pid) return;
+      setResult({ winner, upset, ...data });
       setStatus('revealed');
-      advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
+      // Late response: push the auto-advance out so the Elo roll gets its moment.
+      const remaining = revealDeadline - performance.now();
+      if (remaining < MIN_REVEAL_WITH_DATA_MS) {
+        clearTimeout(advanceTimer.current);
+        advanceTimer.current = setTimeout(fetchNext, MIN_REVEAL_WITH_DATA_MS);
+      }
     } catch (e) {
+      if (pairingIdRef.current !== pid) return; // already moved on — nothing to unwind
+      clearTimeout(advanceTimer.current);
+      setPick(null);
       if (e?.data?.error === 'already_voted') {
         fetchNext();
       } else if (e?.status === 429) {
@@ -172,10 +209,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
       } else {
         setStatus('error');
       }
-    } finally {
-      setSubmitting(false);
     }
-  }, [submitting, status, pairing, fetchNext]);
+  }, [status, pairing, fetchNext]);
 
   // Scouting lens (this pass): which stat rides each roster row (CLV vs projected
   // points), plus the team-color stack layer. Both persist across sessions.
@@ -218,34 +253,39 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   // lives above the keyed node — reset it too so the toggle starts back on Red.
   useEffect(() => { setDeckIndex(0); }, [pairing?.pairing_id]);
 
-  // Reveal payoff on mobile: bring the picked card into view so its Elo delta
-  // and stamp are actually visible.
+  // Reveal payoff on mobile: bring the picked card into view so its stamp and
+  // (once the server responds) Elo delta are actually visible. Fires on the
+  // optimistic pick, so it's immediate.
   useEffect(() => {
-    if (status === 'revealed' && result && !isDesktop) {
-      scrollDeckTo(result.winner === 'a' ? 0 : 1);
+    if ((status === 'picked' || status === 'revealed') && pick && !isDesktop) {
+      scrollDeckTo(pick === 'a' ? 0 : 1);
     }
-  }, [status, result, isDesktop, scrollDeckTo]);
+  }, [status, pick, isDesktop, scrollDeckTo]);
 
   // Keyboard voting (TASK-302): ← picks red/left, → picks blue/right, S/↓ skips,
   // Space/Enter advances during the reveal, L flips the scouting lens. Inert in
   // every other state.
   useEffect(() => {
     const onKey = (e) => {
+      // Ignore auto-repeat: with the optimistic pick there's no network pause
+      // between voting and the reveal, so a held → would vote and then its
+      // repeat events would instantly advance past the reveal.
+      if (e.repeat) return;
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
       if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLens(); return; }
-      if (status === 'voting' && !submitting) {
+      if (status === 'voting') {
         if (e.key === 'ArrowLeft') { e.preventDefault(); vote('a'); }
         else if (e.key === 'ArrowRight') { e.preventDefault(); vote('b'); }
         else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') { e.preventDefault(); fetchNext(); }
-      } else if (status === 'revealed') {
+      } else if (status === 'revealed' || status === 'picked') {
         if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); fetchNext(); }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [status, submitting, vote, fetchNext, toggleLens]);
+  }, [status, vote, fetchNext, toggleLens]);
 
   // Recompute CLV + projected points against the viewer's data — the stored
   // snapshot is frozen insert-new-only, so both are derived fresh at display time.
@@ -311,21 +351,27 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
     );
   }
 
-  // ── Matchup (voting + revealed) ─────────────────────────────────────────
+  // ── Matchup (voting + picked + revealed) ────────────────────────────────
+  // 'picked' = optimistic pick landed, server response in flight. The card
+  // win/loss states, stamp, and reveal footer all show immediately from local
+  // state; the Elo ribbons wait for the server payload ('revealed').
   const revealed = status === 'revealed';
-  const outcome = (side) => (!revealed ? null : result?.winner === side ? 'win' : 'loss');
+  const showOutcome = revealed || status === 'picked';
+  const pickedSide = result?.winner ?? pick;
+  const outcome = (side) => (!showOutcome ? null : pickedSide === side ? 'win' : 'loss');
   const guestCapped = revealed && result && result.counted === false && isGuest;
 
   // Reveal payload per side: the before→after Elo roll (RatingTicker) and the
   // scorecard stamp. The winner is always stamped; an underdog pick upgrades the
-  // stamp to "Upset Win".
+  // stamp to "Upset Win". The pick IS the vote winner, so "Winner" is correct
+  // to stamp before the server confirms.
   const ratingFor = (side) => {
     if (!revealed || !result) return null;
     const r = side === 'a' ? result.team_a : result.team_b;
     return r && Number.isFinite(r.before) && Number.isFinite(r.after) ? r : null;
   };
-  const stampFor = (side) => (revealed && result?.winner === side
-    ? (result.upset ? 'Upset Win' : 'Winner')
+  const stampFor = (side) => (showOutcome && pickedSide === side
+    ? (result?.upset ? 'Upset Win' : 'Winner')
     : null);
 
   // Reveal footer — shared verbatim by the desktop skip row and the mobile
@@ -339,7 +385,9 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
         </p>
       ) : (
         <p className={css.revealNote}>
-          {result?.upset ? 'Upset pick — the ratings had it the other way.' : 'Vote counted — next up.'}
+          {result
+            ? (result.upset ? 'Upset pick — the ratings had it the other way.' : 'Vote counted — next up.')
+            : 'Pick locked in — next up.'}
         </p>
       )}
       <span className={css.advanceTrack}>
@@ -406,14 +454,14 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                 lens={lens}
                 showStacks={showStacks}
                 maxProj={maxProj}
-                pickable={!revealed && !submitting}
-                picked={revealed && result?.winner === 'a'}
+                pickable={status === 'voting'}
+                picked={showOutcome && pickedSide === 'a'}
                 onPick={() => vote('a')}
               />
             </div>
 
             <div className={css.tapeCol}>
-              <ArenaTape a={snapA} b={snapB} active={revealed} />
+              <ArenaTape a={snapA} b={snapB} active={showOutcome} />
             </div>
 
             <div className={css.sideCol}>
@@ -428,16 +476,16 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                 lens={lens}
                 showStacks={showStacks}
                 maxProj={maxProj}
-                pickable={!revealed && !submitting}
-                picked={revealed && result?.winner === 'b'}
+                pickable={status === 'voting'}
+                picked={showOutcome && pickedSide === 'b'}
                 onPick={() => vote('b')}
               />
             </div>
           </div>
 
           <div className={css.skipRow}>
-            {!revealed ? (
-              <button className={css.skipBtn} onClick={fetchNext} disabled={submitting}>
+            {!showOutcome ? (
+              <button className={css.skipBtn} onClick={fetchNext}>
                 Skip <ArrowRight size={15} />
               </button>
             ) : advanceContent}
@@ -461,7 +509,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
         <>
           <div className={css.mobileMatchup} key={pairing.pairing_id}>
             <div className={css.mobileTape}>
-              <ArenaTape a={snapA} b={snapB} active={revealed} />
+              <ArenaTape a={snapA} b={snapB} active={showOutcome} />
             </div>
             <div className={css.cornerToggle} role="group" aria-label="Jump to contender">
               <button
@@ -492,8 +540,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   lens={lens}
                   showStacks={showStacks}
                   maxProj={maxProj}
-                  pickable={!revealed && !submitting}
-                  picked={revealed && result?.winner === 'a'}
+                  pickable={status === 'voting'}
+                  picked={showOutcome && pickedSide === 'a'}
                   onPick={() => (deckIndex === 0 ? vote('a') : scrollDeckTo(0))}
                 />
               </div>
@@ -509,8 +557,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   lens={lens}
                   showStacks={showStacks}
                   maxProj={maxProj}
-                  pickable={!revealed && !submitting}
-                  picked={revealed && result?.winner === 'b'}
+                  pickable={status === 'voting'}
+                  picked={showOutcome && pickedSide === 'b'}
                   onPick={() => (deckIndex === 1 ? vote('b') : scrollDeckTo(1))}
                 />
               </div>
@@ -518,10 +566,10 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
           </div>
 
           <div className={css.pickDock}>
-            {!revealed ? (
+            {!showOutcome ? (
               <div className={css.dockRow}>
                 <span className={css.dockHint}>Tap the roster you prefer</span>
-                <button className={css.skipBtn} onClick={fetchNext} disabled={submitting}>
+                <button className={css.skipBtn} onClick={fetchNext}>
                   Skip <ArrowRight size={15} />
                 </button>
               </div>

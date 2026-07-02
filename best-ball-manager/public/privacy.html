@@ -13,68 +13,63 @@
       line-height: 1.7;
       padding: 2rem 1rem;
     }
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-    }
-    h1 {
-      color: #E8BF4A;
-      font-size: 1.75rem;
-      margin-bottom: 0.25rem;
-    }
-    .updated {
-      color: #6B7A90;
-      font-size: 0.875rem;
-      margin-bottom: 2rem;
-    }
-    h2 {
-      color: #E0E6EE;
-      font-size: 1.15rem;
-      margin-top: 1.75rem;
-      margin-bottom: 0.5rem;
-    }
-    p, li {
-      margin-bottom: 0.75rem;
-    }
-    ul {
-      padding-left: 1.25rem;
-    }
-    a {
-      color: #E8BF4A;
-    }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { color: #E8BF4A; font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .updated { color: #6B7A90; font-size: 0.875rem; margin-bottom: 2rem; }
+    h2 { color: #E0E6EE; font-size: 1.15rem; margin-top: 1.75rem; margin-bottom: 0.5rem; }
+    h3 { color: #C8D0DC; font-size: 1rem; margin-top: 1rem; margin-bottom: 0.4rem; }
+    p, li { margin-bottom: 0.75rem; }
+    ul { padding-left: 1.25rem; }
+    a { color: #E8BF4A; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: April 7, 2026</p>
+    <p class="updated">Last updated: July 2, 2026</p>
 
-    <p>Best Ball Exposures ("we", "our", "us") operates the Best Ball Exposures web application at <a href="https://bestballexposures.com">bestballexposures.com</a> and the Best Ball Exposures Chrome extension. This policy explains what data we access and how it is handled.</p>
+    <p>Best Ball Exposures ("we", "our", "us") operates the Best Ball Exposures web application at <a href="https://bestballexposures.com">bestballexposures.com</a>, the Best Ball Exposures Chrome extension, and the Best Ball Arena. This policy explains what data we access, store, and publish, and the choices you have.</p>
 
     <h2>What the Chrome Extension Does</h2>
-    <p>The Best Ball Exposures Chrome extension enhances your drafting experience on supported platforms (Underdog Fantasy, DraftKings) by displaying your portfolio exposure data alongside the draft board. It reads publicly visible draft-room information from these sites to provide real-time context.</p>
+    <p>The Best Ball Exposures Chrome extension enhances your drafting experience on supported platforms (Underdog Fantasy, DraftKings) by displaying your portfolio exposure data alongside the draft board. It reads draft-room information visible to you on these sites — including the rosters in your draft pods — and, when you are signed in, syncs that roster data to your account so the web app and the Arena can use it.</p>
 
     <h2>Data Collection</h2>
     <p>We do not sell your personal data to third parties.</p>
 
     <h3>Chrome Extension</h3>
-    <p>The Chrome extension does not collect, transmit, or store any data externally. Specifically:</p>
+    <p>When you are signed in, the extension reads the roster data from draft rooms you participate in and writes it to our cloud storage (Supabase) so it is available across the service. Specifically:</p>
     <ul>
-      <li><strong>No personal information</strong> is collected — no names, emails, or account credentials.</li>
-      <li><strong>No browsing history</strong> is tracked or recorded.</li>
-      <li><strong>No data is sent to external servers.</strong> All processing happens locally in your browser.</li>
+      <li><strong>Your drafted rosters</strong> — the entries you draft on supported platforms.</li>
+      <li><strong>Other rosters in your draft pods</strong> — see "Rosters From Your Drafts" below.</li>
+      <li><strong>No browsing history</strong> outside of the supported draft sites is tracked or recorded.</li>
+      <li><strong>No platform account credentials</strong> are collected or stored.</li>
     </ul>
+    <p>Preferences and cached data are also stored locally on your device (see "Local Storage"). If you use the extension without signing in, roster data stays local to your browser and is not sent to our servers.</p>
 
     <h3>Web Application</h3>
     <p>If you create an account on the web app at bestballexposures.com, we collect:</p>
     <ul>
       <li><strong>Email address</strong> — for authentication purposes.</li>
-      <li><strong>Portfolio data</strong> — rosters and settings you choose to sync to the cloud via Supabase.</li>
+      <li><strong>Portfolio data</strong> — rosters and settings synced to the cloud via Supabase.</li>
+      <li><strong>Subscription and payment status</strong> — managed through Stripe. We do not store your full card details; Stripe processes payments and returns only subscription status to us.</li>
     </ul>
-    <p>This data is stored securely in Supabase and is used solely to provide the service. Without an account, all data remains local to your browser via IndexedDB.</p>
+    <p>This data is stored securely in Supabase and is used to provide the service. Without an account, all data remains local to your browser via IndexedDB.</p>
+
+    <h2>Rosters From Your Drafts</h2>
+    <p>Best-ball drafts are pods of multiple entrants. When you sync a draft, the draft data visible to you includes every roster in that pod — yours and your opponents'. We store these opponent rosters ("board teams") to power opponent context in your portfolio views and to populate the Best Ball Arena.</p>
+    <p>These rosters are stored and published without any owner identity attached — no names, emails, or platform account information. They are represented only by their players, draft slots, ADP, and archetype. If a roster in one of your pods is yours or someone requests its removal, see "Your Choices &amp; Data Removal" below.</p>
+
+    <h2>Best Ball Arena</h2>
+    <p>The Best Ball Arena is a community feature where visitors vote on blind, head-to-head roster matchups, and teams are ranked on a public leaderboard by their results. To make the Arena useful from day one, rosters stored in our database — both your own synced teams and the other rosters captured from your draft pods — are included in the Arena's voting pool and public leaderboard <strong>by default</strong>.</p>
+    <p><strong>Publication is identity-free.</strong> An Arena roster shows only its players, draft slots, ADP, and archetype. It never shows an owner's name, email, or platform account, and no owner identity is displayed while voting or on the leaderboard.</p>
+    <p>You have two ways to remove a team from the Arena:</p>
+    <ul>
+      <li><strong>Your own teams</strong> — use the account-level enrollment switch to remove your synced teams from the pool and leaderboard.</li>
+      <li><strong>Any roster</strong> — if you recognize a roster (for example, one from a pod you drafted in) and want it removed, submit a takedown request to <a href="mailto:bestballexposures@gmail.com">bestballexposures@gmail.com</a> and we will remove it.</li>
+    </ul>
 
     <h2>Local Storage</h2>
-    <p>The extension uses Chrome's local storage API (<code>chrome.storage.local</code>) to save your preferences and cached portfolio data on your device. This data never leaves your browser.</p>
+    <p>The extension uses Chrome's local storage API (<code>chrome.storage.local</code>) to save your preferences and cached portfolio data on your device. When you are not signed in, this data stays on your device.</p>
 
     <h2>Host Permissions</h2>
     <p>The extension requests access to the following domains solely to read draft-room data and provide portfolio context:</p>
@@ -85,12 +80,19 @@
       <li><code>www.draftkings.com</code></li>
       <li><code>api.draftkings.com</code></li>
     </ul>
-    <p>No data from these sites is collected, stored remotely, or shared with third parties.</p>
 
     <h2>Third-Party Services</h2>
     <ul>
-      <li><strong>Supabase</strong> — authentication and cloud storage (optional)</li>
+      <li><strong>Supabase</strong> — authentication and cloud storage for roster and Arena data</li>
+      <li><strong>Stripe</strong> — subscription billing and payment processing</li>
       <li><strong>Vercel Analytics</strong> — anonymous, cookie-free page-view metrics (no personal data)</li>
+    </ul>
+
+    <h2>Your Choices &amp; Data Removal</h2>
+    <ul>
+      <li><strong>Arena enrollment</strong> — remove your own teams from the Arena at any time via the enrollment switch in the app.</li>
+      <li><strong>Takedown requests</strong> — request removal of any roster from the Arena by emailing us.</li>
+      <li><strong>Account deletion</strong> — request deletion of your account and synced data by emailing us.</li>
     </ul>
 
     <h2>Changes to This Policy</h2>

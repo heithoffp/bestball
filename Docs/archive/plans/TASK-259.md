@@ -1,3 +1,8 @@
+<!-- Completed: 2026-07-02 | Commit: working tree (not yet committed) -->
+<!-- Folded into TASK-291: the "Rosters From Your Drafts" section added to privacy.html
+     discloses participant-captured pod/board roster storage and its purpose (opponent
+     context + Arena). No separate implementation was needed. -->
+
 # TASK-259: Privacy policy: note participant-captured third-party roster storage
 
 **Status:** Draft
