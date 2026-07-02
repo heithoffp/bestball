@@ -20,10 +20,15 @@ import ArenaRosterCard from './ArenaRosterCard';
 import ArenaTape from './ArenaTape';
 import css from '../Arena.module.css';
 
-// Reveal dwell before auto-advance. Kept snappy: the pick/CLV reveal is instant
-// (local state), so this only governs how long the result lingers. Long enough
-// for the Elo roll (420ms hold + 850ms roll) to finish on a fast response.
+// How long the rating-change graphic lingers before auto-advancing, measured from
+// the moment it appears (the vote response landing) — long enough for the roll
+// (420ms hold + 850ms) to finish, plus a beat to read it. Snappy but never so
+// short that we advance before the graphic has had its moment.
 const REVEAL_MS = 1400;
+// Safety fallback only: advances if a vote response never lands at all (true
+// network hang), so a stuck request can't strand the picked card. Normal
+// responses — even slow mobile ones — reschedule the short hold above instead.
+const FALLBACK_ADVANCE_MS = 7000;
 
 // Session scorecard (TASK-302): votes judged + upset picks this browser session.
 // Momentum feedback only — the durable record lives server-side in arena_matches.
@@ -175,15 +180,15 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const vote = useCallback(async (winner) => {
     if (status !== 'voting' || !pairing) return;
     const pid = pairing.pairing_id;
-    // Optimistic reveal: the picked card flips, the CLV/stamp reveal fires, and the
-    // auto-advance clock all start NOW from local state — no wait on the vote's round
-    // trip. The Elo ribbon fills in when the response lands (usually inside the
-    // window); a slow response simply doesn't get an Elo roll rather than blocking
-    // the reveal or stretching the dwell.
+    // Optimistic pick feedback: the picked card flips and the CLV/stamp reveal fire
+    // NOW from local state — no wait on the vote's round trip. Only a long safety
+    // timer is armed here; the real auto-advance is scheduled once the rating-change
+    // graphic actually appears (on the response, below), so we never move on before
+    // the graphic shows — the failure mode on slow mobile networks.
     setPick(winner);
     setStatus('picked');
     clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
+    advanceTimer.current = setTimeout(fetchNext, FALLBACK_ADVANCE_MS);
     try {
       const data = await submitVote({ token: pairing.token, winner });
       // Upset = the picked team carried the LOWER pre-vote Elo. Ratings only come
@@ -208,6 +213,11 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
       if (pairingIdRef.current !== pid) return;
       setResult({ winner, upset, ...data });
       setStatus('revealed');
+      // The rating-change graphic is on screen now — hold just long enough for the
+      // roll to finish, then advance. Scheduling here (not at tap time) guarantees
+      // the graphic always shows before we move to the next team.
+      clearTimeout(advanceTimer.current);
+      advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
     } catch (e) {
       if (pairingIdRef.current !== pid) return; // already moved on — nothing to unwind
       clearTimeout(advanceTimer.current);
