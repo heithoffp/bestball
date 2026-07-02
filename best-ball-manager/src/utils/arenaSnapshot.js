@@ -161,7 +161,10 @@ export function playerNameKey(players) {
 // Build the anonymized snapshot from a roster's picks (already pick-sorted).
 // `adpLookup` (optional) resolves a name -> latest ADP for picks that carry no ADP
 // of their own (board teams); owned-team rows already have `latestADP`, which wins.
-function buildSnapshot(sorted, platform, tournamentTitle, slateTitle, adpLookup) {
+// `draftedAtOverride` (optional) is stamped on when the picks themselves carry no
+// timestamp — board picks have none, but they share a draft (and so a draft date)
+// with the syncing user's own entry for that same draftId.
+function buildSnapshot(sorted, platform, tournamentTitle, slateTitle, adpLookup, draftedAtOverride = null) {
   // Normalize positions up front (CB → WR) so the snapshot, its posSnap counts,
   // and the archetype classification all agree.
   const picks = sorted.map((p) => ({ ...p, position: normalizePos(p.position) }));
@@ -199,7 +202,7 @@ function buildSnapshot(sorted, platform, tournamentTitle, slateTitle, adpLookup)
     .filter((t) => Number.isFinite(t));
   const draftedAt = times.length
     ? new Date(Math.min(...times)).toISOString().slice(0, 10)
-    : null;
+    : (draftedAtOverride || null);
 
   return {
     players,
@@ -267,9 +270,13 @@ export function buildEnrollableTeams(rosterData, masterPlayers) {
  * @param {string|null} [tournamentTitle] the pod's tournament, known from the syncing
  *   user's own entry in the same draft — board picks carry no tournament of their own,
  *   and the featured-tournament scoping (BBM7) matches on it
+ * @param {string|null} [draftedAt] the pod's draft date (YYYY-MM-DD), known from the
+ *   syncing user's own entry in the same draft — board picks carry no pick timestamps
+ *   of their own, but every seat in a draft is drafted simultaneously, so the owning
+ *   user's draft date applies to the whole pod
  * @returns {Array<{boardEntryRef: string, userId: string|null, platform: string, draftId: string, snapshot: object}>}
  */
-export function buildBoardTeams(board, ownKey, adpLookup, tournamentTitle = null) {
+export function buildBoardTeams(board, ownKey, adpLookup, tournamentTitle = null, draftedAt = null) {
   if (!board || !Array.isArray(board.picks) || board.picks.length === 0) return [];
   const platform = platformFromSlate(board.slateTitle);
 
@@ -290,7 +297,7 @@ export function buildBoardTeams(board, ownKey, adpLookup, tournamentTitle = null
       userId: seat.userId,
       platform,
       draftId: String(board.draftId),
-      snapshot: buildSnapshot(sorted, platform, tournamentTitle || null, board.slateTitle || null, adpLookup),
+      snapshot: buildSnapshot(sorted, platform, tournamentTitle || null, board.slateTitle || null, adpLookup, draftedAt),
     });
   }
   return out;
