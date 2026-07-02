@@ -96,9 +96,16 @@ export async function submitVote({ token, winner }) {
  */
 export async function getLeaderboard({ platform = 'all', tournament = 'featured', limit = 200 } = {}) {
   if (!supabase) return [];
+  // Anon no longer has a column grant for user_id (TASK-296 #3 — a logged-out caller
+  // could otherwise group arena_teams by user_id to reconstruct a whole account's
+  // portfolio). Only request it when signed in, where it's needed to mark "your
+  // team" on the board; selecting an ungranted column would 42501 for guests.
+  const { data: { user } } = await supabase.auth.getUser();
+  const cols = 'id, platform, elo, wins, losses, matches, provisional, display_snapshot'
+    + (user ? ', user_id' : '');
   let q = supabase
     .from('arena_teams')
-    .select('id, platform, elo, wins, losses, matches, provisional, display_snapshot, user_id')
+    .select(cols)
     .eq('enrolled', true)
     .order('elo', { ascending: false })
     .limit(limit);
@@ -199,6 +206,27 @@ export async function registerAllArenaTeams({ ownedTeams = [], boardTeams = [] }
     totals.batches += 1;
   }
   return totals;
+}
+
+/**
+ * The Arena's private-beta switch (ADR-015). While true, only allowlisted accounts
+ * may use the Arena; when the developer flips it false (TASK-310) the Arena is
+ * public. Read from arena_config (client-readable per migration 012). Defaults to
+ * true (closed) on any error so the client-side visibility gate fails closed.
+ */
+export async function getArenaBetaMode() {
+  if (!supabase) return true;
+  try {
+    const { data, error } = await supabase
+      .from('arena_config')
+      .select('beta_mode')
+      .eq('id', true)
+      .single();
+    if (error) return true;
+    return data?.beta_mode ?? true;
+  } catch {
+    return true;
+  }
 }
 
 /** The current user's arena rows (enrolled state + standings per entry). */

@@ -17,6 +17,7 @@ import {
   corsHeaders,
   getClientIp,
   GUEST_VOTE_CAP,
+  hashClientIp,
   inMemoryRateLimit,
   json,
   N_PROVISIONAL,
@@ -92,23 +93,40 @@ Deno.serve(async (req) => {
   // (tamper-proof), falling back to the body only if absent.
   const guestId = isGuest ? (payload.guest ?? body.guestId ?? null) : null;
 
+  // TASK-311 #3: a guest with no guest id cannot be durably capped by that key. The
+  // client always sends one; a missing id is an anomalous/scripted caller, so reject
+  // rather than record uncountable junk rows in arena_matches.
+  if (isGuest && !guestId) {
+    console.warn("[arena-vote] guest vote missing guestId — rejected");
+    return json({ error: "guest_id_required" }, 400);
+  }
+
+  // IP hash (TASK-285 hybrid): a salted, non-reversible base64url handle for the
+  // caller's IP, used as a SECOND durable key alongside guestId so a guest who
+  // rotates guestId per vote can't reset the cap or the rate limit. Empty for an
+  // unknown IP (then only guestId keys apply). Stored on the match row.
+  const ipHash = isGuest ? await hashClientIp(ip, ARENA_TOKEN_SECRET) : "";
+
   // 2b. Durable per-voter vote-rate limit (TASK-285) — the load-bearing limiter
   // (gates state mutation; survives cold starts unlike the in-memory IP check).
-  const rlKeyCol = voterId ? "voter_id" : (guestId ? "voter_guest_id" : null);
-  const rlKeyVal = voterId ?? guestId;
-  if (rlKeyCol && rlKeyVal) {
+  // Authed callers key on user id ONLY (so shared-NAT users aren't throttled as a
+  // group); guests key on guestId OR ipHash (either hitting the limit blocks).
+  const rlClauses = voterId
+    ? [`voter_id.eq.${voterId}`]
+    : [`voter_guest_id.eq.${guestId}`, ...(ipHash ? [`voter_ip_hash.eq.${ipHash}`] : [])];
+  {
     const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
     const { count, error: rlErr } = await supabaseAdmin
       .from("arena_matches")
       .select("id", { count: "exact", head: true })
       .gte("created_at", since)
-      .eq(rlKeyCol, rlKeyVal);
+      .or(rlClauses.join(","));
     if (rlErr) {
       console.error("[arena-vote] rate check failed:", rlErr);
       return json({ error: "rate_check_failed" }, 500);
     }
     if ((count ?? 0) >= RATE_LIMIT_VOTES_PER_MIN) {
-      console.warn(`[arena-vote] voter rate limited key=${rlKeyVal}`);
+      console.warn(`[arena-vote] voter rate limited voter=${voterId ?? guestId}`);
       return json({ error: "rate_limited" }, 429);
     }
   }
@@ -136,25 +154,27 @@ Deno.serve(async (req) => {
   const loserTeam = winner === "a" ? teamB : teamA;
 
   // 5. Decide whether this vote counts toward Elo. Authenticated: always. Guest:
-  // only the first GUEST_VOTE_CAP counted votes per guest id (then recorded but
-  // not counted). A guest with no id cannot be capped, so it is not counted.
+  // only the first GUEST_VOTE_CAP counted votes per guest (keyed on guestId OR the
+  // IP hash) count; the rest are recorded but not counted. Guests with no id were
+  // already rejected above, so a guest here always has at least the guestId key.
   let counted = true;
   if (isGuest) {
-    if (!guestId) {
-      counted = false;
-    } else {
-      const { count, error: cntErr } = await supabaseAdmin
-        .from("arena_matches")
-        .select("id", { count: "exact", head: true })
-        .eq("voter_guest_id", guestId)
-        .eq("counted", true);
-      if (cntErr) {
-        console.error("arena-vote guest count failed:", cntErr);
-        return json({ error: "guest_count_failed" }, 500);
-      }
-      counted = (count ?? 0) < GUEST_VOTE_CAP;
-      if (!counted) console.log(`[arena-vote] guest cap reached guest=${guestId} (recorded, not counted)`);
+    // Hybrid cap (TASK-285): count this guest's prior COUNTED votes across BOTH
+    // durable keys (guestId OR ipHash). Rotating the guestId no longer resets the
+    // cap because the shared ipHash still accumulates. Over the cap → recorded but
+    // not counted; the client surfaces that as a "sign in to keep counting" nudge.
+    const capClauses = [`voter_guest_id.eq.${guestId}`, ...(ipHash ? [`voter_ip_hash.eq.${ipHash}`] : [])];
+    const { count, error: cntErr } = await supabaseAdmin
+      .from("arena_matches")
+      .select("id", { count: "exact", head: true })
+      .eq("counted", true)
+      .or(capClauses.join(","));
+    if (cntErr) {
+      console.error("arena-vote guest count failed:", cntErr);
+      return json({ error: "guest_count_failed" }, 500);
     }
+    counted = (count ?? 0) < GUEST_VOTE_CAP;
+    if (!counted) console.log(`[arena-vote] guest cap reached guest=${guestId} (recorded, not counted)`);
   }
 
   // 6. Compute Elo (only applied if counted).
@@ -181,6 +201,7 @@ Deno.serve(async (req) => {
     voter_id: voterId,
     voter_is_guest: isGuest,
     voter_guest_id: guestId,
+    voter_ip_hash: ipHash || null,
     counted,
     elo_a_before: eloABefore,
     elo_a_after: eloAAfter,

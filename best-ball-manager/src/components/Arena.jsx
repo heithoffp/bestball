@@ -3,9 +3,11 @@
 // is carved out here on purpose: the Arena is the explicit competitive zone where
 // crowd opinion is the product (the analytics tabs stay single-user mirrors).
 //
-// Private beta (ADR-015): the tab/route is gated to allowlisted accounts in App.jsx,
-// and on mount we auto-register the user's own + participant-captured board teams
-// into the opt-out pool (ADR-014 / TASK-288), once per session.
+// Visibility (TASK-310): App.jsx mounts this only when the Arena is visible to the
+// viewer — allowlisted accounts during the private beta (ADR-015), everyone once
+// arena_config.beta_mode flips false. On mount we auto-register the user's own +
+// participant-captured board teams into the opt-out pool (ADR-014 / TASK-288), once
+// per session.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, X } from 'lucide-react';
@@ -14,7 +16,6 @@ import ArenaLeaderboard from './arena/ArenaLeaderboard';
 import ArenaMyTeams from './arena/ArenaMyTeams';
 import { useAuth } from '../contexts/AuthContext';
 import useMediaQuery from '../hooks/useMediaQuery';
-import { isArenaBetaUser } from '../utils/arenaBeta';
 import { canonicalName } from '../utils/helpers';
 import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
 import { fetchDraftBoards } from '../utils/draftBoards';
@@ -44,12 +45,16 @@ function ArenaHelp({ onClose }) {
 
 // Auto-register the user's own + board teams into the opt-out pool, once per session.
 // Best-effort: failures are swallowed and retried next session. Board rows are written
-// service-side (arena-register); the server re-checks the beta gate + guardrail #3.
+// service-side (arena-register); the server re-checks the beta gate. No client beta
+// check here — this hook only runs when <Arena> is mounted, and App.jsx mounts it
+// solely when the Arena is visible to the viewer (allowlisted during the private
+// beta, everyone once beta_mode flips false — TASK-310). The server stays the real
+// boundary: a non-allowlisted caller reaching register during beta gets 403.
 function useAutoRegister(user, rosterData, masterPlayers) {
   const ref = useRef(false);
   useEffect(() => {
     if (ref.current) return;
-    if (!ARENA_AVAILABLE || !user?.id || !isArenaBetaUser(user.email)) return;
+    if (!ARENA_AVAILABLE || !user?.id) return;
     if (!Array.isArray(rosterData) || rosterData.length === 0) return;
 
     const sessionKey = `bbe_arena_registered_${user.id}`;

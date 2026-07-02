@@ -25,7 +25,17 @@
 // source='owned'); this function is the only board-row writer.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { betaGate, corsHeaders, json, playerNameKey } from "../_shared/arena.ts";
+import {
+  betaGate,
+  corsHeaders,
+  getClientIp,
+  inMemoryRateLimit,
+  json,
+  MAX_OWNED_TEAMS_PER_USER,
+  playerNameKey,
+  RATE_LIMIT_REGISTERS_PER_MIN,
+  RATE_LIMIT_WINDOW_MS,
+} from "../_shared/arena.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -73,9 +83,25 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
-  // Private-beta gate (ADR-015).
+  // Anti-abuse (TASK-311 #1): cheap per-IP throttle before any work. Registration
+  // does real DB writes, so cap request volume from a single source.
+  const ip = getClientIp(req);
+  if (!inMemoryRateLimit(`register:${ip}`, RATE_LIMIT_REGISTERS_PER_MIN, RATE_LIMIT_WINDOW_MS)) {
+    console.warn(`[arena-register] ip rate limited ip=${ip}`);
+    return json({ error: "rate_limited" }, 429);
+  }
+
+  // Private-beta gate (ADR-015). Registration is always account-scoped, so an
+  // unauthenticated caller is rejected regardless of beta_mode — but with the
+  // RIGHT error (TASK-311 #4): during beta the door is closed (beta_closed); once
+  // public it is merely an auth requirement (auth_required), not a beta message.
   const gate = await betaGate(req, SUPABASE_URL, SUPABASE_ANON_KEY, createClient, supabaseAdmin);
-  if (!gate.allowed || !gate.voterId) {
+  if (!gate.voterId) {
+    return gate.betaMode
+      ? json({ error: "beta_closed" }, 403)
+      : json({ error: "auth_required" }, 401);
+  }
+  if (!gate.allowed) {
     return json({ error: "beta_closed" }, 403);
   }
   const voterId = gate.voterId;
@@ -120,6 +146,14 @@ Deno.serve(async (req) => {
     const seen = new Set<string>();
     for (const r of existing ?? []) seen.add(`${r.entry_id}::${r.platform}`);
 
+    // Durable per-user owned-team ceiling (TASK-311 #1): reject a batch that would
+    // push the account past MAX_OWNED_TEAMS_PER_USER. Checked against the LIVE count
+    // so it holds across the client's sequential batches, not just per request.
+    if ((existing?.length ?? 0) + ownedIn.length > MAX_OWNED_TEAMS_PER_USER) {
+      console.warn(`[arena-register] owned quota exceeded voter=${voterId} existing=${existing?.length ?? 0}`);
+      return json({ error: "owned_quota_exceeded" }, 429);
+    }
+
     // Account-level enrollment switch (ADR-016): missing pref row = enrolled.
     const { data: pref } = await supabaseAdmin
       .from("arena_user_prefs")
@@ -128,24 +162,28 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const enrolledDefault = pref?.enrolled ?? true;
 
-    // Claim candidates: ownerless board rows reachable by exact seat ref (UD
-    // draftEntryId can equal the entry id) or by pod id for fingerprint matching.
-    // One batched query; matching happens in memory.
-    const quote = (v: string) => `"${String(v).replaceAll('"', '')}"`;
-    const entryIds = [...new Set(ownedIn.map((t) => quote(t.entryId)))].join(",");
-    const draftIds = [...new Set(ownedIn.map((t) => quote(t.draftId ?? t.entryId)))].join(",");
+    // Claim candidates (TASK-296 #1): ONLY ownerless board rows reachable by an
+    // EXACT seat ref. board_entry_ref is the raw UD draftEntryId — a service-role-only
+    // column that is never client-readable (guardrail #1) — so a caller can only ever
+    // match a board row whose UD id equals one of THEIR OWN entry ids (their own seat,
+    // captured by a pod-mate). The removed draft_id + roster-fingerprint fallback
+    // matched purely on client-readable data (draft_id + player names), which let any
+    // authenticated user echo a VISIBLE board row to hijack it — steal its Elo, replace
+    // its public snapshot. Cross-user fingerprint dedup now lives only in the trusted
+    // backfill script (service_role over server-stored data, not client input). Using
+    // .in() (not a hand-built or() string) also removes the quoting bug that mishandled
+    // a value ending in a backslash (TASK-311 #2).
+    const entryIdList = [...new Set(ownedIn.map((t) => String(t.entryId)))];
     const { data: candidates, error: candErr } = await supabaseAdmin
       .from("arena_teams")
-      .select("id, platform, draft_id, board_entry_ref, display_snapshot")
+      .select("id, platform, board_entry_ref")
       .eq("source", "board")
-      .or(`board_entry_ref.in.(${entryIds}),draft_id.in.(${draftIds})`);
+      .in("board_entry_ref", entryIdList);
     if (candErr) {
       console.error("[arena-register] claim candidate select failed:", candErr);
       return json({ error: "claim_select_failed" }, 500);
     }
     const openCandidates = [...(candidates ?? [])];
-    const fingerprintOf = (snapshot: unknown) =>
-      playerNameKey((snapshot as { players?: unknown })?.players);
 
     const toInsert: Record<string, unknown>[] = [];
     for (const t of ownedIn) {
@@ -153,22 +191,10 @@ Deno.serve(async (req) => {
       if (seen.has(k)) continue; // already registered
       seen.add(k); // also dedupe within this batch
 
-      // Claim: exact ref match first, then roster fingerprint within the same pod.
-      const draftId = String(t.draftId ?? t.entryId);
-      let idx = openCandidates.findIndex(
+      // Claim only on exact UD seat ref (see above — the sole unforgeable match).
+      const idx = openCandidates.findIndex(
         (c) => c.platform === t.platform && String(c.board_entry_ref) === String(t.entryId),
       );
-      if (idx === -1) {
-        const fp = fingerprintOf(t.snapshot);
-        if (fp) {
-          idx = openCandidates.findIndex(
-            (c) =>
-              c.platform === t.platform &&
-              String(c.draft_id) === draftId &&
-              fingerprintOf(c.display_snapshot) === fp,
-          );
-        }
-      }
       if (idx !== -1) {
         const [cand] = openCandidates.splice(idx, 1); // one claim per board row
         const { error: claimErr } = await supabaseAdmin
@@ -214,23 +240,61 @@ Deno.serve(async (req) => {
 
   // ── Board teams ──────────────────────────────────────────────────────────
   if (boardIn.length > 0) {
-    // Existence check: the pod must be a real stored board (any source — ADR-016
-    // retired the source='extension' restriction). Fabricated draft ids are refused.
-    const draftIds = [...new Set(boardIn.map((t) => t.draftId))];
+    // Existence + CONTENT validation (TASK-296 #2). The pod must be a real stored
+    // board (any source — ADR-016 retired the source='extension' restriction), AND
+    // each board team's client-built snapshot must match the seat's REAL picks. The
+    // function no longer trusts client snapshot content: a caller with a genuine
+    // draft_id could otherwise submit an enrolled board row full of arbitrary
+    // "player" strings (or a forged "Best Ball Mania" attribution) that enters the
+    // blind pairing pool shown to every voter. We rebuild each pod's per-seat roster
+    // fingerprint from draft_boards_admin.picks (server truth) and reject any team
+    // whose players don't match; the slate title is taken from the stored board too.
+    const draftIds = [...new Set(boardIn.map((t) => String(t.draftId)))];
     const { data: okBoards, error: bErr } = await supabaseAdmin
       .from("draft_boards_admin")
-      .select("draft_id")
+      .select("draft_id, slate_title, picks")
       .in("draft_id", draftIds);
     if (bErr) {
       console.error("[arena-register] board verify failed:", bErr);
       return json({ error: "board_verify_failed" }, 500);
     }
-    const allowedDrafts = new Set((okBoards ?? []).map((r) => String(r.draft_id)));
 
-    const eligible = boardIn.filter((t) => allowedDrafts.has(String(t.draftId)));
+    interface BoardPick { draftEntryId?: unknown; name?: unknown }
+    const boardMeta = new Map<string, { slateTitle: string | null; seatKeys: Map<string, string> }>();
+    for (const b of okBoards ?? []) {
+      const seatPicks = new Map<string, { name: unknown }[]>();
+      for (const pk of ((b.picks ?? []) as BoardPick[])) {
+        const ref = pk.draftEntryId != null ? String(pk.draftEntryId) : null;
+        if (!ref) continue;
+        let arr = seatPicks.get(ref);
+        if (!arr) { arr = []; seatPicks.set(ref, arr); }
+        arr.push({ name: pk.name });
+      }
+      const seatKeys = new Map<string, string>();
+      for (const [ref, picks] of seatPicks) seatKeys.set(ref, playerNameKey(picks));
+      boardMeta.set(String(b.draft_id), {
+        slateTitle: (b.slate_title ?? null) as string | null,
+        seatKeys,
+      });
+    }
+
+    // Keep only teams whose pod exists AND whose player set matches the stored seat.
+    const eligible: (BoardTeam & { trustedSlate: string | null })[] = [];
+    let boardMismatched = 0;
+    for (const t of boardIn) {
+      const meta = boardMeta.get(String(t.draftId));
+      if (!meta) continue; // pod not stored — folded into boardRejected below
+      const trustedKey = meta.seatKeys.get(String(t.boardEntryRef));
+      const clientKey = playerNameKey((t.snapshot as { players?: unknown })?.players);
+      if (!trustedKey || !clientKey || trustedKey !== clientKey) {
+        boardMismatched += 1;
+        continue;
+      }
+      eligible.push({ ...t, trustedSlate: meta.slateTitle });
+    }
     boardRejected = boardIn.length - eligible.length;
     if (boardRejected > 0) {
-      console.log(`[arena-register] rejected ${boardRejected} board teams (draft_id not in draft_boards_admin)`);
+      console.log(`[arena-register] rejected ${boardRejected} board teams (${boardMismatched} content mismatch, rest unknown draft_id)`);
     }
 
     if (eligible.length > 0) {
@@ -261,7 +325,10 @@ Deno.serve(async (req) => {
           draft_id: t.draftId,
           board_entry_ref: t.boardEntryRef,
           board_user_hash: t.userId ? await hashUserId(String(t.userId)) : null,
-          display_snapshot: t.snapshot,
+          // Slate title comes from the stored board (server truth), not the client.
+          display_snapshot: t.trustedSlate
+            ? { ...(t.snapshot as Record<string, unknown>), slateTitle: t.trustedSlate }
+            : t.snapshot,
           enrolled: true,
         });
       }

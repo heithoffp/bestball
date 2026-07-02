@@ -257,8 +257,32 @@ unique), `arena_config` (beta gate; `arena_eligibility_mode` retired in place),
   `ARENA_TOKEN_SECRET`) is a developer step — see `docs/migrations/arena-data-model.md` and
   `docs/plans/TASK-281.md`.
 
+## Public-launch integrity & visibility (ADR-017)
+
+Flipping `arena_config.beta_mode = false` opens the pool to real multi-user + guest
+traffic. The hardening applied before that flip (branch `arena-public-launch`):
+
+- **Visibility gate is `beta_mode`-driven** — the client shows the Arena tab/route when
+  `beta_mode` is false OR the account is allowlisted, so launch is the flag flip alone
+  (no frontend redeploy, no pre-flip exposure). The server (Edge Functions + RLS) stays
+  the real boundary.
+- **Guest-vote integrity = hybrid** — guest votes count toward Elo but the counted cap
+  and rate limit key on both the client `guestId` AND a salted IP hash
+  (`arena_matches.voter_ip_hash`); over the cap → `counted=false` + a sign-in nudge.
+  Guests with no `guestId` are rejected.
+- **Snapshot & claim integrity** — clients can no longer write `display_snapshot`
+  (grants revoked; registration is server-only); board snapshots are validated against
+  `draft_boards_admin.picks`; claim-on-sync honors only the unforgeable exact
+  `board_entry_ref`.
+- **Anonymity** — `user_id` is not readable by anon (no cross-account portfolio grouping).
+- **Takedown** — `scripts/arena-takedown.mjs` removes/unenrolls board (or owned) rows on
+  request (ADR-014 guardrail; non-user subjects can't self-unenroll).
+- **Launch ops** — ordered migrate → deploy → backfill → flip sequence in
+  `docs/Arena_Public_Launch_Runbook.md`.
+
 ## Related
 - ADR-013 (the pivot); ADR-014 (opt-out + board teams); ADR-015 (private beta);
-  ADR-016 (full-database pool, claim-on-sync, account-level enrollment); ADR-001
-  (Edge Function pattern, extended here); ADR-002 (Mirror-Not-Advisor, scope
-  clarified). Epic EPIC-07; tasks TASK-280…286, TASK-288…303, TASK-304…306.
+  ADR-016 (full-database pool, claim-on-sync, account-level enrollment); ADR-017
+  (public-launch vote-integrity + data hardening); ADR-001 (Edge Function pattern,
+  extended here); ADR-002 (Mirror-Not-Advisor, scope clarified). Epic EPIC-07; tasks
+  TASK-280…286, TASK-288…303, TASK-304…306, TASK-310/311/296/285/290.

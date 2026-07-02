@@ -10,6 +10,7 @@ import { supabase } from './utils/supabaseClient';
 import { useSubscription } from './contexts/SubscriptionContext';
 import { canAccessFeature } from './utils/featureAccess';
 import { isArenaBetaUser } from './utils/arenaBeta';
+import { getArenaBetaMode } from './utils/arenaClient';
 import AuthButton from './components/AuthButton';
 import LockedFeature from './components/LockedFeature';
 import AuthModal from './components/AuthModal';
@@ -121,9 +122,15 @@ export default function App() {
   const [rankingsByPlatform, setRankingsByPlatform] = useState({});
   const { isDesktop } = useMediaQuery();
   const { user, loading: authLoading, recoveryMode } = useAuth();
-  // Arena is in private beta (ADR-015) — gate the tab + /arena route to allowlisted
-  // accounts. Convenience gate only; the server (Edge Functions + RLS) is the real boundary.
-  const arenaBeta = isArenaBetaUser(user?.email);
+  // Arena visibility (TASK-310): the Arena is public once arena_config.beta_mode
+  // flips false; during the private beta (ADR-015) it stays limited to allowlisted
+  // accounts. Tracking beta_mode here means the public launch needs no frontend
+  // redeploy — the tab/route appear the instant the flag flips. Convenience gate
+  // only; the server (Edge Functions + RLS) is the real boundary. Fails closed
+  // (hidden) until the flag is known.
+  const [arenaBetaMode, setArenaBetaMode] = useState(true);
+  const [arenaBetaLoaded, setArenaBetaLoaded] = useState(false);
+  const arenaVisible = !arenaBetaMode || isArenaBetaUser(user?.email);
   const { tier, loading: subLoading, openPlanPicker } = useSubscription();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMessage, setAuthModalMessage] = useState('');
@@ -162,11 +169,22 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, authLoading]);
 
-  // Redirect away from /arena for non-allowlisted users during the private beta.
+  // Load the Arena beta switch once (public launch = beta_mode false).
   useEffect(() => {
-    if (authLoading) return;
-    if (activeTab === 'arena' && !arenaBeta) navigate(TAB_PATHS.dashboard, { replace: true });
-  }, [activeTab, arenaBeta, authLoading, navigate]);
+    let cancelled = false;
+    getArenaBetaMode()
+      .then((m) => { if (!cancelled) { setArenaBetaMode(m); setArenaBetaLoaded(true); } })
+      .catch(() => { if (!cancelled) setArenaBetaLoaded(true); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Redirect away from /arena when it isn't visible to this viewer — but only once
+  // the beta switch is known, so a public visitor deep-linking to /arena isn't
+  // bounced during the initial config read.
+  useEffect(() => {
+    if (authLoading || !arenaBetaLoaded) return;
+    if (activeTab === 'arena' && !arenaVisible) navigate(TAB_PATHS.dashboard, { replace: true });
+  }, [activeTab, arenaVisible, arenaBetaLoaded, authLoading, navigate]);
 
   useEffect(() => {
     if (recoveryMode) setShowAuthModal(true);
@@ -395,7 +413,7 @@ export default function App() {
   const navGroups = NAV_GROUPS.map(g => ({
     label: g.label,
     items: g.keys
-      .filter(k => k !== 'arena' || arenaBeta)
+      .filter(k => k !== 'arena' || arenaVisible)
       .map(k => ({ ...tabByKey[k], locked: !subLoading && !canAccessFeature(tier, k) })),
   })).filter(g => g.items.length > 0);
 
@@ -535,8 +553,9 @@ export default function App() {
                 ? <ComboAnalysis rosterData={rosterData} masterPlayers={masterPlayers} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Combo Analysis" onSignUp={() => setShowAuthModal(true)} />
             )}
-            {/* Arena is in private beta (ADR-015) — visible only to allowlisted accounts. */}
-            {activeTab === 'arena' && arenaBeta && <Arena rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
+            {/* Arena visibility tracks arena_config.beta_mode (TASK-310): allowlisted-only
+                during the private beta, everyone once public. Server is the real boundary. */}
+            {activeTab === 'arena' && arenaVisible && <Arena rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
           </Suspense>
         </div>
       </div>

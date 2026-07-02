@@ -63,3 +63,16 @@ Direction to decide (this is ADR-013's "vote manipulation" revisit condition fir
 key the durable cap/rate limit on a hashed IP stored per match (in addition to
 guestId), and/or require auth for *counted* votes while keeping guest voting
 frictionless-but-uncounted. Launch-gating alongside TASK-290/296/310.
+
+## Resolution — HYBRID (code complete, branch `arena-public-launch`)
+Decision recorded in **ADR-017**: guest votes still count toward Elo but the counted
+cap (`GUEST_VOTE_CAP`) and the durable per-voter rate limit key on BOTH the client
+`guestId` AND a salted HMAC of the client IP (`arena_matches.voter_ip_hash`, added in
+migration 015). Rotating the guestId no longer resets either limit — the shared IP
+hash accumulates. Guests with no `guestId` are rejected (400, TASK-311). Over the cap
+→ vote recorded `counted=false`; the existing client UI shows the "sign in to keep
+counting" nudge. Authed callers' rate limit keys on `voter_id` only (shared-NAT users
+not throttled as a group). Residual (accepted, ADR-017): guest self-votes can't be
+fully identified without auth — mitigated by the caps. Files: `arena-vote/index.ts`,
+`_shared/arena.ts` (`hashClientIp`), migration 015. **Not verified** — needs deploy
+(see `docs/Arena_Public_Launch_Runbook.md`).

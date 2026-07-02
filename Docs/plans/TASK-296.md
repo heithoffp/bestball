@@ -37,5 +37,23 @@ None
 Related fix already authored: migration 014 (2026-07-02) makes anon reads
 enrolled-only post-beta. Launch-gating alongside TASK-285/290/310.
 
+## Implementation (code complete — pending deploy, branch `arena-public-launch`)
+- **#1 Claim hijack** — `arena-register` claims an ownerless board row ONLY on an
+  exact `board_entry_ref` match (raw UD `draftEntryId`, service-role-only, so
+  unforgeable). The client-readable `draft_id`+fingerprint fallback is removed;
+  cross-user fingerprint dedup stays in the trusted backfill script.
+- **#2 Snapshot injection** — migration `015` revokes client `INSERT` and
+  `display_snapshot` `UPDATE` on `arena_teams` (registration is server-only), and
+  `arena-register` validates each board team's players against
+  `draft_boards_admin.picks` (server truth) and sets `slateTitle` from the stored
+  board. Deferred: full server-side snapshot rebuild (derived fields) — ADR-017.
+- **#3 Anon `user_id`** — migration `015` drops `user_id` from the anon read grant;
+  `arenaClient.getLeaderboard` selects it only when signed in.
+
+Files: `supabase/migrations/015_arena_public_launch_hardening.sql`,
+`supabase/functions/arena-register/index.ts`,
+`best-ball-manager/src/utils/arenaClient.js`. **Not verified** — needs migration +
+function deploy (see `docs/Arena_Public_Launch_Runbook.md`). Decisions: ADR-017.
+
 ## Open Questions
 <!-- Unknowns or decisions to resolve before planning. Delete if none. -->

@@ -23,7 +23,14 @@ export const POOL_SAMPLE_LIMIT = 200; // max eligible teams pulled for in-memory
 // cheap best-effort backstop (per-isolate, reset on cold start).
 export const RATE_LIMIT_PAIRS_PER_MIN = 40; // pairing requests per IP per minute
 export const RATE_LIMIT_VOTES_PER_MIN = 20; // votes per voter (or IP) per minute
+export const RATE_LIMIT_REGISTERS_PER_MIN = 12; // arena-register requests per IP per minute
 export const RATE_LIMIT_WINDOW_MS = 60_000;
+
+// Per-user total owned-team ceiling (TASK-311 #1). Guards arena_teams against a
+// single authenticated account flooding the table across many register requests.
+// A heavy real portfolio is a few hundred entries; this leaves generous headroom
+// while capping abuse. Enforced durably in arena-register against the live count.
+export const MAX_OWNED_TEAMS_PER_USER = 6000;
 
 // ---------------------------------------------------------------------------
 // Featured tournament (TASK-301). With a small daily audience, votes spread
@@ -143,6 +150,36 @@ export function getClientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "unknown";
+}
+
+// Salted, non-reversible hash of a client IP (TASK-285 hybrid). Stored per match
+// in arena_matches.voter_ip_hash so the guest cap + rate limit can key on the IP
+// in addition to the client-invented guestId (which a determined guest rotates).
+// Salted with ARENA_TOKEN_SECRET so the raw IP is never recoverable or externally
+// correlatable. Returns "" for a missing/unknown IP so callers can skip it.
+export async function hashClientIp(ip: string, secret: string): Promise<string> {
+  if (!ip || ip === "unknown") return "";
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(ip)));
+  // base64url (no +/=): the hash is used directly as a value inside PostgREST or()
+  // filter clauses (arena-vote rate limit + guest cap), where +, / and = would be
+  // mis-parsed. base64url uses only [A-Za-z0-9-_], all filter-safe.
+  return bytesToB64url(sig);
+}
+
+// Escape a value for embedding inside a PostgREST or()/in() filter string. Strips
+// BOTH double-quotes and backslashes (TASK-311 #2): the double-quote closes the
+// quoted term and a trailing backslash escapes the closing quote, so a value ending
+// in "\" would otherwise corrupt (inject into) the filter. Bounded impact, still
+// injection — remove both.
+export function safeFilterValue(v: unknown): string {
+  return String(v).replace(/["\\]/g, "");
 }
 
 // In-memory sliding-window limiter (TASK-285). Best-effort only: state lives in
