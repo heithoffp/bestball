@@ -17,6 +17,24 @@ function normName(s) {
   return (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+// A pick whose player lookup failed at sync time carries the extension's
+// "Unknown (<appearanceId>)" fallback instead of a real name (see normalizePick
+// in chrome-extension/src/injected/underdog-bridge.js). A snapshot built from
+// such picks is useless in a blind matchup — voters see UUIDs — so degraded
+// rosters are kept OUT of the Arena pool entirely. Any single unresolved pick
+// disqualifies the team: the failure mode is a missing lookup table, which
+// degrades most of the roster at once, and a partially-anonymous card would
+// skew votes against that team unfairly.
+const UNRESOLVED_NAME_RE = /^unknown\s*\(/i;
+
+/** True when any pick in the list is missing a real player name. */
+export function hasUnresolvedPlayers(players) {
+  return (players || []).some((p) => {
+    const name = ((typeof p === 'string' ? p : p?.name) || '').trim();
+    return !name || UNRESOLVED_NAME_RE.test(name);
+  });
+}
+
 function round1(n) {
   return n == null || !Number.isFinite(n) ? null : Math.round(n * 10) / 10;
 }
@@ -57,6 +75,31 @@ export function enrichSnapshotCLV(snapshot, adpLookup) {
     ? round1(clvVals.reduce((a, b) => a + b, 0) / clvVals.length)
     : (snapshot.avgCLV ?? null);
   return { ...snapshot, players, avgCLV };
+}
+
+// Display-time enrichment for the voting card / leaderboard expansion: recomputed
+// CLV (see enrichSnapshotCLV) plus per-player projected points and their team total,
+// resolved against the viewer's projection map. Projections are never stored in the
+// snapshot — like CLV they are computed fresh so every pool team gets them, however
+// long ago it was registered. projLookup: (name) => seasonPoints|null.
+export function enrichSnapshotDisplay(snapshot, adpLookup, projLookup) {
+  const withCLV = enrichSnapshotCLV(snapshot, adpLookup);
+  if (!withCLV || typeof projLookup !== 'function') return withCLV;
+  let resolved = 0;
+  const players = (withCLV.players || []).map((p) => {
+    const proj = projLookup(p.name);
+    if (proj == null || !Number.isFinite(proj)) return p;
+    resolved += 1;
+    return { ...p, proj: round1(proj) };
+  });
+  if (resolved === 0) return withCLV;
+  // The team total is only honest when (nearly) the whole roster resolved — a
+  // partial sum would rig the tape's Proj Pts comparison against the side with
+  // more unresolved names. Per-player values still show whatever resolved.
+  const projTotal = resolved >= players.length * 0.8
+    ? round1(players.reduce((sum, p) => sum + (p.proj || 0), 0))
+    : null;
+  return { ...withCLV, players, projTotal };
 }
 
 // Stored platform values are 'underdog' | 'draftkings' (see migration 011).
@@ -115,6 +158,16 @@ function buildSnapshot(sorted, platform, tournamentTitle, slateTitle, adpLookup)
     ? round1(clvVals.reduce((a, b) => a + b, 0) / clvVals.length)
     : null;
 
+  // Draft date: earliest pick timestamp, kept as a plain date. Owned rosters carry
+  // pickedAt from the extension sync; board picks have no timestamps, so board
+  // snapshots simply omit the field (the UI shows the date only when present).
+  const times = sorted
+    .map((p) => (p.pickedAt ? new Date(p.pickedAt).getTime() : NaN))
+    .filter((t) => Number.isFinite(t));
+  const draftedAt = times.length
+    ? new Date(Math.min(...times)).toISOString().slice(0, 10)
+    : null;
+
   return {
     players,
     posSnap,
@@ -124,6 +177,7 @@ function buildSnapshot(sorted, platform, tournamentTitle, slateTitle, adpLookup)
     tournamentTitle: tournamentTitle || null,
     slateTitle: slateTitle || null,
     avgCLV,
+    draftedAt,
   };
 }
 
@@ -143,6 +197,7 @@ export function buildEnrollableTeams(rosterData, masterPlayers) {
 
   return Object.entries(map)
     .filter(([id]) => id && id !== 'Unknown')
+    .filter(([, players]) => !hasUnresolvedPlayers(players))
     .map(([entryId, players]) => {
       const sorted = [...players].sort((a, b) => (a.pick || 0) - (b.pick || 0));
       const platform = derivePlatform(sorted);
@@ -193,6 +248,7 @@ export function buildBoardTeams(board, ownKey, adpLookup) {
   for (const [ref, seat] of Object.entries(seats)) {
     const sorted = [...seat.picks].sort((a, b) => (a.pick || 0) - (b.pick || 0));
     if (ownKey && playerNameKey(sorted) === ownKey) continue; // the user's own seat
+    if (hasUnresolvedPlayers(sorted)) continue; // degraded capture — not pool-worthy
     out.push({
       boardEntryRef: ref,
       userId: seat.userId,

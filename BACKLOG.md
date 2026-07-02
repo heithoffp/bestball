@@ -127,6 +127,7 @@
 | TASK-264 | Daily rebuild so scheduled posts get OG cards on go-live date | Todo | P4 | [Plan](docs/plans/TASK-264.md) -- Draft | No | 2026-06-15 | 2026-06-15 |
 | TASK-271 | Remove orphaned Eliminator CSS and unused model exports | Todo | P4 | [Plan](docs/plans/TASK-271.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
 | TASK-276 | DraftBoardModal: use platform-correct ADP/proj maps for DK boards | Todo | P4 | [Plan](docs/plans/TASK-276.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
+| TASK-309 | Clear pre-existing ESLint errors: HelpOverlay setState-in-effect, AuthContext chrome global, capture-screenshots process global | Todo | P4 | [Plan](docs/plans/TASK-309.md) -- Draft | No | 2026-07-02 | 2026-07-02 |
 
 ## Completed Tasks
 
@@ -134,6 +135,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-308 | Arena mobile matchup comparison UX — swipeable contender deck with quick-toggle and sticky pick bar | Done | P2 | [Plan](docs/archive/plans/TASK-308.md) | Yes | 2026-07-02 |
 | TASK-294 | Arena private-beta allowlist gate (ADR-015) | Done | P2 | [Plan](docs/archive/plans/TASK-294.md) | Yes | 2026-06-28 |
 | TASK-293 | Arena opt-out launch switch (flip arena_eligibility_mode) | Done | P2 | [Plan](docs/archive/plans/TASK-293.md) | Yes | 2026-06-28 |
 | TASK-289 | Arena default leaderboard visibility (drop enrolled filter) | Done | P2 | [Plan](docs/archive/plans/TASK-289.md) | Yes | 2026-06-28 |

@@ -14,6 +14,7 @@ import ArenaLeaderboard from './arena/ArenaLeaderboard';
 import ArenaMyTeams from './arena/ArenaMyTeams';
 import { useAuth } from '../contexts/AuthContext';
 import { isArenaBetaUser } from '../utils/arenaBeta';
+import { canonicalName } from '../utils/helpers';
 import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
 import { fetchDraftBoards } from '../utils/draftBoards';
 import { registerAllArenaTeams, ARENA_AVAILABLE } from '../utils/arenaClient';
@@ -91,7 +92,7 @@ function useAutoRegister(user, rosterData, masterPlayers) {
   }, [user, rosterData, masterPlayers]);
 }
 
-export default function Arena({ rosterData, masterPlayers, helpOpen, onHelpToggle }) {
+export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOpen, onHelpToggle }) {
   const [view, setView] = useState('vote');
   const { user } = useAuth();
   useAutoRegister(user, rosterData, masterPlayers);
@@ -100,6 +101,17 @@ export default function Arena({ rosterData, masterPlayers, helpOpen, onHelpToggl
   // stored snapshots are frozen insert-new-only, so live computation is what makes
   // Team/player CLV reliably appear (see enrichSnapshotCLV).
   const adpLookup = useMemo(() => buildAdpLookup(masterPlayers), [masterPlayers]);
+
+  // The viewer's projections, same display-time treatment as CLV. dataLoader shares
+  // one projPointsMap across every platform entry, so any entry's map is THE map.
+  const projLookup = useMemo(() => {
+    const map = Object.values(adpByPlatform || {}).find((p) => p?.projPointsMap)?.projPointsMap;
+    if (!map) return null;
+    return (name) => {
+      const v = map[canonicalName(name)];
+      return Number.isFinite(v) ? v : null;
+    };
+  }, [adpByPlatform]);
 
   return (
     <div className={css.root}>
@@ -124,7 +136,7 @@ export default function Arena({ rosterData, masterPlayers, helpOpen, onHelpToggl
       {helpOpen && <ArenaHelp onClose={onHelpToggle} />}
 
       <div className={css.body}>
-        {view === 'vote' && <ArenaVote adpLookup={adpLookup} onGoToMyTeams={() => setView('myteams')} />}
+        {view === 'vote' && <ArenaVote adpLookup={adpLookup} projLookup={projLookup} onGoToMyTeams={() => setView('myteams')} />}
         {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} />}
         {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} masterPlayers={masterPlayers} />}
       </div>

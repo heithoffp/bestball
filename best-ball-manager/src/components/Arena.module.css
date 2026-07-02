@@ -94,27 +94,79 @@
   min-height: 0;
   overflow-y: auto;
   padding-right: 2px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Matchup ───────────────────────────────────────────────────────────── */
+/* Fills the tab's full column: min-height 100% lets the matchup grid absorb all
+   spare height so an entire 18–20-pick roster sits on screen with no inner
+   scrollbar; when a short window genuinely can't fit it, .body scrolls. */
 .arena {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  max-width: 1180px;
+  gap: var(--space-sm);
+  max-width: 1240px;
   margin: 0 auto;
   width: 100%;
+  min-height: 100%;
+  flex: 1;
 }
 
-/* Top row: balanced grid so the context bar stays centered while the session
-   scorecard (TASK-302) rides the right edge. */
+/* Top row: balanced grid so the context bar stays centered while the scouting
+   lens rides the left edge and the session scorecard (TASK-302) the right. */
 .topRow {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--space-sm);
+  flex-shrink: 0;
 }
-.topSpacer { min-width: 0; }
+
+/* Scouting lens — CLV/Proj stat lens + the team-color stacks layer. Quiet mono
+   telemetry, not a settings panel. */
+.lensStrip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.lensSeg {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px;
+}
+.lensBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--duration-fast), background var(--duration-fast);
+}
+.lensBtn:hover { color: var(--text-primary); }
+.lensActive, .lensActive:hover {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+.lensToggle {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  padding: 4px 10px;
+}
+.lensToggle.lensActive { border-color: var(--accent); }
 .scoreStrip {
   display: flex;
   justify-content: flex-end;
@@ -182,16 +234,20 @@
 
 .matchup {
   display: grid;
-  grid-template-columns: 1fr minmax(148px, 196px) 1fr;
+  /* Tape wide enough that build names ("Double Anchor", "Hyper Fragile") fit. */
+  grid-template-columns: 1fr minmax(176px, 224px) 1fr;
   gap: var(--space-md);
   align-items: stretch;
+  flex: 1;
+  min-height: 0;
 }
 
 .sideCol {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   min-width: 0;
+  min-height: 0;
   animation: clashIn 360ms var(--ease-default) both;
 }
 .sideCol:first-child { --clash-from: -28px; }
@@ -238,12 +294,14 @@
   box-shadow: 0 0 0 4px var(--surface-0), 0 0 0 5px var(--accent-glow), 0 6px 18px rgba(0, 0, 0, 0.5);
   flex-shrink: 0;
 }
+/* Transform-only pulse — the old keyframes interpolated box-shadow, which
+   repaints every frame and stuttered alongside the card reveal. */
 .vsActive { animation: vsPulse 600ms var(--ease-default); }
 
 @keyframes vsPulse {
-  0% { transform: scale(1); box-shadow: 0 0 0 4px var(--surface-0), 0 0 0 5px var(--accent-glow), 0 6px 18px rgba(0,0,0,0.5); }
-  45% { transform: scale(1.18); box-shadow: 0 0 0 4px var(--surface-0), 0 0 0 6px var(--accent), 0 0 30px var(--accent-glow); }
-  100% { transform: scale(1); box-shadow: 0 0 0 4px var(--surface-0), 0 0 0 5px var(--accent-glow), 0 6px 18px rgba(0,0,0,0.5); }
+  0% { transform: scale(1); }
+  45% { transform: scale(1.18); }
+  100% { transform: scale(1); }
 }
 
 .tapeHairline {
@@ -291,6 +349,16 @@
 }
 .tapeValA { text-align: right; }
 .tapeValB { text-align: left; }
+/* Categorical rows (Build) wrap instead of truncating — "Hyper Fragile" must
+   never render as "Hyper Fra…". */
+.tapeValWrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.25;
+  font-size: var(--text-xs);
+  overflow-wrap: break-word;
+}
 .tapeWinA { color: var(--corner-red); }
 .tapeWinB { color: var(--corner-blue); }
 .tapeWinA::after { content: ' \25C2'; color: var(--corner-red); }
@@ -303,38 +371,81 @@
   border: 1px solid var(--border-default);
   border-left: 3px solid var(--corner, var(--border-default));
   border-radius: var(--radius-lg);
-  padding: 0.9rem 1rem;
+  padding: 0.7rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.45rem;
   flex: 1;
   min-height: 0;
-  transition: border-color var(--duration-normal), box-shadow var(--duration-normal), opacity var(--duration-normal), transform var(--duration-normal);
+  /* Only compositor-friendly properties transition (transform/opacity). Glows
+     live on pre-rendered pseudo-elements whose OPACITY fades — interpolating
+     box-shadow/filter on a viewport-tall card repaints every frame and was the
+     source of the reveal jank. */
+  transition: border-color var(--duration-normal), opacity var(--duration-normal), transform var(--duration-normal);
 }
+.card::before,
+.card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-normal);
+}
+/* Hover/focus pick affordance — corner-colored glow. */
+.card::before { box-shadow: 0 0 0 1px var(--corner, transparent), 0 8px 28px var(--corner-glow, transparent); }
+/* Winner glow, revealed after the vote. */
+.card::after { box-shadow: 0 0 0 1px var(--accent), 0 0 30px var(--accent-glow); }
 .cardRed { --corner: var(--corner-red); --corner-glow: var(--corner-red-glow); }
 .cardBlue { --corner: var(--corner-blue); --corner-glow: var(--corner-blue-glow); }
+
+/* The card IS the vote button on desktop (no dedicated Pick buttons). */
+.cardPickable { cursor: pointer; }
+.cardPickable:hover,
+.cardPickable:focus-visible {
+  border-color: var(--corner);
+  transform: translateY(-2px);
+  outline: none;
+}
+.cardPickable:hover::before,
+.cardPickable:focus-visible::before { opacity: 1; }
+
 .cardWin {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 0 30px var(--accent-glow);
   transform: translateY(-3px);
 }
-.cardLoss { opacity: 0.5; filter: saturate(0.6); }
+.cardWin::after { opacity: 1; }
+.cardLoss { opacity: 0.45; }
 
+/* Elo reveal — big and high-contrast (solid dark pill, not a translucent wash)
+   so the delta is legible in the reveal window. */
 .deltaRibbon {
   position: absolute;
-  top: -12px;
+  top: -16px;
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-mono);
-  font-weight: 800;
-  font-size: var(--text-sm);
-  padding: 3px 12px;
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  padding: 6px 18px;
   border-radius: 999px;
   white-space: nowrap;
+  background: var(--surface-0);
   animation: dropIn var(--duration-normal) var(--ease-default) both;
+  z-index: 3;
 }
-.deltaUp { background: rgba(46, 204, 113, 0.18); color: var(--positive); border: 1px solid rgba(46, 204, 113, 0.5); }
-.deltaDown { background: rgba(231, 76, 60, 0.18); color: var(--negative); border: 1px solid rgba(231, 76, 60, 0.5); }
+.deltaUp {
+  color: var(--positive);
+  border: 1px solid rgba(46, 204, 113, 0.7);
+  box-shadow: 0 0 18px rgba(46, 204, 113, 0.28), 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.deltaDown {
+  color: var(--negative);
+  border: 1px solid rgba(231, 76, 60, 0.7);
+  box-shadow: 0 0 18px rgba(231, 76, 60, 0.25), 0 4px 14px rgba(0, 0, 0, 0.5);
+}
 
 @keyframes dropIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
@@ -366,11 +477,69 @@
   padding: 2px 8px;
   border-radius: 4px;
 }
-.pickCount {
+.headMeta {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.draftDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.draftDate svg { color: var(--text-muted); }
+.pickCount {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+/* Post-reveal marker on the card the voter chose (replaces the old button's
+   "Your pick ✓" state). */
+.pickedTag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* Hover-revealed pill telling mouse users the card itself is the vote target. */
+.pickHint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translate(-50%, 4px);
+  background: var(--surface-0);
+  border: 1px solid var(--corner, var(--border-strong));
+  color: var(--corner, var(--text-primary));
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+.cardPickable:hover .pickHint,
+.cardPickable:focus-visible .pickHint {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 .contextLine {
   font-size: var(--text-xs);
@@ -380,7 +549,7 @@
   white-space: nowrap;
 }
 
-.posSnap { display: flex; flex-wrap: wrap; gap: 5px; }
+.posSnap { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .posChip {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -389,14 +558,32 @@
   padding: 2px 7px;
   letter-spacing: 0.04em;
 }
+/* Stack chips — the roster's correlated groups in their NFL franchise color.
+   Pill-shaped to read as a different species from the square position chips;
+   QB-anchored stacks arrive with a bolder fill (set inline). */
+.stackChip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 2px 8px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: default;
+}
 
+/* The whole roster, no inner scrollbar: rows are single-line and dense so all
+   18–20 picks fit the card's share of the viewport (overflow stays as a safety
+   valve for genuinely short windows). */
 .playerList {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  max-height: 46vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   border-top: 1px solid var(--border-subtle);
 }
@@ -404,12 +591,28 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 2px;
+  padding: 2px 3px 2px 6px;
   border-bottom: 1px solid var(--border-subtle);
+  /* Reserved rail edge — colors on when the row belongs to a stack. */
+  border-left: 4px solid transparent;
+  /* Rows share the card's spare height evenly, so an 18-pick roster fills the
+     card exactly like a 20-pick one — no dead zone under the last pick. */
+  flex: 1 0 auto;
+  min-height: 27px;
+}
+.playerRow:last-child { border-bottom: none; }
+/* Team-color stack rail: stacked players carry a vertical thread in their NFL
+   team's real color. The tint is a gradient anchored to the rail — strong at
+   the edge, fading right — so even dark blue/green franchise colors separate
+   from the navy surface instead of dissolving into it. */
+.playerRowStacked {
+  border-left-color: var(--rail);
+  background: linear-gradient(90deg, var(--rail-bg), transparent 70%);
 }
 .avatar {
-  width: 27px;
-  height: 27px;
+  position: relative;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid;
   display: flex;
@@ -419,41 +622,49 @@
   font-size: 10px;
   font-weight: 800;
   flex-shrink: 0;
+  overflow: hidden;
 }
-.playerMain {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  gap: 1px;
+/* Headshot layered over the monogram; fades in only once loaded so a CDN miss
+   never leaves an empty circle. */
+.face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-default);
 }
+.faceLoaded { opacity: 1; }
 .playerName {
   color: var(--text-primary);
   font-weight: 600;
-  font-size: var(--text-sm);
-  line-height: 1.15;
+  font-size: var(--text-base);
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .playerMeta {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
-  line-height: 1.15;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.2;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .clvCell {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 3px;
-  width: 60px;
+  width: 64px;
   flex-shrink: 0;
 }
-.clvVal { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 800; }
+.clvVal { font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 800; }
 .clvBar {
   position: relative;
   width: 100%;
@@ -478,9 +689,42 @@
 .clvNeg .clvBarFill { background: var(--negative); }
 .clvNeutral .clvVal { color: var(--text-muted); }
 
+/* Projected-points lens: value + a position-colored bar scaled to the matchup's
+   highest projection, so bars compare across BOTH cards. */
+.projCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  width: 64px;
+  flex-shrink: 0;
+}
+.projVal {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.projBar {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.projBarFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  opacity: 0.9;
+}
+
 /* ── Skeleton (cold-load placeholder) ──────────────────────────────────── */
 .skel { pointer-events: none; }
-.skelHead, .skelMeta, .skelRow, .skelBtn, .skelVs {
+.skelHead, .skelMeta, .skelRow, .skelVs {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.3s linear infinite;
@@ -488,8 +732,7 @@
 }
 .skelHead { height: 18px; width: 55%; }
 .skelMeta { height: 11px; width: 38%; }
-.skelRow { height: 22px; }
-.skelBtn { height: 44px; border-radius: var(--radius-md); }
+.skelRow { height: 25px; }
 .skelVs { width: 60px; height: 60px; border-radius: 50%; }
 
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
@@ -586,6 +829,72 @@
   transition: background var(--duration-fast), transform var(--duration-fast);
 }
 .nextBtn:hover { background: rgba(232, 191, 74, 0.22); transform: translateY(-1px); }
+
+/* ── Mobile matchup deck (TASK-308) ─────────────────────────────────────── */
+/* Rendered only when !isDesktop (<900px). The tape leads as the at-a-glance
+   comparison; the two contender cards become a horizontal snap deck with the
+   neighbor's edge peeking in; a sticky dock keeps Pick Red / Pick Blue / Skip
+   on screen at every scroll position. */
+.mobileMatchup { display: flex; flex-direction: column; gap: var(--space-sm); }
+.mobileTape .tapeHairline { display: none; }
+.mobileTape .vsMedallion { width: 44px; height: 44px; font-size: 0.95rem; }
+
+.cornerToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.cornerTab {
+  min-height: 40px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  transition: color var(--duration-fast), background var(--duration-fast);
+}
+.cornerTabRed.cornerTabActive {
+  color: var(--corner-red);
+  background: var(--corner-red-glow);
+  box-shadow: inset 0 -2px 0 var(--corner-red);
+}
+.cornerTabBlue.cornerTabActive {
+  color: var(--corner-blue);
+  background: var(--corner-blue-glow);
+  box-shadow: inset 0 -2px 0 var(--corner-blue);
+}
+
+.deck {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; /* don't trigger the browser back-swipe */
+  padding: 2px 5% 12px;           /* side gutters center the snapped card */
+  scrollbar-width: none;
+}
+.deck::-webkit-scrollbar { display: none; }
+.deckItem { flex: 0 0 90%; scroll-snap-align: center; min-width: 0; }
+
+.pickDock {
+  position: sticky;
+  bottom: 0;
+  z-index: 20; /* below the app's MobileNav dock (z-index 100) */
+  background: var(--surface-0);
+  border-top: 1px solid var(--border-default);
+  padding: 8px 2px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dockPicks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pickDock .pickBtn { min-height: 48px; }
+.pickDock .skipRow { min-height: 30px; }
 
 /* Keyboard hints (desktop only). */
 .kbdRow {
@@ -932,17 +1241,20 @@
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 899px) {
-  .matchup { grid-template-columns: 1fr; gap: var(--space-md); }
+  /* The live matchup renders the deck layout here (TASK-308); the .matchup /
+     .sideCol stacking rules below now serve only MatchupSkeleton. Cards grow to
+     their full roster height and the page scrolls as one — no inner scroll. */
+  .matchup { grid-template-columns: 1fr; gap: var(--space-md); flex: none; }
+  .arena { min-height: 0; flex: none; }
   .tapeCol { padding: 0; }
-  .vsMedallion { width: 50px; height: 50px; font-size: 1.05rem; }
-  .tapeHairline { display: none; }
-  .playerList { max-height: none; }
-  /* No sideways clash when the contenders are stacked vertically. */
+  .playerList { flex: none; overflow-y: visible; }
+  .playerRow { flex: none; }
+  /* No sideways clash when the contenders aren't side by side. */
   .sideCol:first-child, .sideCol:last-child { --clash-from: 0; }
-  /* Touch layout: no keyboard hints; scorecard centers under the context bar. */
+  /* Touch layout: no keyboard hints; lens + scorecard center under the context bar. */
   .kbdRow { display: none; }
   .topRow { grid-template-columns: 1fr; justify-items: center; }
-  .topSpacer { display: none; }
+  .lensStrip { justify-content: center; }
   .scoreStrip { justify-content: center; }
 }
 
@@ -960,12 +1272,16 @@
   .vsActive { animation: none; }
   .deltaRibbon { animation: none; }
   .sideCol, .tape { animation: none; }
-  .skelHead, .skelMeta, .skelRow, .skelBtn, .skelVs { animation: none; }
+  .skelHead, .skelMeta, .skelRow, .skelVs { animation: none; }
   .cardWin { transform: none; }
+  .cardPickable:hover, .cardPickable:focus-visible { transform: none; }
+  .card::before, .card::after { transition: none; }
+  .pickHint { transition: none; transform: translate(-50%, 0); }
   .pickBtn:hover:not(:disabled) { transform: none; }
   .stamp { animation: none; }
   .advanceFill { animation: none; transform: scaleX(1); }
   .nextBtn:hover { transform: none; }
   .podiumCard:hover { transform: none; }
   .rowFlash { animation: none; }
+  .face { transition: none; }
 }

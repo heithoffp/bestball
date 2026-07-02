@@ -1,11 +1,19 @@
 // ArenaRosterCard — one anonymized contender in the blind matchup, styled as a
 // fighter's corner (ADR-013). No owner identity is ever shown. The red/blue corner
 // is purely POSITIONAL (the server already randomizes left/right), so it carries no
-// owner signal and blind fairness holds. Per-player CLV + a position-colored monogram
-// give the snap judgment real signal without a headshot dependency (headshots: TASK-298).
+// owner signal and blind fairness holds.
+//
+// The card is built to put a WHOLE roster on screen at once: dense single-line
+// rows with real player headshots (Sleeper CDN, monogram fallback — TASK-298),
+// NFL-team-colored stack rails, a switchable stat lens (CLV or projected points),
+// and the draft date when the snapshot carries one.
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { CalendarDays } from 'lucide-react';
 import { posColor } from '../../utils/positionColors';
+import { nflTeamColor } from '../../utils/nflTeamColors';
+import { headshotUrl, teamLogoUrl } from '../../utils/headshots';
+import { analyzeRosterStacks } from '../../utils/stackAnalysis';
 import { compactTournamentName } from '../../utils/helpers';
 import css from '../Arena.module.css';
 
@@ -25,6 +33,15 @@ function initials(name) {
   return (first + last).toUpperCase();
 }
 
+// "2026-06-12" -> "Jun 12" (year appended only when it isn't the current year).
+function draftDateLabel(iso) {
+  const d = new Date(`${iso}T00:00:00`);
+  if (isNaN(d)) return null;
+  const opts = { month: 'short', day: 'numeric' };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('en-US', opts);
+}
+
 // CLV → text + sign class + bar magnitude (0–1). ±15% reads as a full half-bar.
 function clvView(clv) {
   if (clv == null) return { text: '—', cls: css.clvNeutral, mag: 0, pos: true };
@@ -37,7 +54,38 @@ function clvView(clv) {
   };
 }
 
-function PosSnapshot({ posSnap }) {
+// Headshot over the position-colored monogram ring. The monogram renders
+// immediately; the photo fades in only once it has actually loaded, and a
+// failed fetch (unmapped name, CDN miss) simply never covers it.
+function PlayerFace({ name, position, team }) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const isDefense = position === 'DST' || position === 'DEF';
+  const src = isDefense ? teamLogoUrl(team) : headshotUrl(name, position);
+  const color = posColor(position);
+  return (
+    <span
+      className={css.avatar}
+      style={{ color, background: `${color}24`, borderColor: `${color}66` }}
+      aria-hidden="true"
+    >
+      {initials(name)}
+      {src && !failed && (
+        <img
+          className={`${css.face} ${loaded ? css.faceLoaded : ''}`}
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+        />
+      )}
+    </span>
+  );
+}
+
+function PosSnapshot({ posSnap, stacks, showStacks }) {
   const keys = [
     ...POS_ORDER.filter((p) => posSnap[p]),
     ...Object.keys(posSnap).filter((p) => !POS_ORDER.includes(p)),
@@ -53,35 +101,94 @@ function PosSnapshot({ posSnap }) {
           {posSnap[pos]}{pos}
         </span>
       ))}
+      {showStacks && stacks.map((s) => {
+        const color = nflTeamColor(s.team);
+        const qbAnchored = s.members.some((m) => m.position === 'QB');
+        return (
+          <span
+            key={s.team}
+            className={css.stackChip}
+            style={{
+              color,
+              borderColor: `${color}99`,
+              background: `${color}${qbAnchored ? '3d' : '24'}`,
+            }}
+            title={`${s.type} — ${s.members.map((m) => `${m.position} ${m.name}`).join(', ')}`}
+          >
+            {s.team} ×{s.members.length}
+          </span>
+        );
+      })}
     </div>
   );
 }
 
 /**
  * @param {object} props
- * @param {object} props.snapshot   display_snapshot payload
+ * @param {object} props.snapshot   display_snapshot payload (display-enriched)
  * @param {'red'|'blue'|'neutral'} props.corner  positional corner (random per matchup);
  *   'neutral' drops the fight tint (used outside the matchup, e.g. leaderboard expansion)
  * @param {string} props.cornerLabel e.g. "Red Corner"
  * @param {'win'|'loss'|null} props.outcome  reveal state
  * @param {number|null} props.delta  Elo delta to reveal
  * @param {string|null} props.stamp  post-reveal scorecard stamp (e.g. "Upset") — TASK-302
+ * @param {'clv'|'proj'} props.lens  which stat rides the right column of each row
+ * @param {boolean} props.showStacks paint NFL-team-colored stack rails + chips
+ * @param {number|null} props.maxProj proj-bar scale ceiling (max across the matchup)
+ * @param {boolean} props.pickable   desktop: the card itself is the vote target
+ * @param {boolean} props.picked     post-reveal: this was the voter's pick
+ * @param {function|null} props.onPick vote handler when the card is pickable
  */
-export default function ArenaRosterCard({ snapshot, corner = 'red', cornerLabel, outcome = null, delta = null, stamp = null }) {
+export default function ArenaRosterCard({
+  snapshot, corner = 'red', cornerLabel, outcome = null, delta = null, stamp = null,
+  lens = 'clv', showStacks = true, maxProj = null,
+  pickable = false, picked = false, onPick = null,
+}) {
+  const { players = [], posSnap = {}, count, platform, tournamentTitle, slateTitle, draftedAt } = snapshot || {};
+
+  // Qualifying stacks (2+ teammates, game stacks and up) and a per-player rail
+  // color. Players in multiple relationships take their team's single stack color,
+  // so a roster's rails read as vertical threads of franchise color.
+  const stacks = useMemo(
+    () => (players.length ? analyzeRosterStacks(players) : []),
+    [players],
+  );
+  const stackTeams = useMemo(() => {
+    const map = new Map();
+    stacks.forEach((s) => map.set(s.team, nflTeamColor(s.team)));
+    return map;
+  }, [stacks]);
+
+  const projCeiling = Math.max(
+    1,
+    maxProj ?? players.reduce((m, p) => Math.max(m, p.proj || 0), 0),
+  );
+
   if (!snapshot) return null;
-  const { players = [], posSnap = {}, count, platform, tournamentTitle, slateTitle } = snapshot;
   const isDk = platform === 'draftkings';
   const context = tournamentTitle || slateTitle;
+  const dateLabel = draftedAt ? draftDateLabel(draftedAt) : null;
 
+  const clickable = pickable && typeof onPick === 'function';
   const cardClass = [
     css.card,
     corner === 'blue' ? css.cardBlue : corner === 'red' ? css.cardRed : '',
     outcome === 'win' ? css.cardWin : '',
     outcome === 'loss' ? css.cardLoss : '',
+    clickable ? css.cardPickable : '',
   ].filter(Boolean).join(' ');
 
   return (
-    <div className={cardClass}>
+    <div
+      className={cardClass}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `Pick ${cornerLabel}` : undefined}
+      onClick={clickable ? onPick : undefined}
+      onKeyDown={clickable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(); }
+      } : undefined}
+    >
       {outcome && delta != null && (
         <div className={`${css.deltaRibbon} ${delta >= 0 ? css.deltaUp : css.deltaDown}`}>
           {delta >= 0 ? '+' : '−'}{Math.abs(Math.round(delta))} Elo
@@ -92,6 +199,7 @@ export default function ArenaRosterCard({ snapshot, corner = 'red', cornerLabel,
       <div className={css.cardHead}>
         <span className={css.cornerDot} />
         <span className={css.sideLabel}>{cornerLabel}</span>
+        {picked && <span className={css.pickedTag}>Your pick ✓</span>}
         <span
           className={css.platformChip}
           style={{
@@ -101,49 +209,80 @@ export default function ArenaRosterCard({ snapshot, corner = 'red', cornerLabel,
         >
           {platformLabel(platform)}
         </span>
-        <span className={css.pickCount}>{count} picks</span>
+        <span className={css.headMeta}>
+          {dateLabel && (
+            <span className={css.draftDate} title={`Drafted ${dateLabel}`}>
+              <CalendarDays size={11} /> {dateLabel}
+            </span>
+          )}
+          <span className={css.pickCount}>{count} picks</span>
+        </span>
       </div>
 
       {context && <div className={css.contextLine} title={context}>{compactTournamentName(context)}</div>}
 
-      <PosSnapshot posSnap={posSnap} />
+      <PosSnapshot posSnap={posSnap} stacks={stacks} showStacks={showStacks} />
 
       <ol className={css.playerList}>
         {players.map((p, i) => {
-          const clv = clvView(p.clv);
           const color = posColor(p.position);
+          const railColor = showStacks ? stackTeams.get(p.team) : null;
           return (
-            <li key={`${p.name}-${i}`} className={css.playerRow}>
-              <span
-                className={css.avatar}
-                style={{ color, background: `${color}24`, borderColor: `${color}66` }}
-                aria-hidden="true"
-              >
-                {initials(p.name)}
+            <li
+              key={`${p.name}-${i}`}
+              className={`${css.playerRow} ${railColor ? css.playerRowStacked : ''}`}
+              style={railColor ? { '--rail': railColor, '--rail-bg': `${railColor}2e` } : undefined}
+            >
+              <PlayerFace name={p.name} position={p.position} team={p.team} />
+              <span className={css.playerName}>{p.name}</span>
+              <span className={css.playerMeta}>
+                <span style={{ color }}>{p.position}</span>
+                {p.team && p.team !== 'N/A' ? (
+                  <>·<span style={railColor ? { color: railColor, fontWeight: 700 } : undefined}>{p.team}</span></>
+                ) : ''}
+                {p.pick ? `·${p.pick}` : ''}
               </span>
-              <span className={css.playerMain}>
-                <span className={css.playerName}>{p.name}</span>
-                <span className={css.playerMeta}>
-                  <span style={{ color }}>{p.position}</span> · {p.team || '—'}{p.pick ? ` · ${p.pick}` : ''}
+              {lens === 'proj' ? (
+                <span className={css.projCell}>
+                  <span className={css.projVal}>{p.proj != null ? Math.round(p.proj) : '—'}</span>
+                  <span className={css.projBar}>
+                    {p.proj != null && (
+                      <span
+                        className={css.projBarFill}
+                        style={{
+                          width: `${Math.min(100, (p.proj / projCeiling) * 100)}%`,
+                          background: color,
+                        }}
+                      />
+                    )}
+                  </span>
                 </span>
-              </span>
-              <span className={`${css.clvCell} ${clv.cls}`}>
-                <span className={css.clvVal}>{clv.text}</span>
-                <span className={css.clvBar}>
-                  {clv.mag > 0 && (
-                    <span
-                      className={css.clvBarFill}
-                      style={clv.pos
-                        ? { left: '50%', width: `${clv.mag * 50}%` }
-                        : { right: '50%', width: `${clv.mag * 50}%` }}
-                    />
-                  )}
-                </span>
-              </span>
+              ) : (() => {
+                const clv = clvView(p.clv);
+                return (
+                  <span className={`${css.clvCell} ${clv.cls}`}>
+                    <span className={css.clvVal}>{clv.text}</span>
+                    <span className={css.clvBar}>
+                      {clv.mag > 0 && (
+                        <span
+                          className={css.clvBarFill}
+                          style={clv.pos
+                            ? { left: '50%', width: `${clv.mag * 50}%` }
+                            : { right: '50%', width: `${clv.mag * 50}%` }}
+                        />
+                      )}
+                    </span>
+                  </span>
+                );
+              })()}
             </li>
           );
         })}
       </ol>
+
+      {clickable && (
+        <span className={css.pickHint} aria-hidden="true">Pick {cornerLabel}</span>
+      )}
     </div>
   );
 }

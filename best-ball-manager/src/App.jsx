@@ -536,7 +536,7 @@ export default function App() {
                 : <LockedFeature featureName="Combo Analysis" onSignUp={() => setShowAuthModal(true)} />
             )}
             {/* Arena is in private beta (ADR-015) — visible only to allowlisted accounts. */}
-            {activeTab === 'arena' && arenaBeta && <Arena rosterData={rosterData} masterPlayers={masterPlayers} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
+            {activeTab === 'arena' && arenaBeta && <Arena rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
           </Suspense>
         </div>
       </div>
