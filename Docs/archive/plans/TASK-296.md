@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: dff614f -->
 # TASK-296: Arena public-launch data hardening (dedup + server-built snapshots)
 
 **Status:** Draft

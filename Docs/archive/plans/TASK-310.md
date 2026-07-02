@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: dff614f -->
 # TASK-310: Arena public-launch flip: remove client allowlist gate + deploy/backfill sequence
 
 **Status:** Draft

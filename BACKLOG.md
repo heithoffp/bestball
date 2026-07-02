@@ -14,9 +14,6 @@
 - TASK-188: Weekly portfolio digest email — retention loop
 - TASK-240: Roster Viewer — full Draft Board view (Underdog)
 - TASK-268: Add Avg CLV column to Exposures tab
-- TASK-311: Arena Edge Function hardening fixes from 2026-07-02 launch review
-- TASK-296: Arena public-launch data hardening (dedup + server-built snapshots)
-- TASK-290: Arena board-team takedown/removal path
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -60,10 +57,6 @@
 | TASK-239 | Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks) | In Progress | P2 | [Plan](docs/plans/TASK-239.md) | No | 2026-05-15 | 2026-05-15 |
 | TASK-250 | Ignore non-football UD slates (e.g. 'UD 2026 World Cup' soccer) in extension sync and/or web app | Todo | P2 | [Plan](docs/plans/TASK-250.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-255 | Blog SEO — per-post meta/OG, canonical, Article schema & sitemap for /blog routes | Todo | P2 | [Plan](docs/plans/TASK-255.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
-| TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | In Progress | P2 | [Plan](docs/plans/TASK-285.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
-| TASK-290 | Arena board-team takedown/removal path | In Progress | P2 | [Plan](docs/plans/TASK-290.md) -- Draft | No | 2026-06-26 | 2026-07-02 |
-| TASK-310 | Arena public-launch flip: remove client allowlist gate + deploy/backfill sequence | Todo | P2 | [Plan](docs/plans/TASK-310.md) -- Draft | No | 2026-07-02 | 2026-07-02 |
-| TASK-311 | Arena Edge Function hardening fixes from 2026-07-02 launch review | In Progress | P2 | [Plan](docs/plans/TASK-311.md) -- Draft | No | 2026-07-02 | 2026-07-02 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -98,7 +91,6 @@
 | TASK-268 | Add Avg CLV column to Exposures tab | In Progress | P3 | [Plan](docs/plans/TASK-268.md) | No | 2026-06-16 | 2026-06-16 |
 | TASK-272 | Add ESLint config to the Chrome extension | Todo | P3 | [Plan](docs/plans/TASK-272.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
 | TASK-292 | Arena monetization-funnel rework (post opt-out) | Todo | P3 | [Plan](docs/plans/TASK-292.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
-| TASK-296 | Arena public-launch data hardening (dedup + server-built snapshots) | In Progress | P3 | [Plan](docs/plans/TASK-296.md) -- Draft | No | 2026-06-27 | 2026-07-02 |
 | TASK-307 | Arena pairing sample mix after full-DB backfill | Todo | P3 | [Plan](docs/plans/TASK-307.md) -- Draft | No | 2026-07-01 | 2026-07-01 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
@@ -117,6 +109,11 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-310 | Arena public-launch flip: remove client allowlist gate + deploy/backfill sequence | Done | P2 | [Plan](docs/archive/plans/TASK-310.md) | Yes | 2026-07-02 |
+| TASK-290 | Arena board-team takedown/removal path | Done | P2 | [Plan](docs/archive/plans/TASK-290.md) | Yes | 2026-07-02 |
+| TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | Done | P2 | [Plan](docs/archive/plans/TASK-285.md) | Yes | 2026-07-02 |
+| TASK-296 | Arena public-launch data hardening (dedup + server-built snapshots) | Done | P3 | [Plan](docs/archive/plans/TASK-296.md) | Yes | 2026-07-02 |
+| TASK-311 | Arena Edge Function hardening fixes from 2026-07-02 launch review | Done | P2 | [Plan](docs/archive/plans/TASK-311.md) | Yes | 2026-07-02 |
 | TASK-295 | Arena beta presentation & smoothness refinement (Won't Do: Superseded — presentation/smoothness shipped via TASK-297 (Tale of the Tape), TASK-302 (fun layer), TASK-303 (leaderboard viz), TASK-308 (mobile deck)) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-295.md) | No | 2026-07-02 |
 | TASK-306 | Full-database Arena pool backfill script (ADR-016) | Done | P2 | [Plan](docs/archive/plans/TASK-306.md) | Yes | 2026-07-02 |
 | TASK-305 | Arena registration rework: retire guardrail #3 + claim-on-sync (ADR-016) | Done | P2 | [Plan](docs/archive/plans/TASK-305.md) | Yes | 2026-07-02 |

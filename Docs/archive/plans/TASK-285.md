@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: dff614f -->
 # TASK-285: Arena: anti-abuse hardening + guest-vote weighting decision
 
 **Status:** Approved (Level 3 auto-executed)

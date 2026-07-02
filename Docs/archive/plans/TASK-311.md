@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: dff614f -->
 # TASK-311: Arena Edge Function hardening fixes from 2026-07-02 launch review
 
 **Status:** Draft

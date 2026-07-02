@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-02 | Commit: dff614f -->
 # TASK-290: Arena board-team takedown/removal path
 
 **Status:** Draft
