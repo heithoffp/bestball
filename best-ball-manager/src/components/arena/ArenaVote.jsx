@@ -4,10 +4,12 @@
 // reveals the Elo deltas, and auto-advances. The next matchup is PREFETCHED during the
 // reveal window so advancing feels instant; a skeleton (not a spinner) covers cold loads.
 //
-// The pick is OPTIMISTIC: the tapped card flips to its win state and the reveal clock
-// starts the moment the user taps — the vote submits during the reveal window, and the
-// Elo ticker/stamp data lands mid-reveal when the server responds. The user never
-// waits on the network to see their pick register.
+// The reveal is INSTANT: the tapped card flips and the Elo ticker/stamp render the
+// moment the user taps, using a rating change predicted client-side (the pairing
+// ships each team's live elo + matches; predictEloResult mirrors the server math).
+// The vote submits in the background during the reveal window and its authoritative
+// result reconciles silently — usually identical, so nothing re-rolls. The user
+// never waits on the network to see the rating move.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, Trophy, RefreshCw, ArrowRight, Gavel, Zap, Link2 } from 'lucide-react';
@@ -20,15 +22,43 @@ import ArenaRosterCard from './ArenaRosterCard';
 import ArenaTape from './ArenaTape';
 import css from '../Arena.module.css';
 
-// How long the rating-change graphic lingers before auto-advancing, measured from
-// the moment it appears (the vote response landing) — long enough for the roll
-// (420ms hold + 850ms) to finish, plus a beat to read it. Snappy but never so
-// short that we advance before the graphic has had its moment.
-const REVEAL_MS = 1400;
-// Safety fallback only: advances if a vote response never lands at all (true
-// network hang), so a stuck request can't strand the picked card. Normal
-// responses — even slow mobile ones — reschedule the short hold above instead.
-const FALLBACK_ADVANCE_MS = 7000;
+// How long the rating-change graphic lingers before auto-advancing. The reveal now
+// renders instantly on tap (Elo predicted client-side), so this is pure dwell:
+// long enough for the roll (420ms hold + 850ms) to finish plus a beat to read it.
+const REVEAL_MS = 1800;
+
+// Client mirror of the server Elo update (supabase/functions/_shared/arena.ts) so
+// the rating change can roll the instant a pick lands — no round trip. The pairing
+// now ships each team's live elo + matches for exactly this; the server vote result
+// is still authoritative and reconciles silently when it returns.
+const K_PROVISIONAL = 40;
+const K_STABLE = 20;
+const N_PROVISIONAL = 10;
+const expectedScore = (forElo, againstElo) => 1 / (1 + 10 ** ((againstElo - forElo) / 400));
+const kFactor = (matches) => (matches < N_PROVISIONAL ? K_PROVISIONAL : K_STABLE);
+
+// Predict both teams' before/after Elo for a chosen winner, matching arena-vote's
+// math exactly. Returns null if the pairing lacks ratings (e.g. a pre-deploy
+// payload), in which case the caller falls back to the server response.
+function predictEloResult(winner, teamA, teamB) {
+  const eloA = Number(teamA?.elo);
+  const eloB = Number(teamB?.elo);
+  if (!Number.isFinite(eloA) || !Number.isFinite(eloB)) return null;
+  const matchesA = Number(teamA?.matches) || 0;
+  const matchesB = Number(teamB?.matches) || 0;
+  const winnerElo = winner === 'a' ? eloA : eloB;
+  const loserElo = winner === 'a' ? eloB : eloA;
+  const winnerMatches = winner === 'a' ? matchesA : matchesB;
+  const loserMatches = winner === 'a' ? matchesB : matchesA;
+  const winnerAfter = winnerElo + kFactor(winnerMatches) * (1 - expectedScore(winnerElo, loserElo));
+  const loserAfter = loserElo + kFactor(loserMatches) * (0 - expectedScore(loserElo, winnerElo));
+  const aAfter = winner === 'a' ? winnerAfter : loserAfter;
+  const bAfter = winner === 'a' ? loserAfter : winnerAfter;
+  return {
+    team_a: { before: eloA, after: aAfter, delta: aAfter - eloA },
+    team_b: { before: eloB, after: bAfter, delta: bAfter - eloB },
+  };
+}
 
 // Session scorecard (TASK-302): votes judged + upset picks this browser session.
 // Momentum feedback only — the durable record lives server-side in arena_matches.
@@ -180,19 +210,34 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const vote = useCallback(async (winner) => {
     if (status !== 'voting' || !pairing) return;
     const pid = pairing.pairing_id;
-    // Optimistic pick feedback: the picked card flips and the CLV/stamp reveal fire
-    // NOW from local state — no wait on the vote's round trip. Only a long safety
-    // timer is armed here; the real auto-advance is scheduled once the rating-change
-    // graphic actually appears (on the response, below), so we never move on before
-    // the graphic shows — the failure mode on slow mobile networks.
+
+    // Instant reveal: predict the Elo change client-side (mirrors arena-vote) and
+    // render the rating graphic the moment the card is tapped — no round trip. A
+    // guest already past the vote cap won't move ratings, so skip the prediction
+    // for them (the "picks no longer count" notice carries that state instead).
+    const willCount = !(isGuest && capReached);
+    const predicted = willCount ? predictEloResult(winner, pairing.team_a, pairing.team_b) : null;
+    // Upset = the picked team carried the LOWER pre-vote Elo (known now from the
+    // pairing's ratings). Stamps as "Upset Win" instead of "Winner".
+    const upsetGuess = predicted
+      ? (winner === 'a' ? pairing.team_a.elo < pairing.team_b.elo : pairing.team_b.elo < pairing.team_a.elo)
+      : false;
+
     setPick(winner);
-    setStatus('picked');
+    if (predicted) {
+      setResult({ winner, upset: upsetGuess, counted: willCount, ...predicted });
+      setStatus('revealed');
+    } else {
+      // No ratings to predict from — show the pick state; the server response fills
+      // in the graphic when it lands.
+      setStatus('picked');
+    }
+    // Reveal is on screen now — hold long enough for the roll, then advance.
     clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(fetchNext, FALLBACK_ADVANCE_MS);
+    advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
+
     try {
       const data = await submitVote({ token: pairing.token, winner });
-      // Upset = the picked team carried the LOWER pre-vote Elo. Ratings only come
-      // back with the vote response, so blindness holds until after the pick.
       const pickedBefore = winner === 'a' ? data?.team_a?.before : data?.team_b?.before;
       const otherBefore = winner === 'a' ? data?.team_b?.before : data?.team_a?.before;
       const upset = Number.isFinite(pickedBefore) && Number.isFinite(otherBefore) &&
@@ -202,26 +247,26 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
         try { sessionStorage.setItem(SESSION_STATS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
         return next;
       });
-      // Record the guest cap BEFORE the stale-response guard: a slow capped
-      // response must still flip the standing notice even when its reveal is dropped.
+      // Record the guest cap BEFORE the stale-response guard so the standing notice
+      // flips even if the user already advanced.
       if (isGuest && data?.counted === false) {
         setCapReached(true);
         try { sessionStorage.setItem(GUEST_CAP_KEY, '1'); } catch { /* ignore */ }
       }
-      // The user may have hit Next before the vote resolved — the vote still
-      // counted (stats above), but don't let a stale reveal clobber the new matchup.
+      // The user may have hit Next before the vote resolved — don't clobber the new
+      // matchup with a stale reveal.
       if (pairingIdRef.current !== pid) return;
+      // Reconcile with the authoritative numbers. Usually identical to the
+      // prediction (same formula, same inputs), so the ticker's before/after props
+      // don't change and it doesn't re-roll; it only differs if the teams' live Elo
+      // drifted since pairing, or on the exact guest-cap-crossing vote (delta → 0).
       setResult({ winner, upset, ...data });
       setStatus('revealed');
-      // The rating-change graphic is on screen now — hold just long enough for the
-      // roll to finish, then advance. Scheduling here (not at tap time) guarantees
-      // the graphic always shows before we move to the next team.
-      clearTimeout(advanceTimer.current);
-      advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
     } catch (e) {
       if (pairingIdRef.current !== pid) return; // already moved on — nothing to unwind
       clearTimeout(advanceTimer.current);
       setPick(null);
+      setResult(null);
       if (e?.data?.error === 'already_voted') {
         fetchNext();
       } else if (e?.status === 429) {
@@ -230,7 +275,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
         setStatus('error');
       }
     }
-  }, [status, pairing, fetchNext, isGuest]);
+  }, [status, pairing, fetchNext, isGuest, capReached]);
 
   // Scouting lens (this pass): which stat rides each roster row (CLV vs projected
   // points), plus the team-color stack layer. Both persist across sessions.

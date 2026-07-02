@@ -1,8 +1,10 @@
-// arena-pair — issues a blind head-to-head matchup + a signed single-use pairing
-// token (ADR-013 / TASK-281). Accepts guests (verify_jwt = false). Selects a
-// COMPARABLE matchup (same platform, nearby Elo) from the eligible pool and
-// EXCLUDES the caller's own teams. Returns only anonymized display snapshots —
-// no owner identity, no Elo — so voting is blind.
+// arena-pair — issues a head-to-head matchup + a signed single-use pairing token
+// (ADR-013 / TASK-281). Accepts guests (verify_jwt = false). Selects a COMPARABLE
+// matchup (same platform, nearby Elo) from the eligible pool and EXCLUDES the
+// caller's own teams. Returns anonymized display snapshots (no owner identity) plus
+// each team's live elo + matches, so the client can render the rating change the
+// instant a pick lands (server vote result stays authoritative). The matchup UI
+// still hides the ratings until the voter picks — presentational blindness only.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
@@ -161,8 +163,8 @@ Deno.serve(async (req) => {
     pairing: {
       pairing_id: pairingId,
       token,
-      team_a: { id: first.id, display_snapshot: first.display_snapshot },
-      team_b: { id: second.id, display_snapshot: second.display_snapshot },
+      team_a: { id: first.id, elo: first.elo, matches: first.matches, display_snapshot: first.display_snapshot },
+      team_b: { id: second.id, elo: second.elo, matches: second.matches, display_snapshot: second.display_snapshot },
     },
   }, 200);
 });
