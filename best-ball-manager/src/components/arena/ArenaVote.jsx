@@ -20,11 +20,10 @@ import ArenaRosterCard from './ArenaRosterCard';
 import ArenaTape from './ArenaTape';
 import css from '../Arena.module.css';
 
-const REVEAL_MS = 2000;
-// If a slow vote response lands late in the reveal window, hold the reveal at
-// least this long past the response so the Elo ticker (420ms hold + 850ms roll)
-// finishes before auto-advance. Fast responses never trigger this.
-const MIN_REVEAL_WITH_DATA_MS = 1400;
+// Reveal dwell before auto-advance. Kept snappy: the pick/CLV reveal is instant
+// (local state), so this only governs how long the result lingers. Long enough
+// for the Elo roll (420ms hold + 850ms roll) to finish on a fast response.
+const REVEAL_MS = 1400;
 
 // Session scorecard (TASK-302): votes judged + upset picks this browser session.
 // Momentum feedback only — the durable record lives server-side in arena_matches.
@@ -176,14 +175,15 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const vote = useCallback(async (winner) => {
     if (status !== 'voting' || !pairing) return;
     const pid = pairing.pairing_id;
-    // Optimistic confirmation: the picked card flips NOW from local state, so the
-    // tap-to-feedback latency is one render, not one RTT. The auto-advance is NOT
-    // scheduled here — it starts only once the Elo reveal lands (below), so a slow
-    // vote can never be advanced past its own reveal.
+    // Optimistic reveal: the picked card flips, the CLV/stamp reveal fires, and the
+    // auto-advance clock all start NOW from local state — no wait on the vote's round
+    // trip. The Elo ribbon fills in when the response lands (usually inside the
+    // window); a slow response simply doesn't get an Elo roll rather than blocking
+    // the reveal or stretching the dwell.
     setPick(winner);
     setStatus('picked');
     clearTimeout(advanceTimer.current);
-    const pickAt = performance.now();
+    advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
     try {
       const data = await submitVote({ token: pairing.token, winner });
       // Upset = the picked team carried the LOWER pre-vote Elo. Ratings only come
@@ -208,15 +208,6 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
       if (pairingIdRef.current !== pid) return;
       setResult({ winner, upset, ...data });
       setStatus('revealed');
-      // Schedule the auto-advance only now that the reveal is on screen: hold the
-      // remainder of the standard window for a fast response, but never less than
-      // the Elo roll needs. Doing this after the response (instead of a fixed timer
-      // at tap time) is what keeps a slow vote — common on mobile networks and
-      // edge-function cold starts — from advancing before the ribbon/roll renders.
-      const elapsed = performance.now() - pickAt;
-      const hold = Math.max(MIN_REVEAL_WITH_DATA_MS, REVEAL_MS - elapsed);
-      clearTimeout(advanceTimer.current);
-      advanceTimer.current = setTimeout(fetchNext, hold);
     } catch (e) {
       if (pairingIdRef.current !== pid) return; // already moved on — nothing to unwind
       clearTimeout(advanceTimer.current);

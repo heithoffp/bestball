@@ -280,8 +280,18 @@ export default function App() {
         await loadPerPlatformRankings(user.id);
         setStatus({ type: '', msg: '' });
       } else {
-        // Unauthenticated: don't auto-load — show landing page instead.
-        // Demo data is loaded on demand via loadDemoData() (Try Demo button).
+        // Unauthenticated: still load bundled ADP + projections so the public Arena
+        // can compute Team CLV / Proj points for guests. rosterData stays empty, so
+        // the landing page still gates the non-Arena tabs (Arena is exempt).
+        const adpFiles = await loadBundledAdp();
+        const projectionsRaw = Object.values(projectionsModules)[0];
+        const result = await processLoadedData({
+          adpFiles,
+          projectionsText: projectionsRaw ? String(projectionsRaw) : undefined,
+        });
+        setAdpSnapshots(result.adpSnapshots);
+        setAdpByPlatform(result.adpByPlatform || {});
+        setMasterPlayers(result.masterPlayers);
         setStatus({ type: '', msg: '' });
       }
     } catch (err) {
