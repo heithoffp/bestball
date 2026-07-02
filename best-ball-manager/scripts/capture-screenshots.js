@@ -23,14 +23,14 @@ const VIEWPORT = { width: 1440, height: 900 };
 const DEVICE_SCALE = 2;
 
 async function waitForApp(page) {
-  // Wait for the tab bar to appear (means data loaded and app rendered)
-  await page.waitForSelector('.tab-bar', { timeout: 30000 });
+  // Wait for the nav rail to appear (means data loaded and app rendered)
+  await page.waitForSelector('[data-nav="rail"]', { timeout: 30000 });
   // Wait a bit for charts to render
   await page.waitForTimeout(2000);
 }
 
-async function clickTab(page, label) {
-  const tab = page.locator('.tab-button', { hasText: label });
+async function clickTab(page, key) {
+  const tab = page.locator(`[data-nav-item="${key}"]`);
   await tab.click();
   await page.waitForTimeout(1500); // let lazy component + charts render
 }
@@ -66,26 +66,26 @@ async function main() {
 
   // 1. Dashboard — hero (viewport) and full scroll
   console.log('Dashboard:');
-  await clickTab(page, 'Dashboard');
+  await clickTab(page, 'dashboard');
   await page.waitForTimeout(1000);
   await capture(page, 'dashboard-hero');
   await capture(page, 'dashboard-full', { fullPage: true });
 
   // 2. Exposures
   console.log('Exposures:');
-  await clickTab(page, 'Exposures');
+  await clickTab(page, 'exposures');
   await page.waitForTimeout(500);
   await capture(page, 'exposures');
 
   // 3. Roster Viewer
   console.log('Rosters:');
-  await clickTab(page, 'Rosters');
+  await clickTab(page, 'rosters');
   await page.waitForTimeout(500);
   await capture(page, 'roster-viewer');
 
   // 4. ADP Tracker
   console.log('ADP Tracker:');
-  await clickTab(page, 'ADP Tracker');
+  await clickTab(page, 'timeseries');
   await page.waitForTimeout(1000);
   // Try to select a few popular players if a search/select input exists
   const searchInput = page.locator('input[placeholder*="player"], input[placeholder*="Player"], input[placeholder*="search"], input[placeholder*="Search"]').first();
@@ -107,19 +107,19 @@ async function main() {
 
   // 5. Combos
   console.log('Combos:');
-  await clickTab(page, 'Combos');
+  await clickTab(page, 'combo');
   await page.waitForTimeout(1000);
   await capture(page, 'combo-analysis');
 
   // 6. Rankings
   console.log('Rankings:');
-  await clickTab(page, 'Rankings');
+  await clickTab(page, 'rankings');
   await page.waitForTimeout(1000);
   await capture(page, 'rankings');
 
   // 7. Draft Assistant
   console.log('Draft Assistant:');
-  await clickTab(page, 'Draft Asst');
+  await clickTab(page, 'draftflow');
   await page.waitForTimeout(1000);
   await capture(page, 'draft-assistant');
 

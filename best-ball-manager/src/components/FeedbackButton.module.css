@@ -1,17 +1,19 @@
 .headerButton {
-  padding: 0.35rem 0.85rem;
-  background: #E8BF4A;
-  color: #060E1F;
-  border: none;
-  border-radius: 6px;
+  padding: 0.4rem 0.85rem;
+  background: transparent;
+  color: var(--text-secondary, #8A9BB5);
+  border: 1px solid var(--border-subtle, #1a2d50);
+  border-radius: 7px;
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 600;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .headerButton:hover {
-  background: #d4aa35;
+  background: var(--surface-2, #142440);
+  color: var(--text-primary, #E8E8E8);
+  border-color: var(--border-default, #243a5c);
 }
 
 /* Overlay */

@@ -18,10 +18,10 @@ import BetaBanner from './components/BetaBanner';
 import PlanPicker from './components/PlanPicker';
 import useMediaQuery from './hooks/useMediaQuery';
 import { trackEvent } from './utils/analytics';
-import BrandLogo from './components/BrandLogo';
 import FeedbackButton from './components/FeedbackButton';
 import InstallExtensionButton from './components/InstallExtensionButton';
-import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, HelpCircle, Lock, Info, Settings, Network, BookOpen, Swords } from 'lucide-react';
+import { SideNav, MobileNav } from './components/AppNav';
+import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, Info, Settings, Network, Swords } from 'lucide-react';
 
 const TAB_PATHS = {
   dashboard: '/',
@@ -43,8 +43,17 @@ const tabs = [
   { key: 'timeseries', label: 'ADP Tracker', icon: TrendingUp },
   { key: 'combo', label: 'Combos', icon: Network },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
-  { key: 'draftflow', label: 'Draft Asst', icon: Crosshair },
+  { key: 'draftflow', label: 'Draft Assistant', icon: Crosshair },
   { key: 'arena', label: 'Arena', icon: Swords, isNew: true },
+];
+
+// Navigation grouping — encodes the product's real structure: the portfolio
+// drill-downs, the market data views, and the draft-time tools.
+const NAV_GROUPS = [
+  { label: null, keys: ['dashboard'] },
+  { label: 'Portfolio', keys: ['exposures', 'rosters', 'combo'] },
+  { label: 'Market', keys: ['timeseries', 'rankings'] },
+  { label: 'Draft Day', keys: ['draftflow', 'arena'] },
 ];
 
 // Lazy-loaded tab components (P2: code splitting)
@@ -110,7 +119,7 @@ export default function App() {
   const activeTab = PATH_TO_TAB[location.pathname] ?? 'dashboard';
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [rankingsByPlatform, setRankingsByPlatform] = useState({});
-  const { isMobile } = useMediaQuery();
+  const { isDesktop } = useMediaQuery();
   const { user, loading: authLoading, recoveryMode } = useAuth();
   // Arena is in private beta (ADR-015) — gate the tab + /arena route to allowlisted
   // accounts. Convenience gate only; the server (Edge Functions + RLS) is the real boundary.
@@ -133,6 +142,18 @@ export default function App() {
     setRosterNavContext(context);
     navigate(TAB_PATHS.rosters);
     trackEvent('tab_viewed', { tab: 'rosters' });
+  }, [navigate]);
+
+  const handleSelectTab = useCallback((key) => {
+    if (key === 'rosters') setRosterNavContext(null);
+    navigate(TAB_PATHS[key]);
+    setHelpOpen(false);
+    trackEvent('tab_viewed', { tab: key });
+  }, [navigate]);
+
+  const handleOpenBlog = useCallback(() => {
+    trackEvent('blog_opened', { from: 'nav' });
+    navigate('/blog');
   }, [navigate]);
 
   useEffect(() => {
@@ -369,116 +390,105 @@ export default function App() {
     );
   }
 
-  return (
-    <div className="app-container">
-      <div className="app-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <BrandLogo size={36} />
-          <h1>{isMobile ? 'BB EXPOSURES' : 'BEST BALL EXPOSURES'}</h1>
-        </div>
-        <div className="auth-button-group">
-          <a
-            href="https://x.com/BBExposures"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="toolbar-btn toolbar-btn--ghost x-link"
-            aria-label="Follow @BBExposures on X"
-            title="Follow @BBExposures on X"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
-          </a>
-          <InstallExtensionButton showButton={!!(user && supabase)} />
-          <FeedbackButton />
-          {user && supabase && (
-            <button
-              className="toolbar-btn"
-              onClick={() => setShowAccountSettings(true)}
-              aria-label="Account settings"
-              style={{ display: 'flex', alignItems: 'center', padding: '0.4rem' }}
-            >
-              <Settings size={18} />
-            </button>
-          )}
-          <AuthButton />
-        </div>
+  // Resolved nav model shared by SideNav (desktop rail) and MobileNav (dock + sheet)
+  const tabByKey = Object.fromEntries(tabs.map(t => [t.key, t]));
+  const navGroups = NAV_GROUPS.map(g => ({
+    label: g.label,
+    items: g.keys
+      .filter(k => k !== 'arena' || arenaBeta)
+      .map(k => ({ ...tabByKey[k], locked: !subLoading && !canAccessFeature(tier, k) })),
+  })).filter(g => g.items.length > 0);
+
+  const xLink = (
+    <a
+      href="https://x.com/BBExposures"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="toolbar-btn toolbar-btn--ghost x-link"
+      aria-label="Follow @BBExposures on X"
+      title="Follow @BBExposures on X"
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    </a>
+  );
+
+  const settingsButton = user && supabase && (
+    <button
+      className="toolbar-btn toolbar-btn--ghost icon-btn"
+      onClick={() => setShowAccountSettings(true)}
+      aria-label="Account settings"
+    >
+      <Settings size={17} />
+    </button>
+  );
+
+  // Desktop rail footer — account + secondary actions
+  const accountCluster = (
+    <div className="side-account">
+      <InstallExtensionButton showButton={!!(user && supabase)} />
+      <div className="side-account-row">
+        {xLink}
+        <FeedbackButton />
+        {settingsButton}
       </div>
+      <AuthButton />
+    </div>
+  );
 
-      {status.msg && (
-        <div className={`card`} style={{ flex: 'none' }}>
-          <strong>{status.type.toUpperCase()}</strong>: {status.msg}
-        </div>
+  // Mobile sheet footer — same actions, stacked
+  const sheetAccountCluster = (
+    <div className="sheet-account">
+      <InstallExtensionButton showButton={!!(user && supabase)} />
+      <div className="side-account-row">
+        {xLink}
+        <FeedbackButton />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="app-shell">
+      {isDesktop && (
+        <SideNav
+          groups={navGroups}
+          activeTab={activeTab}
+          onSelect={handleSelectTab}
+          helpOpen={helpOpen}
+          onToggleHelp={toggleHelp}
+          onOpenBlog={handleOpenBlog}
+          footer={accountCluster}
+        />
       )}
+      <div className="app-main">
+        {!isDesktop && (
+          <MobileNav
+            groups={navGroups}
+            activeTab={activeTab}
+            onSelect={handleSelectTab}
+            helpOpen={helpOpen}
+            onToggleHelp={toggleHelp}
+            onOpenBlog={handleOpenBlog}
+            topActions={<>{settingsButton}<AuthButton /></>}
+            sheetActions={sheetAccountCluster}
+          />
+        )}
 
-      <BetaBanner />
-      <div className="card">
-        <div className="tab-bar">
-          {tabs.filter(({ key }) => key !== 'arena' || arenaBeta).map(({ key, label, icon: Icon, isNew }) => {
-            const locked = !subLoading && !canAccessFeature(tier, key);
-            return (
-              <button
-                key={key}
-                className={`tab-button${activeTab === key ? ' active' : ''}${locked ? ' locked' : ''}`}
-                onClick={() => { if (key === 'rosters') setRosterNavContext(null); navigate(TAB_PATHS[key]); setHelpOpen(false); trackEvent('tab_viewed', { tab: key }); }}
-              >
-                {isMobile ? (
-                  <>
-                    <Icon className="tab-icon" size={20} />
-                    <span>{label}</span>
-                    {isNew && <span className="new-badge" aria-label="New feature">New</span>}
-                    {locked && <Lock size={12} style={{ marginLeft: 2, opacity: 0.5 }} />}
-                  </>
-                ) : (
-                  <>
-                    {label}
-                    {isNew && <span className="new-badge" aria-label="New feature">New</span>}
-                    {locked && <Lock size={12} style={{ marginLeft: 4, opacity: 0.5 }} />}
-                  </>
-                )}
-              </button>
-            );
-          })}
-          <button
-            className="tab-button"
-            onClick={() => { trackEvent('blog_opened', { from: 'tab' }); navigate('/blog'); }}
-            aria-label="Read Against ADP — the Best Ball Exposures blog"
-          >
-            {isMobile ? (
-              <>
-                <BookOpen className="tab-icon" size={20} />
-                <span>Blog</span>
-                <span className="new-badge" aria-label="New feature">New</span>
-              </>
-            ) : (
-              <>
-                Blog
-                <span className="new-badge" aria-label="New feature">New</span>
-              </>
-            )}
-          </button>
-          <button
-            className={`tab-button${helpOpen ? ' help-active' : ''}`}
-            onClick={toggleHelp}
-            aria-label={helpOpen ? 'Close help' : 'Show help'}
-          >
-            {isMobile ? (
-              <>
-                <HelpCircle className="tab-icon" size={20} />
-                <span>Help</span>
-              </>
-            ) : (
-              'Help'
-            )}
-          </button>
-        </div>
+        {status.msg && (
+          <div className="status-strip">
+            <strong>{status.type.toUpperCase()}</strong>: {status.msg}
+          </div>
+        )}
+
+        <BetaBanner />
 
         {isUsingDemoData && rosterData.length > 0 && (
           <div className="demo-banner">
@@ -487,7 +497,7 @@ export default function App() {
           </div>
         )}
 
-        <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="app-content">
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
             {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={(key) => navigate(TAB_PATHS[key])} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
             {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
