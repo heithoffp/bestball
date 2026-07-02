@@ -394,8 +394,9 @@ export default function App() {
     );
   }
 
-  // Show landing page for unauthenticated guests with no data
-  const showLanding = tier === 'guest' && rosterData.length === 0 && !isUsingDemoData && !authLoading && !subLoading;
+  // Show landing page for unauthenticated guests with no data — Arena is a
+  // no-login-required public area, so it's exempt from this redirect.
+  const showLanding = tier === 'guest' && rosterData.length === 0 && !isUsingDemoData && !authLoading && !subLoading && activeTab !== 'arena';
 
   if (showLanding) {
     return (

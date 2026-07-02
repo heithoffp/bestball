@@ -176,14 +176,14 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const vote = useCallback(async (winner) => {
     if (status !== 'voting' || !pairing) return;
     const pid = pairing.pairing_id;
-    // Optimistic confirmation: the picked card flips and the reveal clock starts
-    // NOW. The network round trip happens inside the reveal window instead of
-    // in front of it, so the tap-to-feedback latency is one render, not one RTT.
+    // Optimistic confirmation: the picked card flips NOW from local state, so the
+    // tap-to-feedback latency is one render, not one RTT. The auto-advance is NOT
+    // scheduled here — it starts only once the Elo reveal lands (below), so a slow
+    // vote can never be advanced past its own reveal.
     setPick(winner);
     setStatus('picked');
     clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(fetchNext, REVEAL_MS);
-    const revealDeadline = performance.now() + REVEAL_MS;
+    const pickAt = performance.now();
     try {
       const data = await submitVote({ token: pairing.token, winner });
       // Upset = the picked team carried the LOWER pre-vote Elo. Ratings only come
@@ -208,12 +208,15 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
       if (pairingIdRef.current !== pid) return;
       setResult({ winner, upset, ...data });
       setStatus('revealed');
-      // Late response: push the auto-advance out so the Elo roll gets its moment.
-      const remaining = revealDeadline - performance.now();
-      if (remaining < MIN_REVEAL_WITH_DATA_MS) {
-        clearTimeout(advanceTimer.current);
-        advanceTimer.current = setTimeout(fetchNext, MIN_REVEAL_WITH_DATA_MS);
-      }
+      // Schedule the auto-advance only now that the reveal is on screen: hold the
+      // remainder of the standard window for a fast response, but never less than
+      // the Elo roll needs. Doing this after the response (instead of a fixed timer
+      // at tap time) is what keeps a slow vote — common on mobile networks and
+      // edge-function cold starts — from advancing before the ribbon/roll renders.
+      const elapsed = performance.now() - pickAt;
+      const hold = Math.max(MIN_REVEAL_WITH_DATA_MS, REVEAL_MS - elapsed);
+      clearTimeout(advanceTimer.current);
+      advanceTimer.current = setTimeout(fetchNext, hold);
     } catch (e) {
       if (pairingIdRef.current !== pid) return; // already moved on — nothing to unwind
       clearTimeout(advanceTimer.current);
