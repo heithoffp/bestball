@@ -29,13 +29,15 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
 ### Views (sub-nav within the Arena tab)
 - **Vote** — two anonymized rosters ("Red Corner" / "Blue Corner") flanking the
   Tale-of-the-Tape spine with the gold **VS medallion** (TASK-297). "Pick Red"/"Pick
-  Blue" under each, plus Skip. On vote: instant reveal — victory glow, Elo deltas, a
-  1.5s auto-advance with a visible countdown bar, and a **Next** control (TASK-302).
+  Blue" under each, plus Skip. On vote: a staged reveal — victory glow, then a
+  rating pill on each card that shows the team's pre-vote Elo and **rolls** to the
+  post-vote value (rAF ticker, delta chip alongside), a **"Winner"** stamp slammed
+  onto the picked card (**"Upset Win"** when the pick was the lower-rated team), a
+  2s auto-advance with a visible countdown bar, and a **Next** control (TASK-302).
   **Keyboard voting**: ← / → pick, S or ↓ skips, Space/Enter advances during the
   reveal, L flips the scouting lens (hints shown on desktop only). A **session
-  scorecard** (matchups judged + upset picks, sessionStorage) rides the top-right;
-  picking the lower-rated team stamps the card **"Upset"** post-reveal — pre-vote
-  ratings are never shown, so blindness holds. Free + guest.
+  scorecard** (matchups judged + upset picks, sessionStorage) rides the top-right.
+  Ratings surface only inside the post-pick reveal, so blindness holds. Free + guest.
   - **Full roster on screen** — the matchup fills the tab's viewport height; roster
     rows are dense single-liners that share the card's spare height, so an entire
     18–20-pick roster shows with no inner scrollbar on desktop (overflow remains as
@@ -72,24 +74,44 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
     Drafted (when known).
 - **Leaderboard** — teams ranked by Elo with a **podium strip** (top 3 as champion
   cards), per-row **Elo distribution bars** scaled to the visible range, W–L, win%,
-  and a movement indicator. **Tournament filter** (Featured = Best Ball Mania,
-  default / All tournaments — TASK-301) plus the platform filter. Signed-in owners
-  get a **your-team banner** with true rank + percentile computed by server count
-  queries (correct beyond the fetched 200-row page) and a "Find my team"
-  scroll-and-flash action (TASK-303). Rows expand to the full roster card.
-- **My Teams** — the user's synced teams as **read-only standings** (each team's hidden
-  Elo, W–L, provisional badge) plus the single **account-level enrollment switch**
-  (ADR-016): "Leave the Arena" removes ALL of the user's teams from the pool +
-  leaderboard, "Rejoin the Arena" returns them; there is no per-team selection, and
-  ratings are kept while unenrolled. Guests see a sign-in prompt.
+  and a movement indicator. The whole board is scoped to the featured tournament
+  (BBM7) — a static scope line replaces the former tournament/platform filter chips
+  (see *BBM7-only presentation* below). Signed-in owners get a **your-team banner**
+  with true rank + percentile computed by server count queries (correct beyond the
+  fetched 200-row page) and a "Find my team" scroll-and-flash action (TASK-303).
+  Rows expand to the full roster card.
+- **My Teams** — the user's synced **BBM7** teams as **read-only standings** (each
+  team's hidden Elo, W–L, provisional badge) plus the single **account-level
+  enrollment switch** (ADR-016): "Leave the Arena" removes ALL of the user's teams
+  from the pool + leaderboard, "Rejoin the Arena" returns them; there is no per-team
+  selection, and ratings are kept while unenrolled. Guests see a sign-in prompt.
+  Non-BBM teams stay registered in the pool's database but are not listed.
 
-### Featured tournament (TASK-301)
-Pairing tries a **featured-tournament pool** first (constant pattern matched against
-the snapshot's `tournamentTitle`/`slateTitle`; currently *Best Ball Mania*) and falls
-back to the full pool whenever the featured pool cannot produce a valid pair, so
-scoping never creates an artificial "No matchups yet". The featured pattern lives in
+### BBM7-only presentation (supersedes the TASK-301 fallback behavior)
+The Arena presents **one tournament — Best Ball Mania VII** — until the format proves
+out. Pairing is featured-only with **no full-pool fallback** (a voter is never shown
+a non-BBM matchup; an undersized pool surfaces "No matchups yet" honestly), the
+leaderboard and My Teams are scoped to match, and all platform/slate labels
+(Underdog/DraftKings chips, per-card tournament lines, filter chips) are removed —
+the context bar and a BBM7 season tag carry the scope instead. The full database
+(every platform + tournament) keeps registering and retaining Elo so more slates can
+be presented later. The featured pattern lives in
 `supabase/functions/_shared/arena.ts` (`FEATURED_TOURNAMENT_OR_FILTER`) and
 `src/utils/arenaFeatured.js` (`FEATURED_TOURNAMENT`) — keep them in sync.
+
+**Tournament attribution for board teams:** board picks carry no tournament of their
+own, so board snapshots historically had `tournamentTitle: null` and were invisible
+to the featured filter. Attribution comes from the pod: any synced entry in the same
+draft knows the tournament. `buildBoardTeams` now stamps the pod's title onto new
+board snapshots at registration time (passed from `Arena.jsx`'s auto-register), and
+`scripts/arena-stamp-board-tournaments.mjs` (service-role, dry-run by default,
+idempotent) backfills existing board rows the same way.
+
+**Position hygiene:** two-way players can sync with a defensive designation (Travis
+Hunter arrives as `CB`). `buildSnapshot` normalizes CB → WR at build time (players,
+`posSnap`, archetype input), and `normalizeSnapshotPositions` remaps frozen stored
+snapshots at display time (applied inside `enrichSnapshotCLV`, so every Arena
+surface gets it).
 
 ### Blindness & privacy
 - Owner identity is **never shown** while voting; the matchup uses an anonymized
@@ -111,11 +133,13 @@ scoping never creates an artificial "No matchups yet". The featured pattern live
 - Cohesive with the navy/gold dashboard, with a "scoreboard" personality: JetBrains Mono
   numerics for Elo/rank/deltas, the gold VS medallion as the signature, position-colored
   badges and archetype pills mirroring the Roster Viewer idiom.
-- Motion (VS pulse, delta drop-in, winner glow) respects `prefers-reduced-motion`.
+- Motion (VS pulse, rating-pill drop-in + Elo roll, stamp slam, winner glow)
+  respects `prefers-reduced-motion` (rolls and slams render their final state).
 
 ### Empty / fallback states
 - **Warming up** — backend not available (`ARENA_AVAILABLE` false).
-- **No matchups yet** — fewer than two enrolled teams (CTA to enter your teams).
+- **No matchups yet** — the featured (BBM7) pool can't produce a pair (CTA to sync
+  your teams).
 - **Rate limited** — friendly "slow down" with a retry.
 - **No ranked teams yet** — empty leaderboard.
 
@@ -124,8 +148,8 @@ scoping never creates an artificial "No matchups yet". The featured pattern live
   matchup (same platform, nearby Elo) from the pool (`enrolled = true` always — the
   materialized state of the account-level switch, ADR-016), excludes the caller's own
   teams **at query level** (`or(user_id.is.null,user_id.neq.…)` — filtering after the
-  LIMIT starved the pool for heavy portfolios; TASK-300), tries the featured-tournament
-  pool first with full-pool fallback (TASK-301), returns anonymized snapshots + a signed
+  LIMIT starved the pool for heavy portfolios; TASK-300), pairs **featured-tournament
+  only** (BBM7 — no full-pool fallback), returns anonymized snapshots + a signed
   single-use token.
 - **`POST /arena-register`** with `{ ownedTeams, boardTeams }` →
   `{ ownedWritten, ownedClaimed, boardWritten, boardRejected }`. Auto-registration
@@ -199,7 +223,9 @@ unique), `arena_config` (beta gate; `arena_eligibility_mode` retired in place),
 ## Key Files
 - `src/components/Arena.jsx` — container + sub-nav + contextual help
 - `src/components/arena/ArenaVote.jsx` — blind voting + reveal + states
-- `src/components/arena/ArenaLeaderboard.jsx` — ranked leaderboard + filter + your-rank
+- `src/components/arena/ArenaLeaderboard.jsx` — ranked leaderboard (BBM7-scoped) + your-rank
+- `src/utils/arenaFeatured.js` — the featured tournament (label, filter, matcher)
+- `scripts/arena-stamp-board-tournaments.mjs` — pod-join tournament attribution backfill
 - `src/components/arena/ArenaMyTeams.jsx` — standings + account-level enrollment switch
 - `src/components/arena/ArenaRosterCard.jsx` — anonymized roster card (shared)
 - `src/components/Arena.module.css` — scoped styles

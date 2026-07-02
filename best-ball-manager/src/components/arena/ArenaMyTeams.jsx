@@ -3,24 +3,31 @@
 // is in the Arena by default, and one switch removes/returns ALL of your teams.
 // There is no per-team selection. Teams keep their Elo while unenrolled (they
 // just leave the pool + leaderboard). Owners are never shown while voting.
+// Presentation is scoped to the featured tournament (BBM7) — only BBM teams are
+// listed, though the enrollment switch still governs the whole portfolio.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Swords, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { buildEnrollableTeams } from '../../utils/arenaSnapshot';
+import { FEATURED_TOURNAMENT, isFeaturedSnapshot } from '../../utils/arenaFeatured';
 import { getMyArenaTeams, getArenaEnrollment, setArenaEnrollment, ARENA_AVAILABLE } from '../../utils/arenaClient';
 import css from '../Arena.module.css';
 
 const keyOf = (entryId, platform) => `${entryId}::${platform}`;
 
-function platformLabel(p) { return p === 'draftkings' ? 'DraftKings' : 'Underdog'; }
-
 export default function ArenaMyTeams({ rosterData, masterPlayers }) {
   const { user } = useAuth();
 
-  const teams = useMemo(
+  const allTeams = useMemo(
     () => buildEnrollableTeams(rosterData, masterPlayers),
     [rosterData, masterPlayers],
+  );
+  // BBM7-only presentation: the rest of the portfolio stays registered in the
+  // pool's database, it just isn't listed until more slates are presented.
+  const teams = useMemo(
+    () => allTeams.filter((t) => isFeaturedSnapshot(t.snapshot)),
+    [allTeams],
   );
   const [arenaRows, setArenaRows] = useState(null);
   const [enrolled, setEnrolled] = useState(true);
@@ -78,8 +85,17 @@ export default function ArenaMyTeams({ rosterData, masterPlayers }) {
     return (
       <div className={css.stateBox}>
         <Swords size={32} className={css.stateIcon} />
-        <h3>No teams yet</h3>
-        <p>Sync your portfolio with the Chrome extension and your teams will join the Arena automatically.</p>
+        {allTeams.length === 0 ? (
+          <>
+            <h3>No teams yet</h3>
+            <p>Sync your portfolio with the Chrome extension and your teams will join the Arena automatically.</p>
+          </>
+        ) : (
+          <>
+            <h3>No {FEATURED_TOURNAMENT.shortLabel} teams yet</h3>
+            <p>The Arena runs on {FEATURED_TOURNAMENT.label} for now. Draft a BBM team and it will join the Arena on your next sync.</p>
+          </>
+        )}
       </div>
     );
   }
@@ -89,7 +105,7 @@ export default function ArenaMyTeams({ rosterData, masterPlayers }) {
       <div className={css.myIntro}>
         <p>
           {enrolled
-            ? 'Your synced teams are in the Arena: they appear (anonymously) in the blind vote pool and on the leaderboard. Owners are never shown while voting.'
+            ? `Your ${FEATURED_TOURNAMENT.label} teams are in the Arena: they appear (anonymously) in the blind vote pool and on the leaderboard. Owners are never shown while voting.`
             : 'Your teams are out of the Arena — none of them appear in the vote pool or on the leaderboard. Their ratings are kept for if you return.'}
         </p>
         <button
@@ -105,19 +121,9 @@ export default function ArenaMyTeams({ rosterData, masterPlayers }) {
         {teams.map((team) => {
           const k = keyOf(team.entryId, team.platform);
           const row = arenaRows?.[k];
-          const isDk = team.platform === 'draftkings';
           return (
             <li key={k} className={css.myRow}>
               <div className={css.myInfo}>
-                <span
-                  className={css.platformChip}
-                  style={{
-                    color: isDk ? 'var(--platform-dk)' : 'var(--platform-ud)',
-                    background: isDk ? 'var(--platform-dk-bg)' : 'var(--platform-ud-bg)',
-                  }}
-                >
-                  {platformLabel(team.platform)}
-                </span>
                 <span className={css.myTitle}>{team.tournamentTitle || team.slateTitle || 'Best-ball team'}</span>
                 <span className={css.myMeta}>{team.count} picks</span>
               </div>

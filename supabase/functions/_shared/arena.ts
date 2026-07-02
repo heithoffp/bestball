@@ -27,14 +27,16 @@ export const RATE_LIMIT_WINDOW_MS = 60_000;
 
 // ---------------------------------------------------------------------------
 // Featured tournament (TASK-301). With a small daily audience, votes spread
-// across every synced tournament dilute the Elo signal; pairing concentrates on
-// one featured queue and falls back to the full pool only when the featured pool
-// is too small. Matched against the frozen display_snapshot's tournamentTitle OR
-// slateTitle (board teams carry only a slate title). Keep in sync with the
-// browser-side constant in best-ball-manager/src/utils/arenaFeatured.js.
+// across every synced tournament dilute the Elo signal; the Arena presents ONE
+// featured queue for now (BBM7) — pairing is featured-only with NO full-pool
+// fallback, and the leaderboard/My Teams surfaces are scoped to match. Matched
+// against the frozen display_snapshot's tournamentTitle OR slateTitle (board
+// teams registered before tournament attribution carry only a slate title).
+// Keep in sync with the browser-side constant in
+// best-ball-manager/src/utils/arenaFeatured.js.
 // PostgREST or() syntax: `*` is the wildcard for ilike in URL filter strings.
 // ---------------------------------------------------------------------------
-export const FEATURED_TOURNAMENT_LABEL = "Best Ball Mania";
+export const FEATURED_TOURNAMENT_LABEL = "Best Ball Mania VII";
 export const FEATURED_TOURNAMENT_OR_FILTER =
   "display_snapshot->>tournamentTitle.ilike.*best ball mania*," +
   "display_snapshot->>slateTitle.ilike.*best ball mania*";

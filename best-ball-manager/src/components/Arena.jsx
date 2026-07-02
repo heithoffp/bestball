@@ -33,9 +33,10 @@ function ArenaHelp({ onClose }) {
       <button className={css.helpClose} onClick={onClose} aria-label="Close help"><X size={16} /></button>
       <h3>How the Arena works</h3>
       <ul>
-        <li><strong>Vote</strong> — two real best-ball teams, shown blind (no owners). Pick the one you’d rather have. Your vote nudges each team’s hidden Elo rating.</li>
+        <li><strong>Vote</strong> — two real Best Ball Mania VII teams, shown blind (no owners). Pick the one you’d rather have. Your vote nudges each team’s hidden Elo rating.</li>
         <li><strong>Blind &amp; fair</strong> — owner identity is never shown while voting, and you’ll never be shown your own teams.</li>
         <li><strong>Free to play</strong> — anyone can vote. Entering your own teams to be ranked is a Pro feature.</li>
+        <li><strong>BBM7 season</strong> — the Arena runs on Best Ball Mania VII for now. More slates and platforms come later.</li>
       </ul>
     </div>
   );
@@ -67,16 +68,24 @@ function useAutoRegister(user, rosterData, masterPlayers) {
         }));
 
         // Board teams: fetch each synced pod's stored board (any source — ADR-016),
-        // excluding the user's own seat (matched by player-name fingerprint).
+        // excluding the user's own seat (matched by player-name fingerprint). The
+        // pod's tournament is known from the user's own entry in the same draft and
+        // is stamped onto each board snapshot — board picks carry no tournament of
+        // their own, and the BBM7 featured scoping matches on it.
         const draftIds = [...new Set(rosterData.map((r) => r.entry_id).filter(Boolean))];
         const ownKeyByDraft = {};
+        const titleByDraft = {};
         draftIds.forEach((id) => {
-          ownKeyByDraft[id] = playerNameKey(rosterData.filter((r) => r.entry_id === id));
+          const rows = rosterData.filter((r) => r.entry_id === id);
+          ownKeyByDraft[id] = playerNameKey(rows);
+          titleByDraft[id] = rows.find((r) => r.tournamentTitle)?.tournamentTitle || null;
         });
         const boards = await fetchDraftBoards(draftIds);
         const boardTeams = [];
         boards.forEach((board) => {
-          boardTeams.push(...buildBoardTeams(board, ownKeyByDraft[board.draftId], adpLookup));
+          boardTeams.push(...buildBoardTeams(
+            board, ownKeyByDraft[board.draftId], adpLookup, titleByDraft[board.draftId],
+          ));
         });
 
         if (cancelled) return;
@@ -123,6 +132,7 @@ export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOp
       <div className={css.brand}>
         <Swords size={18} />
         <span>Best Ball Arena</span>
+        <span className={css.seasonTag} title="The Arena runs on Best Ball Mania VII for now">BBM7</span>
       </div>
       <nav className={css.subnav} aria-label="Arena sections">
         {NAV.map(({ key, label }) => (

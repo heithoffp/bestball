@@ -17,6 +17,35 @@ function normName(s) {
   return (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+// Position normalization, PINNED to normalizePosition in ./helpers.js (kept local
+// so this Node-loadable chain stays free of helpers.js's data imports). Two-way
+// players can sync with a defensive designation (e.g. Travis Hunter arrives as CB
+// on some platforms); the fantasy-relevant position is WR.
+function normalizePos(raw) {
+  const pos = String(raw || '').trim().toUpperCase();
+  if (pos === 'CB') return 'WR';
+  return pos || 'N/A';
+}
+
+// Frozen stored snapshots can predate position normalization (a board pick synced
+// as CB). Remap at display time: player positions plus the posSnap chip counts.
+// Returns the input object untouched when nothing needs remapping, so memoized
+// consumers keep their referential stability.
+export function normalizeSnapshotPositions(snapshot) {
+  const players = snapshot?.players;
+  const posSnap = snapshot?.posSnap;
+  const isCB = (p) => String(p?.position || '').trim().toUpperCase() === 'CB';
+  const hasCB = (Array.isArray(players) && players.some(isCB)) || (posSnap && posSnap.CB);
+  if (!hasCB) return snapshot;
+  const nextPlayers = (players || []).map((p) => (isCB(p) ? { ...p, position: 'WR' } : p));
+  const nextPosSnap = { ...(posSnap || {}) };
+  if (nextPosSnap.CB) {
+    nextPosSnap.WR = (nextPosSnap.WR || 0) + nextPosSnap.CB;
+    delete nextPosSnap.CB;
+  }
+  return { ...snapshot, players: nextPlayers, posSnap: nextPosSnap };
+}
+
 // A pick whose player lookup failed at sync time carries the extension's
 // "Unknown (<appearanceId>)" fallback instead of a real name (see normalizePick
 // in chrome-extension/src/injected/underdog-bridge.js). A snapshot built from
@@ -60,6 +89,7 @@ export function buildAdpLookup(masterPlayers) {
 // team without any re-registration. Falls back to the stored value when a name can't
 // be resolved; returns the snapshot untouched when no lookup is available.
 export function enrichSnapshotCLV(snapshot, adpLookup) {
+  snapshot = normalizeSnapshotPositions(snapshot);
   if (!snapshot || typeof adpLookup !== 'function') return snapshot;
   let resolvedAny = false;
   const players = (snapshot.players || []).map((p) => {
@@ -132,13 +162,16 @@ export function playerNameKey(players) {
 // `adpLookup` (optional) resolves a name -> latest ADP for picks that carry no ADP
 // of their own (board teams); owned-team rows already have `latestADP`, which wins.
 function buildSnapshot(sorted, platform, tournamentTitle, slateTitle, adpLookup) {
-  const posSnap = sorted.reduce((acc, p) => {
-    const pos = p.position || 'N/A';
-    acc[pos] = (acc[pos] || 0) + 1;
+  // Normalize positions up front (CB → WR) so the snapshot, its posSnap counts,
+  // and the archetype classification all agree.
+  const picks = sorted.map((p) => ({ ...p, position: normalizePos(p.position) }));
+
+  const posSnap = picks.reduce((acc, p) => {
+    acc[p.position] = (acc[p.position] || 0) + 1;
     return acc;
   }, {});
 
-  const players = sorted.map((p) => {
+  const players = picks.map((p) => {
     const rowAdp = Number(p.latestADP);
     const adp = Number.isFinite(rowAdp) ? rowAdp : (adpLookup ? adpLookup(p.name) : null);
     const clv = calcCLV(p.pick, adp);
@@ -171,8 +204,8 @@ function buildSnapshot(sorted, platform, tournamentTitle, slateTitle, adpLookup)
   return {
     players,
     posSnap,
-    path: classifyRosterPath(sorted),
-    count: sorted.length,
+    path: classifyRosterPath(picks),
+    count: picks.length,
     platform,
     tournamentTitle: tournamentTitle || null,
     slateTitle: slateTitle || null,
@@ -231,9 +264,12 @@ export function buildEnrollableTeams(rosterData, masterPlayers) {
  * @param {{draftId: string, slateTitle: string|null, picks: Array}} board
  * @param {string} ownKey playerNameKey() of the user's own roster for this draft
  * @param {(name: string) => number|null} [adpLookup] master-list ADP fallback for CLV
+ * @param {string|null} [tournamentTitle] the pod's tournament, known from the syncing
+ *   user's own entry in the same draft — board picks carry no tournament of their own,
+ *   and the featured-tournament scoping (BBM7) matches on it
  * @returns {Array<{boardEntryRef: string, userId: string|null, platform: string, draftId: string, snapshot: object}>}
  */
-export function buildBoardTeams(board, ownKey, adpLookup) {
+export function buildBoardTeams(board, ownKey, adpLookup, tournamentTitle = null) {
   if (!board || !Array.isArray(board.picks) || board.picks.length === 0) return [];
   const platform = platformFromSlate(board.slateTitle);
 
@@ -254,7 +290,7 @@ export function buildBoardTeams(board, ownKey, adpLookup) {
       userId: seat.userId,
       platform,
       draftId: String(board.draftId),
-      snapshot: buildSnapshot(sorted, platform, null, board.slateTitle || null, adpLookup),
+      snapshot: buildSnapshot(sorted, platform, tournamentTitle || null, board.slateTitle || null, adpLookup),
     });
   }
   return out;

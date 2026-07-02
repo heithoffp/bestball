@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   // the low-match sample (their own never-voted teams pin matches=0 and crowd out
   // every votable team). A plain `.neq("user_id", voterId)` would also drop board
   // rows (`NULL <> x` is NULL in Postgres), so the filter explicitly keeps NULLs.
-  const fetchVotablePool = async (featuredOnly: boolean) => {
+  const fetchVotablePool = async () => {
     let query = supabaseAdmin
       .from("arena_teams")
       .select("id, user_id, platform, elo, matches, display_snapshot")
@@ -83,7 +83,11 @@ Deno.serve(async (req) => {
     // (everything in the database) minus unenrolled accounts.
     query = query.eq("enrolled", true);
     if (voterId) query = query.or(`user_id.is.null,user_id.neq.${voterId}`);
-    if (featuredOnly) query = query.or(FEATURED_TOURNAMENT_OR_FILTER);
+    // The Arena presents ONE tournament for now (BBM7): pairing is featured-only,
+    // with no full-pool fallback — a non-BBM matchup would contradict every
+    // BBM7-scoped surface in the UI. The rest of the database stays enrolled for
+    // when more slates are presented.
+    query = query.or(FEATURED_TOURNAMENT_OR_FILTER);
 
     const { data: pool, error } = await query;
     if (error) return { teams: null, error };
@@ -127,25 +131,16 @@ Deno.serve(async (req) => {
     return Math.random() < 0.5 ? [teamA, teamB] : [teamB, teamA];
   };
 
-  // Featured tournament first (TASK-301) — concentrates a small audience's votes on
-  // one comparable queue. Fall back to the FULL pool whenever the featured pool can't
-  // produce a valid pair (too small, or no same-platform / cross-owner candidate), so
-  // scoping never reintroduces "No matchups yet". A query error never falls through
-  // to fallback — it surfaces as pool_query_failed.
-  const featured = await fetchVotablePool(true);
+  // Featured tournament only (TASK-301, tightened for the BBM7-only presentation):
+  // when the featured pool can't produce a valid pair the caller gets
+  // insufficient_pool — there is deliberately NO full-pool fallback, so a voter is
+  // never shown a non-BBM matchup.
+  const featured = await fetchVotablePool();
   if (featured.error) {
     console.error("arena-pair pool query failed:", featured.error);
     return json({ error: "pool_query_failed" }, 500);
   }
-  let pair = selectPair(featured.teams ?? []);
-  if (!pair) {
-    const full = await fetchVotablePool(false);
-    if (full.error) {
-      console.error("arena-pair pool query failed:", full.error);
-      return json({ error: "pool_query_failed" }, 500);
-    }
-    pair = selectPair(full.teams ?? []);
-  }
+  const pair = selectPair(featured.teams ?? []);
   if (!pair) {
     return json({ pairing: null, reason: "insufficient_pool" }, 200);
   }

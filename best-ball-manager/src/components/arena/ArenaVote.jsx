@@ -4,13 +4,13 @@
 // reveals the Elo deltas, and auto-advances. The next matchup is PREFETCHED during the
 // reveal window so advancing feels instant; a skeleton (not a spinner) covers cold loads.
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, Trophy, RefreshCw, ArrowRight, Gavel, Zap, Link2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import useMediaQuery from '../../hooks/useMediaQuery';
 import { getPairing, submitVote } from '../../utils/arenaClient';
 import { enrichSnapshotDisplay } from '../../utils/arenaSnapshot';
-import { compactTournamentName } from '../../utils/helpers';
+import { FEATURED_TOURNAMENT } from '../../utils/arenaFeatured';
 import ArenaRosterCard from './ArenaRosterCard';
 import ArenaTape from './ArenaTape';
 import css from '../Arena.module.css';
@@ -43,26 +43,15 @@ function readSessionStats() {
   return { judged: 0, upsets: 0 };
 }
 
-function platformLabel(platform) {
-  return platform === 'draftkings' ? 'DraftKings' : 'Underdog';
-}
-
-// Shared context above the tape. Platform is always shared (pairing enforces it); the
-// tournament/slate is shown only when both contenders share it (else it'd mislead).
-function ContextBar({ pairing }) {
-  const a = pairing?.team_a?.display_snapshot;
-  const b = pairing?.team_b?.display_snapshot;
-  const platform = a?.platform || b?.platform;
-  const sharedTournament = a?.tournamentTitle && a.tournamentTitle === b?.tournamentTitle
-    ? a.tournamentTitle : null;
-  const sharedSlate = a?.slateTitle && a.slateTitle === b?.slateTitle ? a.slateTitle : null;
-  const context = sharedTournament ? compactTournamentName(sharedTournament) : sharedSlate;
+// Shared context above the tape. The Arena runs on one featured tournament for
+// now (BBM7) and the server pairs exclusively within it, so the lower-third is a
+// single static line — no per-matchup platform/slate clutter.
+function ContextBar() {
   return (
     <div className={css.contextBar}>
       <span className={css.ctxBrand}><Swords size={13} /> Blind Matchup</span>
-      {platform && <span className={css.ctxDot} />}
-      {platform && <span className={css.ctxPlatform}>{platformLabel(platform)}</span>}
-      {context && <><span className={css.ctxDot} /><span className={css.ctxSlate} title={sharedTournament || sharedSlate}>{context}</span></>}
+      <span className={css.ctxDot} />
+      <span className={css.ctxTourney}>{FEATURED_TOURNAMENT.label}</span>
     </div>
   );
 }
@@ -258,6 +247,26 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [status, submitting, vote, fetchNext, toggleLens]);
 
+  // Recompute CLV + projected points against the viewer's data — the stored
+  // snapshot is frozen insert-new-only, so both are derived fresh at display time.
+  // Memoized per pairing: re-running enrichment on every render handed the cards
+  // brand-new player arrays at the exact moment the reveal started, forcing a
+  // full re-diff of ~40 headshot rows mid-animation (the source of the jank).
+  const snapA = useMemo(
+    () => (pairing ? enrichSnapshotDisplay(pairing.team_a.display_snapshot, adpLookup, projLookup) : null),
+    [pairing, adpLookup, projLookup],
+  );
+  const snapB = useMemo(
+    () => (pairing ? enrichSnapshotDisplay(pairing.team_b.display_snapshot, adpLookup, projLookup) : null),
+    [pairing, adpLookup, projLookup],
+  );
+  // One proj-bar scale across the whole matchup so bars compare between cards.
+  const maxProj = useMemo(() => Math.max(
+    0,
+    ...(snapA?.players || []).map((p) => p.proj || 0),
+    ...(snapB?.players || []).map((p) => p.proj || 0),
+  ) || null, [snapA, snapB]);
+
   // ── Non-matchup states ──────────────────────────────────────────────────
   if (status === 'loading') return <MatchupSkeleton />;
   if (status === 'unavailable') {
@@ -274,7 +283,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
       <div className={css.stateBox}>
         <Trophy size={32} className={css.stateIcon} />
         <h3>No matchups yet</h3>
-        <p>Not enough teams have entered the Arena. Be among the first — enter your own teams and start the competition.</p>
+        <p>Not enough Best Ball Mania VII teams are in the Arena yet. Be among the first — sync your teams and start the competition.</p>
         {onGoToMyTeams && (
           <button className={css.primaryBtn} onClick={onGoToMyTeams}>Enter your teams</button>
         )}
@@ -307,16 +316,17 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
   const outcome = (side) => (!revealed ? null : result?.winner === side ? 'win' : 'loss');
   const guestCapped = revealed && result && result.counted === false && isGuest;
 
-  // Recompute CLV + projected points against the viewer's data — the stored
-  // snapshot is frozen insert-new-only, so both are derived fresh at display time.
-  const snapA = enrichSnapshotDisplay(pairing.team_a.display_snapshot, adpLookup, projLookup);
-  const snapB = enrichSnapshotDisplay(pairing.team_b.display_snapshot, adpLookup, projLookup);
-  // One proj-bar scale across the whole matchup so bars compare between cards.
-  const maxProj = Math.max(
-    0,
-    ...(snapA?.players || []).map((p) => p.proj || 0),
-    ...(snapB?.players || []).map((p) => p.proj || 0),
-  ) || null;
+  // Reveal payload per side: the before→after Elo roll (RatingTicker) and the
+  // scorecard stamp. The winner is always stamped; an underdog pick upgrades the
+  // stamp to "Upset Win".
+  const ratingFor = (side) => {
+    if (!revealed || !result) return null;
+    const r = side === 'a' ? result.team_a : result.team_b;
+    return r && Number.isFinite(r.before) && Number.isFinite(r.after) ? r : null;
+  };
+  const stampFor = (side) => (revealed && result?.winner === side
+    ? (result.upset ? 'Upset Win' : 'Winner')
+    : null);
 
   // Reveal footer — shared verbatim by the desktop skip row and the mobile
   // pick dock so the two layouts can't drift.
@@ -370,7 +380,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
             <Link2 size={11} /> Stacks
           </button>
         </div>
-        <ContextBar pairing={pairing} />
+        <ContextBar />
         <div className={css.scoreStrip} aria-label="Session scorecard">
           <span className={css.statChip} title="Matchups you've judged this session">
             <Gavel size={12} /> <strong>{stats.judged}</strong> judged
@@ -391,7 +401,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                 cornerLabel="Red Corner"
                 outcome={outcome('a')}
                 delta={revealed ? result?.team_a?.delta : null}
-                stamp={revealed && result?.upset && result?.winner === 'a' ? 'Upset' : null}
+                rating={ratingFor('a')}
+                stamp={stampFor('a')}
                 lens={lens}
                 showStacks={showStacks}
                 maxProj={maxProj}
@@ -412,7 +423,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                 cornerLabel="Blue Corner"
                 outcome={outcome('b')}
                 delta={revealed ? result?.team_b?.delta : null}
-                stamp={revealed && result?.upset && result?.winner === 'b' ? 'Upset' : null}
+                rating={ratingFor('b')}
+                stamp={stampFor('b')}
                 lens={lens}
                 showStacks={showStacks}
                 maxProj={maxProj}
@@ -475,7 +487,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   cornerLabel="Red Corner"
                   outcome={outcome('a')}
                   delta={revealed ? result?.team_a?.delta : null}
-                  stamp={revealed && result?.upset && result?.winner === 'a' ? 'Upset' : null}
+                  rating={ratingFor('a')}
+                  stamp={stampFor('a')}
                   lens={lens}
                   showStacks={showStacks}
                   maxProj={maxProj}
@@ -491,7 +504,8 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   cornerLabel="Blue Corner"
                   outcome={outcome('b')}
                   delta={revealed ? result?.team_b?.delta : null}
-                  stamp={revealed && result?.upset && result?.winner === 'b' ? 'Upset' : null}
+                  rating={ratingFor('b')}
+                  stamp={stampFor('b')}
                   lens={lens}
                   showStacks={showStacks}
                   maxProj={maxProj}

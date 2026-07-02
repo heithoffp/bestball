@@ -2,7 +2,8 @@
 // production build). Renders the blind-matchup screen with two fixture rosters
 // so the Arena card/tape UI can be iterated on without the live backend,
 // pairings, or an allowlisted account. Mirrors ArenaVote's layout and the
-// scouting-lens controls; voting is inert.
+// scouting-lens controls; picking a card plays a SIMULATED reveal (fixture Elo,
+// no server) so the winner stamp + rating roll can be iterated on too.
 
 import React, { useCallback, useRef, useState } from 'react';
 import { Swords, Gavel, Zap, Link2, ArrowRight } from 'lucide-react';
@@ -69,8 +70,8 @@ function toRows(roster, entryId, seat, draftedAt) {
     round: i + 1,
     latestADP: Math.max(1, picks[i] + adpOffset),
     pickedAt: draftedAt,
-    tournamentTitle: 'The Big Board',
-    slateTitle: 'UD 2026 Best Ball',
+    tournamentTitle: 'Best Ball Mania VII',
+    slateTitle: 'UD 2026 Season',
   }));
 }
 
@@ -93,6 +94,21 @@ function buildFixture() {
 
 const FIXTURE = buildFixture();
 
+// Fixture Elo for the simulated reveal: Red is the slight underdog, so picking
+// Red previews the "Upset Win" stamp and picking Blue the plain "Winner".
+const ELO_BEFORE = { a: 1493, b: 1517 };
+const SWING = 16;
+
+function fakeResult(winner) {
+  const sign = (side) => (side === winner ? SWING : -SWING);
+  return {
+    winner,
+    upset: ELO_BEFORE[winner] < ELO_BEFORE[winner === 'a' ? 'b' : 'a'],
+    team_a: { before: ELO_BEFORE.a, after: ELO_BEFORE.a + sign('a'), delta: sign('a') },
+    team_b: { before: ELO_BEFORE.b, after: ELO_BEFORE.b + sign('b'), delta: sign('b') },
+  };
+}
+
 export default function ArenaPreview() {
   // ?lens=proj / ?stacks=off preseed the toggles so states can be screenshot.
   const params = new URLSearchParams(window.location.search);
@@ -102,6 +118,17 @@ export default function ArenaPreview() {
     ...(FIXTURE.a.players || []).map((p) => p.proj || 0),
     ...(FIXTURE.b.players || []).map((p) => p.proj || 0),
   );
+
+  // Simulated reveal — mirrors ArenaVote's reveal props end-to-end (outcome,
+  // rating roll, stamp) without touching the backend. Vote again via Reset.
+  const [result, setResult] = useState(null);
+  const revealed = !!result;
+  const vote = useCallback((side) => setResult((r) => r || fakeResult(side)), []);
+  const outcome = (side) => (!revealed ? null : result.winner === side ? 'win' : 'loss');
+  const ratingFor = (side) => (revealed ? (side === 'a' ? result.team_a : result.team_b) : null);
+  const stampFor = (side) => (revealed && result.winner === side
+    ? (result.upset ? 'Upset Win' : 'Winner')
+    : null);
 
   // Mobile deck (TASK-308) — mirrors ArenaVote's deck logic so the harness
   // previews the swipe/toggle behavior; only voting is inert.
@@ -143,9 +170,7 @@ export default function ArenaPreview() {
             <div className={css.contextBar}>
               <span className={css.ctxBrand}><Swords size={13} /> Blind Matchup</span>
               <span className={css.ctxDot} />
-              <span className={css.ctxPlatform}>Underdog</span>
-              <span className={css.ctxDot} />
-              <span className={css.ctxSlate}>The Big Board</span>
+              <span className={css.ctxTourney}>Best Ball Mania VII</span>
             </div>
             <div className={css.scoreStrip}>
               <span className={css.statChip}><Gavel size={12} /> <strong>12</strong> judged</span>
@@ -157,14 +182,36 @@ export default function ArenaPreview() {
             <>
               <div className={css.matchup}>
                 <div className={css.sideCol}>
-                  <ArenaRosterCard snapshot={FIXTURE.a} corner="red" cornerLabel="Red Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} pickable onPick={() => {}} />
+                  <ArenaRosterCard
+                    snapshot={FIXTURE.a} corner="red" cornerLabel="Red Corner"
+                    outcome={outcome('a')} delta={revealed ? result.team_a.delta : null}
+                    rating={ratingFor('a')} stamp={stampFor('a')}
+                    lens={lens} showStacks={showStacks} maxProj={maxProj}
+                    pickable={!revealed} picked={revealed && result.winner === 'a'}
+                    onPick={() => vote('a')}
+                  />
                 </div>
                 <div className={css.tapeCol}>
-                  <ArenaTape a={FIXTURE.a} b={FIXTURE.b} />
+                  <ArenaTape a={FIXTURE.a} b={FIXTURE.b} active={revealed} />
                 </div>
                 <div className={css.sideCol}>
-                  <ArenaRosterCard snapshot={FIXTURE.b} corner="blue" cornerLabel="Blue Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} pickable onPick={() => {}} />
+                  <ArenaRosterCard
+                    snapshot={FIXTURE.b} corner="blue" cornerLabel="Blue Corner"
+                    outcome={outcome('b')} delta={revealed ? result.team_b.delta : null}
+                    rating={ratingFor('b')} stamp={stampFor('b')}
+                    lens={lens} showStacks={showStacks} maxProj={maxProj}
+                    pickable={!revealed} picked={revealed && result.winner === 'b'}
+                    onPick={() => vote('b')}
+                  />
                 </div>
+              </div>
+
+              <div className={css.skipRow}>
+                {revealed && (
+                  <button className={css.nextBtn} onClick={() => setResult(null)}>
+                    Reset <ArrowRight size={14} />
+                  </button>
+                )}
               </div>
 
               <div className={css.kbdRow} aria-hidden="true">
@@ -199,18 +246,40 @@ export default function ArenaPreview() {
                 </div>
                 <div className={css.deck} ref={deckRef} onScroll={onDeckScroll} aria-label="Contender rosters">
                   <div className={css.deckItem}>
-                    <ArenaRosterCard snapshot={FIXTURE.a} corner="red" cornerLabel="Red Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} pickable onPick={() => (deckIndex === 0 ? undefined : scrollDeckTo(0))} />
+                    <ArenaRosterCard
+                      snapshot={FIXTURE.a} corner="red" cornerLabel="Red Corner"
+                      outcome={outcome('a')} delta={revealed ? result.team_a.delta : null}
+                      rating={ratingFor('a')} stamp={stampFor('a')}
+                      lens={lens} showStacks={showStacks} maxProj={maxProj}
+                      pickable={!revealed} picked={revealed && result.winner === 'a'}
+                      onPick={() => (deckIndex === 0 ? vote('a') : scrollDeckTo(0))}
+                    />
                   </div>
                   <div className={css.deckItem}>
-                    <ArenaRosterCard snapshot={FIXTURE.b} corner="blue" cornerLabel="Blue Corner" lens={lens} showStacks={showStacks} maxProj={maxProj} pickable onPick={() => (deckIndex === 1 ? undefined : scrollDeckTo(1))} />
+                    <ArenaRosterCard
+                      snapshot={FIXTURE.b} corner="blue" cornerLabel="Blue Corner"
+                      outcome={outcome('b')} delta={revealed ? result.team_b.delta : null}
+                      rating={ratingFor('b')} stamp={stampFor('b')}
+                      lens={lens} showStacks={showStacks} maxProj={maxProj}
+                      pickable={!revealed} picked={revealed && result.winner === 'b'}
+                      onPick={() => (deckIndex === 1 ? vote('b') : scrollDeckTo(1))}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className={css.pickDock}>
                 <div className={css.dockRow}>
-                  <span className={css.dockHint}>Tap the roster you prefer</span>
-                  <button className={css.skipBtn}>Skip <ArrowRight size={15} /></button>
+                  <span className={css.dockHint}>
+                    {revealed ? 'Simulated reveal' : 'Tap the roster you prefer'}
+                  </span>
+                  {revealed ? (
+                    <button className={css.nextBtn} onClick={() => setResult(null)}>
+                      Reset <ArrowRight size={14} />
+                    </button>
+                  ) : (
+                    <button className={css.skipBtn}>Skip <ArrowRight size={15} /></button>
+                  )}
                 </div>
               </div>
             </>

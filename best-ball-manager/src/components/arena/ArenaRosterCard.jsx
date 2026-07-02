@@ -8,20 +8,15 @@
 // NFL-team-colored stack rails, a switchable stat lens (CLV or projected points),
 // and the draft date when the snapshot carries one.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { posColor } from '../../utils/positionColors';
 import { nflTeamColor } from '../../utils/nflTeamColors';
 import { headshotUrl, teamLogoUrl } from '../../utils/headshots';
 import { analyzeRosterStacks } from '../../utils/stackAnalysis';
-import { compactTournamentName } from '../../utils/helpers';
 import css from '../Arena.module.css';
 
 const POS_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DEF'];
-
-function platformLabel(platform) {
-  return platform === 'draftkings' ? 'DraftKings' : 'Underdog';
-}
 
 // First + last initial, e.g. "Justin Jefferson" -> "JJ". Defensive states/teams
 // (e.g. "Eagles") fall back to a single letter.
@@ -52,6 +47,41 @@ function clvView(clv) {
     mag: Math.min(1, Math.abs(clv) / 15),
     pos,
   };
+}
+
+// Reveal ticker: holds the pre-vote Elo just long enough to register, then rolls
+// it to the post-vote value. Writes straight to the DOM via requestAnimationFrame —
+// no React re-renders mid-roll, so it stays smooth alongside the card transitions.
+// The whole sequence fits well inside the 2s reveal window.
+const TICK_HOLD_MS = 420;
+const TICK_ROLL_MS = 850;
+
+function RatingTicker({ before, after }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const from = Math.round(before);
+    const to = Math.round(after);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || from === to) {
+      el.textContent = String(to);
+      return undefined;
+    }
+    el.textContent = String(from);
+    let raf;
+    let start;
+    const roll = (now) => {
+      if (start === undefined) start = now;
+      const t = Math.min(1, (now - start) / TICK_ROLL_MS);
+      const eased = 1 - (1 - t) ** 3;
+      el.textContent = String(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(roll);
+    };
+    const hold = setTimeout(() => { raf = requestAnimationFrame(roll); }, TICK_HOLD_MS);
+    return () => { clearTimeout(hold); cancelAnimationFrame(raf); };
+  }, [before, after]);
+  return <span ref={ref} className={css.ribbonNum} />;
 }
 
 // Headshot over the position-colored monogram ring. The monogram renders
@@ -130,8 +160,10 @@ function PosSnapshot({ posSnap, stacks, showStacks }) {
  *   'neutral' drops the fight tint (used outside the matchup, e.g. leaderboard expansion)
  * @param {string} props.cornerLabel e.g. "Red Corner"
  * @param {'win'|'loss'|null} props.outcome  reveal state
- * @param {number|null} props.delta  Elo delta to reveal
- * @param {string|null} props.stamp  post-reveal scorecard stamp (e.g. "Upset") — TASK-302
+ * @param {number|null} props.delta  Elo delta to reveal (fallback when no rating)
+ * @param {{before:number, after:number, delta:number}|null} props.rating  full Elo
+ *   reveal payload — drives the before→after rolling ticker
+ * @param {string|null} props.stamp  post-reveal scorecard stamp ("Winner" / "Upset Win")
  * @param {'clv'|'proj'} props.lens  which stat rides the right column of each row
  * @param {boolean} props.showStacks paint NFL-team-colored stack rails + chips
  * @param {number|null} props.maxProj proj-bar scale ceiling (max across the matchup)
@@ -140,11 +172,11 @@ function PosSnapshot({ posSnap, stacks, showStacks }) {
  * @param {function|null} props.onPick vote handler when the card is pickable
  */
 export default function ArenaRosterCard({
-  snapshot, corner = 'red', cornerLabel, outcome = null, delta = null, stamp = null,
-  lens = 'clv', showStacks = true, maxProj = null,
+  snapshot, corner = 'red', cornerLabel, outcome = null, delta = null, rating = null,
+  stamp = null, lens = 'clv', showStacks = true, maxProj = null,
   pickable = false, picked = false, onPick = null,
 }) {
-  const { players = [], posSnap = {}, count, platform, tournamentTitle, slateTitle, draftedAt } = snapshot || {};
+  const { players = [], posSnap = {}, count, draftedAt } = snapshot || {};
 
   // Qualifying stacks (2+ teammates, game stacks and up) and a per-player rail
   // color. Players in multiple relationships take their team's single stack color,
@@ -164,9 +196,65 @@ export default function ArenaRosterCard({
     maxProj ?? players.reduce((m, p) => Math.max(m, p.proj || 0), 0),
   );
 
+  // The roster rows never change during a matchup — memoizing their JSX means the
+  // reveal's re-renders (outcome/delta/stamp flips, deck-scroll state) reconcile
+  // 20 identical elements instead of re-building every headshot row mid-animation.
+  const rows = useMemo(() => players.map((p, i) => {
+    const color = posColor(p.position);
+    const railColor = showStacks ? stackTeams.get(p.team) : null;
+    return (
+      <li
+        key={`${p.name}-${i}`}
+        className={`${css.playerRow} ${railColor ? css.playerRowStacked : ''}`}
+        style={railColor ? { '--rail': railColor, '--rail-bg': `${railColor}2e` } : undefined}
+      >
+        <PlayerFace name={p.name} position={p.position} team={p.team} />
+        <span className={css.playerName}>{p.name}</span>
+        <span className={css.playerMeta}>
+          <span style={{ color }}>{p.position}</span>
+          {p.team && p.team !== 'N/A' ? (
+            <>·<span style={railColor ? { color: railColor, fontWeight: 700 } : undefined}>{p.team}</span></>
+          ) : ''}
+          {p.pick ? `·${p.pick}` : ''}
+        </span>
+        {lens === 'proj' ? (
+          <span className={css.projCell}>
+            <span className={css.projVal}>{p.proj != null ? Math.round(p.proj) : '—'}</span>
+            <span className={css.projBar}>
+              {p.proj != null && (
+                <span
+                  className={css.projBarFill}
+                  style={{
+                    width: `${Math.min(100, (p.proj / projCeiling) * 100)}%`,
+                    background: color,
+                  }}
+                />
+              )}
+            </span>
+          </span>
+        ) : (() => {
+          const clv = clvView(p.clv);
+          return (
+            <span className={`${css.clvCell} ${clv.cls}`}>
+              <span className={css.clvVal}>{clv.text}</span>
+              <span className={css.clvBar}>
+                {clv.mag > 0 && (
+                  <span
+                    className={css.clvBarFill}
+                    style={clv.pos
+                      ? { left: '50%', width: `${clv.mag * 50}%` }
+                      : { right: '50%', width: `${clv.mag * 50}%` }}
+                  />
+                )}
+              </span>
+            </span>
+          );
+        })()}
+      </li>
+    );
+  }), [players, stackTeams, showStacks, lens, projCeiling]);
+
   if (!snapshot) return null;
-  const isDk = platform === 'draftkings';
-  const context = tournamentTitle || slateTitle;
   const dateLabel = draftedAt ? draftDateLabel(draftedAt) : null;
 
   const clickable = pickable && typeof onPick === 'function';
@@ -189,26 +277,30 @@ export default function ArenaRosterCard({
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(); }
       } : undefined}
     >
-      {outcome && delta != null && (
-        <div className={`${css.deltaRibbon} ${delta >= 0 ? css.deltaUp : css.deltaDown}`}>
-          {delta >= 0 ? '+' : '−'}{Math.abs(Math.round(delta))} Elo
-        </div>
-      )}
+      {outcome && (rating || delta != null) && (() => {
+        const d = Math.round(rating ? rating.delta : delta);
+        return (
+          <div className={`${css.deltaRibbon} ${d >= 0 ? css.deltaUp : css.deltaDown}`}>
+            {rating ? (
+              <>
+                <RatingTicker before={rating.before} after={rating.after} />
+                <span className={css.ribbonUnit}>Elo</span>
+                <span className={css.ribbonDelta}>
+                  {d === 0 ? '±0' : `${d > 0 ? '▲ +' : '▼ −'}${Math.abs(d)}`}
+                </span>
+              </>
+            ) : (
+              <>{d >= 0 ? '+' : '−'}{Math.abs(d)} Elo</>
+            )}
+          </div>
+        );
+      })()}
       {stamp && <div className={css.stamp}>{stamp}</div>}
 
       <div className={css.cardHead}>
         <span className={css.cornerDot} />
         <span className={css.sideLabel}>{cornerLabel}</span>
         {picked && <span className={css.pickedTag}>Your pick ✓</span>}
-        <span
-          className={css.platformChip}
-          style={{
-            color: isDk ? 'var(--platform-dk)' : 'var(--platform-ud)',
-            background: isDk ? 'var(--platform-dk-bg)' : 'var(--platform-ud-bg)',
-          }}
-        >
-          {platformLabel(platform)}
-        </span>
         <span className={css.headMeta}>
           {dateLabel && (
             <span className={css.draftDate} title={`Drafted ${dateLabel}`}>
@@ -219,66 +311,9 @@ export default function ArenaRosterCard({
         </span>
       </div>
 
-      {context && <div className={css.contextLine} title={context}>{compactTournamentName(context)}</div>}
-
       <PosSnapshot posSnap={posSnap} stacks={stacks} showStacks={showStacks} />
 
-      <ol className={css.playerList}>
-        {players.map((p, i) => {
-          const color = posColor(p.position);
-          const railColor = showStacks ? stackTeams.get(p.team) : null;
-          return (
-            <li
-              key={`${p.name}-${i}`}
-              className={`${css.playerRow} ${railColor ? css.playerRowStacked : ''}`}
-              style={railColor ? { '--rail': railColor, '--rail-bg': `${railColor}2e` } : undefined}
-            >
-              <PlayerFace name={p.name} position={p.position} team={p.team} />
-              <span className={css.playerName}>{p.name}</span>
-              <span className={css.playerMeta}>
-                <span style={{ color }}>{p.position}</span>
-                {p.team && p.team !== 'N/A' ? (
-                  <>·<span style={railColor ? { color: railColor, fontWeight: 700 } : undefined}>{p.team}</span></>
-                ) : ''}
-                {p.pick ? `·${p.pick}` : ''}
-              </span>
-              {lens === 'proj' ? (
-                <span className={css.projCell}>
-                  <span className={css.projVal}>{p.proj != null ? Math.round(p.proj) : '—'}</span>
-                  <span className={css.projBar}>
-                    {p.proj != null && (
-                      <span
-                        className={css.projBarFill}
-                        style={{
-                          width: `${Math.min(100, (p.proj / projCeiling) * 100)}%`,
-                          background: color,
-                        }}
-                      />
-                    )}
-                  </span>
-                </span>
-              ) : (() => {
-                const clv = clvView(p.clv);
-                return (
-                  <span className={`${css.clvCell} ${clv.cls}`}>
-                    <span className={css.clvVal}>{clv.text}</span>
-                    <span className={css.clvBar}>
-                      {clv.mag > 0 && (
-                        <span
-                          className={css.clvBarFill}
-                          style={clv.pos
-                            ? { left: '50%', width: `${clv.mag * 50}%` }
-                            : { right: '50%', width: `${clv.mag * 50}%` }}
-                        />
-                      )}
-                    </span>
-                  </span>
-                );
-              })()}
-            </li>
-          );
-        })}
-      </ol>
+      <ol className={css.playerList}>{rows}</ol>
 
       {clickable && (
         <span className={css.pickHint} aria-hidden="true">Pick {cornerLabel}</span>

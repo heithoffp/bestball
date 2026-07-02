@@ -1,7 +1,9 @@
 // ArenaLeaderboard — the opt-in public leaderboard (ADR-013 / TASK-283).
-// Enrolled teams ranked by hidden Elo, with W/L, win%, rank movement, a platform
-// filter, and a "your rank" highlight for the signed-in owner. Owner identity is
-// never shown for OTHER users' teams (only the viewer's own rows are flagged).
+// Enrolled teams ranked by hidden Elo, with W/L, win%, rank movement, and a
+// "your rank" highlight for the signed-in owner. Owner identity is never shown
+// for OTHER users' teams (only the viewer's own rows are flagged). The whole
+// board is scoped to the featured tournament (BBM7) — no platform or tournament
+// filters until more slates are presented.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Trophy, RefreshCw, ChevronDown, LocateFixed } from 'lucide-react';
@@ -13,31 +15,20 @@ import { enrichSnapshotCLV } from '../../utils/arenaSnapshot';
 import ArenaRosterCard from './ArenaRosterCard';
 import css from '../Arena.module.css';
 
-const FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'underdog', label: 'Underdog' },
-  { key: 'draftkings', label: 'DraftKings' },
-];
-
-// Featured tournament first (TASK-301) — the default view matches where pairing
-// concentrates the votes, so the rankings people see are the ones they shape.
-const TOURNAMENTS = [
-  { key: 'featured', label: FEATURED_TOURNAMENT.label },
-  { key: 'all', label: 'All tournaments' },
-];
-
 const RANK_STORE_KEY = 'bbe_arena_lb_ranks';
+// Single BBM7 view for now; the store stays keyed so past per-filter entries are
+// simply ignored and future views can bring their own key.
+const RANK_VIEW_KEY = 'featured:bbm7';
 
 // Client-side movement: compare each team's current rank to the rank it held the
-// last time THIS browser viewed the same platform filter. No schema/history table
-// needed (v1). Returns a map id -> delta (positive = moved up) and persists the
-// new ranks for next time.
-function computeMovement(rows, platform) {
+// last time THIS browser viewed the board. No schema/history table needed (v1).
+// Returns a map id -> delta (positive = moved up) and persists the new ranks.
+function computeMovement(rows, viewKey) {
   let store = {};
   try {
     store = JSON.parse(localStorage.getItem(RANK_STORE_KEY) || '{}');
   } catch { store = {}; }
-  const prev = store[platform] || {};
+  const prev = store[viewKey] || {};
   const moves = {};
   const next = {};
   rows.forEach((r, i) => {
@@ -46,7 +37,7 @@ function computeMovement(rows, platform) {
     moves[r.id] = prev[r.id] != null ? prev[r.id] - rank : null;
   });
   try {
-    store[platform] = next;
+    store[viewKey] = next;
     localStorage.setItem(RANK_STORE_KEY, JSON.stringify(store));
   } catch { /* ignore quota / private mode */ }
   return moves;
@@ -76,8 +67,6 @@ function Movement({ delta }) {
 
 export default function ArenaLeaderboard({ adpLookup }) {
   const { user } = useAuth();
-  const [platform, setPlatform] = useState('all');
-  const [tournament, setTournament] = useState('featured');
   const [rows, setRows] = useState(null); // null = loading
   const [moves, setMoves] = useState({});
   const [error, setError] = useState(null);
@@ -92,17 +81,17 @@ export default function ArenaLeaderboard({ adpLookup }) {
     let ignore = false;
     (async () => {
       try {
-        const data = await getLeaderboard({ platform, tournament });
+        const data = await getLeaderboard({ tournament: 'featured' });
         if (ignore) return;
         setRows(data);
-        setMoves(computeMovement(data, `${tournament}:${platform}`));
+        setMoves(computeMovement(data, RANK_VIEW_KEY));
         setError(null);
       } catch {
         if (!ignore) { setRows([]); setError('Couldn’t load the leaderboard.'); }
       }
     })();
     return () => { ignore = true; };
-  }, [platform, tournament]);
+  }, []);
 
   // Your-team banner (TASK-303): true rank via server counts, so it stays correct
   // even when the viewer's best team sits beyond the fetched leaderboard page.
@@ -113,17 +102,17 @@ export default function ArenaLeaderboard({ adpLookup }) {
     let ignore = false;
     (async () => {
       try {
-        const best = await getMyBestArenaTeam({ platform, tournament });
+        const best = await getMyBestArenaTeam({ tournament: 'featured' });
         if (ignore) return;
         if (!best) { setYourRank(null); return; }
-        const rank = await getArenaRank({ elo: best.elo, platform, tournament });
+        const rank = await getArenaRank({ elo: best.elo, tournament: 'featured' });
         if (!ignore) setYourRank(rank ? { best, ...rank } : null);
       } catch {
         if (!ignore) setYourRank(null); // banner is progressive enhancement — never block the table
       }
     })();
     return () => { ignore = true; };
-  }, [user, platform, tournament]);
+  }, [user]);
 
   // Elo bars are scaled within the visible rows, so the spread reads at a glance.
   const eloRange = useMemo(() => {
@@ -159,27 +148,10 @@ export default function ArenaLeaderboard({ adpLookup }) {
   return (
     <div className={css.lbWrap}>
       <div className={css.lbBar}>
-        <div className={css.lbFilters}>
-          {TOURNAMENTS.map((t) => (
-            <button
-              key={t.key}
-              className={`${css.lbChip} ${tournament === t.key ? css.lbChipActive : ''}`}
-              onClick={() => setTournament(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-          <span className={css.lbFilterSplit} aria-hidden="true" />
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              className={`${css.lbChip} ${platform === f.key ? css.lbChipActive : ''}`}
-              onClick={() => setPlatform(f.key)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <span className={css.lbScope}>
+          <Trophy size={13} /> {FEATURED_TOURNAMENT.label}
+          <span className={css.lbScopeMeta}>· ranked by community vote</span>
+        </span>
       </div>
 
       {user && yourRank && (
@@ -227,7 +199,6 @@ export default function ArenaLeaderboard({ adpLookup }) {
                 >
                   <span className={css.podiumHead}>
                     <span className={`${css.rankBadge} ${rankClass(rank)}`}>{rank}</span>
-                    <span className={css.podiumPlatform}>{r.platform === 'draftkings' ? 'DraftKings' : 'Underdog'}</span>
                   </span>
                   <span className={css.podiumElo}>{Math.round(r.elo)}</span>
                   <span className={css.podiumArche}>{archetypeSummary(r.display_snapshot?.path) || 'Best-ball team'}</span>
@@ -264,10 +235,7 @@ export default function ArenaLeaderboard({ adpLookup }) {
                         {mine && <span className={css.youTag}>You</span>}
                         <span className={css.lbArche}>{archetypeSummary(r.display_snapshot?.path) || 'Best-ball team'}</span>
                       </span>
-                      <span className={css.lbTeamMeta}>
-                        {r.platform === 'draftkings' ? 'DraftKings' : 'Underdog'}
-                        {r.provisional ? ' · new' : ''}
-                      </span>
+                      {r.provisional && <span className={css.lbTeamMeta}>new</span>}
                     </span>
                     <span className={css.cElo}>
                       <span className={css.eloWrap}>

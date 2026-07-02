@@ -6,7 +6,7 @@
 // weighs those. Self-contained on the two display snapshots — no owner identity,
 // no Elo.
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ARCHETYPE_METADATA } from '../../utils/rosterArchetypes';
 import { analyzeRosterStacks } from '../../utils/stackAnalysis';
 import { nflTeamColor } from '../../utils/nflTeamColors';
@@ -61,15 +61,17 @@ function TapeStat({ label, aText, bText, aWin = false, bWin = false, aStyle, bSt
   );
 }
 
-export default function ArenaTape({ a, b, active = false }) {
+function ArenaTape({ a, b, active = false }) {
   const aCLV = a?.avgCLV;
   const bCLV = b?.avgCLV;
   const haveCLV = aCLV != null && bCLV != null;
   const aProj = a?.projTotal;
   const bProj = b?.projTotal;
   const haveProj = aProj != null && bProj != null;
-  const aStack = stackSummary(a);
-  const bStack = stackSummary(b);
+  // Memoized per snapshot — the reveal flips `active`, and re-running stack
+  // analysis for both rosters at that moment competes with the reveal animations.
+  const aStack = useMemo(() => stackSummary(a), [a]);
+  const bStack = useMemo(() => stackSummary(b), [b]);
   const haveDate = a?.draftedAt || b?.draftedAt;
 
   return (
@@ -111,3 +113,7 @@ export default function ArenaTape({ a, b, active = false }) {
     </div>
   );
 }
+
+// Memoized: with the parent's snapshots referentially stable, deck-scroll and
+// session-stat re-renders skip the tape entirely.
+export default React.memo(ArenaTape);
