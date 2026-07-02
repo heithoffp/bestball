@@ -92,10 +92,14 @@ export async function submitVote({ token, winner }) {
  * accounts only — ADR-015).
  * Defaults to the featured (BBM7) scope while that's the whole presentation — a
  * call site must opt IN to the full pool, not accidentally fall into it.
- * @param {{platform?: 'all'|'underdog'|'draftkings', tournament?: 'featured'|'all', limit?: number}} opts
+ * Paginated via `.range()` (TASK-313) so the full pool is reachable, not just the
+ * first page; `total` is the enrolled-team count under the active filters, for
+ * building page controls.
+ * @param {{platform?: 'all'|'underdog'|'draftkings', tournament?: 'featured'|'all', limit?: number, offset?: number}} opts
+ * @returns {Promise<{rows: Array, total: number}>}
  */
-export async function getLeaderboard({ platform = 'all', tournament = 'featured', limit = 200 } = {}) {
-  if (!supabase) return [];
+export async function getLeaderboard({ platform = 'all', tournament = 'featured', limit = 50, offset = 0 } = {}) {
+  if (!supabase) return { rows: [], total: 0 };
   // Anon no longer has a column grant for user_id (TASK-296 #3 — a logged-out caller
   // could otherwise group arena_teams by user_id to reconstruct a whole account's
   // portfolio). Only request it when signed in, where it's needed to mark "your
@@ -105,15 +109,15 @@ export async function getLeaderboard({ platform = 'all', tournament = 'featured'
     + (user ? ', user_id' : '');
   let q = supabase
     .from('arena_teams')
-    .select(cols)
+    .select(cols, { count: 'exact' })
     .eq('enrolled', true)
     .order('elo', { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
   if (platform !== 'all') q = q.eq('platform', platform);
   if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
-  const { data, error } = await q;
+  const { data, error, count } = await q;
   if (error) throw error;
-  return data ?? [];
+  return { rows: data ?? [], total: count ?? 0 };
 }
 
 /**
