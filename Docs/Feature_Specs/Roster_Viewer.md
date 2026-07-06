@@ -141,6 +141,17 @@ same day: two models for the same stat meant the table and the Draft Board modal
 disagreed on the same roster (e.g. 58.8% vs 65.7%). The functions remain in
 `advanceModel.js` (pure, Node-exercisable) but have no UI consumer.
 
+**Demo mode** (2026-07-06): guests can't read `draft_boards_admin`, which would leave
+the demo's Adv % column all dashes. Instead, `utils/demoBoards.js` synthesizes a
+deterministic 12-team board around each demo roster — the user's seat replays their
+real picks, the other 11 seats draft near-ADP from the bundled Underdog snapshot with
+seeded jitter plus positional minimums/caps (≥2 QB / 4 RB / 5 WR / 2 TE, capped at
+3/9/10/3) so every synthetic team fields a startable lineup. Seeds derive from the
+entry id, so the column, the Board modal, and every demo visit agree. RosterViewer
+receives `demoMode` from App (`isUsingDemoData`) and swaps board availability + board
+objects to the synthetic source; the Board modal gets the synthetic board via its
+`boardOverride` prop (no Supabase call).
+
 **Weekly actuals input** (developer workflow, mirrors ADP snapshots): drop
 `{halfppr|fullppr}_week_{N}.csv` files into `src/assets/actuals/` — e.g.
 `halfppr_week_01.csv`. Columns: player name (`Name`, or `firstName`/`lastName`) and a
@@ -166,6 +177,7 @@ Via `classifyRosterPath()` from `utils/rosterArchetypes.js` — classifies each 
 - `src/components/RosterViewer.jsx` — main component
 - `src/utils/advanceModel.js` — lineup-aware projection, weekly actuals ingestion, pod advance math
 - `src/utils/podAdvance.js` — shared pod-exact model over a captured board (drives both the Adv % column and the Board modal)
+- `src/utils/demoBoards.js` — deterministic synthetic boards for demo mode (guests can't read `draft_boards_admin`)
 - `src/components/DraftBoardModal.jsx` — full draft-board modal (TASK-240)
 - `src/utils/draftBoards.js` — board availability + board fetch from `draft_boards_admin`
 - `src/utils/realDraftData.js` — real-draft frequency tables (boards + own rosters)

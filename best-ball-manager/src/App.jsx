@@ -566,7 +566,7 @@ export default function App() {
             )}
             {activeTab === 'rosters' && (
               canAccessFeature(tier, 'rosters') || subLoading
-                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} actuals={weeklyActuals} initialFilter={rosterNavContext} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
+                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} actuals={weeklyActuals} initialFilter={rosterNavContext} helpOpen={helpOpen} onHelpToggle={toggleHelp} demoMode={isUsingDemoData} />
                 : <LockedFeature featureName="Roster Viewer" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'rankings' && (

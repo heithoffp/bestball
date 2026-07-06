@@ -21,6 +21,7 @@ import EmptyState from './EmptyState';
 import DraftBoardModal from './DraftBoardModal';
 import { fetchAvailableBoardIds, fetchDraftBoards } from '../utils/draftBoards';
 import { userPodAdvance } from '../utils/podAdvance';
+import { generateDemoBoards } from '../utils/demoBoards';
 import { POS_COLORS, posColor } from '../utils/positionColors';
 
 const HELP_ANNOTATIONS = [
@@ -149,7 +150,7 @@ function HighlightedName({ name, query }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RosterViewer({ rosterData = [], masterPlayers = [], adpByPlatform = {}, actuals = null, initialFilter = null, helpOpen = false, onHelpToggle }) {
+export default function RosterViewer({ rosterData = [], masterPlayers = [], adpByPlatform = {}, actuals = null, initialFilter = null, helpOpen = false, onHelpToggle, demoMode = false }) {
   const { isMobile } = useMediaQuery();
   const [expandedEntry, setExpandedEntry]   = useState(() => initialFilter?.entry_id ?? null);
   const [filtersOpen, setFiltersOpen]       = useState(false);
@@ -171,10 +172,16 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
   const scrollRef = useRef(null);
 
   // ── Draft boards (TASK-240) ─────────────────────────────────────────────────
-  // Which synced drafts have a full board available, and which board is open.
-  const [boardIds, setBoardIds] = useState(null);
+  // Which drafts have a full board available, and which board is open. Demo
+  // mode never asks Supabase (guest RLS returns nothing) — synthetic demo
+  // boards are generated below, once rosters are grouped.
+  const [fetchedBoardIds, setFetchedBoardIds] = useState(null);
   const [boardRoster, setBoardRoster] = useState(null);
-  useEffect(() => { fetchAvailableBoardIds().then(setBoardIds); }, []);
+  useEffect(() => {
+    if (demoMode) return undefined;
+    fetchAvailableBoardIds().then(setFetchedBoardIds);
+    return undefined;
+  }, [demoMode]);
 
   const openBoard = useCallback((roster, e) => {
     e.stopPropagation();
@@ -185,17 +192,17 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
   // ── Pod-exact Adv % from captured boards ────────────────────────────────────
   // When a roster's full draft board is captured, its Adv % comes from the
   // pod-exact model over the 11 actual opponents (utils/podAdvance.js — the
-  // identical computation the Draft Board modal renders), overriding the
-  // portfolio field model so the column and the board view always agree.
+  // identical computation the Draft Board modal renders), so the column and
+  // the board view always agree.
   const [podBoards, setPodBoards] = useState(null);
   useEffect(() => {
-    if (!boardIds || boardIds.size === 0 || rosterData.length === 0) return undefined;
-    const ids = [...new Set(rosterData.map(p => p.entry_id))].filter(id => boardIds.has(id));
+    if (demoMode || !fetchedBoardIds || fetchedBoardIds.size === 0 || rosterData.length === 0) return undefined;
+    const ids = [...new Set(rosterData.map(p => p.entry_id))].filter(id => fetchedBoardIds.has(id));
     if (ids.length === 0) return undefined;
     let cancelled = false;
     fetchDraftBoards(ids).then(boards => { if (!cancelled) setPodBoards(boards); });
     return () => { cancelled = true; };
-  }, [boardIds, rosterData]);
+  }, [demoMode, fetchedBoardIds, rosterData]);
 
   // ── Combo frequency data ─────────────────────────────────────────────────────
   // Load both pre- and post-draft combo tables (built from real drafts —
@@ -363,19 +370,34 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
     });
   }, [rosterData, alpha, nameToPlayerId, actuals]);
 
+  // Demo mode: synthesize a deterministic board around every demo roster
+  // (utils/demoBoards.js — user's real picks in their seat, ADP-plausible
+  // opponents elsewhere) so Adv % and the Board modal work for guests, who
+  // can't read draft_boards_admin.
+  const demoBoards = useMemo(() => {
+    if (!demoMode) return null;
+    return generateDemoBoards(rosters, adpByPlatform?.underdog?.latestRows ?? []);
+  }, [demoMode, rosters, adpByPlatform]);
+
+  // Effective board availability + board objects, either source.
+  const boardIds = useMemo(() => (
+    demoMode ? new Set((demoBoards ?? []).map(b => b.draftId)) : fetchedBoardIds
+  ), [demoMode, demoBoards, fetchedBoardIds]);
+  const activeBoards = demoMode ? demoBoards : podBoards;
+
   // Pod-exact Adv % per roster with a captured board. Computed in chunks off
   // the render path — each board simulates all 12 seats, so a large portfolio
   // would otherwise freeze the main thread. Results fill in progressively.
   const [podAdvById, setPodAdvById] = useState({});
   useEffect(() => {
-    if (!podBoards?.length || rosters.length === 0) return undefined;
+    if (!activeBoards?.length || rosters.length === 0) return undefined;
     let cancelled = false;
     const rosterById = new Map(rosters.map(r => [r.entry_id, r]));
     (async () => {
       const out = {};
       const CHUNK = 8;
-      for (let i = 0; i < podBoards.length; i += CHUNK) {
-        for (const board of podBoards.slice(i, i + CHUNK)) {
+      for (let i = 0; i < activeBoards.length; i += CHUNK) {
+        for (const board of activeBoards.slice(i, i + CHUNK)) {
           const roster = rosterById.get(board.draftId);
           if (!roster) continue;
           // Store nulls too: a present-but-null entry means "board seen,
@@ -389,11 +411,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         }
         if (cancelled) return;
         setPodAdvById({ ...out });
-        if (i + CHUNK < podBoards.length) await new Promise(r => setTimeout(r, 0));
+        if (i + CHUNK < activeBoards.length) await new Promise(r => setTimeout(r, 0));
       }
     })();
     return () => { cancelled = true; };
-  }, [podBoards, rosters, adpByPlatform, actuals]);
+  }, [activeBoards, rosters, adpByPlatform, actuals]);
 
   // Expected Advance % comes exclusively from the pod-exact board model —
   // no captured board, no number (the row tooltip tells the user to re-sync).
@@ -1265,6 +1287,9 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
           roster={boardRoster}
           adpByPlatform={adpByPlatform}
           actuals={actuals}
+          boardOverride={demoMode
+            ? ((activeBoards ?? []).find(b => b.draftId === boardRoster.entry_id) ?? null)
+            : null}
           onClose={() => setBoardRoster(null)}
         />
       )}
