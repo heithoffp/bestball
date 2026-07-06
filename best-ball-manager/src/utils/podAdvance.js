@@ -9,15 +9,15 @@
 // field model. Determinism matters — seeds derive from draftId + slot, so
 // re-renders and both call sites agree to the decimal.
 
-import { canonicalName } from './helpers';
+import { canonicalName } from './helpers.js';
 import {
   computeRosterOutlook,
   podAdvanceProbabilities,
   scoringForPlatform,
   advanceStructureFor,
   REGULAR_SEASON_WEEKS,
-} from './advanceModel';
-import { BYE_WEEKS_2026 } from '../data/byeWeeks';
+} from './advanceModel.js';
+import { BYE_WEEKS_2026 } from '../data/byeWeeks.js';
 
 /**
  * Derive the full pod model for one captured board.

@@ -12,7 +12,7 @@ Active
 - Sortable table of all rosters with columns: Entry, Draft Date, Snapshot, Actual Pts (in-season only), Proj Pts, Adv %, RB/QB/TE Archetypes, Early Combo %, Avg CLV%
 - Click row to expand: draft capital map, per-player detail (pick, ADP, Proj, Actual Pts in-season, CLV)
 - Color-coded CLV % ranges (>5% green → <-2.5% red)
-- Adv % color-coded against the tournament's own pod baseline — 16.7% (2/12) classic, 25% (3/12) Big/Little Board, 50% (6/12) Eliminator Week 1 — green above, red below, muted em-dash when not modeled
+- Adv % color-coded against the tournament's own pod baseline — 16.7% (2/12) classic, 25% (3/12) Big/Little Board, 50% (6/12) Eliminator Week 1 — green above, red below, muted em-dash when not modeled. Modeled **only** for rosters with a captured draft board (pod-exact); the em-dash tooltip tells the user to re-sync the draft to capture its board
 
 ### Mobile
 - Card-based layout with collapsible sections
@@ -46,17 +46,18 @@ in the `draft_boards_admin` Supabase table — no disabled buttons for rosters w
   mobile (<900px full-screen panel).
 - **Your column:** identified by name-overlap between the clicked roster's players and
   board slots (requires >50% match); highlighted with the accent color and a "YOU" label.
-- **Per-column context:** lineup-aware projected points and Expected Advance % (same
-  `advanceModel.js` engine as the roster table), Avg CLV% (same power-law as the table),
-  and RB/QB/TE archetype pills — for every team in the pod, enriched via the Underdog
-  ADP map and projections (`adpByPlatform` prop, passed from App). Pod Adv % uses the
-  **pod-exact** model (`podAdvanceProbabilities`): every seat is a known opponent, the
-  beat-count is Poisson-binomial, and odds sum to ~advanceSpots across the pod (2, or 3
-  on Big/Little Board, or 6 on Eliminator Week 1 — `advanceStructureFor`). Seats where
-  under half the picks resolve a projection are unmodeled (em-dash) and stand in as
-  pod-average opponents. Eliminator boards score the Week-1 cut from a week-1-only
-  outlook while the displayed Proj stays season-long; Superflex boards simulate the
-  extra QB slot.
+- **Per-column context:** lineup-aware projected points and Expected Advance % (the
+  shared pod model in `utils/podAdvance.js` — the same computation that drives the
+  roster table's Adv % column, so both views show the identical number), Avg CLV%
+  (same power-law as the table), and RB/QB/TE archetype pills — for every team in the
+  pod, enriched via the Underdog ADP map and projections (`adpByPlatform` prop, passed
+  from App). Pod Adv % is **pod-exact** (`podAdvanceProbabilities`): every seat is a
+  known opponent, the beat-count is Poisson-binomial, and odds sum to ~advanceSpots
+  across the pod (2, or 3 on Big/Little Board, or 6 on Eliminator Week 1 —
+  `advanceStructureFor`). Seats where under half the picks resolve a projection are
+  unmodeled (em-dash) and stand in as pod-average opponents. Eliminator boards score
+  the Week-1 cut from a week-1-only outlook while the displayed Proj stays season-long;
+  Superflex boards simulate the extra QB slot.
   Weekly actuals (when loaded) flow in via the `actuals` prop, so pod odds shift with
   banked points in-season.
 - **Board availability is paginated** (2026-07-06): `fetchAvailableBoardIds` pages
@@ -121,16 +122,24 @@ own advancement window (`advanceStructureFor`, 2026-07-06):
 | Superflex slates | top 2 of 12, superflex lineup in the sim | weeks 1–14 |
 | The Eliminator | top 6 of 12 (first survival cut) | **Week 1 only** |
 
-Your total is Normal(banked + R·weeklyMean, weeklySd·√R); the 11 opponents are i.i.d.
-draws from a field model built from the user's own portfolio cohort (tournament →
-platform → all, tournament cohorts need ≥3 rosters, platform/global fallbacks scoped
-per format so superflex/eliminator rosters never measure against classic cohorts),
-with roster-quality spread clamped to 1.5–4% of the field weekly mean. Computed by
-numeric integration (no simulation at this layer). Eliminator advance inputs come from
-a separate week-1-only outlook (week-1 actuals decide the cut once loaded); the Proj
-Pts column keeps the season-long view for all formats. Known simplifications:
-opponents modeled from the portfolio, not the actual pod; opponent actuals unobserved
-(full-window variance); player-overlap correlation ignored.
+**Pod-exact only (2026-07-06):** Adv % is computed exclusively from the roster's
+captured draft board via the shared pod model (`utils/podAdvance.js` —
+`derivePodModel`/`userPodAdvance`, the exact engine the Draft Board modal renders, so
+the column and the Board view always show the identical number). Every seat is a known
+opponent simulated from its real picks; the beat-count is Poisson-binomial
+(`podAdvanceProbabilities`) and odds sum to ~advanceSpots across the pod. Boards are
+bulk-fetched (`fetchDraftBoards`) for all rosters with availability, and pod models are
+computed in chunks off the render path (12 seat simulations per board), filling the
+column progressively. Rosters **without** a captured board show a muted em-dash whose
+tooltip prompts the user to re-sync the draft with the extension. Eliminator advance
+inputs come from a week-1-only outlook (week-1 actuals decide the cut once loaded);
+the Proj Pts column keeps the season-long view for all formats.
+
+The earlier portfolio field model (`buildFieldModel`/`advanceProbability`, i.i.d.
+opponents drawn from the user's own portfolio cohort) was retired from this column the
+same day: two models for the same stat meant the table and the Draft Board modal
+disagreed on the same roster (e.g. 58.8% vs 65.7%). The functions remain in
+`advanceModel.js` (pure, Node-exercisable) but have no UI consumer.
 
 **Weekly actuals input** (developer workflow, mirrors ADP snapshots): drop
 `{halfppr|fullppr}_week_{N}.csv` files into `src/assets/actuals/` — e.g.
@@ -155,7 +164,8 @@ Via `classifyRosterPath()` from `utils/rosterArchetypes.js` — classifies each 
 
 ## Key Files
 - `src/components/RosterViewer.jsx` — main component
-- `src/utils/advanceModel.js` — lineup-aware projection, weekly actuals ingestion, Expected Advance %
+- `src/utils/advanceModel.js` — lineup-aware projection, weekly actuals ingestion, pod advance math
+- `src/utils/podAdvance.js` — shared pod-exact model over a captured board (drives both the Adv % column and the Board modal)
 - `src/components/DraftBoardModal.jsx` — full draft-board modal (TASK-240)
 - `src/utils/draftBoards.js` — board availability + board fetch from `draft_boards_admin`
 - `src/utils/realDraftData.js` — real-draft frequency tables (boards + own rosters)
