@@ -37,3 +37,12 @@ export const NFL_TEAMS = {
 export const NFL_TEAMS_ABBREV = Object.fromEntries(
   Object.entries(NFL_TEAMS).map(([abbr, full]) => [full.toUpperCase(), abbr])
 );
+
+// Collapse a team to its abbreviation. Stored data carries teams as the source
+// platform stored them: DraftKings uses abbreviations ("MIN"), Underdog uses full
+// names ("Minnesota Vikings"). Unknown values (already-abbreviated, "FA", "N/A")
+// pass through unchanged.
+export function teamAbbrev(team) {
+  if (!team) return team;
+  return NFL_TEAMS_ABBREV[String(team).toUpperCase()] || team;
+}

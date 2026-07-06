@@ -10,6 +10,7 @@ import React, { useMemo } from 'react';
 import { ARCHETYPE_METADATA } from '../../utils/rosterArchetypes';
 import { analyzeRosterStacks } from '../../utils/stackAnalysis';
 import { nflTeamColor } from '../../utils/nflTeamColors';
+import { teamAbbrev } from '../../utils/nflTeams';
 import css from '../Arena.module.css';
 
 // A roster's headline "build" — the RB archetype carries the most signal (Hero RB /
@@ -40,7 +41,12 @@ function dateText(iso) {
 // none. Kept to one token — the tape's cells are too narrow for a stack list
 // (the card's chips carry the full picture).
 function stackSummary(snapshot) {
-  const stacks = snapshot?.players?.length ? analyzeRosterStacks(snapshot.players) : [];
+  // Frozen snapshots can carry full team names ("Denver Broncos") — collapse to
+  // abbreviations so the token stays narrow and the color lookup resolves,
+  // matching the roster card's normalization.
+  const players = (snapshot?.players || []).map((p) =>
+    (p.team ? { ...p, team: teamAbbrev(p.team) } : p));
+  const stacks = players.length ? analyzeRosterStacks(players) : [];
   if (!stacks.length) return { text: '—', color: null };
   const best = stacks.reduce((a, b) =>
     (b.members.length > a.members.length ? b : a));

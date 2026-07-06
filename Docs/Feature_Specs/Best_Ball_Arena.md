@@ -88,7 +88,20 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
   (see *BBM7-only presentation* below). Signed-in owners get a **your-team banner**
   with true rank + percentile computed by server count queries (correct beyond the
   fetched 200-row page) and a "Find my team" scroll-and-flash action (TASK-303).
-  Rows expand to the full roster card.
+  Rows expand to the full roster card. Each row (and podium card) carries a
+  **build preview line** — draft date, position build (e.g. `2QB 6RB 8WR 4TE`),
+  and avg CLV recomputed against the viewer's ADP — the same facts the Rosters
+  tab leads with, visible before expanding. A **player / NFL-team search**
+  (chip-based, multiple chips AND-ed) filters the board to teams carrying every
+  chip, best Elo first: suggestions come from the viewer's master player list
+  plus the 32 NFL teams, free text is accepted as a chip, and matching runs
+  server-side via `ilike` patterns against the snapshot's serialized players
+  array (`searchLeaderboard` in `arenaClient.js`). In search mode the rank
+  column shows the match ordinal (not global rank), and the podium, pager, and
+  movement indicator are suppressed; results are capped at the top 50 with the
+  full match count in the summary line. "Find my team" clears an active search
+  first. Team chips match on the full franchise name — correct for the UD-stored
+  featured board; revisit if DK slates (abbreviation-stored teams) are presented.
 - **My Teams** — the user's synced **BBM7** teams as **read-only standings** (each
   team's hidden Elo, W–L, provisional badge) plus the single **account-level
   enrollment switch** (ADR-016): "Leave the Arena" removes ALL of the user's teams

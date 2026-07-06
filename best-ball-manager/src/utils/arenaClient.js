@@ -125,6 +125,41 @@ export async function getLeaderboard({ platform = 'all', tournament = 'featured'
 }
 
 /**
+ * Player / NFL-team search over the leaderboard pool. Each pattern is a SQL
+ * ilike pattern (e.g. '%Ja\'Marr Chase%') matched against the snapshot's players
+ * array serialized as text (display_snapshot->>players), and ALL patterns must
+ * match (AND) — "the best team with X and Y". Results come back best Elo first,
+ * capped at `limit`; `total` is the full match count for the summary line.
+ * Same visibility rules as getLeaderboard (enrolled, owned, RLS, featured scope).
+ * Note: snapshots store teams as the platform stored them (UD full names, DK
+ * abbreviations) — callers build team patterns from the full name, which covers
+ * the featured UD board.
+ * @param {{patterns: string[], platform?: 'all'|'underdog'|'draftkings', tournament?: 'featured'|'all', limit?: number}} opts
+ * @returns {Promise<{rows: Array, total: number}>}
+ */
+export async function searchLeaderboard({ patterns = [], platform = 'all', tournament = 'featured', limit = 50 } = {}) {
+  if (!supabase) return { rows: [], total: 0 };
+  // Same guest column rule as getLeaderboard — user_id is only granted (and only
+  // needed, for the "You" tag) when signed in.
+  const { data: { user } } = await supabase.auth.getUser();
+  const cols = 'id, platform, elo, wins, losses, matches, provisional, display_snapshot'
+    + (user ? ', user_id' : '');
+  let q = supabase
+    .from('arena_teams')
+    .select(cols, { count: 'exact' })
+    .eq('enrolled', true)
+    .eq('source', 'owned')
+    .order('elo', { ascending: false })
+    .limit(limit);
+  if (platform !== 'all') q = q.eq('platform', platform);
+  if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
+  patterns.forEach((p) => { q = q.ilike('display_snapshot->>players', p); });
+  const { data, error, count } = await q;
+  if (error) throw error;
+  return { rows: data ?? [], total: count ?? 0 };
+}
+
+/**
  * The viewer's highest-Elo team under the given filters (TASK-303). Returns null
  * for guests or when no team matches the filters.
  */

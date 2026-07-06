@@ -6,6 +6,7 @@
     { "source": "/extension/(.*)", "destination": "/extension/$1" },
     { "source": "/updates.json", "destination": "/extension/updates.json" },
     { "source": "/blog/:slug", "destination": "/blog/:slug/index.html" },
+    { "source": "/arena", "destination": "/arena/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

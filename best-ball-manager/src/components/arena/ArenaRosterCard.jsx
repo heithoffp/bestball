@@ -12,20 +12,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { posColor } from '../../utils/positionColors';
 import { nflTeamColor } from '../../utils/nflTeamColors';
-import { NFL_TEAMS_ABBREV } from '../../utils/nflTeams';
+import { teamAbbrev } from '../../utils/nflTeams';
 import { headshotUrl, teamLogoUrl } from '../../utils/headshots';
 import { analyzeRosterStacks } from '../../utils/stackAnalysis';
 import css from '../Arena.module.css';
 
 const POS_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DEF'];
-
-// Frozen snapshots carry teams as the source platform stored them: DraftKings uses
-// abbreviations ("MIN"), Underdog uses full names ("Minnesota Vikings"). Collapse to
-// the abbreviation so the row text, stack rails, and team-color lookups all agree.
-function teamAbbrev(team) {
-  if (!team) return team;
-  return NFL_TEAMS_ABBREV[String(team).toUpperCase()] || team;
-}
 
 // First + last initial, e.g. "Justin Jefferson" -> "JJ". Defensive states/teams
 // (e.g. "Eagles") fall back to a single letter.

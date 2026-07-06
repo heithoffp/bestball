@@ -190,7 +190,7 @@ export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOp
       <div className={css.body}>
         {!isDesktop && toolbar}
         {view === 'vote' && <ArenaVote adpLookup={adpLookup} projLookup={projLookup} comboLookup={comboLookup} onGoToMyTeams={() => setView('myteams')} />}
-        {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} comboLookup={comboLookup} />}
+        {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} comboLookup={comboLookup} masterPlayers={masterPlayers} />}
         {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} masterPlayers={masterPlayers} />}
       </div>
     </div>
