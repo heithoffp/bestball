@@ -70,6 +70,9 @@ Weighted combination of 4 factors:
 ### Uniqueness Lift
 Normalized surprisal score comparing roster composition to portfolio baseline. Higher = more unique archetype/player combination.
 
+### Early Combo Rate / Count (Tier 1 frequency)
+How often each roster's first-4-pick combo appears across the field. **Data source (2026-07-05):** real drafts — every seat of every captured pod board in `draft_boards_admin` plus the user's own synced rosters for drafts without a board (`utils/realDraftData.js`); the combo key is the roster's first 4 picks in draft order, sorted by `player_id` (`metadata.key_basis = 'picks'`). Column shows a raw occurrence count ("2×"; 1× = only this roster) and is labeled "Early Combo Count". When no real data is reachable (guests/demo), the bundled Monte Carlo tier1 table is the fallback (`key_basis = 'adp'`, per-1M display, "Early Combo Rate / 1M"). Pre-draft rosters score against the pre table, post-draft against post.
+
 ### Stack Analysis
 Uses `analyzeRosterStacks()` from `utils/stackAnalysis.js` to identify and score team correlations within each roster.
 
@@ -88,6 +91,8 @@ Via `classifyRosterPath()` from `utils/rosterArchetypes.js` — classifies each 
 - `src/components/RosterViewer.jsx` — main component
 - `src/components/DraftBoardModal.jsx` — full draft-board modal (TASK-240)
 - `src/utils/draftBoards.js` — board availability + board fetch from `draft_boards_admin`
+- `src/utils/realDraftData.js` — real-draft frequency tables (boards + own rosters)
+- `src/utils/uniquenessEngine.js` — Tier 1 combo lookup (real data first, sim fallback)
 - `src/utils/positionColors.js` — shared position color palette
 - `src/utils/rosterArchetypes.js` — `classifyRosterPath()`
 - `src/utils/stackAnalysis.js` — `analyzeRosterStacks()`, `scoreRosterStacks()`

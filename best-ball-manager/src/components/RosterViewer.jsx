@@ -25,7 +25,7 @@ const HELP_ANNOTATIONS = [
   { id: 'filter-clv',        label: 'CLV Filter',            description: 'Filter by CLV direction — +CLV rosters contain picks that got cheaper after the draft.' },
   { id: 'filter-archetype',  label: 'Archetype Filters',     description: 'Filter by construction archetype. Counts show how many of your rosters match each style.' },
   { id: 'col-archetype',     label: 'Archetypes',            description: "Each roster's RB, QB, and TE draft strategy, classified by pick position and capital." },
-  { id: 'col-uniqueness',    label: 'Early Combo Rate',      description: 'How often this first-4-round combo appeared per 1M simulated drafts. Lower = rarer construction.' },
+  { id: 'col-uniqueness',    label: 'Early Combo Rate',      description: 'How often this first-4-round combo appears among real tracked drafts (captured boards + your synced rosters), or per 1M simulated drafts when no real data is available. Lower = rarer construction.' },
   { id: 'col-clv',           label: 'Avg CLV%',              description: "Average Closing Line Value across all picks. Positive means the player's ADP rose after your draft." },
 ];
 
@@ -35,12 +35,18 @@ const HELP_ANNOTATIONS = [
 
 /**
  * Format a uniqueness score for display.
- * @param {{ found: boolean, count?: number, totalRosters: number }|null} score
- * @param {boolean} loading - true while sim data is still fetching
+ * Real-draft data shows the raw occurrence count ("2×" = the combo appeared in
+ * two tracked drafts); the sim fallback keeps the per-1M normalization its
+ * 10M-roster denominator was designed for.
+ * @param {{ found: boolean, count?: number, totalRosters: number, dataSource?: string }|null} score
+ * @param {boolean} loading - true while frequency data is still fetching
  * @returns {{ text: string, muted: boolean }}
  */
 function formatUniqueness(score, loading) {
   if (loading || !score || score.loading) return { text: '—', muted: true };
+  if (score.dataSource === 'real') {
+    return { text: score.found ? `${score.count}×` : '0×', muted: false };
+  }
   if (!score.found) return { text: '0.0', muted: false };
   const perMillion = (score.count / (score.totalRosters / 1_000_000)).toFixed(1);
   return { text: perMillion, muted: false };
@@ -170,13 +176,15 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
     setBoardRoster(roster);
   }, []);
 
-  // ── Simulation data ──────────────────────────────────────────────────────────
+  // ── Combo frequency data ─────────────────────────────────────────────────────
   // Load both pre- and post-draft tier1 tables so each roster can be scored
-  // against the simulation source that matches its tournament status.
+  // against the source that matches its tournament status. Real drafts
+  // (captured boards + the user's synced rosters) win; the bundled sim is the
+  // fallback for guests/demo mode.
   const [tier1Pre, setTier1Pre] = useState(null);
   const [tier1Post, setTier1Post] = useState(null);
-  useEffect(() => { loadSimData('pre').then(setTier1Pre); }, []);
-  useEffect(() => { loadSimData('post').then(setTier1Post); }, []);
+  useEffect(() => { loadSimData('pre', { masterPlayers, rosterData }).then(setTier1Pre); }, [masterPlayers, rosterData]);
+  useEffect(() => { loadSimData('post', { masterPlayers, rosterData }).then(setTier1Post); }, [masterPlayers, rosterData]);
 
   // Mirrors the classification used in ComboAnalysis: name-based, since
   // roster-completion heuristics are unreliable (most rosters are 18 picks
@@ -306,10 +314,12 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
     });
   }, [rosterData, alpha, nameToPlayerId]);
 
-  // Per-roster uniqueness score via Tier 1 simulation lookup.
-  // Pre-draft rosters score against the pre sim; post-draft rosters score
-  // against the post sim. Rosters whose source is still loading are flagged
-  // so the UI can show a loading dash instead of a stale value.
+  // Per-roster uniqueness score via Tier 1 frequency lookup.
+  // Pre-draft rosters score against the pre source; post-draft rosters score
+  // against the post source. Rosters whose source is still loading are flagged
+  // so the UI can show a loading dash instead of a stale value. The combo key
+  // is built the same way the loaded table was keyed (metadata.key_basis:
+  // 'picks' for real-draft data, 'adp' for the sim fallback).
   const rosterScores = useMemo(() => {
     const byId = {};
     rosters.forEach(r => {
@@ -319,14 +329,20 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         byId[r.entry_id] = { loading: true, found: false, totalRosters: 10000000 };
         return;
       }
-      const key = buildComboKey(r.players);
+      const dataSource = source.metadata?.data_source ?? 'sim';
+      const key = buildComboKey(r.players, source.metadata?.key_basis ?? 'adp');
       const hit = key ? lookupTier1(key, source) : null;
       byId[r.entry_id] = hit
-        ? { found: true, count: hit.count, totalRosters: hit.totalRosters }
-        : { found: false, totalRosters: source.metadata?.total_rosters ?? 10000000 };
+        ? { found: true, count: hit.count, totalRosters: hit.totalRosters, dataSource }
+        : { found: false, totalRosters: source.metadata?.total_rosters ?? 10000000, dataSource };
     });
     return byId;
   }, [rosters, tier1Pre, tier1Post]);
+
+  // Whether any loaded frequency source is real-draft data (drives column copy).
+  const usesRealData =
+    tier1Pre?.metadata?.data_source === 'real' ||
+    tier1Post?.metadata?.data_source === 'real';
 
 
 
@@ -379,10 +395,12 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         return sortDir === 'asc' ? at - bt : bt - at;
       }
       if (sortKey === 'uniqueness') {
+        // Normalize by each source's denominator so real-data and sim-scored
+        // rosters sort together sensibly.
         const as = rosterScores[a.entry_id];
         const bs = rosterScores[b.entry_id];
-        const av = as?.found ? as.count : 0;
-        const bv = bs?.found ? bs.count : 0;
+        const av = as?.found ? as.count / (as.totalRosters || 1) : 0;
+        const bv = bs?.found ? bs.count / (bs.totalRosters || 1) : 0;
         return sortDir === 'asc' ? av - bv : bv - av;
       }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
@@ -857,9 +875,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
               className={`${css.th} ${css.colUniq}`}
               style={{ textAlign: 'center', color: '#7dffcc' }}
               onClick={() => toggleSort('uniqueness')}
-              title="Expected occurrences of this roster's first-4-round player combo per 1 million simulated drafts"
+              title={usesRealData
+                ? "How many times this roster's first-4-pick combo appeared across all tracked real drafts"
+                : "Expected occurrences of this roster's first-4-round player combo per 1 million simulated drafts"}
             >
-              Early Combo Rate / 1M <SortIcon col="uniqueness" sortKey={sortKey} sortDir={sortDir} />
+              {usesRealData ? 'Early Combo Count' : 'Early Combo Rate / 1M'} <SortIcon col="uniqueness" sortKey={sortKey} sortDir={sortDir} />
             </th>
             <th data-help-id="col-clv" className={css.th} style={{ textAlign: 'center', color: '#00e5a0' }} onClick={() => toggleSort('avgCLV')}>Avg CLV% <SortIcon col="avgCLV" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center', cursor: 'default' }}></th>
@@ -872,8 +892,14 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
             const score = rosterScores[roster.entry_id];
             const uniq = formatUniqueness(score, false);
             const uniqTooltip = score?.found
-              ? 'Observed in simulation — exact frequency count per simulated rosters.'
-              : score?.loading ? 'Loading simulation data…' : 'Not observed — this is a uniquely rare combo.';
+              ? (score.dataSource === 'real'
+                  ? `Seen ${score.count} time${score.count === 1 ? '' : 's'} across ${score.totalRosters.toLocaleString()} tracked real drafts (including this roster) — 1× means no one else we track has drafted it.`
+                  : 'Observed in simulation — exact frequency count per simulated rosters.')
+              : score?.loading
+                ? 'Loading draft data…'
+                : (score?.dataSource === 'real'
+                    ? 'Never seen in any other tracked draft — a uniquely rare combo.'
+                    : 'Not observed — this is a uniquely rare combo.');
             return (
               <React.Fragment key={roster.entry_id}>
                 <tr

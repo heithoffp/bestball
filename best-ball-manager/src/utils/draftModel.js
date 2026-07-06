@@ -1,21 +1,27 @@
 /**
- * Draft Explorer model — uses empirical per-player simulation data (tier3).
+ * Draft Explorer model — per-player pick-path counts (r1–r4).
  *
- * Tier 3 is split into 4 files for progressive loading:
+ * Primary source: REAL drafts — every seat of every captured pod board in
+ * draft_boards_admin plus the user's own synced rosters (realDraftData.js).
+ * Fallback when no real data is reachable (guests, demo mode, fetch errors):
+ * the bundled simulation files, split into 4 files for progressive loading:
  *   tier3_r1.json — R1 unconditional counts (~2KB)
  *   tier3_r2.json — R2 given specific R1 player (~200KB)
  *   tier3_r3.json — R3 given specific R1+R2 (~6MB)
  *   tier3_r4.json — R4 given specific R1+R2+R3 (~20MB)
  *
- * Two cache trees coexist: `pre/` (pre-NFL-draft ADP) and `post/` (post-NFL-draft ADP).
- * Each loader takes a `source` argument and maintains its own per-source cache so
- * toggling between modes after both caches are warm is instant.
- *
- * R1 loads immediately. R2-R4 load in the background after R1 is ready.
+ * Two cache trees coexist per source: `pre` (pre-NFL-draft) and `post`
+ * (post-NFL-draft). Each loader takes a `source` argument and maintains its
+ * own per-source cache so toggling between modes after both caches are warm
+ * is instant. metadata.data_source is 'real' or 'sim'.
  */
 
+import { loadRealDraftData } from './realDraftData';
+
+const _realCaches = new Map(); // source → cache built from real drafts
+
 // ---------------------------------------------------------------------------
-// Per-source progressive loader
+// Per-source progressive loader (bundled sim fallback)
 // ---------------------------------------------------------------------------
 
 const _states = new Map(); // source → { cache, loading, callbacks }
@@ -41,7 +47,7 @@ async function _fetchRound(rnd, source) {
   try {
     const data = await fetch(`/sim/${source}/tier3_${rnd}.json`).then(r => r.json());
     s.cache[rnd] = data[rnd];
-    if (data.metadata) s.cache.metadata = data.metadata;
+    if (data.metadata) s.cache.metadata = { ...data.metadata, data_source: 'sim' };
   } finally {
     s.loading[rnd] = false;
     s.callbacks[rnd].forEach(cb => cb(s.cache[rnd]));
@@ -51,10 +57,27 @@ async function _fetchRound(rnd, source) {
 }
 
 /**
- * Load R1 data immediately, then kick off background loads for R2-R4.
- * Returns the metadata + a flag indicating R1 is ready.
+ * Load pick-path data for a source. Real drafts (boards + user rosters) win;
+ * when no real data is reachable, fall back to the bundled sim files (R1
+ * immediately, R2-R4 in the background).
+ *
+ * @param {string} source - 'pre' | 'post'
+ * @param {{ masterPlayers?: Array, rosterData?: Array }} ctx - inputs for the
+ *   real-data build (name → player_id mapping and the user's own rosters)
  */
-export async function loadTier3Initial(source = 'pre') {
+export async function loadTier3Initial(source = 'pre', ctx = {}) {
+  try {
+    const real = await loadRealDraftData(ctx.masterPlayers ?? [], ctx.rosterData ?? []);
+    const t = real?.[source];
+    if (t && (t.metadata?.total_rosters ?? 0) > 0) {
+      const cache = { r1: t.r1, r2: t.r2, r3: t.r3, r4: t.r4, metadata: t.metadata };
+      _realCaches.set(source, cache);
+      return { metadata: cache.metadata };
+    }
+  } catch {
+    // fall through to the bundled sim
+  }
+  _realCaches.delete(source);
   await _fetchRound('r1', source);
   // Start background loads for R2-R4
   _fetchRound('r2', source);
@@ -64,10 +87,11 @@ export async function loadTier3Initial(source = 'pre') {
 }
 
 /**
- * Get the current tier3 cache state (may have partial data).
+ * Get the current cache state for a source (may have partial data while the
+ * sim fallback is still streaming rounds; real-data caches arrive complete).
  */
 export function getTier3Cache(source = 'pre') {
-  return _getState(source).cache;
+  return _realCaches.get(source) ?? _getState(source).cache;
 }
 
 /**

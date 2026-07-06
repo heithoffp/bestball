@@ -124,8 +124,8 @@ const SIMILARITY_HELP_ANNOTATIONS = [
 ];
 
 const EXPLORER_HELP_ANNOTATIONS = [
-  { id: 'draft-grid', label: 'Draft Board', anchor: 'above', description: 'Players arranged by ADP in snake draft order. Color intensity shows how often each player was drafted in that round across 10M simulated drafts. Click a player to see the next round\'s distribution.' },
-  { id: 'combo-results', label: 'Combo Results', anchor: 'above', description: 'After selecting 4 players, see how often this combo appeared in 10M simulated drafts and which of your actual rosters have it.' },
+  { id: 'draft-grid', label: 'Draft Board', anchor: 'above', description: 'Players arranged by ADP in snake draft order. Color intensity shows how often each player was drafted in that round across real tracked drafts (or simulated drafts when no real data is available). Click a player to see the next round\'s distribution.' },
+  { id: 'combo-results', label: 'Combo Results', anchor: 'above', description: 'After selecting 4 players, see how often this combo appeared across tracked drafts and which of your actual rosters have it.' },
 ];
 
 const PLAYOFF_HELP_ANNOTATIONS = [
@@ -215,6 +215,13 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
     const set = new Set(selectedTournaments);
     return rosterData.filter(p => set.has(p.tournamentTitle));
   }, [rosterData, selectedTournaments]);
+
+  // Stable reference for DraftExplorer — an inline .filter() would retrigger
+  // its data-loading effect on every ComboAnalysis render.
+  const explorerRosterData = useMemo(
+    () => filteredRosterData.filter(p => !((p.slateTitle || '').toLowerCase().includes('superflex'))),
+    [filteredRosterData]
+  );
 
   // Group flat player rows into per-roster arrays
   const rosters = useMemo(() => {
@@ -1119,7 +1126,7 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
         <DraftExplorer
           key={`${selectedTournaments.join('|')}::${draftExplorerDefaultMode}`}
           masterPlayers={masterPlayers}
-          rosterData={filteredRosterData.filter(p => !((p.slateTitle || '').toLowerCase().includes('superflex')))}
+          rosterData={explorerRosterData}
           tournamentStatuses={Object.fromEntries(
             slateGroups.flatMap(g => Object.entries(g.tournamentStatuses || {}))
           )}

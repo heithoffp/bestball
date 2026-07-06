@@ -51,14 +51,16 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
 
   const source = mode === 'post' ? 'post' : 'pre';
 
-  // Load R1 + tier1 for the active source, then background-load R2-R4.
+  // Load pick-path + tier1 data for the active source. Real drafts (captured
+  // boards + the user's synced rosters) win; the bundled sim is the fallback.
   // Re-runs when `source` flips so the post cache loads on first toggle.
   // tier3Ready/tier1 stay sticky across source changes — the per-source caches
   // in draftModel/uniquenessEngine guarantee getTier3Cache(source) returns the
   // right data, and the useMemo guards on cache.r1 being non-null.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([loadTier3Initial(source), loadSimData(source)])
+    const ctx = { masterPlayers, rosterData };
+    Promise.all([loadTier3Initial(source, ctx), loadSimData(source, ctx)])
       .then(() => {
         if (cancelled) return;
         setTier3Ready(true);
@@ -78,7 +80,7 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
       if (loaded === 4) clearInterval(checkLoaded);
     }, 500);
     return () => { cancelled = true; clearInterval(checkLoaded); };
-  }, [source]);
+  }, [source, masterPlayers, rosterData]);
 
   // ── Grid players sorted by ADP ───────────────────────────────────────────
   // Pre-Draft: snap to the pre sim's ADP date so grid order matches the sim.
@@ -270,13 +272,13 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
   if (postUnavailable) {
     return (
       <div className={styles.emptyPrompt}>
-        Post-draft simulation data is not available on this build. Toggle Pre-Draft to use the existing cache.
+        Post-draft data is not available yet. Toggle Pre-Draft to use the existing cache.
       </div>
     );
   }
 
   if (!tier3Ready) {
-    return <div className={styles.loading}>Loading simulation data...</div>;
+    return <div className={styles.loading}>Loading draft data...</div>;
   }
 
   if (gridPlayers.length === 0) {
@@ -293,9 +295,13 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
   }
 
   const cache = getTier3Cache(source);
-  const totalRostersLabel = cache.metadata?.total_rosters
-    ? `${(cache.metadata.total_rosters / 1e6).toFixed(0)}M`
-    : 'millions of';
+  const isRealData = cache.metadata?.data_source === 'real';
+  const totalRostersNum = cache.metadata?.total_rosters || 0;
+  const totalRostersLabel = isRealData
+    ? totalRostersNum.toLocaleString()
+    : totalRostersNum ? `${(totalRostersNum / 1e6).toFixed(0)}M` : 'millions of';
+  const rosterNoun = isRealData ? 'real drafts' : 'simulated drafts';
+  const pctDigits = isRealData ? 1 : 4;
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -403,7 +409,7 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
                     {hasRosters && (
                       <div
                         className={isUnseen ? styles.unseenBadge : styles.rosterBadge}
-                        title={`${rosterCount} of your rosters drafted this player in R${currentRound}${isUnseen ? ' — never seen in sim' : ''}`}
+                        title={`${rosterCount} of your rosters drafted this player in R${currentRound}${isUnseen ? ` — never seen in ${isRealData ? 'any tracked draft' : 'sim'}` : ''}`}
                       >
                         {rosterCount}
                       </div>
@@ -436,7 +442,7 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
             <span className={styles.waterfallPanelTitle}>Combo Waterfall</span>
             <span className={styles.waterfallPanelDivider}>·</span>
             <span className={styles.waterfallPanelSubtitle}>
-              rosters out of <strong>{(cache.metadata?.total_rosters || 0).toLocaleString()}</strong> simulated drafts
+              rosters out of <strong>{totalRostersNum.toLocaleString()}</strong> {rosterNoun}
             </span>
           </div>
           <div className={styles.waterfallBody}>
@@ -480,7 +486,7 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
                       ) : null}
                       <span
                         className={count > 0 ? styles.waterfallCount : styles.waterfallCountZero}
-                        title={count > 0 ? `${pctOfSim.toFixed(4)}% of simulated drafts` : 'Never seen in simulation'}
+                        title={count > 0 ? `${pctOfSim.toFixed(pctDigits)}% of ${rosterNoun}` : `Never seen in ${isRealData ? 'any tracked draft' : 'simulation'}`}
                       >
                         {count > 0 ? count.toLocaleString() : 'never seen'}
                       </span>
@@ -492,7 +498,7 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
 
             <aside className={styles.waterfallSidebar}>
               <div className={styles.sidebarSection}>
-                <div className={styles.sidebarLabel}>Sim Frequency</div>
+                <div className={styles.sidebarLabel}>{isRealData ? 'Draft Frequency' : 'Sim Frequency'}</div>
                 <div className={styles.sidebarValue}>
                   {selectionFrequency?.count > 0 ? (
                     <>
@@ -504,10 +510,12 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
                 </div>
                 <div className={styles.sidebarSubtext}>
                   in {selectionFrequency?.totalRosters
-                    ? `${(selectionFrequency.totalRosters / 1e6).toFixed(0)}M`
-                    : ''} sim rosters
+                    ? (isRealData
+                        ? selectionFrequency.totalRosters.toLocaleString()
+                        : `${(selectionFrequency.totalRosters / 1e6).toFixed(0)}M`)
+                    : ''} {isRealData ? 'real' : 'sim'} rosters
                   {selectionFrequency?.count > 0 && (
-                    <> · <span className={styles.sidebarPct}>{((selectionFrequency.count / selectionFrequency.totalRosters) * 100).toFixed(4)}%</span></>
+                    <> · <span className={styles.sidebarPct}>{((selectionFrequency.count / selectionFrequency.totalRosters) * 100).toFixed(pctDigits)}%</span></>
                   )}
                 </div>
               </div>
@@ -539,8 +547,10 @@ export default function DraftExplorer({ masterPlayers = [], rosterData = [], tou
 
       {/* Explainer */}
       <div className={styles.explainer}>
-        Based on {totalRostersLabel} simulated drafts using {mode === 'post' ? 'post-draft' : 'pre-draft'} ADP.
-        Percentages show how often each player was picked in that round given your prior selections.
+        {isRealData
+          ? `Based on ${totalRostersLabel} real ${mode === 'post' ? 'post-draft' : 'pre-draft'} rosters from captured draft boards and your synced entries.`
+          : `Based on ${totalRostersLabel} simulated drafts using ${mode === 'post' ? 'post-draft' : 'pre-draft'} ADP.`}
+        {' '}Percentages show how often each player was picked in that round given your prior selections.
         Select a player to see how the next round's distribution shifts based on that specific pick.
       </div>
     </div>
