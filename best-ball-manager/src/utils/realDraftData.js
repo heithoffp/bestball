@@ -53,7 +53,9 @@ function isPreDraftSlate(slateTitle, tournamentTitle) {
 // Superflex and Eliminator pods draft to a different shape (QB values shift,
 // Eliminator runs short 6-round drafts); mixing them would pollute the path
 // tables the same way DraftExplorer already excludes superflex rosters.
-function isExcludedSlate(slateTitle) {
+// Exported so score consumers can render "not comparable" instead of a
+// misleading zero for rosters that are deliberately left out of the tables.
+export function isExcludedSlate(slateTitle) {
   const slate = (slateTitle || '').toLowerCase();
   return slate.includes('superflex') || slate.includes('eliminator');
 }
@@ -121,17 +123,48 @@ async function build(masterPlayers, rosterRows) {
     if (p.player_id && p.name) nameToPid.set(canonicalName(p.name), p.player_id);
   }
 
+  // Board slate_title actually stores the TOURNAMENT name as the platform
+  // reported it ("The Big Board"), not the slate the extension entries carry
+  // ("UD 2026 Pre-Draft Best Ball") — the name heuristic alone misclassifies
+  // pre-draft tournaments as post. Classify boards in priority order:
+  //   1. the user's own entry for that draft_id (authoritative for their pods),
+  //   2. a status map learned from the user's entries, keyed by tournament AND
+  //      slate title (covers other users' pods in tournaments the user plays),
+  //   3. the name heuristic, treating the board title as both slate and
+  //      tournament (catches "Pre-Draft" and DK "Early Bird" titles).
+  const entryStatus = new Map();   // draft_id → 'pre' | 'post'
+  const titleStatus = new Map();   // lowercased tournament/slate title → 'pre' | 'post'
+  const excludedTitles = new Set(); // lowercased tournament titles on excluded slates
+  for (const row of rosterRows) {
+    const id = row?.entry_id != null ? String(row.entry_id) : '';
+    const tourn = (row.tournamentTitle || '').toLowerCase();
+    if (isExcludedSlate(row.slateTitle)) {
+      if (tourn) excludedTitles.add(tourn);
+      continue;
+    }
+    const status = isPreDraftSlate(row.slateTitle, row.tournamentTitle) ? 'pre' : 'post';
+    if (id && !entryStatus.has(id)) entryStatus.set(id, status);
+    if (tourn && !titleStatus.has(tourn)) titleStatus.set(tourn, status);
+    const slate = (row.slateTitle || '').toLowerCase();
+    if (slate && !titleStatus.has(slate)) titleStatus.set(slate, status);
+  }
+
   const data = { pre: emptyTables(), post: emptyTables() };
   const boards = await fetchAllBoardsOnce();
   const boardIds = new Set();
 
   for (const b of boards) {
-    boardIds.add(String(b.draft_id));
-    if (isExcludedSlate(b.slate_title)) continue;
+    const draftId = String(b.draft_id);
+    boardIds.add(draftId);
+    const title = (b.slate_title || '').toLowerCase();
+    if (isExcludedSlate(b.slate_title) || excludedTitles.has(title)) continue;
     const picks = Array.isArray(b.picks) ? b.picks : [];
     // Boards from the pre-fix scraper hold null player names — unusable.
     if (picks.length === 0 || picks[0]?.name == null) continue;
-    const tables = isPreDraftSlate(b.slate_title, null) ? data.pre : data.post;
+    const status = entryStatus.get(draftId)
+      ?? titleStatus.get(title)
+      ?? (isPreDraftSlate(b.slate_title, b.slate_title) ? 'pre' : 'post');
+    const tables = status === 'pre' ? data.pre : data.post;
 
     const bySeat = new Map();
     for (const pk of picks) {

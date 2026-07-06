@@ -7,6 +7,7 @@ import TournamentMultiSelect from './TournamentMultiSelect';
 import { NFL_TEAMS } from '../utils/nflTeams';
 import DraftExplorer from './DraftExplorer';
 import PlayoffStacks from './PlayoffStacks';
+import { isExcludedSlate } from '../utils/realDraftData';
 
 // Position palette — shared across all views
 const POS_COLORS = {
@@ -217,9 +218,10 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
   }, [rosterData, selectedTournaments]);
 
   // Stable reference for DraftExplorer — an inline .filter() would retrigger
-  // its data-loading effect on every ComboAnalysis render.
+  // its data-loading effect on every ComboAnalysis render. Superflex and
+  // Eliminator rosters are excluded to match the frequency tables.
   const explorerRosterData = useMemo(
-    () => filteredRosterData.filter(p => !((p.slateTitle || '').toLowerCase().includes('superflex'))),
+    () => filteredRosterData.filter(p => !isExcludedSlate(p.slateTitle)),
     [filteredRosterData]
   );
 

@@ -1,6 +1,7 @@
 // src/components/RosterViewer.jsx
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { loadSimData, buildComboKey, lookupTier1 } from '../utils/uniquenessEngine';
+import { isExcludedSlate } from '../utils/realDraftData';
 import { canonicalName, compactTournamentName } from '../utils/helpers';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
@@ -43,7 +44,7 @@ const HELP_ANNOTATIONS = [
  * @returns {{ text: string, muted: boolean }}
  */
 function formatUniqueness(score, loading) {
-  if (loading || !score || score.loading) return { text: '—', muted: true };
+  if (loading || !score || score.loading || score.notApplicable || score.unscored) return { text: '—', muted: true };
   if (score.dataSource === 'real') {
     return { text: score.found ? `${score.count}×` : '0×', muted: false };
   }
@@ -323,6 +324,12 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
   const rosterScores = useMemo(() => {
     const byId = {};
     rosters.forEach(r => {
+      // Superflex/Eliminator drafts are deliberately excluded from the
+      // frequency tables (different format) — show N/A, not a fake zero.
+      if (isExcludedSlate(r.slateTitle)) {
+        byId[r.entry_id] = { notApplicable: true, found: false, totalRosters: 0 };
+        return;
+      }
       const isPre = isPreDraftRoster(r.slateTitle, r.tournamentTitle);
       const source = isPre ? tier1Pre : tier1Post;
       if (!source) {
@@ -331,7 +338,12 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
       }
       const dataSource = source.metadata?.data_source ?? 'sim';
       const key = buildComboKey(r.players, source.metadata?.key_basis ?? 'adp');
-      const hit = key ? lookupTier1(key, source) : null;
+      if (!key) {
+        // No usable pick/ADP data (broken sync) — unscoreable, not "rare".
+        byId[r.entry_id] = { unscored: true, found: false, totalRosters: 0, dataSource };
+        return;
+      }
+      const hit = lookupTier1(key, source);
       byId[r.entry_id] = hit
         ? { found: true, count: hit.count, totalRosters: hit.totalRosters, dataSource }
         : { found: false, totalRosters: source.metadata?.total_rosters ?? 10000000, dataSource };
@@ -891,7 +903,11 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
             const isOpen = expandedEntry === roster.entry_id;
             const score = rosterScores[roster.entry_id];
             const uniq = formatUniqueness(score, false);
-            const uniqTooltip = score?.found
+            const uniqTooltip = score?.notApplicable
+              ? "Not scored — Superflex and Eliminator drafts aren't comparable to classic best ball combo tables."
+              : score?.unscored
+              ? 'Not scored — this entry is missing pick data. Re-syncing the draft should fix it.'
+              : score?.found
               ? (score.dataSource === 'real'
                   ? `Seen ${score.count} time${score.count === 1 ? '' : 's'} across ${score.totalRosters.toLocaleString()} tracked real drafts (including this roster) — 1× means no one else we track has drafted it.`
                   : 'Observed in simulation — exact frequency count per simulated rosters.')
