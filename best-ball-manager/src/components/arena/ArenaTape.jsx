@@ -61,7 +61,7 @@ function TapeStat({ label, aText, bText, aWin = false, bWin = false, aStyle, bSt
   );
 }
 
-function ArenaTape({ a, b, active = false }) {
+function ArenaTape({ a, b, active = false, comboLookup = null }) {
   const aCLV = a?.avgCLV;
   const bCLV = b?.avgCLV;
   const haveCLV = aCLV != null && bCLV != null;
@@ -73,6 +73,16 @@ function ArenaTape({ a, b, active = false }) {
   const aStack = useMemo(() => stackSummary(a), [a]);
   const bStack = useMemo(() => stackSummary(b), [b]);
   const haveDate = a?.draftedAt || b?.draftedAt;
+
+  // Early Combo rarity (share of tracked real drafts starting with the team's
+  // first-3 picks). Unlike CLV/Proj, the LOWER share wins — rarer is better.
+  // Ratios are compared (not raw counts) in case the two teams score against
+  // different pre/post denominators.
+  const aCombo = useMemo(() => (comboLookup ? comboLookup(a) : null), [comboLookup, a]);
+  const bCombo = useMemo(() => (comboLookup ? comboLookup(b) : null), [comboLookup, b]);
+  const haveCombo = aCombo != null && bCombo != null;
+  const aRatio = haveCombo ? aCombo.count / (aCombo.totalRosters || 1) : null;
+  const bRatio = haveCombo ? bCombo.count / (bCombo.totalRosters || 1) : null;
 
   return (
     <div className={css.tape}>
@@ -93,6 +103,15 @@ function ArenaTape({ a, b, active = false }) {
           aWin={haveProj && aProj > bProj}
           bWin={haveProj && bProj > aProj}
         />
+        {(aCombo || bCombo) && (
+          <TapeStat
+            label="Uniqueness"
+            aText={aCombo?.pctText ?? '—'}
+            bText={bCombo?.pctText ?? '—'}
+            aWin={haveCombo && aRatio < bRatio}
+            bWin={haveCombo && bRatio < aRatio}
+          />
+        )}
         <TapeStat label="Build" aText={buildName(a?.path)} bText={buildName(b?.path)} wrap />
         <TapeStat
           label="Top Stack"

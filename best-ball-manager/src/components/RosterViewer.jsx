@@ -26,7 +26,7 @@ const HELP_ANNOTATIONS = [
   { id: 'filter-clv',        label: 'CLV Filter',            description: 'Filter by CLV direction — +CLV rosters contain picks that got cheaper after the draft.' },
   { id: 'filter-archetype',  label: 'Archetype Filters',     description: 'Filter by construction archetype. Counts show how many of your rosters match each style.' },
   { id: 'col-archetype',     label: 'Archetypes',            description: "Each roster's RB, QB, and TE draft strategy, classified by pick position and capital." },
-  { id: 'col-uniqueness',    label: 'Early Combo %',         description: 'The share of all real tracked drafts (captured boards + your synced rosters) that start with this roster\'s first-3-pick combo. Lower = rarer construction.' },
+  { id: 'col-uniqueness',    label: 'Early Combo %',         description: 'How often other drafts we track open with this roster\'s combo of early picks. 0% means truly unique — no other tracked draft starts this way. Lower = rarer construction.' },
   { id: 'col-clv',           label: 'Avg CLV%',              description: "Average Closing Line Value across all picks. Positive means the player's ADP rose after your draft." },
 ];
 
@@ -335,10 +335,18 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         byId[r.entry_id] = { unscored: true, found: false, totalRosters: 0 };
         return;
       }
+      const rawTotal = source.metadata?.total_rosters ?? 0;
+      if (rawTotal <= 0) {
+        // No tracked data (guest/demo) — renders as an em-dash.
+        byId[r.entry_id] = { found: false, totalRosters: 0 };
+        return;
+      }
+      // Self-exclusion: this roster's own seat is in the tables, so subtract
+      // it from both the count and the pool — 0% means no OTHER tracked draft
+      // opens with this combo (truly unique).
       const hit = lookupTier1(key, source);
-      byId[r.entry_id] = hit
-        ? { found: true, count: hit.count, totalRosters: hit.totalRosters }
-        : { found: false, totalRosters: source.metadata?.total_rosters ?? 0 };
+      const others = Math.max(0, (hit?.count ?? 0) - 1);
+      byId[r.entry_id] = { found: true, count: others, totalRosters: Math.max(1, rawTotal - 1) };
     });
     return byId;
   }, [rosters, tier1Pre, tier1Post]);
@@ -874,7 +882,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
               className={`${css.th} ${css.colUniq}`}
               style={{ textAlign: 'center', color: '#7dffcc' }}
               onClick={() => toggleSort('uniqueness')}
-              title="Share of all tracked real drafts that start with this roster's first-3-pick combo"
+              title="How often other drafts we track open with this roster's combo of early picks — 0% means truly unique"
             >
               Early Combo % <SortIcon col="uniqueness" sortKey={sortKey} sortDir={sortDir} />
             </th>
@@ -893,10 +901,12 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
               : score?.unscored
               ? 'Not scored — this entry is missing pick data. Re-syncing the draft should fix it.'
               : score?.found
-              ? `This first-3-pick combo starts ${score.count.toLocaleString()} of ${score.totalRosters.toLocaleString()} tracked real drafts (including this roster) — the lowest possible share means no one else we track has drafted it.`
+              ? (score.count === 0
+                  ? 'Truly unique — no other draft we track opens with this combo of picks.'
+                  : 'How often other drafts we track open with the same combo of early picks. Lower = rarer construction.')
               : score?.loading
                 ? 'Loading draft data…'
-                : 'Never seen in any tracked draft.';
+                : 'No tracked draft data available.';
             return (
               <React.Fragment key={roster.entry_id}>
                 <tr

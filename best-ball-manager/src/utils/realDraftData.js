@@ -256,6 +256,9 @@ export function formatComboPct(count, totalRosters) {
  * missing from the classified source (e.g. a pod whose tournament the viewer
  * has no entries in), the other source is checked before giving up.
  *
+ * The roster's OWN occurrence is excluded from both the count and the pool,
+ * so 0% means no other tracked draft opens this way — truly unique.
+ *
  * @param {object} data - resolved value of loadRealDraftData()
  * @param {object} snapshot - { players: [{name, pick}], slateTitle, tournamentTitle }
  * @returns {{ count: number, totalRosters: number, pctText: string }|null}
@@ -280,9 +283,11 @@ export function comboRateForSnapshot(data, snapshot) {
     if (!total) continue;
     const count = t.tier1.combos[key];
     if (count != null) {
-      return { count, totalRosters: total, pctText: formatComboPct(count, total) };
+      const others = Math.max(0, count - 1);
+      const pool = Math.max(1, total - 1);
+      return { count: others, totalRosters: pool, pctText: formatComboPct(others, pool) };
     }
   }
   const total = data[primary]?.metadata?.total_rosters ?? 0;
-  return total ? { count: 0, totalRosters: total, pctText: formatComboPct(0, total) } : null;
+  return total ? { count: 0, totalRosters: Math.max(1, total - 1), pctText: '0%' } : null;
 }

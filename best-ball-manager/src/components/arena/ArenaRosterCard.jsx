@@ -336,7 +336,9 @@ export default function ArenaRosterCard({
           {combo?.pctText && (
             <span
               className={css.pickCount}
-              title={`Early Combo: this team's first-3-pick combo starts ${combo.count.toLocaleString()} of ${combo.totalRosters.toLocaleString()} tracked real drafts`}
+              title={combo.count === 0
+                ? 'Truly unique — no other draft we track opens with this combo of picks'
+                : 'How often other drafts we track open with the same combo of early picks — lower is rarer'}
             >
               {combo.pctText} combo
             </span>

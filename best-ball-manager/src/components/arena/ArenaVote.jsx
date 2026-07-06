@@ -528,7 +528,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, comboL
             </div>
 
             <div className={css.tapeCol}>
-              <ArenaTape a={snapA} b={snapB} active={showOutcome} />
+              <ArenaTape a={snapA} b={snapB} active={showOutcome} comboLookup={comboLookup} />
             </div>
 
             <div className={css.sideCol}>
@@ -577,7 +577,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, comboL
         <>
           <div className={css.mobileMatchup} key={pairing.pairing_id}>
             <div className={css.mobileTape}>
-              <ArenaTape a={snapA} b={snapB} active={showOutcome} />
+              <ArenaTape a={snapA} b={snapB} active={showOutcome} comboLookup={comboLookup} />
             </div>
             <div className={css.cornerToggle} role="group" aria-label="Jump to contender">
               <button

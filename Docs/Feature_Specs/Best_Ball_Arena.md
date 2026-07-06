@@ -69,15 +69,18 @@ state until the Edge Functions + migration are deployed (`ARENA_AVAILABLE`).
     (earliest `pickedAt`; owned teams only — board picks have no timestamps); shown
     as a calendar chip in the card head and a tape row when present. Older frozen
     snapshots simply omit it.
-  - **Early Combo % chip (2026-07-05)** — the card head shows the share of all
-    tracked real drafts that start with the team's first-3-pick combo (e.g.
-    "0.09% combo"), computed display-time from `utils/realDraftData.js` tables
+  - **Early Combo % chip (2026-07-05)** — the card head shows the share of
+    other tracked real drafts that start with the team's first-3-pick combo
+    (e.g. "0.09% combo"; self-excluded, so 0% = truly unique), computed
+    display-time from `utils/realDraftData.js` tables
     (same source as Roster Viewer's Early Combo %). `Arena.jsx` builds a
     `comboLookup` and threads it to the vote cards and leaderboard expansion;
     guests resolve to empty tables and the chip is hidden.
-  - **Tale of the tape** rows: Team CLV and **Proj Pts** (winner lit in corner
-    color), Build, **Top Stack** (biggest stack in franchise color), Picks, and
-    Drafted (when known).
+  - **Tale of the tape** rows: Team CLV, **Proj Pts**, and **Uniqueness** (Early
+    Combo % — the LOWER share wins, rarer is better; winner lit in corner color),
+    Build, **Top Stack** (biggest stack in franchise color), Picks, and Drafted
+    (when known). The Uniqueness row renders only when combo data resolves
+    (hidden for guests).
 - **Leaderboard** — teams ranked by Elo with a **podium strip** (top 3 as champion
   cards), per-row **Elo distribution bars** scaled to the visible range, W–L, win%,
   and a movement indicator. The whole board is scoped to the featured tournament
