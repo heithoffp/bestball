@@ -15,23 +15,33 @@ import { supabase } from './supabaseClient';
  * Boards from the pre-fix scraper hold null player names and are excluded —
  * they render as an empty grid and should not surface a button.
  *
+ * Paginated: PostgREST caps un-ranged selects at 1000 rows, and the boards
+ * table grew past that — a single select silently dropped newer boards and
+ * their Board buttons vanished. Mirrors fetchAllBoards in realDraftData.js.
+ *
  * @returns {Promise<Set<string>>}
  */
 export async function fetchAvailableBoardIds() {
   if (!supabase) return new Set();
+  const PAGE = 1000;
+  const ids = new Set();
   try {
-    const { data, error } = await supabase
-      .from('draft_boards_admin')
-      .select('draft_id, first_pick_name:picks->0->>name');
-    if (error) return new Set();
-    return new Set(
-      (data ?? [])
-        .filter(r => r.first_pick_name != null)
-        .map(r => String(r.draft_id))
-    );
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('draft_boards_admin')
+        .select('draft_id, first_pick_name:picks->0->>name')
+        .order('draft_id')
+        .range(from, from + PAGE - 1);
+      if (error || !data) break;
+      for (const r of data) {
+        if (r.first_pick_name != null) ids.add(String(r.draft_id));
+      }
+      if (data.length < PAGE) break;
+    }
   } catch {
-    return new Set();
+    // fail soft — no board affordances
   }
+  return ids;
 }
 
 /**

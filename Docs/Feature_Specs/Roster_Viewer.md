@@ -9,10 +9,10 @@ Active
 ## User-Facing Behavior
 
 ### Desktop
-- Sortable table of all rosters with columns: Grade, Draft Date, Avg CLV, Spike Points, Uniqueness Lift
-- Click row to expand: grade component breakdown, stack summary, per-player detail
+- Sortable table of all rosters with columns: Entry, Draft Date, Snapshot, Actual Pts (in-season only), Proj Pts, Adv %, RB/QB/TE Archetypes, Early Combo %, Avg CLV%
+- Click row to expand: draft capital map, per-player detail (pick, ADP, Proj, Actual Pts in-season, CLV)
 - Color-coded CLV % ranges (>5% green → <-2.5% red)
-- Uniqueness Lift scale: 0 (chalk) → 1 (unique)
+- Adv % color-coded against the 16.7% pod baseline (green above, red below, muted em-dash when not modeled)
 
 ### Mobile
 - Card-based layout with collapsible sections
@@ -46,9 +46,20 @@ in the `draft_boards_admin` Supabase table — no disabled buttons for rosters w
   mobile (<900px full-screen panel).
 - **Your column:** identified by name-overlap between the clicked roster's players and
   board slots (requires >50% match); highlighted with the accent color and a "YOU" label.
-- **Per-column context:** projected points (sum), Avg CLV% (same power-law as the table),
+- **Per-column context:** lineup-aware projected points and Expected Advance % (same
+  `advanceModel.js` engine as the roster table), Avg CLV% (same power-law as the table),
   and RB/QB/TE archetype pills — for every team in the pod, enriched via the Underdog
-  ADP map and projections (`adpByPlatform` prop, passed from App).
+  ADP map and projections (`adpByPlatform` prop, passed from App). Pod Adv % uses the
+  **pod-exact** model (`podAdvanceProbabilities`): every seat is a known opponent, the
+  beat-count is Poisson-binomial, and odds sum to ~2 (the advance spots) across the pod.
+  Seats where under half the picks resolve a projection are unmodeled (em-dash) and
+  stand in as pod-average opponents; Superflex/Eliminator boards hide the Adv stat.
+  Weekly actuals (when loaded) flow in via the `actuals` prop, so pod odds shift with
+  banked points in-season.
+- **Board availability is paginated** (2026-07-06): `fetchAvailableBoardIds` pages
+  through `draft_boards_admin` in 1000-row ranges. PostgREST caps un-ranged selects at
+  1000 rows, and once the table grew past that, newer boards silently lost their Board
+  buttons.
 - **Data source (interim):** developer-scraped boards in `draft_boards_admin`
   (admin-extension, TASK-241), read via `utils/draftBoards.js` with an authenticated-only
   RLS policy (migration 009). Reads fail soft — guests see no board affordances. Boards
@@ -73,6 +84,46 @@ Normalized surprisal score comparing roster composition to portfolio baseline. H
 ### Early Combo % (frequency across real drafts)
 The share of **other** tracked real drafts that start with each roster's **first-3-pick** combo (e.g. "0.09%", "<0.01%"). The roster's own occurrence is excluded from both count and pool, so **0% = truly unique** — no other tracked draft opens this way. Tooltips stay deliberately vague about pool size (no roster counts exposed). **Data source (2026-07-05):** real drafts only — every seat of every captured pod board in `draft_boards_admin` plus the user's own synced rosters for drafts without a board (`utils/realDraftData.js`); the combo key is the roster's first `COMBO_PICKS` (3) picks in draft order, sorted by `player_id`. Three picks (not four) is deliberate: a 2026-07-05 evaluation against ~14K tracked rosters showed 64% of first-4 combos are one-of-one (flat "unique" everywhere), while first-3 combos spread 1×–47× with mean ~7. The old bundled Monte Carlo sim tables were removed the same day; guests/demo see an em-dash. Superflex/Eliminator rosters and broken syncs show "—" (not comparable / unscoreable). Pre-draft rosters score against the pre table, post-draft against post.
 
+### Projected Points & Expected Advance % (2026-07-06, `utils/advanceModel.js`)
+
+**Proj Pts** is a *startable-lineup* expectation over the 14-week tournament regular
+season, not a raw sum of season projections (a raw sum let 4-QB rosters project
+highest simply because QBs score most, even though only one QB starts):
+
+- Each player's weekly mean = season projection ÷ 17 games; a seeded Monte Carlo
+  (deterministic per entry id) draws weekly scores with position-specific volatility
+  (QB steadiest → TE spikiest, CVs 0.40–0.72) and scores the optimal lineup —
+  1 QB / 2 RB / 3 WR / 1 TE / 1 FLEX, plus a QB-eligible slot on Superflex slates.
+  Bench depth earns value through variance; surplus QBs don't.
+- **Byes use the real 2026 schedule** (`src/data/byeWeeks.js`, re-exported from
+  `eliminator-2026.json`): remaining weeks are grouped by which players sit out and
+  each distinct group is simulated with those players zeroed, so clustered byes
+  crater one simulated week instead of being smeared uniformly, and a roster whose
+  byes are behind it gets a cleaner rest-of-season outlook. Players whose team can't
+  be resolved fall back to a uniform 1/17 missed-week chance.
+- **Dynamic in-season:** Proj Pts = banked Actual Pts + remaining weeks × expected
+  weekly lineup score, where each player's rest-of-season weekly mean is a Bayesian
+  blend of the preseason projection (worth ~6 weeks of evidence) and observed actuals.
+
+**Actual Pts** = sum over completed weeks of the optimal lineup on that week's real
+player scores (best ball's own scoring rule). Players absent from a week's file score 0.
+
+**Adv %** = P(finish top-2 of the 12-team pod) after week 14. Your season total is
+Normal(banked + R·weeklyMean, weeklySd·√R); the 11 opponents are i.i.d. draws from a
+field model built from the user's own portfolio cohort (tournament → platform → all,
+tournament cohorts need ≥3 rosters), with roster-quality spread clamped to 1.5–4% of
+the field weekly mean. Computed by numeric integration (no simulation at this layer).
+Known simplifications: opponents modeled from the portfolio, not the actual pod;
+opponent actuals unobserved (full-season variance); player-overlap correlation ignored.
+Superflex and Eliminator slates are unscored (different advancement structures).
+
+**Weekly actuals input** (developer workflow, mirrors ADP snapshots): drop
+`{halfppr|fullppr}_week_{N}.csv` files into `src/assets/actuals/` — e.g.
+`halfppr_week_01.csv`. Columns: player name (`Name`, or `firstName`/`lastName`) and a
+points column (`points`/`FPTS`/`fantasy_points`/`score`). Underdog/Superflex/Eliminator
+rosters read half-PPR files; DraftKings rosters read full-PPR. Until the first file
+lands, the tab stays in pure-projection mode and Actual Pts columns stay hidden.
+
 ### Stack Analysis
 Uses `analyzeRosterStacks()` from `utils/stackAnalysis.js` to identify and score team correlations within each roster.
 
@@ -89,6 +140,7 @@ Via `classifyRosterPath()` from `utils/rosterArchetypes.js` — classifies each 
 
 ## Key Files
 - `src/components/RosterViewer.jsx` — main component
+- `src/utils/advanceModel.js` — lineup-aware projection, weekly actuals ingestion, Expected Advance %
 - `src/components/DraftBoardModal.jsx` — full draft-board modal (TASK-240)
 - `src/utils/draftBoards.js` — board availability + board fetch from `draft_boards_admin`
 - `src/utils/realDraftData.js` — real-draft frequency tables (boards + own rosters)

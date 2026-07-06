@@ -82,6 +82,11 @@ const demoRosterModules = import.meta.glob('./assets/demo-rosters.csv', { as: 'r
 const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
 const projectionsModules = import.meta.glob('./assets/projections.csv', { as: 'raw', eager: true });
 const rankingsModules = import.meta.glob('./assets/rankings.csv', { as: 'raw', eager: true });
+// Weekly actual fantasy points, dropped in as the season progresses (same
+// workflow as ADP snapshots): {halfppr|fullppr}_week_{N}.csv — e.g.
+// halfppr_week_01.csv. Absent files are fine; the Roster Viewer stays in
+// pure-projection mode until the first week's results land.
+const actualsModules = import.meta.glob('./assets/actuals/*.csv', { as: 'raw', eager: true });
 
 async function loadBundledAdp() {
   const adpEntries = Object.entries(adpModules);
@@ -168,6 +173,30 @@ export default function App() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, authLoading]);
+
+  // Parse bundled weekly actuals once — independent of auth state.
+  const [weeklyActuals, setWeeklyActuals] = useState(null);
+  useEffect(() => {
+    const entries = Object.entries(actualsModules);
+    if (entries.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ parseCSVText }, { parseActualsFiles }] = await Promise.all([
+          import('./utils/csv'),
+          import('./utils/advanceModel'),
+        ]);
+        const files = await Promise.all(entries.map(async ([filePath, raw]) => ({
+          filename: filePath.split('/').pop(),
+          rows: await parseCSVText(String(raw)),
+        })));
+        if (!cancelled) setWeeklyActuals(parseActualsFiles(files));
+      } catch (err) {
+        console.error('Weekly actuals failed to parse', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Load the Arena beta switch once (public launch = beta_mode false).
   useEffect(() => {
@@ -537,7 +566,7 @@ export default function App() {
             )}
             {activeTab === 'rosters' && (
               canAccessFeature(tier, 'rosters') || subLoading
-                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} initialFilter={rosterNavContext} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
+                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} actuals={weeklyActuals} initialFilter={rosterNavContext} helpOpen={helpOpen} onHelpToggle={toggleHelp} />
                 : <LockedFeature featureName="Roster Viewer" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'rankings' && (

@@ -13,6 +13,8 @@ import TabLayout from './TabLayout';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
 import { calcCLV, clvLabel } from '../utils/clvHelpers';
+import { computeRosterOutlook, buildFieldModel, advanceProbability, scoringForPlatform, advanceLabel, ADVANCE_BASELINE, REGULAR_SEASON_WEEKS } from '../utils/advanceModel';
+import { BYE_WEEKS_2026 } from '../data/byeWeeks';
 import { renderRosterImage } from '../utils/rosterImageRenderer';
 import { FolderSync, Download, LayoutGrid } from 'lucide-react';
 import EmptyState from './EmptyState';
@@ -26,6 +28,8 @@ const HELP_ANNOTATIONS = [
   { id: 'filter-clv',        label: 'CLV Filter',            description: 'Filter by CLV direction — +CLV rosters contain picks that got cheaper after the draft.' },
   { id: 'filter-archetype',  label: 'Archetype Filters',     description: 'Filter by construction archetype. Counts show how many of your rosters match each style.' },
   { id: 'col-archetype',     label: 'Archetypes',            description: "Each roster's RB, QB, and TE draft strategy, classified by pick position and capital." },
+  { id: 'col-proj',          label: 'Proj Pts',              description: 'Expected best-ball points over the 14-week regular season. Each week scores your optimal starting lineup (1 QB, 2 RB, 3 WR, 1 TE, 1 FLEX) against the real bye schedule — surplus QBs no longer inflate the number, and stacked byes cost what they actually cost. Once weekly results are loaded, banked actual points replace projections for completed weeks and rest-of-season projections re-weight toward observed scoring.' },
+  { id: 'col-adv',           label: 'Adv %',                 description: 'Estimated chance this roster finishes top-2 of its 12-team pod and advances, from its projected points versus the other rosters in its tournament pool plus any points already banked. 16.7% is dead average. Superflex and Eliminator formats are not modeled.' },
   { id: 'col-uniqueness',    label: 'Early Combo %',         description: 'How often other drafts we track open with this roster\'s combo of early picks. 0% means truly unique — no other tracked draft starts this way. Lower = rarer construction.' },
   { id: 'col-clv',           label: 'Avg CLV%',              description: "Average Closing Line Value across all picks. Positive means the player's ADP rose after your draft." },
 ];
@@ -121,7 +125,12 @@ const SORT_OPTIONS = [
   { value: 'draftDate', label: 'Draft Date' },
   { value: 'avgCLV', label: 'Avg CLV' },
   { value: 'uniqueness', label: 'Early Combo Rate' },
+  { value: 'projectedPoints', label: 'Proj Pts' },
+  { value: 'advanceProb', label: 'Adv %' },
 ];
+
+// Sort keys where "best first" means descending.
+const DESC_FIRST_KEYS = ['avgCLV', 'projectedPoints', 'advanceProb', 'actualPoints'];
 
 
 function HighlightedName({ name, query }) {
@@ -139,7 +148,7 @@ function HighlightedName({ name, query }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RosterViewer({ rosterData = [], masterPlayers = [], adpByPlatform = {}, initialFilter = null, helpOpen = false, onHelpToggle }) {
+export default function RosterViewer({ rosterData = [], masterPlayers = [], adpByPlatform = {}, actuals = null, initialFilter = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
   const [expandedEntry, setExpandedEntry]   = useState(() => initialFilter?.entry_id ?? null);
   const [filtersOpen, setFiltersOpen]       = useState(false);
@@ -271,6 +280,9 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
       map[id].push(p);
     });
 
+    // Keep the seeded Monte Carlo cheap on very large portfolios.
+    const sims = Object.keys(map).length > 300 ? 150 : 300;
+
     return Object.entries(map).map(([entry_id, players]) => {
       const clvValues = players
         .map(p => calcCLV(p.pick, p.latestADP, alpha))
@@ -297,18 +309,74 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
       const tournamentTitle = players[0]?.tournamentTitle || null;
       const slateTitle = players[0]?.slateTitle || null;
 
-      const projectedPoints = players.reduce((sum, p) => sum + (p.projectedPoints || 0), 0);
+      const adpPlatform = players.find(p => p.adpPlatform !== 'global')?.adpPlatform || 'global';
+      const superflex = (slateTitle || '').toLowerCase().includes('superflex');
 
-      // Annotate each player with canonical player_id via masterPlayers name lookup
+      // Dynamic season outlook (advanceModel): lineup-aware projection over the
+      // 14-week regular season, banked actual best-ball points once weekly
+      // actuals are loaded, and the rest-of-season weekly distribution.
+      const outlook = computeRosterOutlook(players, {
+        scoring: scoringForPlatform(adpPlatform, slateTitle),
+        actuals,
+        superflex,
+        sims,
+        seedKey: entry_id,
+        byeWeeks: BYE_WEEKS_2026,
+      });
+
+      // Annotate each player with canonical player_id via masterPlayers name
+      // lookup, plus banked actual points once weekly actuals exist.
       const annotatedPlayers = players.map(p => ({
         ...p,
         player_id: nameToPlayerId.get(canonicalName(p.name)) ?? null,
+        actualPoints: outlook.weeksCompleted > 0
+          ? (outlook.playerActuals.get(canonicalName(p.name)) ?? 0)
+          : null,
       }));
 
-      const adpPlatform = players.find(p => p.adpPlatform !== 'global')?.adpPlatform || 'global';
-      return { entry_id, players: annotatedPlayers, avgCLV, posSnap, count: players.length, path, draftDate, tournamentTitle, slateTitle, projectedPoints, adpPlatform };
+      return {
+        entry_id, players: annotatedPlayers, avgCLV, posSnap, count: players.length, path,
+        draftDate, tournamentTitle, slateTitle, adpPlatform,
+        projectedPoints: outlook.projectedPoints,
+        actualPoints: outlook.actualPoints,
+        weeksCompleted: outlook.weeksCompleted,
+        weeklyMean: outlook.weeklyMean,
+        weeklySd: outlook.weeklySd,
+      };
     });
-  }, [rosterData, alpha, nameToPlayerId]);
+  }, [rosterData, alpha, nameToPlayerId, actuals]);
+
+  // Expected Advance % — each eligible roster measured against a field model
+  // built from the user's own portfolio cohort (tournament → platform → all).
+  // Superflex/Eliminator advancement structures differ, so they are unscored.
+  const advanceProbs = useMemo(() => {
+    const eligible = rosters.filter(r => !isExcludedSlate(r.slateTitle) && r.weeklyMean > 0);
+    const getField = buildFieldModel(eligible.map(r => ({
+      tournamentTitle: r.tournamentTitle,
+      platform: r.adpPlatform,
+      weeklyMean: r.weeklyMean,
+      weeklySd: r.weeklySd,
+    })));
+    const byId = {};
+    rosters.forEach(r => {
+      if (isExcludedSlate(r.slateTitle) || !(r.weeklyMean > 0)) { byId[r.entry_id] = null; return; }
+      const field = getField(r.tournamentTitle, r.adpPlatform);
+      if (!field) { byId[r.entry_id] = null; return; }
+      byId[r.entry_id] = advanceProbability({
+        myActualPoints: r.actualPoints,
+        myWeeklyMean: r.weeklyMean,
+        myWeeklySd: r.weeklySd,
+        fieldWeeklyMean: field.weeklyMean,
+        fieldWeeklySd: field.weeklySd,
+        fieldQualitySd: field.qualitySd,
+        weeksCompleted: r.weeksCompleted,
+      });
+    });
+    return byId;
+  }, [rosters]);
+
+  // Any completed weeks loaded for at least one roster → show Actual Pts columns.
+  const hasActuals = useMemo(() => rosters.some(r => r.weeksCompleted > 0), [rosters]);
 
   // Per-roster uniqueness score via Early Combo frequency lookup.
   // Pre-draft rosters score against the pre source; post-draft rosters score
@@ -410,11 +478,16 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         const bv = bs?.found ? bs.count / (bs.totalRosters || 1) : 0;
         return sortDir === 'asc' ? av - bv : bv - av;
       }
+      if (sortKey === 'advanceProb') {
+        const av = advanceProbs[a.entry_id] ?? -Infinity;
+        const bv = advanceProbs[b.entry_id] ?? -Infinity;
+        return sortDir === 'asc' ? av - bv : bv - av;
+      }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, selectedTournaments, rosterScores, selectedPlayers, selectedTeams, rosterSearchMatches, selectedEntryId]);
+  }, [rosters, sortKey, sortDir, clvFilter, rbFilter, qbFilter, teFilter, selectedTournaments, rosterScores, advanceProbs, selectedPlayers, selectedTeams, rosterSearchMatches, selectedEntryId]);
 
   const slateGroups = useMemo(() => {
     const map = new Map();
@@ -475,7 +548,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortKey(key); setSortDir(key === 'avgCLV' ? 'desc' : 'asc'); }
+    else { setSortKey(key); setSortDir(DESC_FIRST_KEYS.includes(key) ? 'desc' : 'asc'); }
   }
 
 
@@ -537,6 +610,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
     const clv    = clvLabel(roster.avgCLV);
     const isOpen = expandedEntry === roster.entry_id;
     const uniq   = formatUniqueness(rosterScores[roster.entry_id], false);
+    const adv    = advanceLabel(advanceProbs[roster.entry_id]);
 
     return (
       <div
@@ -588,6 +662,22 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
               {uniq.text}
             </span>
           </div>
+          {roster.weeksCompleted > 0 && (
+            <div className={css.cardStat}>
+              <span className={css.cardStatLabel}>Actual</span>
+              <span className={css.cardStatValue} style={{ color: '#fbbf24' }}>{roster.actualPoints.toFixed(0)}</span>
+            </div>
+          )}
+          <div className={css.cardStat}>
+            <span className={css.cardStatLabel}>Proj</span>
+            <span className={css.cardStatValue} style={{ color: '#60a5fa' }}>
+              {roster.projectedPoints > 0 ? roster.projectedPoints.toFixed(0) : '—'}
+            </span>
+          </div>
+          <div className={css.cardStat}>
+            <span className={css.cardStatLabel}>Adv %</span>
+            <span className={css.cardStatValue} style={{ color: adv.color, fontVariantNumeric: 'tabular-nums' }}>{adv.text}</span>
+          </div>
         </div>
 
         {/* Expanded detail */}
@@ -625,7 +715,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         onChange={e => {
           const key = e.target.value;
           setSortKey(key);
-          setSortDir(key === 'avgCLV' ? 'desc' : 'asc');
+          setSortDir(DESC_FIRST_KEYS.includes(key) ? 'desc' : 'asc');
         }}
       >
         {SORT_OPTIONS.map(opt => (
@@ -873,7 +963,34 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
             <th className={css.th} onClick={() => toggleSort('entry_id')}>Entry <SortIcon col="entry_id" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center' }} onClick={() => toggleSort('draftDate')}>Draft Date <SortIcon col="draftDate" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ textAlign: 'center' }}>Snapshot</th>
-            <th className={`${css.th} ${css.colProjPts}`} style={{ textAlign: 'center', color: '#60a5fa' }} onClick={() => toggleSort('projectedPoints')}>Proj Pts <SortIcon col="projectedPoints" sortKey={sortKey} sortDir={sortDir} /></th>
+            {hasActuals && (
+              <th
+                className={`${css.th} ${css.colActual}`}
+                style={{ textAlign: 'center', color: '#fbbf24' }}
+                onClick={() => toggleSort('actualPoints')}
+                title="Best-ball points banked across completed weeks — each week scores this roster's optimal lineup from the loaded weekly results"
+              >
+                Actual Pts <SortIcon col="actualPoints" sortKey={sortKey} sortDir={sortDir} />
+              </th>
+            )}
+            <th
+              data-help-id="col-proj"
+              className={`${css.th} ${css.colProjPts}`}
+              style={{ textAlign: 'center', color: '#60a5fa' }}
+              onClick={() => toggleSort('projectedPoints')}
+              title={`Expected best-ball points over the ${REGULAR_SEASON_WEEKS}-week regular season — optimal weekly lineup (1 QB, 2 RB, 3 WR, 1 TE, 1 FLEX), banked actuals included once weekly results load`}
+            >
+              Proj Pts <SortIcon col="projectedPoints" sortKey={sortKey} sortDir={sortDir} />
+            </th>
+            <th
+              data-help-id="col-adv"
+              className={css.th}
+              style={{ textAlign: 'center', color: '#c084fc' }}
+              onClick={() => toggleSort('advanceProb')}
+              title="Estimated chance to finish top-2 of the 12-team pod — this roster's projection vs the other rosters in its tournament pool, plus points already banked. 16.7% is average."
+            >
+              Adv % <SortIcon col="advanceProb" sortKey={sortKey} sortDir={sortDir} />
+            </th>
             <th data-help-id="col-archetype" className={css.th} style={{ color: archetypeColor('RB_HERO') }} onClick={() => toggleSort('path.rb')}>RB Arch <SortIcon col="path.rb" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ color: archetypeColor('QB_CORE') }} onClick={() => toggleSort('path.qb')}>QB Arch <SortIcon col="path.qb" sortKey={sortKey} sortDir={sortDir} /></th>
             <th className={css.th} style={{ color: archetypeColor('TE_ANCHOR') }} onClick={() => toggleSort('path.te')}>TE Arch <SortIcon col="path.te" sortKey={sortKey} sortDir={sortDir} /></th>
@@ -896,6 +1013,13 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
             const isOpen = expandedEntry === roster.entry_id;
             const score = rosterScores[roster.entry_id];
             const uniq = formatUniqueness(score, false);
+            const advProb = advanceProbs[roster.entry_id];
+            const adv = advanceLabel(advProb);
+            const advTooltip = advProb == null
+              ? (isExcludedSlate(roster.slateTitle)
+                  ? 'Not modeled — Superflex and Eliminator advancement structures differ from classic best ball.'
+                  : 'Not modeled — no projection data for this roster.')
+              : `Estimated chance to finish top-2 of the 12-team pod. ${(ADVANCE_BASELINE * 100).toFixed(1)}% is average.`;
             const uniqTooltip = score?.notApplicable
               ? "Not scored — Superflex and Eliminator drafts aren't comparable to classic best ball combo tables."
               : score?.unscored
@@ -949,8 +1073,33 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
                       : '—'}
                   </td>
                   <td className={css.td} style={{ textAlign: 'center' }}><PositionSnapshot snap={roster.posSnap} /></td>
-                  <td className={`${css.td} ${css.colProjPts}`} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#60a5fa' }}>
+                  {hasActuals && (
+                    <td className={`${css.td} ${css.colActual}`} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#fbbf24' }}>
+                      {roster.weeksCompleted > 0 ? roster.actualPoints.toFixed(1) : '—'}
+                    </td>
+                  )}
+                  <td
+                    className={`${css.td} ${css.colProjPts}`}
+                    style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#60a5fa' }}
+                    title={roster.weeksCompleted > 0
+                      ? `${roster.actualPoints.toFixed(1)} banked through ${roster.weeksCompleted} week${roster.weeksCompleted !== 1 ? 's' : ''} + ${(roster.projectedPoints - roster.actualPoints).toFixed(1)} projected rest-of-season`
+                      : undefined}
+                  >
                     {roster.projectedPoints > 0 ? roster.projectedPoints.toFixed(1) : '—'}
+                  </td>
+                  <td className={css.td} style={{ textAlign: 'center' }}>
+                    <span
+                      title={advTooltip}
+                      aria-label={advTooltip}
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 15,
+                        fontVariantNumeric: 'tabular-nums',
+                        color: adv.color,
+                      }}
+                    >
+                      {adv.text}
+                    </span>
                   </td>
                   <td className={css.td}><ArchetypePill archetypeKey={roster.path.rb} /></td>
                   <td className={css.td}><ArchetypePill archetypeKey={roster.path.qb} /></td>
@@ -995,7 +1144,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
                 </tr>
                 {isOpen && (
                   <tr>
-                    <td colSpan={10} style={{ padding: 0 }}>
+                    <td colSpan={hasActuals ? 12 : 11} style={{ padding: 0 }}>
                       <PlayerDetail players={roster.players} alpha={alpha} isMobile={false} shareAction={
                         <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
                           <Download size={14} /> Share Image
@@ -1086,6 +1235,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         <DraftBoardModal
           roster={boardRoster}
           adpByPlatform={adpByPlatform}
+          actuals={actuals}
           onClose={() => setBoardRoster(null)}
         />
       )}
@@ -1213,6 +1363,8 @@ function DraftCapitalMap({ players, isMobile = false, actions }) {
 function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
   const [pSort, setPSort] = useState('pick');
   const [pDir,  setPDir]  = useState('asc');
+  // Banked actual points are annotated once weekly results are loaded.
+  const showActuals = players.some(p => p.actualPoints != null);
 
   const sorted = useMemo(() => [...players].sort((a, b) => {
     let av, bv;
@@ -1239,6 +1391,7 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
       { value: 'name', label: 'Name' },
       { value: 'adp', label: 'Current ADP' },
       { value: 'projectedPoints', label: 'Proj Pts' },
+      ...(showActuals ? [{ value: 'actualPoints', label: 'Actual Pts' }] : []),
       { value: 'clv', label: 'CLV%' },
     ];
 
@@ -1271,6 +1424,12 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
                   <span className={css.cardStatLabel}>Proj</span>
                   <span className={css.cardStatValue}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</span>
                 </div>
+                {showActuals && (
+                  <div className={css.cardStat}>
+                    <span className={css.cardStatLabel}>Actual</span>
+                    <span className={css.cardStatValue} style={{ color: '#fbbf24' }}>{p.actualPoints != null ? p.actualPoints.toFixed(1) : '—'}</span>
+                  </div>
+                )}
                 <div className={css.cardStat}>
                   <span className={css.cardStatLabel}>CLV</span>
                   <span className={css.cardStatValue} style={{ color: clv.color }}>{clv.text}</span>
@@ -1294,6 +1453,9 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
             <th className={css.dth} style={{ textAlign: 'center' }}>Team</th>
             <th className={css.dth} style={{ textAlign: 'center' }} onClick={() => tp('pick')}>Draft Pick {piIcon('pick')}</th>
             <th className={css.dth} style={{ textAlign: 'center' }} onClick={() => tp('projectedPoints')}>Proj Pts {piIcon('projectedPoints')}</th>
+            {showActuals && (
+              <th className={css.dth} style={{ textAlign: 'center', color: '#fbbf2488' }} onClick={() => tp('actualPoints')}>Actual Pts {piIcon('actualPoints')}</th>
+            )}
             <th className={css.dth} style={{ textAlign: 'center' }} onClick={() => tp('adp')}>Cur ADP {piIcon('adp')}</th>
             <th className={css.dth} style={{ textAlign: 'center', color: '#00e5a055' }} onClick={() => tp('clv')}>CLV% {piIcon('clv')}</th>
           </tr>
@@ -1317,6 +1479,9 @@ function PlayerDetail({ players, alpha = 0.5, isMobile = false, shareAction }) {
                 <td className={css.dtd} style={{ textAlign: 'center', color: '#e0e0e0', fontFamily: "'JetBrains Mono', monospace", fontSize: 14 }}>{NFL_TEAMS_ABBREV[p.team?.toUpperCase()] || p.team}</td>
                 <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.pick || '—'}</td>
                 <td className={css.dtd} style={{ textAlign: 'center', color: '#ececec', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.projectedPoints ? p.projectedPoints.toFixed(1) : '—'}</td>
+                {showActuals && (
+                  <td className={css.dtd} style={{ textAlign: 'center', color: '#fbbf24', fontFamily: "'JetBrains Mono', monospace", fontSize: 15 }}>{p.actualPoints != null ? p.actualPoints.toFixed(1) : '—'}</td>
+                )}
                 <td className={css.dtd} style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: '#f0f0f0' }}>{(!p.latestADPDisplay || p.latestADPDisplay === 'N/A') ? '240' : p.latestADPDisplay}</td>
                 <td className={css.dtd} style={{ textAlign: 'center' }}>
                   {clvPct !== null ? (

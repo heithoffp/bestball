@@ -13,6 +13,9 @@ import { calcCLV, clvLabel } from '../utils/clvHelpers';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import { canonicalName } from '../utils/helpers';
 import { posColor } from '../utils/positionColors';
+import { computeRosterOutlook, podAdvanceProbabilities, scoringForPlatform, advanceLabel, ADVANCE_BASELINE } from '../utils/advanceModel';
+import { isExcludedSlate } from '../utils/realDraftData';
+import { BYE_WEEKS_2026 } from '../data/byeWeeks';
 import css from './DraftBoardModal.module.css';
 
 const CLV_ALPHA = 0.5; // matches RosterViewer's balanced CLV curve
@@ -31,7 +34,7 @@ function MiniArchetypePill({ archetypeKey }) {
   );
 }
 
-export default function DraftBoardModal({ roster, adpByPlatform, onClose, boardOverride = null, hideColumnSummary = false }) {
+export default function DraftBoardModal({ roster, adpByPlatform, onClose, actuals = null, boardOverride = null, hideColumnSummary = false }) {
   const [board, setBoard] = useState(boardOverride);
   const [loading, setLoading] = useState(!boardOverride);
 
@@ -88,8 +91,44 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, boardO
     let bestOverlap = 0;
     const slots = Array.from({ length: entryCount }, (_, i) => i + 1);
 
-    const slotSummaries = {};
+    // Season outlook per seat (same model as the Roster Viewer table): lineup-
+    // aware projection plus banked actuals. Seats where under half the picks
+    // resolved a projection stay unmodeled rather than scoring a fake low.
+    const slateTitle = board.slateTitle || '';
+    const platform = slateTitle.startsWith('DK') ? 'draftkings' : 'underdog';
+    const superflex = slateTitle.toLowerCase().includes('superflex');
+    const advModeled = !isExcludedSlate(slateTitle);
+    const outlookBySlot = {};
     for (const slot of slots) {
+      const players = playersBySlot[slot] ?? [];
+      if (players.length === 0) continue;
+      const resolved = players.filter(p => p.projectedPoints > 0).length;
+      if (resolved < players.length / 2) continue;
+      outlookBySlot[slot] = computeRosterOutlook(players, {
+        scoring: scoringForPlatform(platform, slateTitle),
+        actuals,
+        superflex,
+        sims: 200,
+        seedKey: `${board.draftId || ''}-${slot}`,
+        byeWeeks: BYE_WEEKS_2026,
+      });
+    }
+
+    // Every seat is a known opponent here, so advance odds come from the
+    // pod-exact model (Poisson-binomial), not the portfolio field model.
+    const seatDists = slots.map(slot => {
+      if (!advModeled) return null;
+      const o = outlookBySlot[slot];
+      if (!o || !(o.weeklyMean > 0)) return null;
+      return {
+        mean: o.actualPoints + o.remainingWeeks * o.weeklyMean,
+        sd: o.weeklySd * Math.sqrt(o.remainingWeeks),
+      };
+    });
+    const advBySlot = podAdvanceProbabilities(seatDists);
+
+    const slotSummaries = {};
+    slots.forEach((slot, i) => {
       const players = playersBySlot[slot] ?? [];
       const clvValues = players
         .map(p => calcCLV(p.pick, p.latestADP, CLV_ALPHA))
@@ -97,18 +136,22 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, boardO
       const avgCLV = clvValues.length
         ? clvValues.reduce((a, b) => a + b, 0) / clvValues.length
         : null;
-      const projectedPoints = players.reduce((sum, p) => sum + (p.projectedPoints || 0), 0);
       const path = players.length ? classifyRosterPath(players) : null;
-      slotSummaries[slot] = { avgCLV, projectedPoints, path };
+      slotSummaries[slot] = {
+        avgCLV,
+        projectedPoints: outlookBySlot[slot]?.projectedPoints ?? null,
+        adv: advBySlot[i],
+        path,
+      };
 
       const overlap = players.filter(p => p.name && userNames.has(canonicalName(p.name))).length;
       if (overlap > bestOverlap) { bestOverlap = overlap; userSlot = slot; }
-    }
+    });
     // Demand a real match — over half the column — before claiming a slot as "you".
     if (userSlot != null && bestOverlap <= (playersBySlot[userSlot]?.length ?? 0) / 2) userSlot = null;
 
-    return { entryCount, rounds, slots, byRoundSlot, slotSummaries, userSlot };
-  }, [board, roster.players, adpByPlatform]);
+    return { entryCount, rounds, slots, byRoundSlot, slotSummaries, userSlot, advModeled };
+  }, [board, roster.players, adpByPlatform, actuals]);
 
   const draftDateLabel = roster.draftDate
     ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -165,12 +208,23 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, boardO
                     </div>
                     {!hideColumnSummary && (
                       <div className={css.colStats}>
-                        <span className={css.colStat} title="Projected points (sum of player projections)">
+                        <span className={css.colStat} title="Expected best-ball points over the 14-week regular season — optimal weekly lineup, banked actuals included once weekly results load">
                           <span className={css.colStatLabel}>Proj</span>
                           <span className={css.colStatValue} style={{ color: '#60a5fa' }}>
                             {s?.projectedPoints > 0 ? s.projectedPoints.toFixed(0) : '—'}
                           </span>
                         </span>
+                        {derived.advModeled && (
+                          <span
+                            className={css.colStat}
+                            title={`Estimated chance this team finishes top-2 of the pod. ${(ADVANCE_BASELINE * 100).toFixed(1)}% is average.`}
+                          >
+                            <span className={css.colStatLabel}>Adv</span>
+                            <span className={css.colStatValue} style={{ color: advanceLabel(s?.adv ?? null).color }}>
+                              {advanceLabel(s?.adv ?? null).text}
+                            </span>
+                          </span>
+                        )}
                         <span className={css.colStat} title="Average Closing Line Value across this team's picks">
                           <span className={css.colStatLabel}>CLV</span>
                           <span className={css.colStatValue} style={{ color: clv.color }}>{clv.text}</span>
