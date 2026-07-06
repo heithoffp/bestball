@@ -23,12 +23,20 @@
 //     projection (treated as PRIOR_WEIGHT_WEEKS weeks of evidence) with the
 //     player's actual weekly scores once weekly actuals are loaded.
 //
-//   Expected Advance % = P(finish top ADVANCE_SPOTS of POD_SIZE) over the
-//     REGULAR_SEASON_WEEKS-week regular season. Your roster's season total is
+//   Expected Advance % = P(finish top advanceSpots of podSize) over the
+//     tournament's advancement window. Your roster's total is
 //     Normal(actual + R·weeklyMean, weeklySd·√R); the 11 opponents are i.i.d.
 //     draws from a field model built from the user's own portfolio cohort in
-//     the same tournament (fallback: platform, then all rosters). Computed by
-//     numeric integration — no simulation needed at this layer.
+//     the same tournament (fallback: platform, then all rosters — both scoped
+//     to the same format so superflex/eliminator rosters never measure
+//     against classic cohorts). Computed by numeric integration — no
+//     simulation needed at this layer.
+//
+//   Advancement structure is per-tournament (advanceStructureFor):
+//     - classic UD/DK tournaments: top 2 of 12 over the 14-week regular season
+//     - The Big Board / The Little Board: top 3 of 12 over 14 weeks
+//     - Superflex: top 2 of 12 over 14 weeks, simulated with the superflex slot
+//     - The Eliminator: top 6 of 12 on Week 1 alone (the first survival cut)
 //
 // Byes: when a bye schedule is supplied (team abbreviation → week, see
 // src/data/byeWeeks.js), remaining weeks are simulated against the REAL
@@ -63,6 +71,45 @@ export const POD_SIZE = 12;
 export const ADVANCE_SPOTS = 2;
 /** Baseline advance rate — an exactly-average roster in an average pod. */
 export const ADVANCE_BASELINE = ADVANCE_SPOTS / POD_SIZE;
+
+/**
+ * Resolve a tournament's advancement structure from its slate / tournament
+ * titles. Every supported format is modeled:
+ *   - The Eliminator: weekly survival — Week 1 alone decides the first cut,
+ *     top 6 of the 12-team pod survive. Advance % is scored on that cut.
+ *   - The Big Board / The Little Board: top 3 of 12 over the regular season.
+ *   - Superflex: classic 2-of-12 advancement, superflex lineup in the sim.
+ *   - Everything else: classic 2-of-12 over the 14-week regular season.
+ * `format` scopes the opponent field model so rosters only measure against
+ * same-format cohorts; `baseline` is the exactly-average advance rate used
+ * for display coloring.
+ *
+ * @param {string|null} slateTitle
+ * @param {string|null} tournamentTitle
+ * @returns {{advanceSpots: number, podSize: number, totalWeeks: number,
+ *            format: 'classic'|'superflex'|'eliminator', baseline: number}}
+ */
+export function advanceStructureFor(slateTitle, tournamentTitle) {
+  const slate = (slateTitle || '').toLowerCase();
+  const tourn = (tournamentTitle || '').toLowerCase();
+  const make = (advanceSpots, totalWeeks, format) => ({
+    advanceSpots,
+    podSize: POD_SIZE,
+    totalWeeks,
+    format,
+    baseline: advanceSpots / POD_SIZE,
+  });
+  if (slate.includes('eliminator') || tourn.includes('eliminator')) {
+    return make(6, 1, 'eliminator');
+  }
+  if (slate.includes('superflex') || tourn.includes('superflex')) {
+    return make(ADVANCE_SPOTS, REGULAR_SEASON_WEEKS, 'superflex');
+  }
+  if (tourn.includes('big board') || tourn.includes('little board')) {
+    return make(3, REGULAR_SEASON_WEEKS, 'classic');
+  }
+  return make(ADVANCE_SPOTS, REGULAR_SEASON_WEEKS, 'classic');
+}
 
 /** Season projections cover a 17-game schedule. */
 export const PROJECTION_GAMES = 17;
@@ -446,9 +493,14 @@ const QUALITY_SD_MAX_FRAC = 0.04;
  * the most specific pool available. Also captures roster-quality dispersion
  * (spread of weekly means across the cohort) so opponents aren't all clones.
  *
+ * The platform and global fallbacks are scoped per format ('classic' |
+ * 'superflex' | 'eliminator') — a superflex roster's inflated weekly mean
+ * (extra QB slot) or an eliminator roster's week-1 outlook must never be
+ * measured against classic cohorts, and vice versa.
+ *
  * @param {Array<{tournamentTitle: string|null, platform: string|null,
- *                weeklyMean: number, weeklySd: number}>} outlooks
- * @returns {(tournamentTitle: string|null, platform: string|null) =>
+ *                format?: string, weeklyMean: number, weeklySd: number}>} outlooks
+ * @returns {(tournamentTitle: string|null, platform: string|null, format?: string) =>
  *           {weeklyMean: number, weeklySd: number, qualitySd: number}|null}
  */
 export function buildFieldModel(outlooks = []) {
@@ -470,24 +522,27 @@ export function buildFieldModel(outlooks = []) {
   };
 
   const byTournament = new Map();
-  const byPlatform = new Map();
+  const byPlatform = new Map(); // `${format}|${platform}` → outlooks
+  const byFormat = new Map();   // format → outlooks
   for (const o of valid) {
+    const format = o.format || 'classic';
     if (o.tournamentTitle) {
       if (!byTournament.has(o.tournamentTitle)) byTournament.set(o.tournamentTitle, []);
       byTournament.get(o.tournamentTitle).push(o);
     }
-    const plat = o.platform || 'global';
-    if (!byPlatform.has(plat)) byPlatform.set(plat, []);
-    byPlatform.get(plat).push(o);
+    const platKey = `${format}|${o.platform || 'global'}`;
+    if (!byPlatform.has(platKey)) byPlatform.set(platKey, []);
+    byPlatform.get(platKey).push(o);
+    if (!byFormat.has(format)) byFormat.set(format, []);
+    byFormat.get(format).push(o);
   }
-  const global = summarize(valid);
 
-  return (tournamentTitle, platform) => {
+  return (tournamentTitle, platform, format = 'classic') => {
     const tourn = tournamentTitle ? summarize(byTournament.get(tournamentTitle) || []) : null;
     if (tourn && tourn.n >= MIN_TOURNAMENT_COHORT) return tourn;
-    const plat = summarize(byPlatform.get(platform || 'global') || []);
+    const plat = summarize(byPlatform.get(`${format}|${platform || 'global'}`) || []);
     if (plat) return plat;
-    return global;
+    return summarize(byFormat.get(format) || []);
   };
 }
 
@@ -626,13 +681,15 @@ export function podAdvanceProbabilities(seats = [], { advanceSpots = ADVANCE_SPO
 
 /**
  * Display treatment for an advance probability (0–1 or null): formatted
- * percentage colored against the pod baseline. Shared by the Roster Viewer
- * table/cards and the Draft Board modal so the number reads identically.
+ * percentage colored against the pod baseline (pass the tournament's own
+ * baseline from advanceStructureFor — 3/12 and 6/12 structures center
+ * differently). Shared by the Roster Viewer table/cards and the Draft Board
+ * modal so the number reads identically.
  */
-export function advanceLabel(prob) {
+export function advanceLabel(prob, baseline = ADVANCE_BASELINE) {
   if (prob == null) return { text: '—', color: 'var(--text-muted)' };
-  const color = prob >= ADVANCE_BASELINE + 0.03 ? '#00e5a0'
-    : prob <= ADVANCE_BASELINE - 0.03 ? '#ff6b6b'
+  const color = prob >= baseline + 0.03 ? '#00e5a0'
+    : prob <= baseline - 0.03 ? '#ff6b6b'
     : '#e0e0e0';
   return { text: `${(prob * 100).toFixed(1)}%`, color };
 }

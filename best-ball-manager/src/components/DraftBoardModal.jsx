@@ -13,8 +13,7 @@ import { calcCLV, clvLabel } from '../utils/clvHelpers';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
 import { canonicalName } from '../utils/helpers';
 import { posColor } from '../utils/positionColors';
-import { computeRosterOutlook, podAdvanceProbabilities, scoringForPlatform, advanceLabel, ADVANCE_BASELINE } from '../utils/advanceModel';
-import { isExcludedSlate } from '../utils/realDraftData';
+import { computeRosterOutlook, podAdvanceProbabilities, scoringForPlatform, advanceLabel, advanceStructureFor, REGULAR_SEASON_WEEKS } from '../utils/advanceModel';
 import { BYE_WEEKS_2026 } from '../data/byeWeeks';
 import css from './DraftBoardModal.module.css';
 
@@ -97,8 +96,12 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
     const slateTitle = board.slateTitle || '';
     const platform = slateTitle.startsWith('DK') ? 'draftkings' : 'underdog';
     const superflex = slateTitle.toLowerCase().includes('superflex');
-    const advModeled = !isExcludedSlate(slateTitle);
+    // Board slate_title carries the platform's tournament name ("The Big
+    // Board"); the clicked roster's tournamentTitle is checked too for boards
+    // whose title is a plain slate name.
+    const structure = advanceStructureFor(slateTitle, roster?.tournamentTitle || slateTitle);
     const outlookBySlot = {};
+    const advOutlookBySlot = {};
     for (const slot of slots) {
       const players = playersBySlot[slot] ?? [];
       if (players.length === 0) continue;
@@ -112,20 +115,32 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
         seedKey: `${board.draftId || ''}-${slot}`,
         byeWeeks: BYE_WEEKS_2026,
       });
+      // Advance odds run on the tournament's own horizon (Eliminator: Week 1
+      // alone decides the 6-of-12 cut); the displayed Proj stays season-long.
+      advOutlookBySlot[slot] = structure.totalWeeks === REGULAR_SEASON_WEEKS
+        ? outlookBySlot[slot]
+        : computeRosterOutlook(players, {
+            scoring: scoringForPlatform(platform, slateTitle),
+            actuals,
+            superflex,
+            totalWeeks: structure.totalWeeks,
+            sims: 200,
+            seedKey: `${board.draftId || ''}-${slot}`,
+            byeWeeks: BYE_WEEKS_2026,
+          });
     }
 
     // Every seat is a known opponent here, so advance odds come from the
     // pod-exact model (Poisson-binomial), not the portfolio field model.
     const seatDists = slots.map(slot => {
-      if (!advModeled) return null;
-      const o = outlookBySlot[slot];
+      const o = advOutlookBySlot[slot];
       if (!o || !(o.weeklyMean > 0)) return null;
       return {
         mean: o.actualPoints + o.remainingWeeks * o.weeklyMean,
         sd: o.weeklySd * Math.sqrt(o.remainingWeeks),
       };
     });
-    const advBySlot = podAdvanceProbabilities(seatDists);
+    const advBySlot = podAdvanceProbabilities(seatDists, { advanceSpots: structure.advanceSpots });
 
     const slotSummaries = {};
     slots.forEach((slot, i) => {
@@ -150,8 +165,8 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
     // Demand a real match — over half the column — before claiming a slot as "you".
     if (userSlot != null && bestOverlap <= (playersBySlot[userSlot]?.length ?? 0) / 2) userSlot = null;
 
-    return { entryCount, rounds, slots, byRoundSlot, slotSummaries, userSlot, advModeled };
-  }, [board, roster.players, adpByPlatform, actuals]);
+    return { entryCount, rounds, slots, byRoundSlot, slotSummaries, userSlot, structure };
+  }, [board, roster.players, roster.tournamentTitle, adpByPlatform, actuals]);
 
   const draftDateLabel = roster.draftDate
     ? roster.draftDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -214,17 +229,15 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
                             {s?.projectedPoints > 0 ? s.projectedPoints.toFixed(0) : '—'}
                           </span>
                         </span>
-                        {derived.advModeled && (
-                          <span
-                            className={css.colStat}
-                            title={`Estimated chance this team finishes top-2 of the pod. ${(ADVANCE_BASELINE * 100).toFixed(1)}% is average.`}
-                          >
-                            <span className={css.colStatLabel}>Adv</span>
-                            <span className={css.colStatValue} style={{ color: advanceLabel(s?.adv ?? null).color }}>
-                              {advanceLabel(s?.adv ?? null).text}
-                            </span>
+                        <span
+                          className={css.colStat}
+                          title={`Estimated chance this team finishes top-${derived.structure.advanceSpots} of the pod${derived.structure.format === 'eliminator' ? ' on Week 1' : ''}. ${(derived.structure.baseline * 100).toFixed(1)}% is average.`}
+                        >
+                          <span className={css.colStatLabel}>Adv</span>
+                          <span className={css.colStatValue} style={{ color: advanceLabel(s?.adv ?? null, derived.structure.baseline).color }}>
+                            {advanceLabel(s?.adv ?? null, derived.structure.baseline).text}
                           </span>
-                        )}
+                        </span>
                         <span className={css.colStat} title="Average Closing Line Value across this team's picks">
                           <span className={css.colStatLabel}>CLV</span>
                           <span className={css.colStatValue} style={{ color: clv.color }}>{clv.text}</span>

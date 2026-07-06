@@ -12,7 +12,7 @@ Active
 - Sortable table of all rosters with columns: Entry, Draft Date, Snapshot, Actual Pts (in-season only), Proj Pts, Adv %, RB/QB/TE Archetypes, Early Combo %, Avg CLV%
 - Click row to expand: draft capital map, per-player detail (pick, ADP, Proj, Actual Pts in-season, CLV)
 - Color-coded CLV % ranges (>5% green → <-2.5% red)
-- Adv % color-coded against the 16.7% pod baseline (green above, red below, muted em-dash when not modeled)
+- Adv % color-coded against the tournament's own pod baseline — 16.7% (2/12) classic, 25% (3/12) Big/Little Board, 50% (6/12) Eliminator Week 1 — green above, red below, muted em-dash when not modeled
 
 ### Mobile
 - Card-based layout with collapsible sections
@@ -51,9 +51,12 @@ in the `draft_boards_admin` Supabase table — no disabled buttons for rosters w
   and RB/QB/TE archetype pills — for every team in the pod, enriched via the Underdog
   ADP map and projections (`adpByPlatform` prop, passed from App). Pod Adv % uses the
   **pod-exact** model (`podAdvanceProbabilities`): every seat is a known opponent, the
-  beat-count is Poisson-binomial, and odds sum to ~2 (the advance spots) across the pod.
-  Seats where under half the picks resolve a projection are unmodeled (em-dash) and
-  stand in as pod-average opponents; Superflex/Eliminator boards hide the Adv stat.
+  beat-count is Poisson-binomial, and odds sum to ~advanceSpots across the pod (2, or 3
+  on Big/Little Board, or 6 on Eliminator Week 1 — `advanceStructureFor`). Seats where
+  under half the picks resolve a projection are unmodeled (em-dash) and stand in as
+  pod-average opponents. Eliminator boards score the Week-1 cut from a week-1-only
+  outlook while the displayed Proj stays season-long; Superflex boards simulate the
+  extra QB slot.
   Weekly actuals (when loaded) flow in via the `actuals` prop, so pod odds shift with
   banked points in-season.
 - **Board availability is paginated** (2026-07-06): `fetchAvailableBoardIds` pages
@@ -108,14 +111,26 @@ highest simply because QBs score most, even though only one QB starts):
 **Actual Pts** = sum over completed weeks of the optimal lineup on that week's real
 player scores (best ball's own scoring rule). Players absent from a week's file score 0.
 
-**Adv %** = P(finish top-2 of the 12-team pod) after week 14. Your season total is
-Normal(banked + R·weeklyMean, weeklySd·√R); the 11 opponents are i.i.d. draws from a
-field model built from the user's own portfolio cohort (tournament → platform → all,
-tournament cohorts need ≥3 rosters), with roster-quality spread clamped to 1.5–4% of
-the field weekly mean. Computed by numeric integration (no simulation at this layer).
-Known simplifications: opponents modeled from the portfolio, not the actual pod;
-opponent actuals unobserved (full-season variance); player-overlap correlation ignored.
-Superflex and Eliminator slates are unscored (different advancement structures).
+**Adv %** = P(finish in the advancing spots of the 12-team pod) over the tournament's
+own advancement window (`advanceStructureFor`, 2026-07-06):
+
+| Tournament | Structure | Window |
+|---|---|---|
+| Classic UD/DK (default) | top 2 of 12 | weeks 1–14 |
+| The Big Board / The Little Board | top 3 of 12 | weeks 1–14 |
+| Superflex slates | top 2 of 12, superflex lineup in the sim | weeks 1–14 |
+| The Eliminator | top 6 of 12 (first survival cut) | **Week 1 only** |
+
+Your total is Normal(banked + R·weeklyMean, weeklySd·√R); the 11 opponents are i.i.d.
+draws from a field model built from the user's own portfolio cohort (tournament →
+platform → all, tournament cohorts need ≥3 rosters, platform/global fallbacks scoped
+per format so superflex/eliminator rosters never measure against classic cohorts),
+with roster-quality spread clamped to 1.5–4% of the field weekly mean. Computed by
+numeric integration (no simulation at this layer). Eliminator advance inputs come from
+a separate week-1-only outlook (week-1 actuals decide the cut once loaded); the Proj
+Pts column keeps the season-long view for all formats. Known simplifications:
+opponents modeled from the portfolio, not the actual pod; opponent actuals unobserved
+(full-window variance); player-overlap correlation ignored.
 
 **Weekly actuals input** (developer workflow, mirrors ADP snapshots): drop
 `{halfppr|fullppr}_week_{N}.csv` files into `src/assets/actuals/` — e.g.

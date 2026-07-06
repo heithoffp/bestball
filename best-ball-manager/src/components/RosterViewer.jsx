@@ -13,7 +13,7 @@ import TabLayout from './TabLayout';
 import css from './RosterViewer.module.css';
 import { trackEvent } from '../utils/analytics';
 import { calcCLV, clvLabel } from '../utils/clvHelpers';
-import { computeRosterOutlook, buildFieldModel, advanceProbability, scoringForPlatform, advanceLabel, ADVANCE_BASELINE, REGULAR_SEASON_WEEKS } from '../utils/advanceModel';
+import { computeRosterOutlook, buildFieldModel, advanceProbability, advanceStructureFor, scoringForPlatform, advanceLabel, REGULAR_SEASON_WEEKS } from '../utils/advanceModel';
 import { BYE_WEEKS_2026 } from '../data/byeWeeks';
 import { renderRosterImage } from '../utils/rosterImageRenderer';
 import { FolderSync, Download, LayoutGrid } from 'lucide-react';
@@ -29,7 +29,7 @@ const HELP_ANNOTATIONS = [
   { id: 'filter-archetype',  label: 'Archetype Filters',     description: 'Filter by construction archetype. Counts show how many of your rosters match each style.' },
   { id: 'col-archetype',     label: 'Archetypes',            description: "Each roster's RB, QB, and TE draft strategy, classified by pick position and capital." },
   { id: 'col-proj',          label: 'Proj Pts',              description: 'Expected best-ball points over the 14-week regular season. Each week scores your optimal starting lineup (1 QB, 2 RB, 3 WR, 1 TE, 1 FLEX) against the real bye schedule — surplus QBs no longer inflate the number, and stacked byes cost what they actually cost. Once weekly results are loaded, banked actual points replace projections for completed weeks and rest-of-season projections re-weight toward observed scoring.' },
-  { id: 'col-adv',           label: 'Adv %',                 description: 'Estimated chance this roster finishes top-2 of its 12-team pod and advances, from its projected points versus the other rosters in its tournament pool plus any points already banked. 16.7% is dead average. Superflex and Eliminator formats are not modeled.' },
+  { id: 'col-adv',           label: 'Adv %',                 description: 'Estimated chance this roster advances from its 12-team pod, from its projected points versus the other rosters in its tournament pool plus any points already banked. The advancement structure matches the tournament: top 2 for classic pods (16.7% is average), top 3 for The Big Board and The Little Board (25% is average), and top 6 on Week 1 alone for The Eliminator (50% is average). Superflex pods are simulated with the extra QB slot.' },
   { id: 'col-uniqueness',    label: 'Early Combo %',         description: 'How often other drafts we track open with this roster\'s combo of early picks. 0% means truly unique — no other tracked draft starts this way. Lower = rarer construction.' },
   { id: 'col-clv',           label: 'Avg CLV%',              description: "Average Closing Line Value across all picks. Positive means the player's ADP rose after your draft." },
 ];
@@ -311,6 +311,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
 
       const adpPlatform = players.find(p => p.adpPlatform !== 'global')?.adpPlatform || 'global';
       const superflex = (slateTitle || '').toLowerCase().includes('superflex');
+      const structure = advanceStructureFor(slateTitle, tournamentTitle);
 
       // Dynamic season outlook (advanceModel): lineup-aware projection over the
       // 14-week regular season, banked actual best-ball points once weekly
@@ -324,6 +325,21 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         byeWeeks: BYE_WEEKS_2026,
       });
 
+      // Advance math runs on the tournament's own horizon. The Eliminator's
+      // first cut is decided by Week 1 alone, so its advance inputs come from
+      // a week-1-only outlook while the display columns keep the season view.
+      const advOutlook = structure.totalWeeks === REGULAR_SEASON_WEEKS
+        ? outlook
+        : computeRosterOutlook(players, {
+            scoring: scoringForPlatform(adpPlatform, slateTitle),
+            actuals,
+            superflex,
+            totalWeeks: structure.totalWeeks,
+            sims,
+            seedKey: entry_id,
+            byeWeeks: BYE_WEEKS_2026,
+          });
+
       // Annotate each player with canonical player_id via masterPlayers name
       // lookup, plus banked actual points once weekly actuals exist.
       const annotatedPlayers = players.map(p => ({
@@ -336,40 +352,49 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
 
       return {
         entry_id, players: annotatedPlayers, avgCLV, posSnap, count: players.length, path,
-        draftDate, tournamentTitle, slateTitle, adpPlatform,
+        draftDate, tournamentTitle, slateTitle, adpPlatform, structure,
         projectedPoints: outlook.projectedPoints,
         actualPoints: outlook.actualPoints,
         weeksCompleted: outlook.weeksCompleted,
         weeklyMean: outlook.weeklyMean,
         weeklySd: outlook.weeklySd,
+        advActualPoints: advOutlook.actualPoints,
+        advWeeksCompleted: advOutlook.weeksCompleted,
+        advWeeklyMean: advOutlook.weeklyMean,
+        advWeeklySd: advOutlook.weeklySd,
       };
     });
   }, [rosterData, alpha, nameToPlayerId, actuals]);
 
-  // Expected Advance % — each eligible roster measured against a field model
-  // built from the user's own portfolio cohort (tournament → platform → all).
-  // Superflex/Eliminator advancement structures differ, so they are unscored.
+  // Expected Advance % — each roster measured against a field model built
+  // from the user's own portfolio cohort (tournament → platform → all, scoped
+  // per format). Every format is scored with its own advancement structure:
+  // classic 2/12, Big/Little Board 3/12, Eliminator 6/12 on Week 1 alone.
   const advanceProbs = useMemo(() => {
-    const eligible = rosters.filter(r => !isExcludedSlate(r.slateTitle) && r.weeklyMean > 0);
+    const eligible = rosters.filter(r => r.advWeeklyMean > 0);
     const getField = buildFieldModel(eligible.map(r => ({
       tournamentTitle: r.tournamentTitle,
       platform: r.adpPlatform,
-      weeklyMean: r.weeklyMean,
-      weeklySd: r.weeklySd,
+      format: r.structure.format,
+      weeklyMean: r.advWeeklyMean,
+      weeklySd: r.advWeeklySd,
     })));
     const byId = {};
     rosters.forEach(r => {
-      if (isExcludedSlate(r.slateTitle) || !(r.weeklyMean > 0)) { byId[r.entry_id] = null; return; }
-      const field = getField(r.tournamentTitle, r.adpPlatform);
+      if (!(r.advWeeklyMean > 0)) { byId[r.entry_id] = null; return; }
+      const field = getField(r.tournamentTitle, r.adpPlatform, r.structure.format);
       if (!field) { byId[r.entry_id] = null; return; }
       byId[r.entry_id] = advanceProbability({
-        myActualPoints: r.actualPoints,
-        myWeeklyMean: r.weeklyMean,
-        myWeeklySd: r.weeklySd,
+        myActualPoints: r.advActualPoints,
+        myWeeklyMean: r.advWeeklyMean,
+        myWeeklySd: r.advWeeklySd,
         fieldWeeklyMean: field.weeklyMean,
         fieldWeeklySd: field.weeklySd,
         fieldQualitySd: field.qualitySd,
-        weeksCompleted: r.weeksCompleted,
+        weeksCompleted: r.advWeeksCompleted,
+        totalWeeks: r.structure.totalWeeks,
+        podSize: r.structure.podSize,
+        advanceSpots: r.structure.advanceSpots,
       });
     });
     return byId;
@@ -610,7 +635,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
     const clv    = clvLabel(roster.avgCLV);
     const isOpen = expandedEntry === roster.entry_id;
     const uniq   = formatUniqueness(rosterScores[roster.entry_id], false);
-    const adv    = advanceLabel(advanceProbs[roster.entry_id]);
+    const adv    = advanceLabel(advanceProbs[roster.entry_id], roster.structure.baseline);
 
     return (
       <div
@@ -987,7 +1012,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
               className={css.th}
               style={{ textAlign: 'center', color: '#c084fc' }}
               onClick={() => toggleSort('advanceProb')}
-              title="Estimated chance to finish top-2 of the 12-team pod — this roster's projection vs the other rosters in its tournament pool, plus points already banked. 16.7% is average."
+              title="Estimated chance to advance from the 12-team pod — this roster's projection vs the other rosters in its tournament pool, plus points already banked. Top 2 for classic pods, top 3 for the Big/Little Board, top 6 on Week 1 for The Eliminator."
             >
               Adv % <SortIcon col="advanceProb" sortKey={sortKey} sortDir={sortDir} />
             </th>
@@ -1014,12 +1039,10 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
             const score = rosterScores[roster.entry_id];
             const uniq = formatUniqueness(score, false);
             const advProb = advanceProbs[roster.entry_id];
-            const adv = advanceLabel(advProb);
+            const adv = advanceLabel(advProb, roster.structure.baseline);
             const advTooltip = advProb == null
-              ? (isExcludedSlate(roster.slateTitle)
-                  ? 'Not modeled — Superflex and Eliminator advancement structures differ from classic best ball.'
-                  : 'Not modeled — no projection data for this roster.')
-              : `Estimated chance to finish top-2 of the 12-team pod. ${(ADVANCE_BASELINE * 100).toFixed(1)}% is average.`;
+              ? 'Not modeled — no projection data for this roster.'
+              : `Estimated chance to finish top-${roster.structure.advanceSpots} of the ${roster.structure.podSize}-team pod${roster.structure.format === 'eliminator' ? ' on Week 1' : ''}. ${(roster.structure.baseline * 100).toFixed(1)}% is average.`;
             const uniqTooltip = score?.notApplicable
               ? "Not scored — Superflex and Eliminator drafts aren't comparable to classic best ball combo tables."
               : score?.unscored
