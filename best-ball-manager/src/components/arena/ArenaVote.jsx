@@ -133,7 +133,7 @@ function MatchupSkeleton() {
   );
 }
 
-export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
+export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, comboLookup }) {
   const { user } = useAuth();
   const isGuest = !user;
   // <900px swaps the three-column matchup for the swipeable contender deck
@@ -518,6 +518,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                 rating={ratingFor('a')}
                 stamp={stampFor('a')}
                 lens={lens}
+                comboLookup={comboLookup}
                 showStacks={showStacks}
                 maxProj={maxProj}
                 pickable={status === 'voting'}
@@ -540,6 +541,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                 rating={ratingFor('b')}
                 stamp={stampFor('b')}
                 lens={lens}
+                comboLookup={comboLookup}
                 showStacks={showStacks}
                 maxProj={maxProj}
                 pickable={status === 'voting'}
@@ -604,6 +606,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   rating={ratingFor('a')}
                   stamp={stampFor('a')}
                   lens={lens}
+                  comboLookup={comboLookup}
                   showStacks={showStacks}
                   maxProj={maxProj}
                   pickable={status === 'voting'}
@@ -621,6 +624,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup }) {
                   rating={ratingFor('b')}
                   stamp={stampFor('b')}
                   lens={lens}
+                  comboLookup={comboLookup}
                   showStacks={showStacks}
                   maxProj={maxProj}
                   pickable={status === 'voting'}

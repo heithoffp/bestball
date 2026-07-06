@@ -1,6 +1,5 @@
 // src/utils/realDraftData.js
-// Real-draft frequency tables — computed from actual drafts instead of the
-// Monte Carlo simulation:
+// Real-draft frequency tables — computed from actual drafts:
 //   1. Every seat of every captured pod board in draft_boards_admin
 //      (participant-authorized capture per ADR-009 + admin scraper per ADR-008).
 //      Each board holds all 12 real rosters of a pod.
@@ -9,21 +8,21 @@
 //      here — the board already contains the user's seat, and counting both
 //      would double-count it.
 //
-// Output shapes mirror the bundled sim files so uniquenessEngine / draftModel
-// lookups work unchanged:
-//   tier1: { combos: { "pid|pid|pid|pid": count }, metadata }
+// Output shapes:
+//   tier1: { combos: { "pid|pid|pid": count }, metadata }
 //   r1: { pid: count }
 //   r2: { pid1: { pid2: count } }
 //   r3: { "pid1|pid2": { pid3: count } }
 //   r4: { "pid1|pid2|pid3": { pid4: count } }
 //
-// Combo keys are built from each roster's FIRST FOUR PICKS in draft order,
-// sorted by player_id (metadata.key_basis = 'picks'). The sim keyed on the
-// 4 lowest-ADP players instead; callers must read metadata.key_basis and build
-// lookup keys the same way the loaded table was keyed.
+// Combo keys are built from each roster's FIRST THREE PICKS in draft order,
+// sorted by player_id. Three (not four) is deliberate: against ~14K tracked
+// rosters, 64% of first-4 combos are one-of-one (the stat reads flat "unique"
+// everywhere), while first-3 combos spread 1×–47× with a mean near 7 — an
+// actually differentiating rarity signal (2026-07-05 evaluation).
 //
 // All reads fail soft: guests, missing grants, and fetch errors yield empty
-// tables, and callers fall back to the bundled simulation files.
+// tables and consumers render an em-dash / empty state.
 
 import { supabase } from './supabaseClient';
 import { canonicalName } from './helpers';
@@ -31,13 +30,16 @@ import { canonicalName } from './helpers';
 const PAGE = 250;
 const PATH_ROUNDS = 4;
 
+/** Number of earliest picks that form the Early Combo key. */
+export const COMBO_PICKS = 3;
+
 let _boardsPromise = null; // boards are fetched once per session
 const _builds = new Map(); // input signature → Promise<{ pre, post }>
 
 function emptyTables() {
   // tier1.metadata and the top-level metadata are deliberately the same
   // object, so total_rosters stays in sync across both lookups.
-  const metadata = { total_rosters: 0, data_source: 'real', key_basis: 'picks' };
+  const metadata = { total_rosters: 0 };
   return { tier1: { combos: {}, metadata }, r1: {}, r2: {}, r3: {}, r4: {}, metadata };
 }
 
@@ -110,11 +112,12 @@ function addSeat(tables, pids) {
   if (!p3) return;
   const r3 = (tables.r3[`${p1}|${p2}`] ||= {});
   r3[p3] = (r3[p3] || 0) + 1;
+  // Early Combo key: the first COMBO_PICKS picks, order-independent.
+  const comboKey = pids.slice(0, COMBO_PICKS).sort((a, b) => a.localeCompare(b)).join('|');
+  tables.tier1.combos[comboKey] = (tables.tier1.combos[comboKey] || 0) + 1;
   if (!p4) return;
   const r4 = (tables.r4[`${p1}|${p2}|${p3}`] ||= {});
   r4[p4] = (r4[p4] || 0) + 1;
-  const comboKey = [p1, p2, p3, p4].sort((a, b) => a.localeCompare(b)).join('|');
-  tables.tier1.combos[comboKey] = (tables.tier1.combos[comboKey] || 0) + 1;
 }
 
 async function build(masterPlayers, rosterRows) {
@@ -201,6 +204,17 @@ async function build(masterPlayers, rosterRows) {
     addSeat(tables, sorted.slice(0, PATH_ROUNDS).map(p => resolvePid(p.name, nameToPid)));
   }
 
+  // Carried on the result so snapshot consumers (Arena) can resolve names and
+  // classify pre/post the same way the tables were built.
+  data.nameToPid = nameToPid;
+  data.classify = (slateTitle, tournamentTitle) => {
+    const tourn = (tournamentTitle || '').toLowerCase();
+    const slate = (slateTitle || '').toLowerCase();
+    return titleStatus.get(tourn)
+      ?? titleStatus.get(slate)
+      ?? (isPreDraftSlate(slateTitle, tournamentTitle) ? 'pre' : 'post');
+  };
+
   return data;
 }
 
@@ -222,4 +236,53 @@ export async function loadRealDraftData(masterPlayers = [], rosterRows = []) {
     if (_builds.size > 6) _builds.delete(_builds.keys().next().value);
   }
   return promise;
+}
+
+/**
+ * Format a combo occurrence as a share of all tracked drafts.
+ * @returns {string|null} e.g. "0.09%", "<0.01%"; null when there is no data
+ */
+export function formatComboPct(count, totalRosters) {
+  if (!totalRosters || count == null) return null;
+  const pct = (count / totalRosters) * 100;
+  if (pct === 0) return '0%';
+  return pct < 0.01 ? '<0.01%' : `${pct.toFixed(2)}%`;
+}
+
+/**
+ * Early Combo rate for an Arena display snapshot (or any object carrying
+ * `players` with name+pick, plus slate/tournament titles). Classifies the
+ * snapshot pre/post the same way the tables were built; if its combo is
+ * missing from the classified source (e.g. a pod whose tournament the viewer
+ * has no entries in), the other source is checked before giving up.
+ *
+ * @param {object} data - resolved value of loadRealDraftData()
+ * @param {object} snapshot - { players: [{name, pick}], slateTitle, tournamentTitle }
+ * @returns {{ count: number, totalRosters: number, pctText: string }|null}
+ */
+export function comboRateForSnapshot(data, snapshot) {
+  if (!data || !snapshot || isExcludedSlate(snapshot.slateTitle)) return null;
+  const picks = (snapshot.players ?? [])
+    .filter(p => p?.name && Number(p.pick) > 0)
+    .sort((a, b) => Number(a.pick) - Number(b.pick))
+    .slice(0, COMBO_PICKS);
+  if (picks.length < COMBO_PICKS) return null;
+  const key = picks
+    .map(p => resolvePid(p.name, data.nameToPid ?? new Map()))
+    .sort((a, b) => a.localeCompare(b))
+    .join('|');
+
+  const primary = data.classify?.(snapshot.slateTitle, snapshot.tournamentTitle) ?? 'post';
+  const fallback = primary === 'pre' ? 'post' : 'pre';
+  for (const src of [primary, fallback]) {
+    const t = data[src];
+    const total = t?.metadata?.total_rosters ?? 0;
+    if (!total) continue;
+    const count = t.tier1.combos[key];
+    if (count != null) {
+      return { count, totalRosters: total, pctText: formatComboPct(count, total) };
+    }
+  }
+  const total = data[primary]?.metadata?.total_rosters ?? 0;
+  return total ? { count: 0, totalRosters: total, pctText: formatComboPct(0, total) } : null;
 }

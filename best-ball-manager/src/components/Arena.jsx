@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { canonicalName } from '../utils/helpers';
 import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
+import { loadRealDraftData, comboRateForSnapshot } from '../utils/realDraftData';
 import { fetchDraftBoards } from '../utils/draftBoards';
 import { registerAllArenaTeams, ARENA_AVAILABLE } from '../utils/arenaClient';
 import css from './Arena.module.css';
@@ -131,6 +132,23 @@ export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOp
   // Team/player CLV reliably appear (see enrichSnapshotCLV).
   const adpLookup = useMemo(() => buildAdpLookup(masterPlayers), [masterPlayers]);
 
+  // Early Combo rarity, same display-time treatment as CLV/projections: computed
+  // fresh from the real-draft frequency tables (captured boards + the viewer's
+  // synced rosters) so every snapshot gets it regardless of registration age.
+  // Guests resolve to empty tables and the chip simply doesn't render.
+  const [comboData, setComboData] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadRealDraftData(masterPlayers ?? [], rosterData ?? [])
+      .then((d) => { if (!cancelled) setComboData(d); })
+      .catch(() => { /* fail soft — chip hidden */ });
+    return () => { cancelled = true; };
+  }, [masterPlayers, rosterData]);
+  const comboLookup = useMemo(
+    () => (comboData ? (snapshot) => comboRateForSnapshot(comboData, snapshot) : null),
+    [comboData],
+  );
+
   // The viewer's projections, same display-time treatment as CLV. dataLoader shares
   // one projPointsMap across every platform entry, so any entry's map is THE map.
   const projLookup = useMemo(() => {
@@ -171,8 +189,8 @@ export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOp
 
       <div className={css.body}>
         {!isDesktop && toolbar}
-        {view === 'vote' && <ArenaVote adpLookup={adpLookup} projLookup={projLookup} onGoToMyTeams={() => setView('myteams')} />}
-        {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} />}
+        {view === 'vote' && <ArenaVote adpLookup={adpLookup} projLookup={projLookup} comboLookup={comboLookup} onGoToMyTeams={() => setView('myteams')} />}
+        {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} comboLookup={comboLookup} />}
         {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} masterPlayers={masterPlayers} />}
       </div>
     </div>

@@ -176,13 +176,16 @@ function PosSnapshot({ posSnap, stacks, showStacks }) {
  * @param {'clv'|'proj'} props.lens  which stat rides the right column of each row
  * @param {boolean} props.showStacks paint NFL-team-colored stack rails + chips
  * @param {number|null} props.maxProj proj-bar scale ceiling (max across the matchup)
+ * @param {function|null} props.comboLookup (snapshot) => Early Combo rate
+ *   ({count, totalRosters, pctText}) from the real-draft frequency tables;
+ *   null (guest / still loading) hides the chip
  * @param {boolean} props.pickable   desktop: the card itself is the vote target
  * @param {boolean} props.picked     post-reveal: this was the voter's pick
  * @param {function|null} props.onPick vote handler when the card is pickable
  */
 export default function ArenaRosterCard({
   snapshot, corner = 'red', cornerLabel, outcome = null, delta = null, rating = null,
-  stamp = null, lens = 'clv', showStacks = true, maxProj = null,
+  stamp = null, lens = 'clv', showStacks = true, maxProj = null, comboLookup = null,
   pickable = false, picked = false, onPick = null,
 }) {
   const { players: rawPlayers = [], posSnap = {}, count, draftedAt } = snapshot || {};
@@ -210,6 +213,13 @@ export default function ArenaRosterCard({
   const projCeiling = Math.max(
     1,
     maxProj ?? players.reduce((m, p) => Math.max(m, p.proj || 0), 0),
+  );
+
+  // Early Combo rarity — how big a share of all tracked real drafts start with
+  // this team's first-3 picks. Null (guest, loading, unresolvable) hides it.
+  const combo = useMemo(
+    () => (comboLookup ? comboLookup(snapshot) : null),
+    [comboLookup, snapshot],
   );
 
   // The roster rows never change during a matchup — memoizing their JSX means the
@@ -321,6 +331,14 @@ export default function ArenaRosterCard({
           {dateLabel && (
             <span className={css.draftDate} title={`Drafted ${dateLabel}`}>
               <CalendarDays size={11} /> {dateLabel}
+            </span>
+          )}
+          {combo?.pctText && (
+            <span
+              className={css.pickCount}
+              title={`Early Combo: this team's first-3-pick combo starts ${combo.count.toLocaleString()} of ${combo.totalRosters.toLocaleString()} tracked real drafts`}
+            >
+              {combo.pctText} combo
             </span>
           )}
           <span className={css.pickCount}>{count} picks</span>

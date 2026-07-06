@@ -70,8 +70,8 @@ Weighted combination of 4 factors:
 ### Uniqueness Lift
 Normalized surprisal score comparing roster composition to portfolio baseline. Higher = more unique archetype/player combination.
 
-### Early Combo Rate / Count (Tier 1 frequency)
-How often each roster's first-4-pick combo appears across the field. **Data source (2026-07-05):** real drafts — every seat of every captured pod board in `draft_boards_admin` plus the user's own synced rosters for drafts without a board (`utils/realDraftData.js`); the combo key is the roster's first 4 picks in draft order, sorted by `player_id` (`metadata.key_basis = 'picks'`). Column shows a raw occurrence count ("2×"; 1× = only this roster) and is labeled "Early Combo Count". When no real data is reachable (guests/demo), the bundled Monte Carlo tier1 table is the fallback (`key_basis = 'adp'`, per-1M display, "Early Combo Rate / 1M"). Pre-draft rosters score against the pre table, post-draft against post.
+### Early Combo % (frequency across real drafts)
+The share of all tracked real drafts that start with each roster's **first-3-pick** combo (e.g. "0.09%", "<0.01%"). **Data source (2026-07-05):** real drafts only — every seat of every captured pod board in `draft_boards_admin` plus the user's own synced rosters for drafts without a board (`utils/realDraftData.js`); the combo key is the roster's first `COMBO_PICKS` (3) picks in draft order, sorted by `player_id`. Three picks (not four) is deliberate: a 2026-07-05 evaluation against ~14K tracked rosters showed 64% of first-4 combos are one-of-one (flat "unique" everywhere), while first-3 combos spread 1×–47× with mean ~7. The old bundled Monte Carlo sim tables were removed the same day; guests/demo see an em-dash. Superflex/Eliminator rosters and broken syncs show "—" (not comparable / unscoreable). Pre-draft rosters score against the pre table, post-draft against post.
 
 ### Stack Analysis
 Uses `analyzeRosterStacks()` from `utils/stackAnalysis.js` to identify and score team correlations within each roster.

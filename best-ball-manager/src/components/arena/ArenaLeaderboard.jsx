@@ -82,7 +82,7 @@ function Movement({ delta }) {
   return <span className={css.moveFlat}>—</span>;
 }
 
-export default function ArenaLeaderboard({ adpLookup }) {
+export default function ArenaLeaderboard({ adpLookup, comboLookup = null }) {
   const { user } = useAuth();
   const [rows, setRows] = useState(null); // null = loading
   const [total, setTotal] = useState(0);
@@ -304,7 +304,7 @@ export default function ArenaLeaderboard({ adpLookup }) {
                   </button>
                   {isOpen && (
                     <div className={css.lbExpand}>
-                      <ArenaRosterCard snapshot={enrichSnapshotCLV(r.display_snapshot, adpLookup)} corner="neutral" cornerLabel={`Rank #${rank}`} />
+                      <ArenaRosterCard snapshot={enrichSnapshotCLV(r.display_snapshot, adpLookup)} corner="neutral" cornerLabel={`Rank #${rank}`} comboLookup={comboLookup} />
                     </div>
                   )}
                 </div>
