@@ -11,10 +11,9 @@ import { X, LayoutGrid } from 'lucide-react';
 import { fetchDraftBoard } from '../utils/draftBoards';
 import { calcCLV, clvLabel } from '../utils/clvHelpers';
 import { classifyRosterPath, ARCHETYPE_METADATA } from '../utils/rosterArchetypes';
-import { canonicalName } from '../utils/helpers';
 import { posColor } from '../utils/positionColors';
-import { computeRosterOutlook, podAdvanceProbabilities, scoringForPlatform, advanceLabel, advanceStructureFor, REGULAR_SEASON_WEEKS } from '../utils/advanceModel';
-import { BYE_WEEKS_2026 } from '../data/byeWeeks';
+import { advanceLabel } from '../utils/advanceModel';
+import { derivePodModel } from '../utils/podAdvance';
 import css from './DraftBoardModal.module.css';
 
 const CLV_ALPHA = 0.5; // matches RosterViewer's balanced CLV curve
@@ -59,88 +58,20 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
     if (e.target === e.currentTarget) onClose();
   }, [onClose]);
 
-  // Derive the grid: picks bucketed by (round, slot), plus per-slot summary
-  // stats and the user's slot (matched by name overlap with the clicked roster).
+  // Derive the grid: the shared pod model (utils/podAdvance.js — the same
+  // engine the Roster Viewer's Adv % column reads, so the numbers agree)
+  // plus modal-only display stats per slot (CLV, archetypes).
   const derived = useMemo(() => {
     if (!board) return null;
-    const udAdpMap = adpByPlatform?.underdog?.latestAdpMap ?? {};
-    const projMap = adpByPlatform?.underdog?.projPointsMap ?? {};
-    const entryCount = board.entryCount || 12;
-    const rounds = board.rounds || Math.ceil(board.picks.length / entryCount);
-
-    const byRoundSlot = {};
-    const playersBySlot = {};
-    for (const p of board.picks) {
-      const round = p.round ?? (p.pick ? Math.ceil(p.pick / entryCount) : null);
-      if (round == null || p.slot == null) continue;
-      const key = p.name ? canonicalName(p.name) : null;
-      const latestADP = key && udAdpMap[key] ? udAdpMap[key].pick : null;
-      const enriched = {
-        ...p,
-        round,
-        latestADP: Number.isFinite(latestADP) ? latestADP : null,
-        projectedPoints: (key && projMap[key]) || null,
-      };
-      (byRoundSlot[round] ??= {})[p.slot] = enriched;
-      (playersBySlot[p.slot] ??= []).push(enriched);
-    }
-
-    const userNames = new Set((roster.players ?? []).map(p => canonicalName(p.name)));
-    let userSlot = null;
-    let bestOverlap = 0;
-    const slots = Array.from({ length: entryCount }, (_, i) => i + 1);
-
-    // Season outlook per seat (same model as the Roster Viewer table): lineup-
-    // aware projection plus banked actuals. Seats where under half the picks
-    // resolved a projection stay unmodeled rather than scoring a fake low.
-    const slateTitle = board.slateTitle || '';
-    const platform = slateTitle.startsWith('DK') ? 'draftkings' : 'underdog';
-    const superflex = slateTitle.toLowerCase().includes('superflex');
-    // Board slate_title carries the platform's tournament name ("The Big
-    // Board"); the clicked roster's tournamentTitle is checked too for boards
-    // whose title is a plain slate name.
-    const structure = advanceStructureFor(slateTitle, roster?.tournamentTitle || slateTitle);
-    const outlookBySlot = {};
-    const advOutlookBySlot = {};
-    for (const slot of slots) {
-      const players = playersBySlot[slot] ?? [];
-      if (players.length === 0) continue;
-      const resolved = players.filter(p => p.projectedPoints > 0).length;
-      if (resolved < players.length / 2) continue;
-      outlookBySlot[slot] = computeRosterOutlook(players, {
-        scoring: scoringForPlatform(platform, slateTitle),
-        actuals,
-        superflex,
-        sims: 200,
-        seedKey: `${board.draftId || ''}-${slot}`,
-        byeWeeks: BYE_WEEKS_2026,
-      });
-      // Advance odds run on the tournament's own horizon (Eliminator: Week 1
-      // alone decides the 6-of-12 cut); the displayed Proj stays season-long.
-      advOutlookBySlot[slot] = structure.totalWeeks === REGULAR_SEASON_WEEKS
-        ? outlookBySlot[slot]
-        : computeRosterOutlook(players, {
-            scoring: scoringForPlatform(platform, slateTitle),
-            actuals,
-            superflex,
-            totalWeeks: structure.totalWeeks,
-            sims: 200,
-            seedKey: `${board.draftId || ''}-${slot}`,
-            byeWeeks: BYE_WEEKS_2026,
-          });
-    }
-
-    // Every seat is a known opponent here, so advance odds come from the
-    // pod-exact model (Poisson-binomial), not the portfolio field model.
-    const seatDists = slots.map(slot => {
-      const o = advOutlookBySlot[slot];
-      if (!o || !(o.weeklyMean > 0)) return null;
-      return {
-        mean: o.actualPoints + o.remainingWeeks * o.weeklyMean,
-        sd: o.weeklySd * Math.sqrt(o.remainingWeeks),
-      };
+    const {
+      entryCount, rounds, slots, byRoundSlot, playersBySlot,
+      structure, outlookBySlot, advBySlot, userSlot,
+    } = derivePodModel(board, {
+      rosterPlayers: roster.players,
+      tournamentTitle: roster?.tournamentTitle,
+      adpByPlatform,
+      actuals,
     });
-    const advBySlot = podAdvanceProbabilities(seatDists, { advanceSpots: structure.advanceSpots });
 
     const slotSummaries = {};
     slots.forEach((slot, i) => {
@@ -158,12 +89,7 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
         adv: advBySlot[i],
         path,
       };
-
-      const overlap = players.filter(p => p.name && userNames.has(canonicalName(p.name))).length;
-      if (overlap > bestOverlap) { bestOverlap = overlap; userSlot = slot; }
     });
-    // Demand a real match — over half the column — before claiming a slot as "you".
-    if (userSlot != null && bestOverlap <= (playersBySlot[userSlot]?.length ?? 0) / 2) userSlot = null;
 
     return { entryCount, rounds, slots, byRoundSlot, slotSummaries, userSlot, structure };
   }, [board, roster.players, roster.tournamentTitle, adpByPlatform, actuals]);
