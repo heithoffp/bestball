@@ -21,11 +21,11 @@ const DIST_INDEX = join(DIST, 'index.html');
 
 const SITE = 'https://bestballexposures.com';
 const URL = `${SITE}/arena`;
-const TITLE = 'Best Ball Arena — Vote on Real BBM7 Rosters Head to Head';
+const TITLE = 'Best Ball Arena — Head-to-Head Roster Battles';
 const DESCRIPTION =
-  'Two real Best Ball Mania rosters, side by side, no usernames. Pick the winner, move the ratings, climb the leaderboard. Free to play — sync your Underdog teams and they enter the pool automatically.';
+  'Anonymous best-ball rosters go head to head. Pick the winner, move the ratings, climb the leaderboard. Free to play — synced teams enter the pool automatically.';
 const IMAGE = `${SITE}/og-image-arena.png`;
-const IMAGE_ALT = 'Two anonymous best-ball rosters facing off in the Best Ball Arena.';
+const IMAGE_ALT = 'Anonymous best-ball rosters facing off in the Best Ball Arena.';
 
 function esc(s) {
   return String(s)

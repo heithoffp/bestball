@@ -142,7 +142,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8" />
   <div class="corner tl"></div><div class="corner tr"></div>
   <div class="corner bl"></div><div class="corner br"></div>
   <div class="headline">BEST BALL ARENA</div>
-  <div class="tagline">Two real BBM7 rosters. No usernames. <strong>You pick the winner.</strong></div>
+  <div class="tagline">Head-to-head roster battles. <strong>You pick the winner.</strong></div>
   <div class="ring">
     ${contenderCard(CARD_A, 'a')}
     <div class="vs">VS</div>
