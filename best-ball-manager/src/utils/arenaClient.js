@@ -85,9 +85,11 @@ export async function submitVote({ token, winner }) {
 }
 
 /**
- * Leaderboard — teams ranked by Elo. Under opt-out (ADR-014/016) every registered
- * team is shown by default; `enrolled=false` marks accounts that flipped the
- * account-level switch off (ADR-016), so those rows are excluded everywhere.
+ * Leaderboard — teams ranked by Elo. Scoped to synced-user teams (source='owned');
+ * ownerless board rows are held back from the leaderboard for now. Under opt-out
+ * (ADR-014/016) every registered team is shown by default; `enrolled=false` marks
+ * accounts that flipped the account-level switch off (ADR-016), so those rows are
+ * excluded everywhere.
  * Visibility is otherwise governed by RLS (during the private beta, allowlisted
  * accounts only — ADR-015).
  * Defaults to the featured (BBM7) scope while that's the whole presentation — a
@@ -111,6 +113,8 @@ export async function getLeaderboard({ platform = 'all', tournament = 'featured'
     .from('arena_teams')
     .select(cols, { count: 'exact' })
     .eq('enrolled', true)
+    // Only synced-user teams are shown for now; ownerless board rows are excluded.
+    .eq('source', 'owned')
     .order('elo', { ascending: false })
     .range(offset, offset + limit - 1);
   if (platform !== 'all') q = q.eq('platform', platform);
@@ -151,7 +155,7 @@ export async function getMyBestArenaTeam({ platform = 'all', tournament = 'featu
 export async function getArenaRank({ elo, platform = 'all', tournament = 'featured' } = {}) {
   if (!supabase || !Number.isFinite(elo)) return null;
   const build = () => {
-    let q = supabase.from('arena_teams').select('id', { count: 'exact', head: true }).eq('enrolled', true);
+    let q = supabase.from('arena_teams').select('id', { count: 'exact', head: true }).eq('enrolled', true).eq('source', 'owned');
     if (platform !== 'all') q = q.eq('platform', platform);
     if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
     return q;

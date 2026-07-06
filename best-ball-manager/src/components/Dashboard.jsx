@@ -596,6 +596,9 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
               );
             })}
           </div>
+          {/* touch-action: pan-y — vertical swipes over the chart must scroll
+              the dashboard instead of being captured for tooltip tracking */}
+          <div style={{ touchAction: 'pan-y' }}>
           <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
             <BarChart data={draftCapitalShape} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
               <YAxis domain={[0, 100]} hide />
@@ -632,6 +635,7 @@ export default function Dashboard({ rosterData = [], masterPlayers = [], adpSnap
               <Bar dataKey="mTE" stackId="market" fill={POS_COLORS.TE} opacity={0.25} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          </div>
           <div className={styles.capitalLegend}>
             <div className={styles.capitalLegendItem}>
               <span className={styles.capitalLegendSwatch} style={{ opacity: 1 }} />

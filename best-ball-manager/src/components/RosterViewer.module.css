@@ -13,9 +13,12 @@
   animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
 }
 
+/* End at `transform: none` — `fill: both` keeps the final keyframe applied
+   forever, and a lingering transform re-anchors position:fixed descendants
+   and forces an extra compositing layer on the scroll container. */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Nav banner — shown when arriving via cross-module navigation */
@@ -713,6 +716,19 @@
   width: 100%;
 }
 
+/* Mobile scroll viewport for the virtualized card list. Must be height-bounded
+   (flex: 1 within the clipped tab root) or the virtualizer renders every row
+   and everything below the fold becomes unreachable. */
+.cardListScroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
 /* === Mobile player sort bar (inside expanded detail) === */
 .playerSortBar {
   display: flex;
@@ -735,10 +751,10 @@
   font-family: var(--font-mono);
 }
 
+/* Expanded roster detail (mobile only). No inner max-height/scroll: nesting a
+   third scroll region inside the card list made scrolling finnicky — the card
+   grows and the outer list scrolls it as one surface. */
 .playerListScroll {
-  max-height: 55vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -770,6 +786,13 @@
     gap: 12px;
     border-radius: 8px;
     margin-bottom: 12px;
+    /* Opened filters must never grow past the viewport (the tab root clips
+       overflow) — cap and scroll internally so every control stays reachable. */
+    max-height: 55vh;
+    max-height: 55dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .searchRow {

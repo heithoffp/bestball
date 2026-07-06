@@ -91,6 +91,10 @@ select { color-scheme: dark; background: var(--surface-1); color: var(--text-pri
 select option { background: var(--surface-1); color: var(--text-primary); }
 body { font-family: 'DM Sans', sans-serif; background: var(--surface-0); color: var(--text-primary); }
 
+/* The app shell owns all scrolling; stop the viewport from rubber-banding /
+   triggering pull-to-refresh when a swipe starts on non-scrolling chrome. */
+html, body { overscroll-behavior-y: none; }
+
 /* ── App shell: rail + main column ── */
 .app-shell {
   height: 100vh;
@@ -717,9 +721,11 @@ td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--border-subtle); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
 
+/* End at `transform: none` — `fill: both` keeps the final keyframe applied
+   forever, and a lingering transform re-anchors position:fixed descendants. */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ---- Shared UI Patterns ---- */
@@ -1186,6 +1192,12 @@ td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--border-subtle); }
 
   .filter-checkbox {
     min-height: 44px;
+  }
+
+  /* Chips are primary filter controls on mobile — give them a real tap target */
+  .filter-chip {
+    min-height: 38px;
+    padding: 0.45rem 0.85rem;
   }
 }
 

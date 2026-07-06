@@ -216,7 +216,9 @@
 
 .cardRow2 {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  /* 4 stats per card (Exp / Count / ADP / CLV) — must be 4 columns or the
+     last stat wraps onto its own row. */
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-sm);
   margin-top: 6px;
   font-size: 13px;

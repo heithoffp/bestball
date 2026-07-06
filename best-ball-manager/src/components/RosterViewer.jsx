@@ -652,7 +652,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
   const renderCardList = () => (
     <div
       ref={scrollRef}
-      style={{ overflowY: 'auto', minHeight: 400, flexShrink: 0, borderRadius: 8, border: '1px solid var(--border-subtle)' }}
+      className={css.cardListScroll}
     >
       {displayed.length === 0 ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>

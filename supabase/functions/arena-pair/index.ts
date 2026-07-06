@@ -84,6 +84,11 @@ Deno.serve(async (req) => {
     // arena_eligibility_mode flag is retired in place — the pool is opt-out
     // (everything in the database) minus unenrolled accounts.
     query = query.eq("enrolled", true);
+    // Only BBM synced-user teams vote for now. Ownerless "board" rows (the other
+    // pod rosters captured under ADR-014) stay in the database for when the pool is
+    // expanded, but are excluded from the votable pool so voters only ever see teams
+    // belonging to real synced accounts.
+    query = query.eq("source", "owned");
     if (voterId) query = query.or(`user_id.is.null,user_id.neq.${voterId}`);
     // The Arena presents ONE tournament for now (BBM7): pairing is featured-only,
     // with no full-pool fallback — a non-BBM matchup would contradict every

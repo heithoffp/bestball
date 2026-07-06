@@ -10,9 +10,11 @@
   animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
 }
 
+/* End at `transform: none` — `fill: both` keeps the final keyframe applied
+   forever, and a lingering transform re-anchors position:fixed descendants. */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ── Toolbar Row ── */
@@ -102,5 +104,12 @@
 
   .content {
     padding: 0 2px 8px;
+  }
+
+  /* Re-assert flush after the mobile .content override above — same
+     specificity, so source order decides. Flush tabs manage their own
+     spacing and rely on true zero padding for full-height scroll areas. */
+  .contentFlush {
+    padding: 0;
   }
 }

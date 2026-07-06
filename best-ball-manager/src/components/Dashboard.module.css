@@ -6,14 +6,19 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   gap: 12px;
   padding: 4px 2px 14px;
   animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
 }
 
+/* End at `transform: none` — `fill: both` keeps the final keyframe applied
+   forever, and a lingering transform re-anchors position:fixed descendants
+   and forces an extra compositing layer on the scroll container. */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ── Player link button ── */
@@ -561,12 +566,19 @@
   .shapeGrid {
     grid-template-columns: 1fr;
   }
-  .exposureByRoundPlayer {
-    flex-wrap: wrap;
-    gap: 2px 4px;
+  /* Tighten the round grid so player names keep readable width on phones */
+  .exposureByRoundHeader,
+  .exposureByRoundRow {
+    grid-template-columns: 24px 1fr 1fr;
+    gap: 6px;
   }
-  .blindSpotName {
-    flex-basis: 100%;
+  .exposureByRoundColGroup,
+  .blindSpotEntry {
+    grid-template-columns: 1fr 36px 32px;
+    gap: 0 4px;
+  }
+  .blindSpotAdp {
+    font-size: 0.68rem;
   }
   .exposureRow {
     flex-wrap: wrap;

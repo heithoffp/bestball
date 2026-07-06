@@ -299,7 +299,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
   const virtualizer = useVirtualizer({
     count: filteredAndSorted.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => isMobile ? 72 : 51,
+    estimateSize: () => isMobile ? 84 : 51,
     overscan: 10,
   });
 
@@ -489,7 +489,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
     >
       <div
         ref={tableContainerRef}
-        style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}
+        style={{ overflowY: 'auto', flex: 1, minHeight: 0, WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {filteredAndSorted.length === 0 ? (
           masterPlayers.length === 0
