@@ -62,24 +62,52 @@ export function isExcludedSlate(slateTitle) {
   return slate.includes('superflex') || slate.includes('eliminator');
 }
 
+async function fetchAllBoardsSequential() {
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('draft_boards_admin')
+      .select('draft_id, slate_title, picks')
+      .order('draft_id')
+      .range(from, from + PAGE - 1);
+    if (error || !data) break;
+    out.push(...data);
+    if (data.length < PAGE) break;
+  }
+  return out;
+}
+
 async function fetchAllBoards() {
   if (!supabase) return [];
-  const out = [];
   try {
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
+    // Count first, then fetch every page in parallel — the sequential
+    // page-by-page walk was the dominant cost of the Early Combo column
+    // (each page waits a full round-trip before the next starts). A row
+    // landing between count and fetch shifts a page boundary by one; the
+    // frequency tables tolerate that.
+    const { count, error: countError } = await supabase
+      .from('draft_boards_admin')
+      .select('draft_id', { count: 'exact', head: true });
+    if (countError || !Number.isFinite(count)) return await fetchAllBoardsSequential();
+    if (count === 0) return [];
+    const pages = Math.ceil(count / PAGE);
+    const responses = await Promise.all(Array.from({ length: pages }, (_, i) =>
+      supabase
         .from('draft_boards_admin')
         .select('draft_id, slate_title, picks')
         .order('draft_id')
-        .range(from, from + PAGE - 1);
-      if (error || !data) break;
-      out.push(...data);
-      if (data.length < PAGE) break;
+        .range(i * PAGE, i * PAGE + PAGE - 1)
+        .then(res => res, () => ({ data: null, error: true }))
+    ));
+    const out = [];
+    for (const { data, error } of responses) {
+      if (!error && data) out.push(...data);
     }
+    return out;
   } catch {
-    // fail soft — callers fall back to the bundled sim
+    // fail soft — callers see empty tables
+    return [];
   }
-  return out;
 }
 
 function fetchAllBoardsOnce() {

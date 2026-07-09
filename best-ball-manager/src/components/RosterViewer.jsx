@@ -1,6 +1,6 @@
 // src/components/RosterViewer.jsx
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { loadComboTable, buildComboKey, lookupTier1 } from '../utils/uniquenessEngine';
+import { loadComboTable, buildComboKey, lookupTier1, comboTablesSig, hydrateComboTables, persistComboTables } from '../utils/uniquenessEngine';
 import { isExcludedSlate, formatComboPct } from '../utils/realDraftData';
 import { canonicalName, compactTournamentName } from '../utils/helpers';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -19,8 +19,8 @@ import { renderRosterImage } from '../utils/rosterImageRenderer';
 import { FolderSync, Download, LayoutGrid, Trash2 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import DraftBoardModal from './DraftBoardModal';
-import { fetchAvailableBoardIds, fetchDraftBoards } from '../utils/draftBoards';
-import { userPodAdvance } from '../utils/podAdvance';
+import { fetchUserBoardsOnce } from '../utils/draftBoards';
+import { podAdvVersionKey, getMemoPodAdv, hydratePodAdv, subscribePodAdv, computePodAdvance } from '../utils/podAdvanceStore';
 import { generateDemoBoards } from '../utils/demoBoards';
 import { POS_COLORS, posColor } from '../utils/positionColors';
 
@@ -232,16 +232,22 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
   const scrollRef = useRef(null);
 
   // ── Draft boards (TASK-240) ─────────────────────────────────────────────────
-  // Which drafts have a full board available, and which board is open. Demo
-  // mode never asks Supabase (guest RLS returns nothing) — synthetic demo
-  // boards are generated below, once rosters are grouped.
-  const [fetchedBoardIds, setFetchedBoardIds] = useState(null);
+  // The user's captured boards, fetched directly by entry id (parallel chunked
+  // queries, module-cached per session — usually already warm from the
+  // app-level prewarm). Demo mode never asks Supabase (guest RLS returns
+  // nothing) — synthetic demo boards are generated below, once rosters are
+  // grouped. Boards drive both the Board modal and the pod-exact Adv % column
+  // (utils/podAdvance.js — the identical computation the Draft Board modal
+  // renders), so the column and the board view always agree.
+  const [fetchedBoards, setFetchedBoards] = useState(null);
   const [boardRoster, setBoardRoster] = useState(null);
   useEffect(() => {
-    if (demoMode) return undefined;
-    fetchAvailableBoardIds().then(setFetchedBoardIds);
-    return undefined;
-  }, [demoMode]);
+    if (demoMode || rosterData.length === 0) return undefined;
+    let cancelled = false;
+    const ids = [...new Set(rosterData.map(p => p.entry_id))];
+    fetchUserBoardsOnce(ids).then(boards => { if (!cancelled) setFetchedBoards(boards); });
+    return () => { cancelled = true; };
+  }, [demoMode, rosterData]);
 
   const openBoard = useCallback((roster, e) => {
     e.stopPropagation();
@@ -249,30 +255,41 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
     setBoardRoster(roster);
   }, []);
 
-  // ── Pod-exact Adv % from captured boards ────────────────────────────────────
-  // When a roster's full draft board is captured, its Adv % comes from the
-  // pod-exact model over the 11 actual opponents (utils/podAdvance.js — the
-  // identical computation the Draft Board modal renders), so the column and
-  // the board view always agree.
-  const [podBoards, setPodBoards] = useState(null);
-  useEffect(() => {
-    if (demoMode || !fetchedBoardIds || fetchedBoardIds.size === 0 || rosterData.length === 0) return undefined;
-    const ids = [...new Set(rosterData.map(p => p.entry_id))].filter(id => fetchedBoardIds.has(id));
-    if (ids.length === 0) return undefined;
-    let cancelled = false;
-    fetchDraftBoards(ids).then(boards => { if (!cancelled) setPodBoards(boards); });
-    return () => { cancelled = true; };
-  }, [demoMode, fetchedBoardIds, rosterData]);
-
   // ── Combo frequency data ─────────────────────────────────────────────────────
   // Load both pre- and post-draft combo tables (built from real drafts —
   // captured boards + the user's synced rosters) so each roster can be scored
   // against the source that matches its tournament status. Guests/demo mode
   // resolve to empty tables and the column renders an em-dash.
+  //
+  // Stale-while-revalidate: last session's built tables hydrate instantly
+  // from IndexedDB so Early Combo % renders on first paint, while the real
+  // build (board fetch + aggregation, usually pre-warmed at app bootstrap)
+  // refreshes and replaces them when it lands.
   const [tier1Pre, setTier1Pre] = useState(null);
   const [tier1Post, setTier1Post] = useState(null);
-  useEffect(() => { loadComboTable('pre', { masterPlayers, rosterData }).then(setTier1Pre); }, [masterPlayers, rosterData]);
-  useEffect(() => { loadComboTable('post', { masterPlayers, rosterData }).then(setTier1Post); }, [masterPlayers, rosterData]);
+  useEffect(() => {
+    let cancelled = false;
+    let fresh = false;
+    const sig = comboTablesSig(masterPlayers, rosterData);
+    if (!demoMode) {
+      hydrateComboTables(sig).then(cached => {
+        if (cancelled || fresh || !cached) return;
+        setTier1Pre(prev => prev ?? cached.pre);
+        setTier1Post(prev => prev ?? cached.post);
+      });
+    }
+    Promise.all([
+      loadComboTable('pre', { masterPlayers, rosterData }),
+      loadComboTable('post', { masterPlayers, rosterData }),
+    ]).then(([pre, post]) => {
+      if (cancelled) return;
+      fresh = true;
+      setTier1Pre(pre);
+      setTier1Post(post);
+      if (!demoMode) persistComboTables(sig, pre, post);
+    });
+    return () => { cancelled = true; };
+  }, [masterPlayers, rosterData, demoMode]);
 
   // Mirrors the classification used in ComboAnalysis: name-based, since
   // roster-completion heuristics are unreliable (most rosters are 18 picks
@@ -440,42 +457,68 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
   }, [demoMode, rosters, adpByPlatform]);
 
   // Effective board availability + board objects, either source.
-  const boardIds = useMemo(() => (
-    demoMode ? new Set((demoBoards ?? []).map(b => b.draftId)) : fetchedBoardIds
-  ), [demoMode, demoBoards, fetchedBoardIds]);
-  const activeBoards = demoMode ? demoBoards : podBoards;
+  const boardIds = useMemo(() => {
+    if (demoMode) return new Set((demoBoards ?? []).map(b => b.draftId));
+    return fetchedBoards ? new Set(fetchedBoards.map(b => b.draftId)) : null;
+  }, [demoMode, demoBoards, fetchedBoards]);
+  const activeBoards = demoMode ? demoBoards : fetchedBoards;
 
-  // Pod-exact Adv % per roster with a captured board. Computed in chunks off
-  // the render path — each board simulates all 12 seats, so a large portfolio
-  // would otherwise freeze the main thread. Results fill in progressively.
-  const [podAdvById, setPodAdvById] = useState({});
+  // Pod-exact Adv % per roster with a captured board. The heavy math (each
+  // board simulates all 12 seats) runs in a Web Worker via podAdvanceStore,
+  // which caches results in memory + IndexedDB keyed by data version — tab
+  // revisits and page reloads render instantly, and only boards missing from
+  // the cache are computed. The app-level prewarm (utils/rosterPrewarm.js)
+  // usually has everything ready before this tab is even opened. Results
+  // fill in progressively through the store subscription.
+  const podAdvVersion = useMemo(
+    () => podAdvVersionKey(adpByPlatform, actuals, demoMode ? 'demo' : 'real'),
+    [adpByPlatform, actuals, demoMode]
+  );
+  const [podAdvById, setPodAdvById] = useState(() => ({ ...(getMemoPodAdv(podAdvVersion) ?? {}) }));
+  useEffect(() => {
+    setPodAdvById({ ...(getMemoPodAdv(podAdvVersion) ?? {}) });
+    return subscribePodAdv(podAdvVersion, results => {
+      setPodAdvById(prev => ({ ...prev, ...results }));
+    });
+  }, [podAdvVersion]);
   useEffect(() => {
     if (!activeBoards?.length || rosters.length === 0) return undefined;
     let cancelled = false;
+    let task = null;
     const rosterById = new Map(rosters.map(r => [r.entry_id, r]));
     (async () => {
-      const out = {};
-      const CHUNK = 8;
-      for (let i = 0; i < activeBoards.length; i += CHUNK) {
-        for (const board of activeBoards.slice(i, i + CHUNK)) {
-          const roster = rosterById.get(board.draftId);
-          if (!roster) continue;
-          // Store nulls too: a present-but-null entry means "board seen,
-          // couldn't model", distinct from "still computing" for tooltips.
-          out[board.draftId] = userPodAdvance(board, {
-            rosterPlayers: roster.players,
-            tournamentTitle: roster.tournamentTitle,
-            adpByPlatform,
-            actuals,
-          });
-        }
+      let known = getMemoPodAdv(podAdvVersion);
+      if (!known && !demoMode) {
+        known = await hydratePodAdv(podAdvVersion);
         if (cancelled) return;
-        setPodAdvById({ ...out });
-        if (i + CHUNK < activeBoards.length) await new Promise(r => setTimeout(r, 0));
+        if (known && Object.keys(known).length) setPodAdvById(prev => ({ ...known, ...prev }));
       }
+      // Cached nulls count as done: a present-but-null entry means "board
+      // seen, couldn't model", distinct from "still computing" for tooltips.
+      const missing = activeBoards.filter(b => rosterById.has(b.draftId) && !(known && b.draftId in known));
+      if (missing.length === 0) return;
+      const metaById = {};
+      for (const b of missing) {
+        const r = rosterById.get(b.draftId);
+        metaById[b.draftId] = {
+          players: r.players.map(p => ({ name: p.name })),
+          tournamentTitle: r.tournamentTitle,
+        };
+      }
+      task = computePodAdvance({
+        boards: missing,
+        metaById,
+        adp: {
+          latestAdpMap: adpByPlatform?.underdog?.latestAdpMap ?? {},
+          projPointsMap: adpByPlatform?.underdog?.projPointsMap ?? {},
+        },
+        actuals,
+        versionKey: podAdvVersion,
+        persist: !demoMode,
+      });
     })();
-    return () => { cancelled = true; };
-  }, [activeBoards, rosters, adpByPlatform, actuals]);
+    return () => { cancelled = true; task?.cancel(); };
+  }, [activeBoards, rosters, adpByPlatform, actuals, podAdvVersion, demoMode]);
 
   // Expected Advance % comes exclusively from the pod-exact board model —
   // no captured board, no number (the row tooltip tells the user to re-sync).

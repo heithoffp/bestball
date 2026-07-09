@@ -12,6 +12,36 @@
  */
 
 import { loadRealDraftData, COMBO_PICKS } from './realDraftData';
+import { cacheGet, cachePut } from './modelCache';
+
+// ── Persistent table cache (stale-while-revalidate) ──────────────────────────
+// The built tier1 tables persist to IndexedDB so a fresh page load can render
+// Early Combo % immediately from last session's tables while the real build
+// (network fetch of every board + aggregation) refreshes them in the
+// background. Keyed by the same input signature loadRealDraftData rebuilds on.
+
+const COMBO_CACHE_KEY = 'comboTables:v1';
+
+/** Cache signature for the built tables — mirrors loadRealDraftData's key. */
+export function comboTablesSig(masterPlayers = [], rosterData = []) {
+  return `${masterPlayers.length}:${rosterData.length}`;
+}
+
+/**
+ * Read last session's built tables for this signature.
+ * @returns {Promise<{pre: object, post: object}|null>} tier1 tables or null
+ */
+export async function hydrateComboTables(sig) {
+  const rec = await cacheGet(COMBO_CACHE_KEY);
+  return rec && rec.sig === sig && rec.tables ? rec.tables : null;
+}
+
+/** Persist freshly built tier1 tables. Empty (guest/demo) results are skipped. */
+export function persistComboTables(sig, pre, post) {
+  const total = (pre?.metadata?.total_rosters ?? 0) + (post?.metadata?.total_rosters ?? 0);
+  if (!total) return; // never clobber a real user's cache with guest emptiness
+  cachePut(COMBO_CACHE_KEY, { sig, tables: { pre, post } });
+}
 
 /**
  * Load the Early Combo frequency table for a source ('pre' | 'post').

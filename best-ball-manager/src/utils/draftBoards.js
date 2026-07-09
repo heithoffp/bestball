@@ -57,13 +57,20 @@ export async function fetchDraftBoards(draftIds) {
   if (!supabase || !draftIds?.length) return [];
   const ids = [...new Set(draftIds.map(String))];
   const CHUNK = 50;
-  const out = [];
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const { data, error } = await supabase
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
+  // Chunks fetch in parallel — the browser's per-host connection cap is the
+  // throttle, so a big portfolio costs ~one round-trip, not chunks-many.
+  const responses = await Promise.all(chunks.map(chunk =>
+    supabase
       .from('draft_boards_admin')
       .select('draft_id, slate_title, entry_count, rounds, picks')
-      .in('draft_id', ids.slice(i, i + CHUNK));
-    if (error || !data) continue; // best-effort
+      .in('draft_id', chunk)
+      .then(res => res, () => ({ data: null, error: true })) // best-effort per chunk
+  ));
+  const out = [];
+  for (const { data, error } of responses) {
+    if (error || !data) continue;
     for (const d of data) {
       out.push({
         draftId: String(d.draft_id),
@@ -75,6 +82,35 @@ export async function fetchDraftBoards(draftIds) {
     }
   }
   return out;
+}
+
+// ── User-board fetch, cached per session ─────────────────────────────────────
+
+const _userBoardsCache = new Map(); // ids signature → Promise<boards>
+
+/**
+ * Fetch the user's usable captured boards directly by entry id — cached per
+ * session so the Roster Viewer and the app-level prewarm share one fetch.
+ * Replaces the old two-stage flow (page ALL board ids, then fetch the
+ * intersection): asking for the user's ids directly returns exactly the
+ * boards that exist, in one parallel round of chunked queries.
+ *
+ * Boards from the pre-fix scraper hold null player names and are filtered
+ * out — they render as an empty grid and must not surface a Board button.
+ *
+ * @param {Array<string>} draftIds - the portfolio's entry ids
+ * @returns {Promise<Array<{draftId, slateTitle, entryCount, rounds, picks}>>}
+ */
+export function fetchUserBoardsOnce(draftIds) {
+  const ids = [...new Set((draftIds ?? []).map(String))].sort();
+  const sig = ids.join('|');
+  let promise = _userBoardsCache.get(sig);
+  if (!promise) {
+    promise = fetchDraftBoards(ids).then(boards => boards.filter(b => b.picks?.[0]?.name != null));
+    _userBoardsCache.set(sig, promise);
+    if (_userBoardsCache.size > 4) _userBoardsCache.delete(_userBoardsCache.keys().next().value);
+  }
+  return promise;
 }
 
 /**

@@ -198,6 +198,24 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
+  // Pre-warm the Roster Viewer's slow columns (captured boards → pod-exact
+  // Adv %, real-draft combo tables → Early Combo %) as soon as roster data is
+  // loaded, so opening the Rosters tab renders them instantly. Fire-and-forget
+  // into module-level caches shared with the tab; dynamically imported so the
+  // model code stays out of the main bundle. Demo mode synthesizes its own
+  // boards inside the tab and skips this entirely.
+  useEffect(() => {
+    if (!rosterData.length || isUsingDemoData) return;
+    import('./utils/rosterPrewarm')
+      .then(({ prewarmRosterModels }) => prewarmRosterModels({
+        rosterData,
+        masterPlayers,
+        adpByPlatform,
+        actuals: weeklyActuals,
+      }))
+      .catch(() => { /* best-effort */ });
+  }, [rosterData, masterPlayers, adpByPlatform, weeklyActuals, isUsingDemoData]);
+
   // Load the Arena beta switch once (public launch = beta_mode false).
   useEffect(() => {
     let cancelled = false;
