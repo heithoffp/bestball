@@ -808,13 +808,6 @@ export default function CompareView({
     <div className={s.root} ref={containerRef}>
       {/* Compare controls row */}
       <div className={s.controlsRow}>
-        <SearchInput
-          value={searchTerm}
-          onChange={setSearchTerm}
-          placeholder="Search both columns..."
-          delay={150}
-        />
-
         <div className="filter-chip-group">
           {VIEWS.map(v => {
             const isActive = viewMode === v;
@@ -831,6 +824,15 @@ export default function CompareView({
           })}
         </div>
 
+        <div className={s.search}>
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search both columns..."
+            delay={150}
+          />
+        </div>
+
         <label className={s.sliderLabel}>
           Movers ≥
           <input
@@ -845,30 +847,31 @@ export default function CompareView({
           <span className={s.sliderValue}>{moversThreshold}</span>
         </label>
 
-        <button
-          className={s.lockToggle}
-          onClick={() => setScrollLocked(v => !v)}
-          title={scrollLocked ? 'Scroll lock on — click to unlock' : 'Scroll lock off — click to lock'}
-        >
-          {scrollLocked ? <Lock size={14} /> : <Unlock size={14} />}
-          {scrollLocked ? 'Locked' : 'Unlocked'}
-        </button>
+        <div className={s.actions}>
+          <button
+            className={s.lockToggle}
+            onClick={() => setScrollLocked(v => !v)}
+            title={scrollLocked ? 'Scroll lock on — click to unlock' : 'Scroll lock off — click to lock'}
+          >
+            {scrollLocked ? <Lock size={14} /> : <Unlock size={14} />}
+            {scrollLocked ? 'Locked' : 'Unlocked'}
+          </button>
 
-        <button
-          onClick={handleSave}
-          disabled={saveStatus === 'saving'}
-          className={s.saveBtn}
-          title="Save both Underdog and DraftKings rankings"
-          style={{
-            background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : 'var(--gradient-accent)',
-            color: (saveStatus === 'saved' || saveStatus === 'error') ? 'white' : undefined,
-            cursor: saveStatus === 'saving' ? 'wait' : 'pointer',
-            opacity: saveStatus === 'saving' ? 0.7 : 1,
-          }}
-        >
-          <Save size={14} />
-          {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save Both'}
-        </button>
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className={[
+              s.saveBtn,
+              saveStatus === 'saved' && s.saveBtnSaved,
+              saveStatus === 'error' && s.saveBtnError,
+              saveStatus === 'saving' && s.saveBtnSaving,
+            ].filter(Boolean).join(' ')}
+            title="Save both Underdog and DraftKings rankings"
+          >
+            <Save size={14} />
+            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save Both'}
+          </button>
+        </div>
       </div>
 
       {/* Column header strips */}

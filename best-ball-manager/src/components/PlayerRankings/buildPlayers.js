@@ -30,7 +30,8 @@ export function buildPlayersFromSource(source, projMap = {}, isAdpFallback = fal
       firstName,
       lastName,
       adp: isNaN(adpVal) ? 9999 : adpVal,
-      adpStr: isNaN(adpVal) ? '-' : String(adpVal),
+      // Display-only: round to one decimal so ADP-fallback floats don't overflow the column
+      adpStr: isNaN(adpVal) ? '-' : String(Math.round(adpVal * 10) / 10),
       projectedPoints: proj,
       slotName: row.slotName || row.position || row.Position || row.pos || 'N/A',
       teamName: expandTeam(row.teamName || row.team || row.Team || ''),

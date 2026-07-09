@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import TabLayout from './TabLayout';
-import { FolderSync } from 'lucide-react';
+import { FolderSync, ChevronRight } from 'lucide-react';
 import EmptyState from './EmptyState';
 import CombinedSearchInput from './filters/CombinedSearchInput';
 import TournamentMultiSelect from './TournamentMultiSelect';
@@ -8,6 +8,7 @@ import { NFL_TEAMS } from '../utils/nflTeams';
 import DraftExplorer from './DraftExplorer';
 import PlayoffStacks from './PlayoffStacks';
 import { isExcludedSlate } from '../utils/realDraftData';
+import styles from './ComboAnalysis.module.css';
 
 // Position palette — shared across all views
 const POS_COLORS = {
@@ -38,33 +39,19 @@ function comboColor(index) {
 
 function PlayerBadge({ name, position }) {
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      background: 'var(--surface-2)', padding: '3px 10px',
-      borderRadius: 4, border: '1px solid var(--border-subtle)', fontSize: 14,
-    }}>
-      <span style={{ color: POS_COLORS[position] || POS_COLORS.default, fontWeight: 800, fontSize: 12 }}>
-        {position}
-      </span>
-      <span style={{ fontWeight: 500 }}>{name}</span>
+    <span className={styles.pBadge} style={{ '--pos-color': POS_COLORS[position] || POS_COLORS.default }}>
+      <span className={styles.pBadgePos}>{position}</span>
+      <span className={styles.pBadgeName}>{name}</span>
     </span>
   );
 }
-
-const seeRostersBtnStyle = {
-  background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer',
-  fontSize: 12, fontFamily: 'var(--font-mono)', padding: '2px 6px',
-  whiteSpace: 'nowrap', opacity: 0.8, flexShrink: 0,
-};
 
 function NavBtn({ players, onNavigateToRosters }) {
   if (!onNavigateToRosters) return null;
   return (
     <button
-      style={seeRostersBtnStyle}
+      className={styles.ghostBtn}
       onClick={e => { e.stopPropagation(); onNavigateToRosters({ players }); }}
-      onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.textDecoration = 'underline'; }}
-      onMouseLeave={e => { e.currentTarget.style.opacity = 0.8; e.currentTarget.style.textDecoration = 'none'; }}
     >
       Rosters →
     </button>
@@ -76,32 +63,28 @@ function SegmentTooltip({ children, label, style }) {
   const [visible, setVisible] = useState(false);
   return (
     <div
-      style={{ position: 'relative', display: 'flex', height: '100%', ...style }}
+      className={styles.segWrap}
+      style={style}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >
       {children}
-      {visible && (
-        <div style={{
-          position: 'absolute',
-          bottom: 'calc(100% + 6px)',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'var(--surface-3)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 8,
-          padding: '6px 12px',
-          fontSize: 12,
-          color: 'var(--text-primary)',
-          whiteSpace: 'nowrap',
-          zIndex: 100,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          pointerEvents: 'none',
-          fontFamily: 'var(--font-body)',
-        }}>
-          {label}
-        </div>
-      )}
+      {visible && <div className={styles.segTip}>{label}</div>}
+    </div>
+  );
+}
+
+// Per-view console band — title, live portfolio stats, description, optional filters
+function ConsoleBand({ title, stats, desc, descHelpId, children }) {
+  return (
+    <div className={styles.console}>
+      <div className={styles.consoleHead} data-help-id={descHelpId}>
+        <span className={styles.consoleTitle}>{title}</span>
+        <span className={styles.consoleDivider}>·</span>
+        <span className={styles.consoleStats}>{stats}</span>
+        {desc && <span className={styles.consoleDesc}>{desc}</span>}
+      </div>
+      {children && <div className={styles.consoleFilters}>{children}</div>}
     </div>
   );
 }
@@ -135,6 +118,14 @@ const PLAYOFF_HELP_ANNOTATIONS = [
   { id: 'playoff-card', label: 'Game Card', anchor: 'below', description: 'Each card is a playoff matchup where your portfolio carries a meaningful cross-team stack (QB/WR/TE pairings, RB and TE↔TE excluded). The gold card is your most concentrated game that week.' },
   { id: 'playoff-teams', label: 'Team Rotation', anchor: 'below', description: 'One row per team your portfolio touches. Cells show that team’s opponent each week and the % of your rosters that hold a meaningful stack involving that team. Click any column header to sort — heaviest exposure, weakest week, or alphabetical.' },
   { id: 'playoff-rosters', label: 'Roster Leaderboard', anchor: 'below', description: 'Every roster ranked by total playoff stacks. The three coverage dots show which weeks each roster is stacked. Sort by W15/W16/W17 to find the rosters that are heaviest or naked in a specific week.' },
+];
+
+const VIEW_TABS = [
+  { key: 'stacks', label: 'Stacks' },
+  { key: 'qbpairs', label: 'QB Pairs' },
+  { key: 'similarity', label: 'Similarity' },
+  { key: 'playoffs', label: 'Playoffs', isNew: true },
+  { key: 'explorer', label: 'Explorer' },
 ];
 
 export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
@@ -523,19 +514,39 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
     );
   }
 
+  // Visible rows for the active view — shared between the console stats and the body
+  const visibleStackProfiles = activeTab === 'stacks' && stackProfilesData
+    ? (() => {
+        const filtered = stackProfilesData.filter(g => {
+          if (g.qb.team === 'N/A' || g.qb.team === 'FA') return false;
+          const qualifying = g.sortedCombos.filter(c => c.count >= minCount && c.players.length > 0);
+          if (qualifying.length === 0) return false;
+          if (selectedPlayer) return qualifying.some(c => c.players.some(p => p.name === selectedPlayer));
+          return true;
+        });
+        return [...filtered].sort((a, b) => {
+          let cmp = 0;
+          if (sortKey === 'stackPct') cmp = a.stackPct - b.stackPct;
+          else if (sortKey === 'totalDrafts') cmp = a.totalDrafts - b.totalDrafts;
+          else if (sortKey === 'name') cmp = a.qb.name.localeCompare(b.qb.name);
+          return sortDir === 'desc' ? -cmp : cmp;
+        });
+      })()
+    : null;
+
+  const visiblePairs = activeTab === 'qbpairs' && qbPairsData
+    ? qbPairsData.filter(p => p.count >= minCount)
+    : null;
+
+  const minLabel = activeTab === 'stacks' ? 'Min stacks' : activeTab === 'similarity' ? 'Min overlap' : 'Min count';
+
   const toolbarControls = (
-    <div style={{ display: 'flex', width: '100%', minWidth: 0, alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-      <div className="filter-btn-group">
-        {[
-          { key: 'stacks', label: 'Stack Profiles' },
-          { key: 'qbpairs', label: 'QB Pairs' },
-          { key: 'similarity', label: 'Roster Similarity' },
-          { key: 'playoffs', label: 'Playoff Stacks', isNew: true },
-          { key: 'explorer', label: 'Draft Explorer' },
-        ].map(t => (
+    <div className={styles.toolbarRow}>
+      <div className={styles.switcher}>
+        {VIEW_TABS.map(t => (
           <button
             key={t.key}
-            className={`filter-btn-group__item ${activeTab === t.key ? 'filter-btn-group__item--active' : ''}`}
+            className={`${styles.switchBtn} ${activeTab === t.key ? styles.switchBtnActive : ''}`}
             onClick={() => handleTabClick(t.key)}
           >
             {t.label}
@@ -544,25 +555,33 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className={styles.toolbarRight}>
         <TournamentMultiSelect
           slateGroups={slateGroups}
           selected={selectedTournaments}
           onChange={setSelectedTournaments}
         />
         {activeTab !== 'explorer' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label className="filter-select-label" style={{ marginBottom: 0 }}>
-              {activeTab === 'stacks' ? 'Min stacks' : activeTab === 'similarity' ? 'Min overlap' : 'Min count'}
-            </label>
+          <div className={styles.stepper}>
+            <span className={styles.stepperLabel}>{minLabel}</span>
+            <button
+              className={styles.stepperBtn}
+              aria-label={`Decrease ${minLabel.toLowerCase()}`}
+              onClick={() => setMinCount(v => Math.max(1, v - 1))}
+            >−</button>
             <input
               type="number"
+              className={styles.stepperValue}
               value={minCount}
               min={1}
+              aria-label={minLabel}
               onChange={e => setMinCount(Math.max(1, Number(e.target.value) || 1))}
-              className="filter-select"
-              style={{ width: 52 }}
             />
+            <button
+              className={styles.stepperBtn}
+              aria-label={`Increase ${minLabel.toLowerCase()}`}
+              onClick={() => setMinCount(v => v + 1)}
+            >+</button>
           </div>
         )}
       </div>
@@ -574,543 +593,384 @@ export default function ComboAnalysis({ rosterData = [], masterPlayers = [], onN
 
       {/* ── Stack Profiles ─────────────────────────────────────────────────── */}
       {activeTab === 'stacks' && (
-        <>
-          {/* Position exclusion toggles + player filter */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <div className="filter-btn-group" data-help-id="position-toggles">
-            <button
-              className={`filter-btn-group__item${excludeTE ? ' filter-btn-group__item--active' : ''}`}
-              onClick={() => setExcludeTE(v => !v)}
-            >
-              Exclude TE
-            </button>
-            <button
-              className={`filter-btn-group__item${excludeRB ? ' filter-btn-group__item--active' : ''}`}
-              onClick={() => setExcludeRB(v => !v)}
-            >
-              Exclude RB
-            </button>
-          </div>
-
-          {/* Player filter with autocomplete */}
-          <div data-help-id="player-filter" style={{ position: 'relative', maxWidth: 320, flex: '1 1 200px' }}>
-            <input
-              type="text"
-              placeholder="Filter by player…"
-              value={playerSearch}
-              onChange={e => {
-                setPlayerSearch(e.target.value);
-                setSelectedPlayer('');
-                setShowDropdown(true);
-                setExpandedQBs(new Set());
-              }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
-              style={{
-                width: '100%',
-                background: 'var(--surface-2)',
-                border: `1px solid ${selectedPlayer ? 'var(--accent)' : 'var(--border-subtle)'}`,
-                borderRadius: 6,
-                padding: '6px 12px',
-                color: 'var(--text-primary)',
-                fontSize: 13,
-                fontFamily: 'var(--font-body)',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-            {playerSearch && (
+        <div className={styles.view}>
+          <ConsoleBand
+            title="Stack Profiles"
+            stats={<><strong>{visibleStackProfiles?.length ?? 0}</strong> QBs · <strong>{totalRosters}</strong> rosters</>}
+            desc="Every QB you drafted and the same-team pass-catchers paired with them. Click a row to expand its combos."
+          >
+            <div className="filter-chip-group" data-help-id="position-toggles">
               <button
-                onMouseDown={e => { e.preventDefault(); handleClearPlayer(); }}
-                style={{
-                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--text-muted)', fontSize: 14, lineHeight: 1, padding: 2,
-                }}
-              >✕</button>
-            )}
-            {showDropdown && playerSuggestions.length > 0 && (
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                background: 'var(--surface-3)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 8,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                zIndex: 200,
-                overflow: 'hidden',
-              }}>
-                {playerSuggestions.map(name => (
-                  <div
-                    key={name}
-                    onMouseDown={e => { e.preventDefault(); handleSelectPlayer(name); }}
-                    style={{
-                      padding: '8px 14px',
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      color: 'var(--text-primary)',
-                      borderBottom: '1px solid var(--border-subtle)',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    {name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          </div>
+                className={`filter-chip${excludeTE ? ' filter-chip--active' : ''}`}
+                onClick={() => setExcludeTE(v => !v)}
+              >
+                Exclude TE
+              </button>
+              <button
+                className={`filter-chip${excludeRB ? ' filter-chip--active' : ''}`}
+                onClick={() => setExcludeRB(v => !v)}
+              >
+                Exclude RB
+              </button>
+            </div>
 
-          <div className="card" style={{ padding: 0, overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'var(--surface-2)', fontSize: 12, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
+            {/* Player filter with autocomplete */}
+            <div data-help-id="player-filter" className={styles.searchWrap}>
+              <input
+                type="text"
+                placeholder="Filter by player…"
+                className={`${styles.searchInput}${selectedPlayer ? ` ${styles.searchInputActive}` : ''}`}
+                value={playerSearch}
+                onChange={e => {
+                  setPlayerSearch(e.target.value);
+                  setSelectedPlayer('');
+                  setShowDropdown(true);
+                  setExpandedQBs(new Set());
+                }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => { blurTimeout.current = setTimeout(() => setShowDropdown(false), 150); }}
+              />
+              {playerSearch && (
+                <button
+                  className={styles.searchClear}
+                  onMouseDown={e => { e.preventDefault(); handleClearPlayer(); }}
+                >✕</button>
+              )}
+              {showDropdown && playerSuggestions.length > 0 && (
+                <div className={styles.suggestList}>
+                  {playerSuggestions.map(name => (
+                    <div
+                      key={name}
+                      className={styles.suggestItem}
+                      onMouseDown={e => { e.preventDefault(); handleSelectPlayer(name); }}
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ConsoleBand>
+
+          <div className={styles.panel}>
+            <table className={styles.stackTable}>
+              <thead>
                 {(() => {
                   const SortHeader = ({ label, colKey, align = 'left', width, helpId }) => (
                     <th
                       onClick={() => handleSort(colKey)}
                       data-help-id={helpId}
-                      style={{
-                        padding: '12px 20px',
-                        textAlign: align,
-                        width,
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        whiteSpace: 'nowrap',
-                      }}
+                      className={`${styles.thSortable}${sortKey === colKey ? ` ${styles.thActive}` : ''}`}
+                      style={{ textAlign: align, width }}
                     >
-                      {label}{sortKey === colKey ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      {label}
+                      {sortKey === colKey && <span className={styles.sortArrow}>{sortDir === 'desc' ? '▼' : '▲'}</span>}
                     </th>
                   );
                   return (
                     <tr>
-                      <SortHeader label="QB" colKey="name" width={440} helpId="qb-col" />
-                      <th data-help-id="diversity-col" style={{ padding: '12px 20px', textAlign: 'left' }}>STACK DIVERSITY</th>
-                      <SortHeader label="STACK %" colKey="stackPct" align="center" width={80} helpId="stack-pct-col" />
-                      <SortHeader label="DRAFTS" colKey="totalDrafts" align="center" width={80} />
+                      <SortHeader label="Quarterback" colKey="name" width={300} helpId="qb-col" />
+                      <th data-help-id="diversity-col">Stack Spectrum</th>
+                      <SortHeader label="Stack %" colKey="stackPct" align="center" width={100} helpId="stack-pct-col" />
+                      <SortHeader label="Drafts" colKey="totalDrafts" align="center" width={90} />
                     </tr>
                   );
                 })()}
               </thead>
               <tbody>
-                {(() => {
-                  const filtered = (stackProfilesData ?? []).filter(g => {
-                    if (g.qb.team === 'N/A' || g.qb.team === 'FA') return false;
-                    const qualifying = g.sortedCombos.filter(c => c.count >= minCount && c.players.length > 0);
-                    if (qualifying.length === 0) return false;
-                    if (selectedPlayer) return qualifying.some(c => c.players.some(p => p.name === selectedPlayer));
-                    return true;
-                  });
-                  const sorted = [...filtered].sort((a, b) => {
-                    let cmp = 0;
-                    if (sortKey === 'stackPct') cmp = a.stackPct - b.stackPct;
-                    else if (sortKey === 'totalDrafts') cmp = a.totalDrafts - b.totalDrafts;
-                    else if (sortKey === 'name') cmp = a.qb.name.localeCompare(b.qb.name);
-                    return sortDir === 'desc' ? -cmp : cmp;
-                  });
-                  return sorted.map(group => {
-                    const isExpanded = expandedQBs.has(group.qb.name);
+                {(visibleStackProfiles ?? []).map(group => {
+                  const isExpanded = expandedQBs.has(group.qb.name);
 
-                    // Bar segments: filter by minCount, exclude naked, reorder if player active
-                    const barCombos = (() => {
-                      const qualified = group.sortedCombos
-                        .map((combo, idx) => ({ combo, idx }))
-                        .filter(({ combo }) => combo.count >= minCount && combo.players.length > 0);
-                      if (!selectedPlayer) return qualified;
-                      const matching = qualified.filter(({ combo }) => combo.players.some(p => p.name === selectedPlayer));
-                      const rest = qualified.filter(({ combo }) => !combo.players.some(p => p.name === selectedPlayer));
-                      return [...matching, ...rest];
-                    })();
+                  // Bar segments: filter by minCount, exclude naked, reorder if player active
+                  const barCombos = (() => {
+                    const qualified = group.sortedCombos
+                      .map((combo, idx) => ({ combo, idx }))
+                      .filter(({ combo }) => combo.count >= minCount && combo.players.length > 0);
+                    if (!selectedPlayer) return qualified;
+                    const matching = qualified.filter(({ combo }) => combo.players.some(p => p.name === selectedPlayer));
+                    const rest = qualified.filter(({ combo }) => !combo.players.some(p => p.name === selectedPlayer));
+                    return [...matching, ...rest];
+                  })();
 
-                    return (
-                      <React.Fragment key={group.qb.name}>
-                        <tr
-                                                    onClick={() => toggleQB(group.qb.name)}
-                          style={{
-                            borderTop: '1px solid var(--border-subtle)',
-                            cursor: 'pointer',
-                            background: isExpanded ? 'var(--surface-2)' : 'transparent',
-                          }}
-                        >
-                          {/* QB name + team */}
-                          <td style={{ padding: '14px 20px', verticalAlign: 'middle' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <div>
-                                <div style={{ fontWeight: 700, fontSize: 15 }}>{group.qb.name}</div>
-                                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{group.qb.team}</div>
-                              </div>
-                              <NavBtn players={[group.qb.name]} onNavigateToRosters={onNavigateToRosters} />
+                  return (
+                    <React.Fragment key={group.qb.name}>
+                      <tr
+                        onClick={() => toggleQB(group.qb.name)}
+                        className={`${styles.qbRow}${isExpanded ? ` ${styles.qbRowExpanded}` : ''}`}
+                      >
+                        {/* QB name + team */}
+                        <td className={styles.qbCell}>
+                          <div className={styles.qbCellInner}>
+                            <span className={`${styles.chev}${isExpanded ? ` ${styles.chevOpen}` : ''}`}>
+                              <ChevronRight size={14} />
+                            </span>
+                            <div className={styles.qbIdent}>
+                              <div className={styles.qbName}>{group.qb.name}</div>
+                              <div className={styles.qbTeam}>{group.qb.team}</div>
                             </div>
-                          </td>
+                            <NavBtn players={[group.qb.name]} onNavigateToRosters={onNavigateToRosters} />
+                          </div>
+                        </td>
 
-                          {/* Diversity bar + legend */}
-                          <td style={{ padding: '12px 20px', verticalAlign: 'middle' }}>
-                            <div style={{ height: 18, display: 'flex', width: '100%', gap: 1 }}>
-                              {barCombos.map(({ combo, idx }, barPos) => {
-                                const w = (combo.count / group.totalDrafts) * 100;
-                                const isMatch = selectedPlayer && combo.players.some(p => p.name === selectedPlayer);
-                                const segColor = comboColor(idx);
-                                const segOpacity = 0.85;
-                                const label = `${combo.players.map(p => p.name).join(' + ')}: ${combo.count} roster${combo.count !== 1 ? 's' : ''}`;
-                                const isFirst = barPos === 0;
-                                const isLast = barPos === barCombos.length - 1;
-                                const radius = `${isFirst ? 3 : 0}px ${isLast ? 3 : 0}px ${isLast ? 3 : 0}px ${isFirst ? 3 : 0}px`;
-                                return (
-                                  <SegmentTooltip key={idx} label={label} style={{ width: `${w}%`, minWidth: 2 }}>
-                                    <div style={{
-                                      width: '100%', height: '100%',
-                                      background: segColor,
-                                      opacity: segOpacity,
-                                      transition: 'box-shadow 0.15s',
-                                      cursor: 'default',
-                                      borderRadius: radius,
-                                      boxShadow: isMatch ? 'inset 0 0 0 2px #E8BF4A' : 'none',
-                                    }} />
-                                  </SegmentTooltip>
-                                );
-                              })}
-                            </div>
-                            {/* Legend for top bar combos */}
-                            <div style={{ display: 'flex', gap: 12, marginTop: 5, flexWrap: 'wrap' }}>
-                              {barCombos.slice(0, 4).map(({ combo, idx }) => {
-                                const isMatch = selectedPlayer && combo.players.some(p => p.name === selectedPlayer);
-                                const label = combo.players.map(p => p.name.split(' ').pop()).join('+');
-                                return (
-                                  <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)' }}>
-                                    <span style={{
-                                      width: 8, height: 8, borderRadius: 2,
-                                      background: comboColor(idx), opacity: 0.85,
-                                      display: 'inline-block', flexShrink: 0,
-                                      boxShadow: isMatch ? 'inset 0 0 0 2px #E8BF4A' : 'none',
-                                    }} />
-                                    {label}
-                                  </span>
-                                );
-                              })}
-                              {barCombos.length > 4 && (
-                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                  +{barCombos.length - 4} more
+                        {/* Correlation spectrum + legend */}
+                        <td className={styles.spectrumCell}>
+                          <div className={styles.spectrumTrack}>
+                            {barCombos.map(({ combo, idx }) => {
+                              const w = (combo.count / group.totalDrafts) * 100;
+                              const isMatch = selectedPlayer && combo.players.some(p => p.name === selectedPlayer);
+                              const label = `${combo.players.map(p => p.name).join(' + ')}: ${combo.count} roster${combo.count !== 1 ? 's' : ''}`;
+                              return (
+                                <SegmentTooltip key={idx} label={label} style={{ width: `${w}%`, minWidth: 2 }}>
+                                  <div
+                                    className={`${styles.spectrumSeg}${isMatch ? ` ${styles.spectrumSegMatch}` : ''}`}
+                                    style={{ background: comboColor(idx) }}
+                                  />
+                                </SegmentTooltip>
+                              );
+                            })}
+                          </div>
+                          {/* Legend for top bar combos */}
+                          <div className={styles.legend}>
+                            {barCombos.slice(0, 4).map(({ combo, idx }) => {
+                              const isMatch = selectedPlayer && combo.players.some(p => p.name === selectedPlayer);
+                              const label = combo.players.map(p => p.name.split(' ').pop()).join('+');
+                              return (
+                                <span key={idx} className={styles.legendItem}>
+                                  <span
+                                    className={`${styles.legendSwatch}${isMatch ? ` ${styles.legendSwatchMatch}` : ''}`}
+                                    style={{ background: comboColor(idx) }}
+                                  />
+                                  {label}
                                 </span>
-                              )}
+                              );
+                            })}
+                            {barCombos.length > 4 && (
+                              <span className={styles.legendMore}>+{barCombos.length - 4} more</span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className={styles.numCell}>
+                          {group.stackPct.toFixed(1)}<span className={styles.numUnit}>%</span>
+                        </td>
+
+                        <td className={styles.numCell}>
+                          {group.totalDrafts}
+                        </td>
+                      </tr>
+
+                      {/* Expanded combo detail */}
+                      {isExpanded && (
+                        <tr className={styles.detailTr}>
+                          <td colSpan={4} className={styles.detailCell}>
+                            <div className={styles.detailPanel}>
+                              {group.sortedCombos
+                                .map((combo, i) => ({ combo, i }))
+                                .filter(({ combo }) => {
+                                  if (combo.count < minCount) return false;
+                                  if (combo.players.length === 0) return false;
+                                  if (selectedPlayer) return combo.players.some(p => p.name === selectedPlayer);
+                                  return true;
+                                })
+                                .map(({ combo, i }) => {
+                                  const pct = ((combo.count / group.totalDrafts) * 100).toFixed(1);
+                                  return (
+                                    <div key={i} className={styles.comboLine}>
+                                      <div className={styles.comboRail} style={{ background: comboColor(i) }} />
+                                      <div className={styles.comboPlayers}>
+                                        {combo.players.map((p, j) => <PlayerBadge key={j} name={p.name} position={p.position} />)}
+                                      </div>
+                                      <div className={styles.comboMeta}>
+                                        <span className={styles.comboCount}>{combo.count}</span>
+                                        <span className={styles.comboPct}>{pct}%</span>
+                                        <NavBtn players={[group.qb.name, ...combo.players.map(p => p.name)]} onNavigateToRosters={onNavigateToRosters} />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                             </div>
-                          </td>
-
-                          <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 700, fontSize: 15 }}>
-                            {group.stackPct.toFixed(1)}%
-                          </td>
-
-                          <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 700, fontSize: 15 }}>
-                            {group.totalDrafts}
                           </td>
                         </tr>
-
-                        {/* Expanded combo detail */}
-                        {isExpanded && (
-                          <tr style={{ background: 'var(--surface-0)' }}>
-                            <td colSpan={3} style={{ padding: '4px 20px 16px 20px' }}>
-                              <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {group.sortedCombos
-                                  .map((combo, i) => ({ combo, i }))
-                                  .filter(({ combo }) => {
-                                    if (combo.count < minCount) return false;
-                                    if (combo.players.length === 0) return false;
-                                    if (selectedPlayer) return combo.players.some(p => p.name === selectedPlayer);
-                                    return true;
-                                  })
-                                  .map(({ combo, i }) => {
-                                    const pct = ((combo.count / group.totalDrafts) * 100).toFixed(1);
-                                    const color = comboColor(i);
-                                    return (
-                                      <div key={i} className="combo-row" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <div style={{
-                                          width: 3, alignSelf: 'stretch', borderRadius: 2,
-                                          background: color, opacity: 0.85, flexShrink: 0,
-                                        }} />
-                                        <div style={{ flex: 1, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                                          {combo.players.map((p, j) => <PlayerBadge key={j} name={p.name} position={p.position} />)}
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, textAlign: 'right', flexShrink: 0 }}>
-                                          <span style={{ fontWeight: 700, fontSize: 14 }}>{combo.count}</span>
-                                          <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 6 }}>{pct}%</span>
-                                          <NavBtn players={[group.qb.name, ...combo.players.map(p => p.name)]} onNavigateToRosters={onNavigateToRosters} />
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  });
-                })()}
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </>
+        </div>
       )}
 
       {/* ── QB Pairs — Frequency Leaderboard ───────────────────────────────── */}
       {activeTab === 'qbpairs' && (
-        <div className="card" style={{ padding: '16px 24px', overflow: 'auto' }}>
-          <div data-help-id="qbpairs-desc" style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-            Most frequent QB pairings on the same roster.
-          </div>
-          {(qbPairsData?.filter(p => p.count >= minCount) ?? []).length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', padding: '20px 0' }}>
-              No QB pairs found. Rosters with only one QB will not appear here.
-            </div>
-          ) : (() => {
-            const filtered = qbPairsData.filter(p => p.count >= minCount);
-            const maxCount = filtered[0]?.count || 1;
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {filtered.map(pair => {
-                  const isTop = pair.rank === 1;
-                  const fillPct = (pair.count / maxCount) * 100;
-                  return (
-                    <div
-                      key={`${pair.qb1.name}||${pair.qb2.name}`}
-                      data-help-id={pair.rank === 1 ? 'qbpairs-row' : undefined}
-                      style={{
-                        position: 'relative',
-                        overflow: 'hidden',
-                        borderRadius: 6,
-                        border: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.25)' : 'var(--border-subtle)'}`,
-                        background: 'var(--surface-1)',
-                      }}
-                    >
-                      {/* Frequency fill bar */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0, left: 0, bottom: 0,
-                        width: `${fillPct}%`,
-                        background: isTop
-                          ? 'rgba(232, 191, 74, 0.07)'
-                          : 'rgba(139, 148, 176, 0.05)',
-                        borderRight: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.2)' : 'rgba(139, 148, 176, 0.1)'}`,
-                        pointerEvents: 'none',
-                      }} />
+        <div className={styles.view}>
+          <ConsoleBand
+            title="QB Pairs"
+            stats={<><strong>{visiblePairs?.length ?? 0}</strong> pairings · <strong>{totalRosters}</strong> rosters</>}
+            desc="QB duos rostered together, ranked by frequency. Single-QB rosters are excluded."
+            descHelpId="qbpairs-desc"
+          />
 
-                      {/* Row content */}
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 14, padding: '11px 18px' }}>
-                        <span style={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: isTop ? 'var(--accent)' : 'var(--text-muted)',
-                          minWidth: 28,
-                          textAlign: 'right',
-                          letterSpacing: '0.02em',
-                        }}>
-                          #{pair.rank}
-                        </span>
+          <div className={styles.panel}>
+            {(visiblePairs ?? []).length === 0 ? (
+              <div className={styles.emptyNote}>
+                No QB pairs found. Rosters with only one QB will not appear here.
+              </div>
+            ) : (() => {
+              const maxCount = visiblePairs[0]?.count || 1;
+              return (
+                <div className={styles.board}>
+                  {visiblePairs.map((pair, i) => {
+                    const isTop = pair.rank === 1;
+                    const fillPct = (pair.count / maxCount) * 100;
+                    return (
+                      <div
+                        key={`${pair.qb1.name}||${pair.qb2.name}`}
+                        data-help-id={pair.rank === 1 ? 'qbpairs-row' : undefined}
+                        className={`${styles.boardRow}${isTop ? ` ${styles.boardRowTop}` : ''}`}
+                        style={{ animationDelay: `${Math.min(i, 14) * 28}ms` }}
+                      >
+                        <div className={styles.boardFill} style={{ width: `${fillPct}%` }} />
+                        <div className={styles.boardContent}>
+                          <span className={`${styles.rank}${isTop ? ` ${styles.rankTop}` : ''}`}>#{pair.rank}</span>
 
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                          <PlayerBadge name={pair.qb1.name} position="QB" />
-                          <span style={{
-                            color: 'var(--text-muted)',
-                            fontSize: 14,
-                            fontWeight: 300,
-                            fontFamily: 'var(--font-mono)',
-                            lineHeight: 1,
-                          }}>+</span>
-                          <PlayerBadge name={pair.qb2.name} position="QB" />
-                        </div>
+                          <div className={styles.pairNames}>
+                            <PlayerBadge name={pair.qb1.name} position="QB" />
+                            <span className={styles.plus}>+</span>
+                            <PlayerBadge name={pair.qb2.name} position="QB" />
+                          </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, textAlign: 'right', flexShrink: 0 }}>
-                          <span style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontWeight: 700,
-                            fontSize: 15,
-                            color: isTop ? 'var(--accent)' : 'var(--text-primary)',
-                          }}>
-                            {pair.count}
-                          </span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 7 }}>
-                            {pair.pct}%
-                          </span>
-                          <NavBtn players={[pair.qb1.name, pair.qb2.name]} onNavigateToRosters={onNavigateToRosters} />
+                          <div className={styles.countBlock}>
+                            <span className={`${styles.count}${isTop ? ` ${styles.countTop}` : ''}`}>{pair.count}</span>
+                            <span className={styles.countPct}>{pair.pct}%</span>
+                            <NavBtn players={[pair.qb1.name, pair.qb2.name]} onNavigateToRosters={onNavigateToRosters} />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
       {/* ── Roster Similarity — Most Overlapping Pairs ─────────────────── */}
       {activeTab === 'similarity' && (
-        <>
-        {/* Include / Exclude filters */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 280px', minWidth: 200 }}>
-            <CombinedSearchInput
-              selectedPlayers={includePlayers}
-              selectedTeams={includeTeams}
-              onAddPlayer={addIncludePlayer}
-              onAddTeam={addIncludeTeam}
-              onRemovePlayer={removeIncludePlayer}
-              onRemoveTeam={removeIncludeTeam}
-              onClear={() => { setIncludePlayers([]); setIncludeTeams([]); setIncludeSearch(''); }}
-              playerSuggestions={includePlayerSuggestions}
-              teamSuggestions={includeTeamSuggestions}
-              teamNames={NFL_TEAMS}
-              searchValue={includeSearch}
-              onSearchChange={setIncludeSearch}
-              placeholder="Include players & teams..."
-              label="Include Player / Team"
-            />
-          </div>
-          <div style={{ flex: '1 1 280px', minWidth: 200 }}>
-            <CombinedSearchInput
-              selectedPlayers={excludePlayers}
-              selectedTeams={excludeTeams}
-              onAddPlayer={addExcludePlayer}
-              onAddTeam={addExcludeTeam}
-              onRemovePlayer={removeExcludePlayer}
-              onRemoveTeam={removeExcludeTeam}
-              onClear={() => { setExcludePlayers([]); setExcludeTeams([]); setExcludeSearch(''); }}
-              playerSuggestions={excludePlayerSuggestions}
-              teamSuggestions={excludeTeamSuggestions}
-              teamNames={NFL_TEAMS}
-              searchValue={excludeSearch}
-              onSearchChange={setExcludeSearch}
-              placeholder="Exclude players & teams..."
-              label="Exclude Player / Team"
-            />
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: '16px 24px', overflow: 'auto' }}>
-          <div data-help-id="similarity-desc" style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-            Most overlapping roster pairs in your portfolio — high overlap means concentrated risk.
-          </div>
-          {(similarityData ?? []).length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', padding: '20px 0' }}>
-              No roster pairs found with {minCount}+ shared players.
+        <div className={styles.view}>
+          <ConsoleBand
+            title="Roster Similarity"
+            stats={<><strong>{similarityData?.length ?? 0}</strong> pairs · <strong>{totalRosters}</strong> rosters</>}
+            desc="Your most overlapping roster pairs — high overlap means concentrated risk."
+            descHelpId="similarity-desc"
+          >
+            <div style={{ flex: '1 1 280px', minWidth: 200 }}>
+              <CombinedSearchInput
+                selectedPlayers={includePlayers}
+                selectedTeams={includeTeams}
+                onAddPlayer={addIncludePlayer}
+                onAddTeam={addIncludeTeam}
+                onRemovePlayer={removeIncludePlayer}
+                onRemoveTeam={removeIncludeTeam}
+                onClear={() => { setIncludePlayers([]); setIncludeTeams([]); setIncludeSearch(''); }}
+                playerSuggestions={includePlayerSuggestions}
+                teamSuggestions={includeTeamSuggestions}
+                teamNames={NFL_TEAMS}
+                searchValue={includeSearch}
+                onSearchChange={setIncludeSearch}
+                placeholder="Include players & teams..."
+                label="Include Player / Team"
+              />
             </div>
-          ) : (() => {
-            const maxOverlap = similarityData[0]?.overlapCount || 1;
-            const shortId = (id) => id.slice(0, 8);
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {similarityData.map(pair => {
-                  const isTop = pair.rank === 1;
-                  const fillPct = (pair.overlapCount / maxOverlap) * 100;
-                  const pairKey = `${pair.roster1.entryId}||${pair.roster2.entryId}`;
-                  return (
-                    <div
-                      key={pairKey}
-                      data-help-id={pair.rank === 1 ? 'similarity-row' : undefined}
-                      style={{
-                        position: 'relative',
-                        overflow: 'hidden',
-                        borderRadius: 6,
-                        border: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.25)' : 'var(--border-subtle)'}`,
-                        background: 'var(--surface-1)',
-                      }}
-                    >
-                      {/* Frequency fill bar */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0, left: 0, bottom: 0,
-                        width: `${fillPct}%`,
-                        background: isTop
-                          ? 'rgba(232, 191, 74, 0.07)'
-                          : 'rgba(139, 148, 176, 0.05)',
-                        borderRight: `1px solid ${isTop ? 'rgba(232, 191, 74, 0.2)' : 'rgba(139, 148, 176, 0.1)'}`,
-                        pointerEvents: 'none',
-                      }} />
+            <div style={{ flex: '1 1 280px', minWidth: 200 }}>
+              <CombinedSearchInput
+                selectedPlayers={excludePlayers}
+                selectedTeams={excludeTeams}
+                onAddPlayer={addExcludePlayer}
+                onAddTeam={addExcludeTeam}
+                onRemovePlayer={removeExcludePlayer}
+                onRemoveTeam={removeExcludeTeam}
+                onClear={() => { setExcludePlayers([]); setExcludeTeams([]); setExcludeSearch(''); }}
+                playerSuggestions={excludePlayerSuggestions}
+                teamSuggestions={excludeTeamSuggestions}
+                teamNames={NFL_TEAMS}
+                searchValue={excludeSearch}
+                onSearchChange={setExcludeSearch}
+                placeholder="Exclude players & teams..."
+                label="Exclude Player / Team"
+              />
+            </div>
+          </ConsoleBand>
 
-                      {/* Row content */}
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 14, padding: '11px 18px' }}>
-                        <span style={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: isTop ? 'var(--accent)' : 'var(--text-muted)',
-                          minWidth: 28,
-                          textAlign: 'right',
-                          letterSpacing: '0.02em',
-                          alignSelf: 'flex-start',
-                          paddingTop: 2,
-                        }}>
-                          #{pair.rank}
-                        </span>
+          <div className={styles.panel}>
+            {(similarityData ?? []).length === 0 ? (
+              <div className={styles.emptyNote}>
+                No roster pairs found with {minCount}+ shared players.
+              </div>
+            ) : (() => {
+              const maxOverlap = similarityData[0]?.overlapCount || 1;
+              const shortId = (id) => id.slice(0, 8);
+              return (
+                <div className={styles.board}>
+                  {similarityData.map((pair, i) => {
+                    const isTop = pair.rank === 1;
+                    const fillPct = (pair.overlapCount / maxOverlap) * 100;
+                    const pairKey = `${pair.roster1.entryId}||${pair.roster2.entryId}`;
+                    return (
+                      <div
+                        key={pairKey}
+                        data-help-id={pair.rank === 1 ? 'similarity-row' : undefined}
+                        className={`${styles.boardRow}${isTop ? ` ${styles.boardRowTop}` : ''}`}
+                        style={{ animationDelay: `${Math.min(i, 14) * 28}ms` }}
+                      >
+                        <div className={styles.boardFill} style={{ width: `${fillPct}%` }} />
+                        <div className={styles.boardContent}>
+                          <span className={`${styles.rank} ${styles.rankAlignTop}${isTop ? ` ${styles.rankTop}` : ''}`}>#{pair.rank}</span>
 
-                        {/* Roster IDs + shared players */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                          {/* Roster pair header */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                              <span style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {shortId(pair.roster1.entryId)}
-                              </span>
-                              {pair.roster1.tournamentTitle && (
-                                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
-                                  {pair.roster1.tournamentTitle}
-                                </span>
-                              )}
+                          {/* Roster IDs + shared players */}
+                          <div className={styles.simBody}>
+                            <div className={styles.simHeader}>
+                              <div className={styles.simEntry}>
+                                <span className={styles.simId}>{shortId(pair.roster1.entryId)}</span>
+                                {pair.roster1.tournamentTitle && (
+                                  <span className={styles.simTourn}>{pair.roster1.tournamentTitle}</span>
+                                )}
+                              </div>
+
+                              <span className={styles.simX}>×</span>
+
+                              <div className={styles.simEntry}>
+                                <span className={styles.simId}>{shortId(pair.roster2.entryId)}</span>
+                                {pair.roster2.tournamentTitle && (
+                                  <span className={styles.simTourn}>{pair.roster2.tournamentTitle}</span>
+                                )}
+                              </div>
+                              <NavBtn players={pair.sharedPlayers.map(p => p.name)} onNavigateToRosters={onNavigateToRosters} />
                             </div>
 
-                            <span style={{
-                              color: 'var(--text-muted)',
-                              fontSize: 14,
-                              fontWeight: 300,
-                              fontFamily: 'var(--font-mono)',
-                              lineHeight: 1,
-                            }}>×</span>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                              <span style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {shortId(pair.roster2.entryId)}
-                              </span>
-                              {pair.roster2.tournamentTitle && (
-                                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
-                                  {pair.roster2.tournamentTitle}
-                                </span>
-                              )}
+                            {/* Shared players — always visible */}
+                            <div className={styles.sharedChips}>
+                              {pair.sharedPlayers.map((p, j) => (
+                                <PlayerBadge key={j} name={p.name} position={p.position} />
+                              ))}
                             </div>
-                            <NavBtn players={pair.sharedPlayers.map(p => p.name)} onNavigateToRosters={onNavigateToRosters} />
                           </div>
 
-                          {/* Shared players — always visible */}
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {pair.sharedPlayers.map((p, i) => (
-                              <PlayerBadge key={i} name={p.name} position={p.position} />
-                            ))}
+                          <div className={`${styles.countBlock} ${styles.countBlockCol}`}>
+                            <span className={`${styles.count}${isTop ? ` ${styles.countTop}` : ''}`}>{pair.overlapCount}</span>
+                            <span className={styles.countLabel}>shared</span>
+                            <span className={styles.countPct}>{pair.overlapPct.toFixed(0)}%</span>
                           </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, textAlign: 'right', flexShrink: 0, alignSelf: 'flex-start', paddingTop: 2 }}>
-                          <span style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontWeight: 700,
-                            fontSize: 15,
-                            color: isTop ? 'var(--accent)' : 'var(--text-primary)',
-                          }}>
-                            {pair.overlapCount}
-                          </span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>
-                            shared
-                          </span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 7 }}>
-                            {pair.overlapPct.toFixed(0)}%
-                          </span>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
         </div>
-        </>
       )}
 
       {/* ── Playoff Stacks ─────────────────────────────────────────────── */}

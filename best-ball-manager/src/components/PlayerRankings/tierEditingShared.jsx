@@ -51,19 +51,17 @@ export function TierDividerEditable({
   return (
     <div
       ref={setDropRef}
-      className={styles.tierDivider}
+      className={`${styles.tierDivider}${isOver ? ` ${styles.tierDividerOver}` : ''}`}
       style={{
-        background: tierColor.border,
-        boxShadow: isOver ? 'inset 0 0 0 1px rgba(255,255,255,0.35)' : undefined,
+        '--tier-color': tierColor.border,
+        '--tier-bg': tierColor.bg,
+        '--tier-soft': `${tierColor.border}55`,
         opacity: isDragging ? 0.3 : 1,
-        position: 'relative',
-        height: '100%',
-        width: '100%',
       }}
     >
       {canDrag && (
         <div ref={setDragRef} className={styles.tierDragHandle} {...listeners} {...attributes}>
-          <GripVertical size={14} />
+          <GripVertical size={13} />
         </div>
       )}
       {isEditing ? (
@@ -81,9 +79,10 @@ export function TierDividerEditable({
           <span onClick={handleLabelClick} title="Click to edit tier label" className={styles.tierLabel}>
             {tierLabelText}
           </span>
+          <span className={styles.tierRule} />
           {canDrag && (
             <button onClick={handleDelete} className={styles.tierDeleteBtn} title="Remove tier break">
-              <X size={14} />
+              <X size={13} />
             </button>
           )}
         </>
@@ -106,9 +105,9 @@ export function TierInsertZone({ styles, playerId, onClick, dropId, disabled }) 
       title="Add tier break above this player"
       style={{ height: '100%', width: '100%', position: 'relative', cursor: disabled ? 'default' : 'pointer' }}
     >
-      <div className={styles.tierInsertIndicator} style={isOver ? { opacity: 0.85 } : undefined}>
+      <div className={styles.tierInsertIndicator} style={isOver ? { opacity: 1 } : undefined}>
         <div className={styles.tierInsertIndicatorLine} />
-        <div className={styles.tierInsertIndicatorBtn}>+</div>
+        <div className={styles.tierInsertPill}>+ Tier</div>
       </div>
     </div>
   );
@@ -140,9 +139,10 @@ export function PointerTrackingOverlay({ styles, activePlayer, activeTierDrag, d
     return createPortal(
       <div className={styles.dragOverlayTier} style={{
         left: pos.x + 12, top: pos.y - 16,
-        background: activeTierDrag.tierColor.border,
+        '--tier-color': activeTierDrag.tierColor.border,
+        '--tier-soft': `${activeTierDrag.tierColor.border}55`,
       }}>
-        <GripVertical size={14} />
+        <GripVertical size={13} />
         <span className={styles.dragOverlayTierLabel}>{activeTierDrag.tierLabelText}</span>
       </div>,
       document.body
@@ -164,7 +164,7 @@ export function PointerTrackingOverlay({ styles, activePlayer, activeTierDrag, d
     >
       <span className={styles.dragOverlayRank}>{rank}</span>
       <span className={styles.dragOverlayName}>{activePlayer.name}</span>
-      <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+      <span className={styles.dragOverlayAdp}>
         {activePlayer.adpStr ?? activePlayer.latestAdp ?? activePlayer.originalAdp ?? '-'}
       </span>
     </div>,

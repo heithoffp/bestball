@@ -1,4 +1,6 @@
 /* === CompareView CSS Module === */
+/* Command Deck styling — matches PlayerRankings.module.css: mono numerals,
+   tier rails, ghost/primary button hierarchy, surface-1 panels. */
 
 .root {
   display: flex;
@@ -8,25 +10,44 @@
   width: 100%;
 }
 
+/* ── Controls row (below the console band, above the columns) ── */
 .controlsRow {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 0 0 8px;
+  padding: 0 0 10px;
+}
+
+.search {
+  display: flex;
+  flex: 1 1 200px;
+  min-width: 180px;
+  max-width: 300px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .sliderLabel {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .slider {
-  width: 120px;
+  width: 110px;
   accent-color: var(--accent);
 }
 
@@ -34,39 +55,77 @@
   display: inline-block;
   min-width: 22px;
   text-align: right;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .lockToggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
   padding: 6px 12px;
   border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-  cursor: pointer;
-  font-size: var(--text-sm);
+  font-family: var(--font-body);
   font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease-default),
+    color var(--duration-fast) var(--ease-default),
+    border-color var(--duration-fast) var(--ease-default);
 }
 
 .lockToggle:hover {
-  border-color: var(--accent);
+  background: var(--surface-2);
+  color: var(--text-primary);
 }
 
 .saveBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  background: var(--gradient-accent);
+  color: var(--text-inverse);
+  border: none;
+  padding: 7px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  font-size: var(--text-sm);
+  font-family: var(--font-body);
   font-weight: 700;
-  color: var(--surface-0);
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default);
+}
+
+.saveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px var(--accent-glow);
+}
+
+.saveBtn:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.saveBtnSaved {
+  background: var(--positive);
+  color: #fff;
+}
+
+.saveBtnError {
+  background: var(--negative);
+  color: #fff;
+}
+
+.saveBtnSaving {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 /* ── Column header strip ─────────────────────────────────────── */
@@ -81,10 +140,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-subtle);
   border-bottom: 2px solid var(--border-default);
   background: var(--surface-1);
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .gutterHeader {
@@ -92,19 +152,25 @@
 }
 
 .platformLabel {
-  font-size: var(--text-md);
+  font-family: var(--font-body);
+  font-size: 12.5px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .sourcePillSaved,
 .sourcePillAdp,
 .sourcePillEmpty {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 8px;
   border-radius: 999px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .sourcePillSaved {
@@ -125,9 +191,9 @@
 
 .countLabel {
   margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--text-muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── Columns area ────────────────────────────────────────────── */
@@ -146,7 +212,7 @@
   min-height: 0;
   border: 1px solid var(--border-subtle);
   border-top: none;
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   background: var(--surface-1);
   position: relative;
 }
@@ -182,89 +248,108 @@
   font-family: var(--font-mono);
 }
 
-/* ── Tier divider ────────────────────────────────────────────── */
+/* ── Tier rail (divider) ─────────────────────────────────────── */
+/* Reads its tier hue from --tier-color / --tier-bg / --tier-soft
+   custom props set inline by tierEditingShared.jsx. */
 .tierDivider {
   position: relative;
-  border: none;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: linear-gradient(90deg, var(--tier-bg), rgba(0, 0, 0, 0) 65%);
+  box-shadow: inset 3px 0 0 var(--tier-color), inset 0 -1px 0 rgba(26, 45, 80, 0.55);
   user-select: none;
 }
 
+.tierDividerOver {
+  box-shadow: inset 3px 0 0 var(--tier-color), inset 0 0 0 1px var(--tier-soft);
+}
+
 .tierLabel {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 3px;
-  padding: 2px 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tier-color);
+  background: rgba(6, 14, 31, 0.55);
+  border: 1px solid var(--tier-soft);
+  border-radius: 4px;
+  padding: 1px 8px;
   cursor: pointer;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tierRule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--tier-color), transparent);
+  opacity: 0.35;
 }
 
 .tierLabelInput {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: rgba(0, 0, 0, 0.4);
-  color: #fff;
-  border: none;
-  border-radius: 0;
+  flex: 1;
+  height: 20px;
+  min-width: 0;
+  background: rgba(6, 14, 31, 0.7);
+  color: var(--text-primary);
+  border: 1px solid var(--tier-soft);
+  border-radius: 4px;
   padding: 0 8px;
   box-sizing: border-box;
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
-  text-align: center;
-  font-family: inherit;
+  letter-spacing: 0.06em;
   outline: none;
 }
 
 .tierDragHandle {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.5);
-  cursor: grab;
-  padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 0;
-  transition: color var(--duration-fast);
-  z-index: 1;
+  color: var(--tier-color);
+  opacity: 0.55;
+  cursor: grab;
+  padding: 2px;
+  margin-left: -4px;
+  transition: opacity var(--duration-fast);
 }
 
 .tierDragHandle:hover {
-  color: rgba(255, 255, 255, 0.9);
+  opacity: 1;
 }
 
 .tierDeleteBtn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.3);
-  border: none;
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 0;
-  transition: color var(--duration-fast), background var(--duration-fast);
-  z-index: 1;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--tier-color);
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity var(--duration-fast), color var(--duration-fast);
+}
+
+.tierDivider:hover .tierDeleteBtn {
+  opacity: 0.6;
 }
 
 .tierDeleteBtn:hover {
-  color: #fff;
-  background: rgba(239, 68, 68, 0.6);
+  opacity: 1 !important;
+  color: var(--negative);
 }
 
 /* ── Tier insert zone (between same-tier players) ─────────────── */
@@ -290,24 +375,26 @@
   flex: 1;
   height: 1px;
   background: var(--accent);
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
-.tierInsertIndicatorBtn {
+.tierInsertPill {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-0);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 /* ── Drag overlay (portal-based, fixed positioning) ──────────── */
@@ -318,27 +405,33 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px;
-  background: var(--surface-1);
+  padding: 7px 12px;
+  background: var(--surface-3);
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
-  font-size: 14px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  opacity: 0.95;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
 }
 
 .dragOverlayRank {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
   color: var(--text-secondary);
   min-width: 24px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  text-align: right;
 }
 
 .dragOverlayName {
   font-weight: 600;
+  font-size: 13.5px;
   flex: 1;
+}
+
+.dragOverlayAdp {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .dragOverlayTier {
@@ -348,21 +441,21 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 14px;
+  padding: 4px 12px;
+  background: var(--surface-3);
+  border: 1px solid var(--tier-soft);
   border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  opacity: 0.95;
+  box-shadow: inset 3px 0 0 var(--tier-color), 0 10px 26px rgba(0, 0, 0, 0.5);
+  color: var(--tier-color);
   white-space: nowrap;
 }
 
 .dragOverlayTierLabel {
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-  padding: 2px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* ── Compare row ─────────────────────────────────────────────── */
@@ -372,8 +465,8 @@
   align-items: center;
   height: 40px;
   padding: 0 8px;
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: var(--text-base);
+  box-shadow: inset 0 -1px 0 rgba(26, 45, 80, 0.55);
+  font-size: 13.5px;
   gap: 8px;
   transition: background var(--duration-fast);
 }
@@ -392,20 +485,28 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
+  opacity: 0.35;
   cursor: grab;
+  transition: opacity var(--duration-fast);
+}
+
+.compareRow:hover .gripCell {
+  opacity: 1;
 }
 
 .rankCell {
-  text-align: center;
+  text-align: right;
+  padding-right: 2px;
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .nameCell {
   padding: 0 6px 0 8px;
   overflow: hidden;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .nameText {
@@ -424,8 +525,8 @@
 .adpCell {
   text-align: right;
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 
 /* ── Mirror proposal: ghost target row ──────────────────────── */
@@ -440,8 +541,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--accent);
   pointer-events: none;
   z-index: 2;
@@ -456,21 +559,22 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--surface-1);
+  background: var(--surface-3);
   border: 1px solid var(--accent);
   border-radius: 999px;
   padding: 4px 4px 4px 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
   z-index: 5;
   pointer-events: auto;
 }
 
 .mirrorPillApply {
   background: var(--gradient-accent);
-  color: var(--surface-0);
+  color: var(--text-inverse);
   border: none;
   border-radius: 999px;
   padding: 4px 12px;
+  font-family: var(--font-body);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -496,9 +600,12 @@
 .emptyState {
   padding: var(--space-xl);
   text-align: center;
-  color: var(--text-muted);
-  border: 1px dashed var(--border-subtle);
-  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .searchEmpty {

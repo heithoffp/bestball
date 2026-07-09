@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { GripVertical, Download, Save, X, RotateCcw } from 'lucide-react';
+import { GripVertical, Download, Save, X, RotateCcw, ListOrdered } from 'lucide-react';
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDndMonitor, useDroppable, useDraggable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { exportRankingsCSV, saveRankingsToAssets } from '../utils/rankingsExport';
@@ -44,12 +44,11 @@ const TIER_COLORS = {
 };
 
 const HELP_ANNOTATIONS = [
-  { id: 'search-controls', label: 'Search & Actions', anchor: 'below', description: 'Search by player or team. Save your rankings, export to CSV, or upload a rankings file.' },
-  { id: 'platform-toggle', label: 'Platform Toggle', anchor: 'below', description: 'Switch between Underdog and DraftKings rankings. Each platform has its own saved order.' },
-  { id: 'position-filter', label: 'Position Filter', anchor: 'below', description: 'View overall rankings or filter to a single position. Player count updates to match.' },
-  { id: 'tier-breaks', label: 'Tier Breaks', anchor: 'below', description: 'Colored dividers group players into tiers. Click a label to rename it, drag to reposition, or ✕ to remove.' },
-  { id: 'drag-reorder', label: 'Drag to Reorder', anchor: 'below', description: 'Drag the grip handle to set your personal ranking order. Rankings are per-platform.' },
-  { id: 'keyboard-shortcuts', label: 'Keyboard Shortcuts', anchor: 'below', description: 'Arrow keys move selection. T inserts a tier break. Delete removes the selected tier break.' },
+  { id: 'search-controls', label: 'Board Controls', anchor: 'below', description: 'Search the board, save your rankings, export to CSV, upload a rankings file, or reset to the platform\'s current ADP.' },
+  { id: 'platform-toggle', label: 'Platform', anchor: 'below', description: 'Each platform keeps its own saved order. Both edits Underdog and DraftKings side-by-side.' },
+  { id: 'position-filter', label: 'Position Filter', anchor: 'below', description: 'View the overall board or a single position. The player count above updates to match.' },
+  { id: 'tier-breaks', label: 'Tier Breaks', anchor: 'below', description: 'Colored rails split the board into tiers. Click a label to rename it, drag the grip to move it, or ✕ to remove.' },
+  { id: 'drag-reorder', label: 'Drag to Reorder', anchor: 'below', description: 'Drag the grip handle to set your personal order. Hover between rows and click + Tier to add a break.' },
 ];
 
 /* Pointer-based insertion-point collision detection — finds the first droppable
@@ -96,6 +95,15 @@ function getTierLabel(tierNum) {
 
 function getTierColor(tierNum) {
   return TIER_COLORS[getTierLabel(tierNum)] || TIER_COLORS['F'];
+}
+
+/* CSS custom props consumed by the tier-rail styles (.tierBar & friends). */
+function tierVars(tierColor) {
+  return {
+    '--tier-color': tierColor.border,
+    '--tier-bg': tierColor.bg,
+    '--tier-soft': `${tierColor.border}55`,
+  };
 }
 
 /* Build the displayed-player array from a row source (saved rankings or ADP rows).
@@ -196,77 +204,53 @@ function TierDividerContent({ tierColor, tierLabelText, playerId, onTierLabelCha
     if (onDelete) onDelete(playerId);
   };
 
+  const barContent = (
+    <>
+      {canDrag && (
+        <div ref={setDragRef} className={s.tierDragHandle} {...listeners} {...attributes}>
+          <GripVertical size={13} />
+        </div>
+      )}
+      {isEditing ? (
+        <input
+          autoFocus
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleLabelSave}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(); if (e.key === 'Escape') setIsEditing(false); }}
+          onClick={(e) => e.stopPropagation()}
+          className={s.tierLabelInput}
+        />
+      ) : (
+        <>
+          <span onClick={handleLabelClick} title={isMobile ? 'Tap to edit tier label' : 'Click to edit tier label'} className={s.tierLabel}>
+            {tierLabelText}
+          </span>
+          <span className={s.tierRule} />
+          <button onClick={handleDelete} className={s.tierDeleteBtn} title="Remove tier break">
+            <X size={13} />
+          </button>
+        </>
+      )}
+    </>
+  );
+
   if (isMobile) {
     return (
-      <div
-        ref={setDropRef}
-        className={s.tierDividerMobile}
-        style={{
-          background: tierColor.border,
-          outline: isOver ? '1px solid rgba(255,255,255,0.35)' : 'none',
-          opacity: isDragging ? 0.3 : 1,
-        }}
-      >
-        {canDrag && (
-          <div ref={setDragRef} className={s.tierDragHandle} {...listeners} {...attributes}>
-            <GripVertical size={14} />
-          </div>
-        )}
-        {isEditing ? (
-          <input
-            autoFocus
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={handleLabelSave}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(); if (e.key === 'Escape') setIsEditing(false); }}
-            onClick={(e) => e.stopPropagation()}
-            className={s.tierLabelInputMobile}
-          />
-        ) : (
-          <>
-            <span onClick={handleLabelClick} title="Tap to edit tier label" className={s.tierLabelMobile}>
-              {tierLabelText}
-            </span>
-            <button onClick={handleDelete} className={s.tierDeleteBtn} title="Remove tier break">
-              <X size={14} />
-            </button>
-          </>
-        )}
+      <div ref={setDropRef} className={s.tierRowMobile} style={{ opacity: isDragging ? 0.3 : 1 }}>
+        <div className={`${s.tierBar} ${s.tierBarSm}${isOver ? ` ${s.tierBarOver}` : ''}`} style={tierVars(tierColor)}>
+          {barContent}
+        </div>
       </div>
     );
   }
 
   return (
-    <tr ref={setDropRef} style={{
-      ...(isOver ? { boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)' } : undefined),
-      opacity: isDragging ? 0.3 : 1,
-    }}>
-      <td colSpan={10} className={s.tierDivider} style={{ background: tierColor.border }}>
-        {canDrag && (
-          <div ref={setDragRef} className={s.tierDragHandle} {...listeners} {...attributes}>
-            <GripVertical size={14} />
-          </div>
-        )}
-        {isEditing ? (
-          <input
-            autoFocus
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={handleLabelSave}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(); if (e.key === 'Escape') setIsEditing(false); }}
-            onClick={(e) => e.stopPropagation()}
-            className={s.tierLabelInput}
-          />
-        ) : (
-          <>
-            <span onClick={handleLabelClick} title="Click to edit tier label" className={s.tierLabel}>
-              {tierLabelText}
-            </span>
-            <button onClick={handleDelete} className={s.tierDeleteBtn} title="Remove tier break">
-              <X size={14} />
-            </button>
-          </>
-        )}
+    <tr ref={setDropRef} style={{ opacity: isDragging ? 0.3 : 1 }}>
+      <td colSpan={10} className={s.tierCell}>
+        <div className={`${s.tierBar}${isOver ? ` ${s.tierBarOver}` : ''}`} style={tierVars(tierColor)}>
+          {barContent}
+        </div>
       </td>
     </tr>
   );
@@ -280,19 +264,19 @@ function TierInsertZone({ playerId, isMobile, onClick, dropId }) {
 
   if (isMobile) {
     return (
-      <div ref={setNodeRef} className={s.tierInsertZoneMobile} onClick={onClick} style={isOver ? { opacity: 0.85 } : undefined}>
+      <div ref={setNodeRef} className={s.tierInsertZoneMobile} onClick={onClick}>
         <div className={s.tierInsertMobileLine} />
-        <div className={s.tierInsertMobileBtn}>+</div>
+        <div className={isOver ? s.tierInsertPill : s.tierInsertPillMuted}>+ Tier</div>
       </div>
     );
   }
 
   return (
     <tr ref={setNodeRef} className={s.tierInsertZone} onClick={onClick} title="Add tier break above this player">
-      <td colSpan={10} className={s.tierInsertCell} style={isOver ? { opacity: 0.85 } : undefined}>
+      <td colSpan={10} className={`${s.tierInsertCell}${isOver ? ` ${s.tierInsertCellOver}` : ''}`}>
         <div className={s.tierInsertIndicator}>
           <div className={s.tierInsertIndicatorLine} />
-          <div className={s.tierInsertIndicatorBtn}>+</div>
+          <div className={s.tierInsertPill}>+ Tier</div>
         </div>
       </td>
     </tr>
@@ -315,17 +299,13 @@ const SortableRow = React.memo(function SortableRow({
     disabled: !canDrag,
   });
 
-  const rowStyle = {
-    opacity: isDragging ? 0.3 : 1,
-    background: tier % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-    cursor: canDrag ? 'grab' : 'default',
-  };
+  const rowStyle = { opacity: isDragging ? 0.3 : 1 };
 
   return (
     <tbody>
-      <tr ref={setNodeRef} style={rowStyle} className={s.playerRow}>
-        <td className={s.gripCell} {...listeners} {...attributes}>
-          {canDrag && <GripVertical size={16} />}
+      <tr ref={setNodeRef} style={rowStyle} className={s.playerRow} data-even={tier % 2 === 0 ? 'true' : 'false'}>
+        <td className={s.gripCell} style={{ cursor: canDrag ? 'grab' : 'default' }} {...listeners} {...attributes}>
+          {canDrag && <GripVertical size={15} />}
         </td>
         <td className={s.rankCell}>{displayRank}</td>
         <td className={s.posRankCell} style={{ color: POS_COLORS[pos] || 'var(--text-muted)' }}>{posRank}</td>
@@ -347,7 +327,7 @@ const SortableRow = React.memo(function SortableRow({
             const adpNum = parseFloat(adpStr);
             if (!adpStr || adpStr === '-' || isNaN(adpNum)) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
             const diff = +(adpNum - displayRank).toFixed(1);
-            const clr = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : 'var(--text-secondary)';
+            const clr = diff > 0 ? 'var(--positive)' : diff < 0 ? 'var(--negative)' : 'var(--text-secondary)';
             return <span style={{ color: clr, fontWeight: 600 }}>{diff > 0 ? '+' : ''}{diff}</span>;
           })()}
         </td>
@@ -417,7 +397,7 @@ const SortableCard = React.memo(function SortableCard({
                 <div className={s.cardDetailItem}>
                   <span className={s.cardDetailLabel}>Diff</span>
                   <span className={s.cardDetailValue} style={{
-                    color: diff === null ? 'var(--text-muted)' : diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : 'var(--text-secondary)',
+                    color: diff === null ? 'var(--text-muted)' : diff > 0 ? 'var(--positive)' : diff < 0 ? 'var(--negative)' : 'var(--text-secondary)',
                   }}>
                     {diff === null ? '-' : `${diff > 0 ? '+' : ''}${diff}`}
                   </span>
@@ -469,9 +449,9 @@ function PointerTrackingOverlay({ activePlayer, activeTierDrag, displayedPlayers
     return createPortal(
       <div className={s.dragOverlayTier} style={{
         left: pos.x + 12, top: pos.y - 16,
-        background: activeTierDrag.tierColor.border,
+        ...tierVars(activeTierDrag.tierColor),
       }}>
-        <GripVertical size={14} />
+        <GripVertical size={13} />
         <span className={s.dragOverlayTierLabel}>{activeTierDrag.tierLabelText}</span>
       </div>,
       document.body
@@ -489,7 +469,7 @@ function PointerTrackingOverlay({ activePlayer, activeTierDrag, displayedPlayers
       <span className={s.dragOverlayName} style={{ borderLeft: `3px solid ${POS_COLORS[activePlayer.slotName] || '#9ca3af'}`, paddingLeft: 8 }}>
         {activePlayer.name}
       </span>
-      <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+      <span className={s.dragOverlayAdp}>
         {activePlayer.latestAdp ?? activePlayer.originalAdp ?? '-'}
       </span>
     </div>,
@@ -777,9 +757,11 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: (i) => {
       const item = flatItems[i];
-      if (item?.type === 'tier-divider') return isMobile ? 28 : 36;
+      // Values must match the exact rendered heights in PlayerRankings.module.css —
+      // the virtualizer positions rows from these estimates alone (no re-measure).
+      if (item?.type === 'tier-divider') return isMobile ? 30 : 36;
       if (item?.type === 'tier-insert') return isMobile ? 18 : 14;
-      return isMobile ? 42 : 40;
+      return isMobile ? 42 : 38;
     },
     overscan: 15,
   });
@@ -988,7 +970,7 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
   /* --- export --- */
   const handleExport = useCallback(() => {
     exportRankingsCSV(rankedPlayers, fullTierMap, tierLabels, selectedPlatform || 'underdog');
-  }, [rankedPlayers, fullTierMap, tierLabels]);
+  }, [rankedPlayers, fullTierMap, tierLabels, selectedPlatform]);
 
   /* --- reset to ADP order (local only — Save persists) --- */
   const handleReset = useCallback(() => {
@@ -1031,16 +1013,25 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
     };
   })() : null;
 
+  /* --- console band derived bits --- */
+  const tierCount = rankedPlayers.length > 0 ? overallTierBreaks.size + 1 : 0;
+  const saveBtnClass = [
+    s.saveBtn,
+    saveStatus === 'saved' && s.saveBtnSaved,
+    saveStatus === 'error' && s.saveBtnError,
+    saveStatus === 'saving' && s.saveBtnSaving,
+  ].filter(Boolean).join(' ');
+
   /* --- empty state --- */
   if (availablePlatforms.length === 0 && Object.values(rankingsByPlatform).every(r => !r?.length)) {
     return (
       <div className={s.emptyState}>
-        <div className={s.emptyHeader}>
-          {onRankingsUpload && <FileUploadButton label="Upload CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} className={s.exportBtn} />}
-        </div>
+        <ListOrdered size={30} className={s.emptyIcon} />
+        <h3 className={s.emptyTitle}>No rankings loaded</h3>
         <p className={s.emptyText}>
-          No rankings data loaded. Use the Upload button to import a Rankings CSV.
+          Your board seeds from live ADP once a platform syncs. To start now, upload a rankings CSV.
         </p>
+        {onRankingsUpload && <FileUploadButton label="Upload CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} className={s.saveBtn} />}
       </div>
     );
   }
@@ -1074,15 +1065,15 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
         <thead>
           <tr className={s.stickyHead} data-help-id="drag-reorder">
             <th className={s.headerCell} />
-            <th className={s.headerCell} data-help-id="keyboard-shortcuts">#</th>
+            <th className={`${s.headerCell} ${s.hRight}`}>#</th>
             <th className={s.headerCell}>Pos#</th>
             <th className={s.headerCell} data-help-id="tier-breaks">Tier</th>
-            <th className={s.headerCellName}>Player</th>
+            <th className={`${s.headerCell} ${s.hLeft}`}>Player</th>
             <th className={s.headerCell}>Pos</th>
-            <th className={s.headerCell}>Team</th>
-            <th className={s.headerCell}>ADP</th>
-            <th className={s.headerCell}>Diff</th>
-            <th className={s.headerCell}>Proj</th>
+            <th className={`${s.headerCell} ${s.hLeft}`}>Team</th>
+            <th className={`${s.headerCell} ${s.hRight}`} title="Latest market ADP">ADP</th>
+            <th className={`${s.headerCell} ${s.hRight}`} title="ADP minus your rank — positive means you're higher on the player than the market">Diff</th>
+            <th className={`${s.headerCell} ${s.hRight}`} style={{ paddingRight: 12 }}>Proj</th>
           </tr>
         </thead>
         {/* Top spacer */}
@@ -1108,8 +1099,11 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
                   />
                 ) : (
                   <tr>
-                    <td colSpan={10} className={s.tierDivider} style={{ background: item.tierColor.border }}>
-                      <span className={s.tierLabel}>{item.tierLabel}</span>
+                    <td colSpan={10} className={s.tierCell}>
+                      <div className={s.tierBar} style={tierVars(item.tierColor)}>
+                        <span className={s.tierLabelStatic}>{item.tierLabel}</span>
+                        <span className={s.tierRule} />
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -1190,8 +1184,11 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
                   canDrag={canDrag && viewMode === 'overall' && overallTierBreaks.has(item.playerId)}
                 />
               ) : (
-                <div className={s.tierDividerMobile} style={{ background: item.tierColor.border }}>
-                  <span className={s.tierLabelMobile}>{item.tierLabel}</span>
+                <div className={s.tierRowMobile}>
+                  <div className={`${s.tierBar} ${s.tierBarSm}`} style={tierVars(item.tierColor)}>
+                    <span className={s.tierLabelStatic}>{item.tierLabel}</span>
+                    <span className={s.tierRule} />
+                  </div>
                 </div>
               )}
             </div>
@@ -1230,85 +1227,116 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
   return (
     <TabLayout flush helpAnnotations={HELP_ANNOTATIONS} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
     <div className={s.root}>
-      {/* Header row — hidden in Compare mode (CompareView has its own controls) */}
-      {selectedPlatform !== 'compare' && (
-      <div className={s.headerRow} data-help-id="search-controls">
-        <div className={s.headerRight}>
-          {/* Search */}
-          <SearchInput
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Search player or team..."
-            delay={150}
-          />
-          {/* Reset to ADP — local only; Save persists */}
-          <button
-            onClick={handleReset}
-            className={s.exportBtn}
-            title="Restore current platform's ADP order and clear tier breaks. Click Save to persist."
-            disabled={!availablePlatforms.includes(selectedPlatform)}
-          >
-            <RotateCcw size={14} />
-            {!isMobile && 'Reset to ADP'}
-          </button>
-          {/* Save — always visible */}
-          <button
-            onClick={handleSave}
-            disabled={saveStatus === 'saving'}
-            className={s.saveBtn}
-            style={{
-              background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : 'var(--gradient-accent)',
-              color: (saveStatus === 'saved' || saveStatus === 'error') ? 'white' : undefined,
-              cursor: saveStatus === 'saving' ? 'wait' : 'pointer',
-              opacity: saveStatus === 'saving' ? 0.7 : 1,
-            }}
-          >
-            <Save size={14} />
-            {isMobile
-              ? (saveStatus === 'saving' ? '...' : saveStatus === 'saved' ? '✓' : saveStatus === 'error' ? 'Err' : '')
-              : (saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save')
-            }
-          </button>
-          {/* Export / Upload — desktop only */}
-          {!isMobile && (
+      {/* Console band — title, live stats, and all board controls */}
+      <div className={s.console} data-help-id="search-controls">
+        <div className={s.consoleHead}>
+          <span className={s.consoleTitle}>Draft Board</span>
+          <span className={s.consoleDivider}>·</span>
+          <span className={s.consoleStats}>
+            {selectedPlatform === 'compare'
+              ? <><strong>UD</strong> + <strong>DK</strong> side-by-side</>
+              : <><strong>{displayedPlayers.length}</strong> players · <strong>{tierCount}</strong> {tierCount === 1 ? 'tier' : 'tiers'}</>}
+          </span>
+          <span className={s.consoleDesc}>
+            {selectedPlatform === 'compare'
+              ? 'Edit both platform boards side-by-side.'
+              : 'Drag rows to set your order. Hover between rows to add a tier break.'}
+          </span>
+        </div>
+
+        <div className={s.consoleControls}>
+          {/* Platform switcher — always on desktop (Both button); single-platform hidden on mobile */}
+          {(!isMobile || availablePlatforms.length > 1) && (
+            <div className="filter-btn-group" data-help-id="platform-toggle">
+              {['underdog', 'draftkings'].map(p => {
+                const enabled = availablePlatforms.includes(p) || !isMobile;
+                if (!enabled) return null;
+                return (
+                  <button
+                    key={p}
+                    className={`filter-btn-group__item ${selectedPlatform === p ? 'filter-btn-group__item--active' : ''}`}
+                    onClick={() => setSelectedPlatform(p)}
+                  >
+                    {p === 'underdog' ? 'Underdog' : 'DraftKings'}
+                  </button>
+                );
+              })}
+              {!isMobile && (
+                <button
+                  className={`filter-btn-group__item ${selectedPlatform === 'compare' ? 'filter-btn-group__item--active' : ''}`}
+                  onClick={() => setSelectedPlatform('compare')}
+                  title="Edit Underdog and DraftKings rankings side-by-side"
+                >
+                  Both
+                </button>
+              )}
+            </div>
+          )}
+
+          {selectedPlatform !== 'compare' && (
             <>
-              <button onClick={handleExport} className={s.exportBtn}>
-                <Download size={14} /> Export
-              </button>
-              {onRankingsUpload && <FileUploadButton label="Upload CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} className={s.exportBtn} />}
+              {/* Position filter */}
+              <div className="filter-chip-group" data-help-id="position-filter">
+                {VIEWS.map(v => {
+                  const isActive = viewMode === v;
+                  const posClass = v !== 'overall' ? `filter-chip--pos-${v.toLowerCase()}` : '';
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => { setViewMode(v); setSearchTerm(''); }}
+                      className={`filter-chip ${isActive ? `filter-chip--active ${posClass}` : ''}`}
+                    >
+                      {v === 'overall' ? 'Overall' : v}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search */}
+              <div className={s.search}>
+                <SearchInput
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  placeholder="Search player or team..."
+                  delay={150}
+                />
+              </div>
+
+              {/* Actions — ghost commands, Save as the one primary */}
+              <div className={s.actions}>
+                <button
+                  onClick={handleReset}
+                  className={s.exportBtn}
+                  title="Restore current platform's ADP order and clear tier breaks. Click Save to persist."
+                  disabled={!availablePlatforms.includes(selectedPlatform)}
+                >
+                  <RotateCcw size={14} />
+                  {!isMobile && 'Reset to ADP'}
+                </button>
+                {!isMobile && (
+                  <>
+                    <button onClick={handleExport} className={s.exportBtn}>
+                      <Download size={14} /> Export
+                    </button>
+                    {onRankingsUpload && <FileUploadButton label="Upload CSV" onUpload={(text, filename) => onRankingsUpload(text, filename, selectedPlatform || 'underdog')} onBeforeUpload={uploadAuthGuard} className={s.exportBtn} />}
+                  </>
+                )}
+                <button
+                  onClick={handleSave}
+                  disabled={saveStatus === 'saving'}
+                  className={saveBtnClass}
+                >
+                  <Save size={14} />
+                  {isMobile
+                    ? (saveStatus === 'saving' ? '...' : saveStatus === 'saved' ? '✓' : saveStatus === 'error' ? 'Err' : '')
+                    : (saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save')
+                  }
+                </button>
+              </div>
             </>
           )}
         </div>
       </div>
-      )}
-
-      {/* Platform toggle — always render on desktop (Compare button); single-platform on mobile */}
-      {(!isMobile || availablePlatforms.length > 1) && (
-        <div className="filter-btn-group" style={{ padding: '0 0 8px' }} data-help-id="platform-toggle">
-          {['underdog', 'draftkings'].map(p => {
-            const enabled = availablePlatforms.includes(p) || !isMobile;
-            if (!enabled) return null;
-            return (
-              <button
-                key={p}
-                className={`filter-btn-group__item ${selectedPlatform === p ? 'filter-btn-group__item--active' : ''}`}
-                onClick={() => setSelectedPlatform(p)}
-              >
-                {p === 'underdog' ? 'Underdog Rankings' : 'DraftKings Rankings'}
-              </button>
-            );
-          })}
-          {!isMobile && (
-            <button
-              className={`filter-btn-group__item ${selectedPlatform === 'compare' ? 'filter-btn-group__item--active' : ''}`}
-              onClick={() => setSelectedPlatform('compare')}
-              title="Edit Underdog and DraftKings rankings side-by-side"
-            >
-              Both
-            </button>
-          )}
-        </div>
-      )}
 
       {selectedPlatform === 'compare' ? (
         <CompareView
@@ -1318,30 +1346,10 @@ export default function PlayerRankings({ rankingsByPlatform = {}, masterPlayers,
         />
       ) : (
         <>
-          {/* Position toggle */}
-          <div className="filter-chip-group" style={{ padding: '0 0 8px' }} data-help-id="position-filter">
-            {VIEWS.map(v => {
-              const isActive = viewMode === v;
-              const posClass = v !== 'overall' ? `filter-chip--pos-${v.toLowerCase()}` : '';
-              return (
-                <button
-                  key={v}
-                  onClick={() => { setViewMode(v); setSearchTerm(''); }}
-                  className={`filter-chip ${isActive ? `filter-chip--active ${posClass}` : ''}`}
-                >
-                  {v === 'overall' ? 'Overall' : v}
-                </button>
-              );
-            })}
-            <span className="filter-count">
-              {displayedPlayers.length} players
-            </span>
-          </div>
-
           {/* Search notice */}
           {isSearching && (
             <div className={s.searchNotice}>
-              Drag disabled while searching. Clear search to reorder.
+              Drag paused while searching — clear search to reorder
             </div>
           )}
 

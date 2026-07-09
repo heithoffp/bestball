@@ -1,4 +1,5 @@
 /* === PlayerRankings CSS Module === */
+/* Command Deck styling: console band header, mono numerals, tier rails. */
 
 /* Root layout */
 .root {
@@ -6,114 +7,236 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
 }
 
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- Header Toolbar --- */
-.headerRow {
+/* ── Console Band (title · stats · controls) ─────────────────── */
+.console {
+  position: relative;
+  flex-shrink: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px 13px;
+  margin-bottom: 10px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(232, 191, 74, 0.06), transparent 45%),
+    radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.04), transparent 45%),
+    var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
-.headerLeft {
+.console::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+.consoleHead {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.consoleTitle {
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.consoleDivider {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.consoleStats {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.consoleStats strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.consoleDesc {
+  position: relative;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-left: auto;
+  text-align: right;
+  min-width: 0;
+}
+
+.consoleControls {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.headerTitle {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
+.search {
+  display: flex;
+  flex: 1 1 200px;
+  min-width: 180px;
+  max-width: 300px;
 }
 
-.headerRight {
+.actions {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  flex: 1;
-  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
 }
 
-/* --- Buttons --- */
+/* ── Buttons ──────────────────────────────────────────────────── */
 .saveBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #1a1a1a;
+  background: var(--gradient-accent);
+  color: var(--text-inverse);
   border: none;
-  padding: 6px 14px;
+  padding: 7px 14px;
   border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 13px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12.5px;
   cursor: pointer;
+  white-space: nowrap;
+  transition: transform var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default);
+}
+
+.saveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px var(--accent-glow);
+}
+
+.saveBtn:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.saveBtnSaved {
+  background: var(--positive);
+  color: #fff;
+}
+
+.saveBtnError {
+  background: var(--negative);
+  color: #fff;
+}
+
+.saveBtnSaving {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .exportBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface-2);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-  padding: 6px 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
-  cursor: pointer;
+  font-family: var(--font-body);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease-default),
+    color var(--duration-fast) var(--ease-default),
+    border-color var(--duration-fast) var(--ease-default);
 }
 
-/* --- Search Empty State --- */
+.exportBtn:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.exportBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ── Search states ────────────────────────────────────────────── */
 .searchEmpty {
   padding: var(--space-xl) var(--space-md);
   text-align: center;
   color: var(--text-muted);
   font-size: var(--text-sm);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
-/* --- Search Notice --- */
 .searchNotice {
-  font-size: 12px;
-  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accent-muted);
+  border: 1px solid rgba(232, 191, 74, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
   margin-bottom: 8px;
 }
 
-/* --- Table Container --- */
+/* ── Table Panel ──────────────────────────────────────────────── */
 .tableWrap {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  border-radius: 8px;
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 16px;
   table-layout: fixed;
 }
 
 /* --- Column widths --- */
 .colGrip { width: 3%; }
 .colRank { width: 4%; }
-.colPosRank { width: 5%; }
-.colTier { width: 5%; }
-.colName { width: 21%; }
+.colPosRank { width: 5.5%; }
+.colTier { width: 5.5%; }
+.colName { width: 23%; }
 .colPos { width: 6%; }
-.colTeam { width: 15%; }
+.colTeam { width: 14%; }
 .colAdp { width: 7%; }
-.colDiff { width: 6%; }
-.colProj { width: 7%; }
+.colDiff { width: 6.5%; }
+.colProj { width: 7.5%; }
 
 /* --- Table Head --- */
 .stickyHead {
@@ -124,113 +247,163 @@
 }
 
 .headerCell {
-  padding: 10px 5px;
+  padding: 9px 8px;
   text-align: center;
-  color: var(--text-secondary);
+  vertical-align: middle;
+  background: var(--surface-1);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
   font-weight: 600;
-  font-size: 15px;
-}
-
-.headerCellName {
-  padding: 10px 6px;
-  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 15px;
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 var(--border-default);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* --- Tier Divider --- */
-.tierDivider {
+.hLeft { text-align: left; }
+.hRight { text-align: right; }
+
+/* ── Tier Rail (divider) ──────────────────────────────────────── */
+/* Each rail reads its tier hue from --tier-color / --tier-bg /
+   --tier-soft custom props set inline on the cell or wrapper. */
+.tierCell {
   padding: 0;
   height: 36px;
   border: none;
+  vertical-align: middle;
+}
+
+.tierRowMobile {
+  height: 30px;
+  display: flex;
+  align-items: center;
+}
+
+.tierBar {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+  margin: 5px 6px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--tier-bg), rgba(0, 0, 0, 0) 65%);
+  box-shadow: inset 3px 0 0 var(--tier-color);
+}
+
+.tierBarSm {
+  flex: 1;
+  height: 22px;
+  margin: 0 6px;
+  gap: 8px;
+}
+
+.tierBarOver {
+  box-shadow: inset 3px 0 0 var(--tier-color), inset 0 0 0 1px var(--tier-soft);
+  background: linear-gradient(90deg, var(--tier-bg), rgba(0, 0, 0, 0) 90%);
 }
 
 .tierLabel {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tier-color);
+  background: rgba(6, 14, 31, 0.55);
+  border: 1px solid var(--tier-soft);
+  border-radius: 4px;
+  padding: 1px 8px;
   cursor: pointer;
   user-select: none;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-  padding: 2px 12px;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tierLabelStatic {
+  composes: tierLabel;
+  cursor: default;
+}
+
+.tierRule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--tier-color), transparent);
+  opacity: 0.35;
 }
 
 .tierLabelInput {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: rgba(0, 0, 0, 0.4);
-  color: #fff;
-  border: none;
-  border-radius: 0;
+  flex: 1;
+  height: 20px;
+  min-width: 0;
+  background: rgba(6, 14, 31, 0.7);
+  color: var(--text-primary);
+  border: 1px solid var(--tier-soft);
+  border-radius: 4px;
   padding: 0 8px;
   box-sizing: border-box;
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
-  text-align: center;
-  font-family: inherit;
+  letter-spacing: 0.06em;
   outline: none;
 }
 
-/* --- Tier Drag Handle --- */
 .tierDragHandle {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.5);
-  cursor: grab;
-  padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 0;
-  transition: color var(--duration-fast);
-  z-index: 1;
+  color: var(--tier-color);
+  opacity: 0.55;
+  cursor: grab;
+  padding: 2px;
+  margin-left: -4px;
+  transition: opacity var(--duration-fast);
 }
 
 .tierDragHandle:hover {
-  color: rgba(255, 255, 255, 0.9);
+  opacity: 1;
 }
 
-/* --- Tier Delete Button --- */
 .tierDeleteBtn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.3);
-  border: none;
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 0;
-  transition: color var(--duration-fast), background var(--duration-fast);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--tier-color);
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity var(--duration-fast), color var(--duration-fast);
+}
+
+.tierBar:hover .tierDeleteBtn {
+  opacity: 0.6;
 }
 
 .tierDeleteBtn:hover {
-  color: #fff;
-  background: rgba(239, 68, 68, 0.6);
+  opacity: 1 !important;
+  color: var(--negative);
 }
 
-/* --- Desktop Tier Insert Zone --- */
+@media (hover: none) {
+  .tierDeleteBtn {
+    opacity: 0.6;
+  }
+}
+
+/* ── Tier Insert Zone ─────────────────────────────────────────── */
 .tierInsertZone {
   height: 14px;
   cursor: pointer;
@@ -239,6 +412,7 @@
 .tierInsertCell {
   padding: 0;
   height: 14px;
+  border: none;
   position: relative;
 }
 
@@ -252,7 +426,8 @@
   pointer-events: none;
 }
 
-.tierInsertZone:hover .tierInsertIndicator {
+.tierInsertZone:hover .tierInsertIndicator,
+.tierInsertCellOver .tierInsertIndicator {
   opacity: 1;
 }
 
@@ -260,116 +435,129 @@
   flex: 1;
   height: 1px;
   background: var(--accent);
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
-.tierInsertIndicatorBtn {
+.tierInsertPill {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-0);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  white-space: nowrap;
 }
 
-/* --- Player Row --- */
-.playerRow {
-  cursor: grab;
+/* ── Player Row ───────────────────────────────────────────────── */
+.playerRow[data-even="true"] {
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.playerRow[data-dragging="true"] {
-  opacity: 0.4;
+.playerRow:hover {
+  background: var(--surface-2);
 }
 
-.playerRow[data-drop-target="true"] {
-  border-top: 3px solid var(--accent);
+.playerRow td {
+  height: 38px;
+  padding: 0 8px;
+  vertical-align: middle;
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 rgba(26, 45, 80, 0.55);
+  white-space: nowrap;
 }
 
-/* --- Row Cells --- */
 .gripCell {
-  padding: 8px 5px;
   color: var(--text-muted);
+  opacity: 0.35;
+  cursor: grab;
+  text-align: center;
+  line-height: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.playerRow:hover .gripCell {
+  opacity: 1;
 }
 
 .rankCell {
-  padding: 8px 5px;
-  text-align: center;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-secondary);
-  font-size: 16px;
 }
 
 .posRankCell {
-  padding: 8px 5px;
   text-align: center;
-  font-size: 15px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
 }
 
 .tierBadgeCell {
-  padding: 8px 5px;
   text-align: center;
 }
 
 .tierBadge {
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
   font-weight: 700;
+  letter-spacing: 0.04em;
   border-radius: 4px;
   padding: 2px 6px;
 }
 
 .nameCell {
-  padding: 8px 6px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
   padding-left: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 16px;
 }
 
 .posCell {
-  padding: 8px 5px;
   text-align: center;
 }
 
 .teamCell {
-  padding: 8px 5px;
-  text-align: center;
+  text-align: left;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 12.5px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .adpCell {
-  padding: 8px 5px;
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 16px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
 }
 
 .diffCell {
-  padding: 8px 5px;
-  text-align: center;
-  font-size: 16px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 
 .projCell {
-  padding: 8px 5px;
-  text-align: center;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
   color: var(--text-secondary);
-  font-size: 16px;
+  padding-right: 12px;
 }
 
-/* --- Drag Overlay (portal-based, fixed positioning) --- */
+/* ── Drag Overlays (portal-based, fixed positioning) ─────────── */
 .dragOverlayPortal {
   position: fixed;
   z-index: 10000;
@@ -377,28 +565,35 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  background: var(--surface-1);
+  padding: 7px 12px;
+  background: var(--surface-3);
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
-  font-size: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  opacity: 0.95;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
 }
 
 .dragOverlayRank {
-  color: var(--text-secondary);
-  min-width: 28px;
-  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 24px;
+  text-align: right;
 }
 
 .dragOverlayName {
   font-weight: 600;
+  font-size: 13.5px;
   flex: 1;
 }
 
-/* --- Tier Drag Overlay (portal-based) --- */
+.dragOverlayAdp {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .dragOverlayTier {
   position: fixed;
   z-index: 10000;
@@ -406,39 +601,56 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 16px;
+  padding: 4px 12px;
+  background: var(--surface-3);
+  border: 1px solid var(--tier-soft);
   border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  opacity: 0.95;
+  box-shadow: inset 3px 0 0 var(--tier-color), 0 10px 26px rgba(0, 0, 0, 0.5);
+  color: var(--tier-color);
   white-space: nowrap;
 }
 
 .dragOverlayTierLabel {
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-  padding: 2px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-/* --- Empty State --- */
+/* ── Empty State ──────────────────────────────────────────────── */
 .emptyState {
-  padding: var(--space-lg);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: var(--space-2xl) var(--space-lg);
   text-align: center;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
-.emptyHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: var(--space-md);
+.emptyIcon {
+  color: var(--text-muted);
+}
+
+.emptyTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  letter-spacing: 0.03em;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .emptyText {
   color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  max-width: 420px;
+  margin: 0 0 6px;
 }
 
 /* ============================= */
@@ -449,12 +661,15 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  border-radius: 8px;
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
 }
 
 .playerCard {
-  padding: 6px 10px;
+  padding: 5px 10px;
+  min-height: 42px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -480,10 +695,11 @@
 }
 
 .cardRank {
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-secondary);
   min-width: 24px;
-  text-align: center;
+  text-align: right;
   flex-shrink: 0;
 }
 
@@ -509,7 +725,8 @@
 }
 
 .cardTierBadge {
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -517,7 +734,8 @@
 }
 
 .cardAdp {
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-secondary);
   flex-shrink: 0;
   min-width: 36px;
@@ -543,9 +761,10 @@
 }
 
 .cardDetailLabel {
-  font-size: 10px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--text-muted);
 }
 
@@ -553,46 +772,6 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-/* --- Mobile Tier Divider --- */
-.tierDividerMobile {
-  min-height: 32px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tierLabelMobile {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  cursor: pointer;
-  user-select: none;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-  padding: 4px 14px;
-}
-
-.tierLabelInputMobile {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: rgba(0, 0, 0, 0.4);
-  color: #fff;
-  border: none;
-  border-radius: 0;
-  padding: 0 8px;
-  box-sizing: border-box;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-  font-family: inherit;
-  outline: none;
 }
 
 /* --- Mobile Tier Insert Zone --- */
@@ -612,42 +791,42 @@
   opacity: 0.8;
 }
 
-.tierInsertMobileBtn {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
+.tierInsertPillMuted {
+  composes: tierInsertPill;
+  background: var(--surface-1);
+  border-color: var(--border-subtle);
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 8.5px;
+  padding: 0 7px;
+  opacity: 0.75;
 }
 
 /* ============ RESPONSIVE ============ */
 
 /* --- Mobile (max-width: 599px) --- */
 @media (max-width: 599px) {
-  .headerRow {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+  .console {
+    padding: 10px 12px 11px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
-  .headerRight {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: var(--space-sm);
+  .consoleDesc {
+    display: none;
   }
 
-  .tierDivider {
-    height: 44px;
+  .consoleControls {
+    gap: 8px;
+  }
+
+  .search {
+    flex: 1 1 160px;
+    min-width: 150px;
+    max-width: none;
+  }
+
+  .actions {
+    gap: 6px;
   }
 }
 
@@ -670,5 +849,5 @@
 
   .colName { width: 26%; }
   .colTeam { width: 18%; }
-  .colAdp { width: 10%; }
+  .colAdp { width: 10%; padding-right: 12px; }
 }
