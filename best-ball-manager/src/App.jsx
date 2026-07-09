@@ -267,6 +267,16 @@ export default function App() {
     return true;
   }
 
+  async function handleDeleteRoster(entryId) {
+    // Only authenticated, non-demo sessions have real rows in extension_entries.
+    if (!user?.id || !supabase || isUsingDemoData) return;
+    const { deleteExtensionEntry } = await import('./utils/extensionBridge');
+    await deleteExtensionEntry(user.id, entryId);
+    // Optimistically drop every row for this entry from the in-memory portfolio.
+    setRosterData(prev => prev.filter(r => r.entry_id !== entryId));
+    trackEvent('roster_deleted');
+  }
+
   async function loadPerPlatformRankings(userId) {
     const { parseCSVText } = await import('./utils/csv');
     const platforms = ['underdog', 'draftkings'];
@@ -566,7 +576,7 @@ export default function App() {
             )}
             {activeTab === 'rosters' && (
               canAccessFeature(tier, 'rosters') || subLoading
-                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} actuals={weeklyActuals} initialFilter={rosterNavContext} helpOpen={helpOpen} onHelpToggle={toggleHelp} demoMode={isUsingDemoData} />
+                ? <RosterViewer rosterData={rosterData} masterPlayers={masterPlayers} adpByPlatform={adpByPlatform} actuals={weeklyActuals} initialFilter={rosterNavContext} helpOpen={helpOpen} onHelpToggle={toggleHelp} demoMode={isUsingDemoData} onDeleteRoster={user?.id && !isUsingDemoData ? handleDeleteRoster : undefined} />
                 : <LockedFeature featureName="Roster Viewer" onSignUp={() => setShowAuthModal(true)} />
             )}
             {activeTab === 'rankings' && (

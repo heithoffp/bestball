@@ -111,6 +111,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-314 | Rosters page — per-roster Delete button (remove entry from extension_entries) | Done | P2 | [Plan](docs/archive/plans/TASK-314.md) | Yes | 2026-07-09 |
 | TASK-310 | Arena public-launch flip: remove client allowlist gate + deploy/backfill sequence | Done | P2 | [Plan](docs/archive/plans/TASK-310.md) | Yes | 2026-07-02 |
 | TASK-290 | Arena board-team takedown/removal path | Done | P2 | [Plan](docs/archive/plans/TASK-290.md) | Yes | 2026-07-02 |
 | TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | Done | P2 | [Plan](docs/archive/plans/TASK-285.md) | Yes | 2026-07-02 |

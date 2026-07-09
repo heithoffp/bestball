@@ -42,6 +42,33 @@ export async function readExtensionEntries(userId) {
 }
 
 /**
+ * Deletes a single synced roster from `extension_entries` for the given user.
+ * Scoped to `(user_id, entry_id)`; RLS additionally restricts deletes to the
+ * caller's own rows. Throws on error so callers can surface it.
+ *
+ * Note: this is not durable against a still-live draft — the extension's
+ * incremental sync re-fetches any draft absent from `extension_entries` that
+ * still exists on the platform (see chrome-extension bridge.js). Thrown-out /
+ * invalid drafts no longer appear in the platform's draft list, so once
+ * deleted they stay gone.
+ *
+ * @param {string} userId
+ * @param {string} entryId
+ * @returns {Promise<void>}
+ */
+export async function deleteExtensionEntry(userId, entryId) {
+  if (!supabase || !userId || !entryId) {
+    throw new Error('[BBM] deleteExtensionEntry requires supabase + userId + entryId');
+  }
+  const { error } = await supabase
+    .from('extension_entries')
+    .delete()
+    .eq('user_id', userId)
+    .eq('entry_id', entryId);
+  if (error) throw error;
+}
+
+/**
  * Converts extension Entry objects into the flat roster row shape
  * expected by processLoadedData's rosterRows parameter.
  *

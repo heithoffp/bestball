@@ -16,7 +16,7 @@ import { calcCLV, clvLabel } from '../utils/clvHelpers';
 import { computeRosterOutlook, advanceStructureFor, scoringForPlatform, advanceLabel, REGULAR_SEASON_WEEKS } from '../utils/advanceModel';
 import { BYE_WEEKS_2026 } from '../data/byeWeeks';
 import { renderRosterImage } from '../utils/rosterImageRenderer';
-import { FolderSync, Download, LayoutGrid } from 'lucide-react';
+import { FolderSync, Download, LayoutGrid, Trash2 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import DraftBoardModal from './DraftBoardModal';
 import { fetchAvailableBoardIds, fetchDraftBoards } from '../utils/draftBoards';
@@ -148,9 +148,69 @@ function HighlightedName({ name, query }) {
   );
 }
 
+// ── Delete roster button ──────────────────────────────────────────────────────
+// Inline two-step confirm (matches AccountSettings "Delete Account"): the trigger
+// swaps to a Cancel / Delete pair rather than a browser confirm() dialog. On a
+// successful delete the parent drops the roster from the list, so this unmounts;
+// onDeleted lets the parent also collapse the (now-gone) expanded row.
+
+function DeleteRosterButton({ entryId, onDelete, onDeleted }) {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
+  const [error, setError]           = useState(null);
+
+  const stop = (e) => e.stopPropagation();
+
+  const handleConfirm = async (e) => {
+    stop(e);
+    setDeleting(true);
+    setError(null);
+    try {
+      await onDelete(entryId);
+      onDeleted?.();
+    } catch (err) {
+      console.error('Roster delete failed:', err);
+      setError('Delete failed — try again.');
+      setDeleting(false);
+    }
+  };
+
+  if (!confirming) {
+    return (
+      <button
+        className={css.deleteBtn}
+        title="Delete this roster from your portfolio"
+        onClick={(e) => { stop(e); setConfirming(true); }}
+      >
+        <Trash2 size={14} /> Delete
+      </button>
+    );
+  }
+
+  return (
+    <div className={css.deleteConfirm} onClick={stop}>
+      <span className={css.deleteConfirmText}>
+        {error || 'Delete this roster? This removes it from your portfolio.'}
+      </span>
+      <div className={css.deleteConfirmBtns}>
+        <button
+          className={css.cancelBtn}
+          onClick={(e) => { stop(e); setConfirming(false); setError(null); }}
+          disabled={deleting}
+        >
+          Cancel
+        </button>
+        <button className={css.deleteBtn} onClick={handleConfirm} disabled={deleting}>
+          {deleting ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RosterViewer({ rosterData = [], masterPlayers = [], adpByPlatform = {}, actuals = null, initialFilter = null, helpOpen = false, onHelpToggle, demoMode = false }) {
+export default function RosterViewer({ rosterData = [], masterPlayers = [], adpByPlatform = {}, actuals = null, initialFilter = null, helpOpen = false, onHelpToggle, demoMode = false, onDeleteRoster }) {
   const { isMobile } = useMediaQuery();
   const [expandedEntry, setExpandedEntry]   = useState(() => initialFilter?.entry_id ?? null);
   const [filtersOpen, setFiltersOpen]       = useState(false);
@@ -733,7 +793,7 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
         {isOpen && (
           <div className={css.rosterCardExpanded} onClick={e => e.stopPropagation()}>
             <DraftCapitalMap players={roster.players} isMobile={true} actions={
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {boardIds?.has(roster.entry_id) && (
                   <button onClick={(e) => openBoard(roster, e)} className={css.boardBtn}>
                     <LayoutGrid size={14} /> Board
@@ -742,6 +802,13 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
                 <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
                   <Download size={14} /> Share Image
                 </button>
+                {!demoMode && onDeleteRoster && (
+                  <DeleteRosterButton
+                    entryId={roster.entry_id}
+                    onDelete={onDeleteRoster}
+                    onDeleted={() => setExpandedEntry(null)}
+                  />
+                )}
               </div>
             } />
             <div className={css.playerListScroll}>
@@ -1197,9 +1264,18 @@ export default function RosterViewer({ rosterData = [], masterPlayers = [], adpB
                   <tr>
                     <td colSpan={hasActuals ? 12 : 11} style={{ padding: 0 }}>
                       <PlayerDetail players={roster.players} alpha={alpha} isMobile={false} shareAction={
-                        <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
-                          <Download size={14} /> Share Image
-                        </button>
+                        <>
+                          {!demoMode && onDeleteRoster && (
+                            <DeleteRosterButton
+                              entryId={roster.entry_id}
+                              onDelete={onDeleteRoster}
+                              onDeleted={() => setExpandedEntry(null)}
+                            />
+                          )}
+                          <button onClick={(e) => handleDownloadImage(roster, e)} className={css.downloadBtn}>
+                            <Download size={14} /> Share Image
+                          </button>
+                        </>
                       } />
                     </td>
                   </tr>
