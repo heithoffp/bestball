@@ -17,6 +17,8 @@ import ArenaMyTeams from './arena/ArenaMyTeams';
 import { useAuth } from '../contexts/AuthContext';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { canonicalName } from '../utils/helpers';
+import { computeRosterOutlook } from '../utils/advanceModel';
+import { BYE_WEEKS_2026 } from '../data/byeWeeks';
 import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
 import { loadRealDraftData, comboRateForSnapshot } from '../utils/realDraftData';
 import { fetchDraftBoards } from '../utils/draftBoards';
@@ -160,6 +162,21 @@ export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOp
     };
   }, [adpByPlatform]);
 
+  // Team Proj Pts total, computed the SAME lineup-aware way as the Rosters page
+  // (computeRosterOutlook): only a starting lineup scores (1 QB / 2 RB / 3 WR /
+  // 1 TE / 1 FLEX), real byes cost what they cost, and surplus QBs stop inflating
+  // the total — versus the old naive sum-of-season-projections. Injected into
+  // enrichSnapshotDisplay so arenaSnapshot.js stays free of the helpers.js data
+  // chain. Arena runs on BBM7 (classic UD, half-PPR), so defaults apply and no
+  // weekly actuals are blended in — this is a pure preseason season outlook.
+  const projTotalFn = useMemo(() => (players) => {
+    const outlook = computeRosterOutlook(
+      players.map((p) => ({ ...p, projectedPoints: p.proj })),
+      { byeWeeks: BYE_WEEKS_2026 },
+    );
+    return outlook.projectedPoints;
+  }, []);
+
   const toolbar = (
     <div className={css.toolbar}>
       <div className={css.brand}>
@@ -189,7 +206,7 @@ export default function Arena({ rosterData, masterPlayers, adpByPlatform, helpOp
 
       <div className={css.body}>
         {!isDesktop && toolbar}
-        {view === 'vote' && <ArenaVote adpLookup={adpLookup} projLookup={projLookup} comboLookup={comboLookup} onGoToMyTeams={() => setView('myteams')} />}
+        {view === 'vote' && <ArenaVote adpLookup={adpLookup} projLookup={projLookup} projTotalFn={projTotalFn} comboLookup={comboLookup} onGoToMyTeams={() => setView('myteams')} />}
         {view === 'leaderboard' && <ArenaLeaderboard adpLookup={adpLookup} comboLookup={comboLookup} masterPlayers={masterPlayers} />}
         {view === 'myteams' && <ArenaMyTeams rosterData={rosterData} masterPlayers={masterPlayers} />}
       </div>

@@ -112,7 +112,14 @@ export function enrichSnapshotCLV(snapshot, adpLookup) {
 // resolved against the viewer's projection map. Projections are never stored in the
 // snapshot — like CLV they are computed fresh so every pool team gets them, however
 // long ago it was registered. projLookup: (name) => seasonPoints|null.
-export function enrichSnapshotDisplay(snapshot, adpLookup, projLookup) {
+//
+// projTotalFn (optional): (players, snapshot) => teamSeasonPoints. When provided it
+// computes the TEAM total the same lineup-aware way the Rosters page does — only a
+// starting lineup scores, byes cost what they actually cost, surplus QBs don't inflate
+// (see computeRosterOutlook). It's injected rather than imported so this module stays
+// free of helpers.js's data imports and Node-loadable for arena-backfill-pool.mjs.
+// When absent, the team total falls back to the naive per-player sum.
+export function enrichSnapshotDisplay(snapshot, adpLookup, projLookup, projTotalFn = null) {
   const withCLV = enrichSnapshotCLV(snapshot, adpLookup);
   if (!withCLV || typeof projLookup !== 'function') return withCLV;
   let resolved = 0;
@@ -124,10 +131,14 @@ export function enrichSnapshotDisplay(snapshot, adpLookup, projLookup) {
   });
   if (resolved === 0) return withCLV;
   // The team total is only honest when (nearly) the whole roster resolved — a
-  // partial sum would rig the tape's Proj Pts comparison against the side with
+  // partial total would rig the tape's Proj Pts comparison against the side with
   // more unresolved names. Per-player values still show whatever resolved.
   const projTotal = resolved >= players.length * 0.8
-    ? round1(players.reduce((sum, p) => sum + (p.proj || 0), 0))
+    ? round1(
+        typeof projTotalFn === 'function'
+          ? projTotalFn(players, withCLV)
+          : players.reduce((sum, p) => sum + (p.proj || 0), 0),
+      )
     : null;
   return { ...withCLV, players, projTotal };
 }

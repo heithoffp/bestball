@@ -133,7 +133,7 @@ function MatchupSkeleton() {
   );
 }
 
-export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, comboLookup }) {
+export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, projTotalFn, comboLookup }) {
   const { user } = useAuth();
   const isGuest = !user;
   // <900px swaps the three-column matchup for the swipeable contender deck
@@ -359,12 +359,12 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, comboL
   // brand-new player arrays at the exact moment the reveal started, forcing a
   // full re-diff of ~40 headshot rows mid-animation (the source of the jank).
   const snapA = useMemo(
-    () => (pairing ? enrichSnapshotDisplay(pairing.team_a.display_snapshot, adpLookup, projLookup) : null),
-    [pairing, adpLookup, projLookup],
+    () => (pairing ? enrichSnapshotDisplay(pairing.team_a.display_snapshot, adpLookup, projLookup, projTotalFn) : null),
+    [pairing, adpLookup, projLookup, projTotalFn],
   );
   const snapB = useMemo(
-    () => (pairing ? enrichSnapshotDisplay(pairing.team_b.display_snapshot, adpLookup, projLookup) : null),
-    [pairing, adpLookup, projLookup],
+    () => (pairing ? enrichSnapshotDisplay(pairing.team_b.display_snapshot, adpLookup, projLookup, projTotalFn) : null),
+    [pairing, adpLookup, projLookup, projTotalFn],
   );
   // One proj-bar scale across the whole matchup so bars compare between cards.
   const maxProj = useMemo(() => Math.max(
