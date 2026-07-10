@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-09 | Commit: 309410d -->
 # TASK-315: Precompute combo-board aggregate: stop full-table draft_boards_admin downloads
 
 **Status:** Approved (developer pre-approved in session, 2026-07-09)

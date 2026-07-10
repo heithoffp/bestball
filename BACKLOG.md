@@ -15,8 +15,6 @@
 - TASK-240: Roster Viewer — full Draft Board view (Underdog)
 - TASK-268: Add Avg CLV column to Exposures tab
 - TASK-313: Arena leaderboard pagination
-- TASK-315: Precompute combo-board aggregate: stop full-table draft_boards_admin downloads
-- TASK-316: Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -38,8 +36,6 @@
 | TASK-237 | Risk note: iOS App Store rejection scenarios and fallbacks | Todo | P1 | [Plan](docs/plans/TASK-237.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-238 | L5 config-update loop design (gated on TASK-234) | Todo | P1 | [Plan](docs/plans/TASK-238.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-188 | Weekly portfolio digest email — retention loop | In Progress | P1 | [Plan](docs/plans/TASK-188.md) | No | 2026-06-03 | 2026-06-03 |
-| TASK-315 | Precompute combo-board aggregate: stop full-table draft_boards_admin downloads | In Progress | P1 | [Plan](docs/plans/TASK-315.md) | No | 2026-07-09 | 2026-07-09 |
-| TASK-316 | Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard | In Progress | P1 | [Plan](docs/plans/TASK-316.md) | No | 2026-07-09 | 2026-07-09 |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No | 2026-04-08 | 2026-04-08 |
@@ -116,18 +112,6 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
-| TASK-314 | Rosters page — per-roster Delete button (remove entry from extension_entries) | Done | P2 | [Plan](docs/archive/plans/TASK-314.md) | Yes | 2026-07-09 |
-| TASK-310 | Arena public-launch flip: remove client allowlist gate + deploy/backfill sequence | Done | P2 | [Plan](docs/archive/plans/TASK-310.md) | Yes | 2026-07-02 |
-| TASK-290 | Arena board-team takedown/removal path | Done | P2 | [Plan](docs/archive/plans/TASK-290.md) | Yes | 2026-07-02 |
-| TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | Done | P2 | [Plan](docs/archive/plans/TASK-285.md) | Yes | 2026-07-02 |
-| TASK-296 | Arena public-launch data hardening (dedup + server-built snapshots) | Done | P3 | [Plan](docs/archive/plans/TASK-296.md) | Yes | 2026-07-02 |
-| TASK-311 | Arena Edge Function hardening fixes from 2026-07-02 launch review | Done | P2 | [Plan](docs/archive/plans/TASK-311.md) | Yes | 2026-07-02 |
-| TASK-295 | Arena beta presentation & smoothness refinement (Won't Do: Superseded — presentation/smoothness shipped via TASK-297 (Tale of the Tape), TASK-302 (fun layer), TASK-303 (leaderboard viz), TASK-308 (mobile deck)) | Won't Do | P3 | [Plan](docs/archive/plans/TASK-295.md) | No | 2026-07-02 |
-| TASK-306 | Full-database Arena pool backfill script (ADR-016) | Done | P2 | [Plan](docs/archive/plans/TASK-306.md) | Yes | 2026-07-02 |
-| TASK-305 | Arena registration rework: retire guardrail #3 + claim-on-sync (ADR-016) | Done | P2 | [Plan](docs/archive/plans/TASK-305.md) | Yes | 2026-07-02 |
-| TASK-297 | Arena 'Tale of the Tape' redesign + CLV + perf | Done | P2 | [Plan](docs/archive/plans/TASK-297.md) | Yes | 2026-07-02 |
-| TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | Done | P2 | [Plan](docs/archive/plans/TASK-286.md) | Yes | 2026-07-02 |
-| TASK-284 | Arena: enrollment toggle + paid-tier gating | Done | P2 | [Plan](docs/archive/plans/TASK-284.md) | Yes | 2026-07-02 |
 | TASK-283 | Arena: leaderboard view | Done | P2 | [Plan](docs/archive/plans/TASK-283.md) | Yes | 2026-07-02 |
 | TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | Done | P1 | [Plan](docs/archive/plans/TASK-282.md) | Yes | 2026-07-02 |
 | TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | Done | P1 | [Plan](docs/archive/plans/TASK-281.md) | Yes | 2026-07-02 |
@@ -135,3 +119,6 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 | TASK-259 | Privacy policy: note participant-captured third-party roster storage | Done | P3 | [Plan](docs/archive/plans/TASK-259.md) | Yes | 2026-07-02 |
 | TASK-291 | Arena privacy policy + ToS update for public ranking | Done | P2 | [Plan](docs/archive/plans/TASK-291.md) | Yes | 2026-07-02 |
 | TASK-308 | Arena mobile matchup comparison UX — swipeable contender deck with quick-toggle and sticky pick bar | Done | P2 | [Plan](docs/archive/plans/TASK-308.md) | Yes | 2026-07-02 |
+| TASK-316 | Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard | Done | P1 | [Plan](docs/archive/plans/TASK-316.md) | Yes | 2026-07-09 |
+| TASK-315 | Precompute combo-board aggregate: stop full-table draft_boards_admin downloads | Done | P1 | [Plan](docs/archive/plans/TASK-315.md) | Yes | 2026-07-09 |
+| TASK-314 | Rosters page — per-roster Delete button (remove entry from extension_entries) | Done | P2 | [Plan](docs/archive/plans/TASK-314.md) | Yes | 2026-07-09 |

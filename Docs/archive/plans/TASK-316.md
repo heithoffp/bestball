@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-09 | Commit: 309410d -->
 # TASK-316: Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard
 
 **Status:** Approved (developer pre-approved in session, 2026-07-09)

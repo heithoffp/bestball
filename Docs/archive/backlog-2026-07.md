@@ -1,6 +1,6 @@
 # Backlog Archive -- July 2026
 
-Archived from `BACKLOG.md`. Last updated 2026-07-02. Contains completed tasks through TASK-304.
+Archived from `BACKLOG.md`. Last updated 2026-07-09. Contains completed tasks through TASK-311.
 
 ## Completed Tasks
 
@@ -28,3 +28,14 @@ Archived from `BACKLOG.md`. Last updated 2026-07-02. Contains completed tasks th
 | TASK-300 | Arena: fix pairing pool starvation (own-team exclusion at query level) | Done | P1 | [Plan](../plans/TASK-300.md) | Yes | 2026-07-02 |
 | TASK-299 | Wire Eliminator ADP into roster enrichment (eliminator_adp.csv for Eliminator slate) | Done | P2 | [Plan](../plans/TASK-299.md) | Yes | 2026-07-02 |
 | TASK-298 | Arena player headshots (external image source) | Done | P3 | [Plan](../plans/TASK-298.md) | Yes | 2026-07-02 |
+| TASK-310 | Arena public-launch flip: remove client allowlist gate + deploy/backfill sequence | Done | P2 | [Plan](../plans/TASK-310.md) | Yes | 2026-07-02 |
+| TASK-290 | Arena board-team takedown/removal path | Done | P2 | [Plan](../plans/TASK-290.md) | Yes | 2026-07-02 |
+| TASK-285 | Arena: anti-abuse hardening + guest-vote weighting decision | Done | P2 | [Plan](../plans/TASK-285.md) | Yes | 2026-07-02 |
+| TASK-296 | Arena public-launch data hardening (dedup + server-built snapshots) | Done | P3 | [Plan](../plans/TASK-296.md) | Yes | 2026-07-02 |
+| TASK-311 | Arena Edge Function hardening fixes from 2026-07-02 launch review | Done | P2 | [Plan](../plans/TASK-311.md) | Yes | 2026-07-02 |
+| TASK-295 | Arena beta presentation & smoothness refinement (Won't Do: Superseded — presentation/smoothness shipped via TASK-297 (Tale of the Tape), TASK-302 (fun layer), TASK-303 (leaderboard viz), TASK-308 (mobile deck)) | Won't Do | P3 | [Plan](../plans/TASK-295.md) | No | 2026-07-02 |
+| TASK-306 | Full-database Arena pool backfill script (ADR-016) | Done | P2 | [Plan](../plans/TASK-306.md) | Yes | 2026-07-02 |
+| TASK-305 | Arena registration rework: retire guardrail #3 + claim-on-sync (ADR-016) | Done | P2 | [Plan](../plans/TASK-305.md) | Yes | 2026-07-02 |
+| TASK-297 | Arena 'Tale of the Tape' redesign + CLV + perf | Done | P2 | [Plan](../plans/TASK-297.md) | Yes | 2026-07-02 |
+| TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | Done | P2 | [Plan](../plans/TASK-286.md) | Yes | 2026-07-02 |
+| TASK-284 | Arena: enrollment toggle + paid-tier gating | Done | P2 | [Plan](../plans/TASK-284.md) | Yes | 2026-07-02 |
