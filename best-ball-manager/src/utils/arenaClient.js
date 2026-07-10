@@ -6,7 +6,6 @@
 // so enrollment only ever sets enrolled + display_snapshot on the owner's own rows.
 
 import { supabase } from './supabaseClient';
-import { FEATURED_TOURNAMENT } from './arenaFeatured';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
@@ -97,9 +96,15 @@ export async function submitVote({ token, winner }) {
  * Paginated via `.range()` (TASK-313) so the full pool is reachable, not just the
  * first page; `total` is the enrolled-team count under the active filters, for
  * building page controls.
+ * The exact count is fetched once per (platform, tournament) per session and
+ * cached (TASK-316) — pool membership changes rarely, and counting on every
+ * page view forced a filtered scan per call. The cache clears when this client
+ * changes pool membership (registration / enrollment flip).
  * @param {{platform?: 'all'|'underdog'|'draftkings', tournament?: 'featured'|'all', limit?: number, offset?: number}} opts
  * @returns {Promise<{rows: Array, total: number}>}
  */
+const _lbTotals = new Map(); // `${platform}|${tournament}` → session-cached exact total
+
 export async function getLeaderboard({ platform = 'all', tournament = 'featured', limit = 50, offset = 0 } = {}) {
   if (!supabase) return { rows: [], total: 0 };
   // Anon no longer has a column grant for user_id (TASK-296 #3 — a logged-out caller
@@ -109,19 +114,22 @@ export async function getLeaderboard({ platform = 'all', tournament = 'featured'
   const { data: { user } } = await supabase.auth.getUser();
   const cols = 'id, platform, elo, wins, losses, matches, provisional, display_snapshot'
     + (user ? ', user_id' : '');
+  const totalKey = `${platform}|${tournament}`;
+  const cachedTotal = _lbTotals.get(totalKey);
   let q = supabase
     .from('arena_teams')
-    .select(cols, { count: 'exact' })
+    .select(cols, cachedTotal == null ? { count: 'exact' } : {})
     .eq('enrolled', true)
     // Only synced-user teams are shown for now; ownerless board rows are excluded.
     .eq('source', 'owned')
     .order('elo', { ascending: false })
     .range(offset, offset + limit - 1);
   if (platform !== 'all') q = q.eq('platform', platform);
-  if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
+  if (tournament === 'featured') q = q.eq('featured', true);
   const { data, error, count } = await q;
   if (error) throw error;
-  return { rows: data ?? [], total: count ?? 0 };
+  if (cachedTotal == null) _lbTotals.set(totalKey, count ?? 0);
+  return { rows: data ?? [], total: cachedTotal ?? count ?? 0 };
 }
 
 /**
@@ -152,7 +160,7 @@ export async function searchLeaderboard({ patterns = [], platform = 'all', tourn
     .order('elo', { ascending: false })
     .limit(limit);
   if (platform !== 'all') q = q.eq('platform', platform);
-  if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
+  if (tournament === 'featured') q = q.eq('featured', true);
   patterns.forEach((p) => { q = q.ilike('display_snapshot->>players', p); });
   const { data, error, count } = await q;
   if (error) throw error;
@@ -175,7 +183,7 @@ export async function getMyBestArenaTeam({ platform = 'all', tournament = 'featu
     .order('elo', { ascending: false })
     .limit(1);
   if (platform !== 'all') q = q.eq('platform', platform);
-  if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
+  if (tournament === 'featured') q = q.eq('featured', true);
   const { data, error } = await q;
   if (error) throw error;
   return data?.[0] ?? null;
@@ -192,7 +200,7 @@ export async function getArenaRank({ elo, platform = 'all', tournament = 'featur
   const build = () => {
     let q = supabase.from('arena_teams').select('id', { count: 'exact', head: true }).eq('enrolled', true).eq('source', 'owned');
     if (platform !== 'all') q = q.eq('platform', platform);
-    if (tournament === 'featured') q = q.or(FEATURED_TOURNAMENT.orFilter);
+    if (tournament === 'featured') q = q.eq('featured', true);
     return q;
   };
   const [above, total] = await Promise.all([build().gt('elo', elo), build()]);
@@ -218,6 +226,7 @@ export async function registerArenaTeams({ ownedTeams = [], boardTeams = [] }) {
   if (!res.ok) {
     throw Object.assign(new Error(data.error || 'register_failed'), { status: res.status, data });
   }
+  _lbTotals.clear(); // registration changes pool membership — refetch totals
   return data;
 }
 
@@ -340,4 +349,5 @@ export async function setArenaEnrollment(enrolled) {
     .update({ enrolled, updated_at: new Date().toISOString() })
     .eq('user_id', user.id);
   if (teamsErr) throw teamsErr;
+  _lbTotals.clear(); // enrollment flip changes pool membership — refetch totals
 }

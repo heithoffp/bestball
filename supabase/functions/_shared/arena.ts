@@ -39,15 +39,15 @@ export const MAX_OWNED_TEAMS_PER_USER = 6000;
 // featured queue for now (BBM7) — pairing is featured-only with NO full-pool
 // fallback, and the leaderboard/My Teams surfaces are scoped to match. Matched
 // against the frozen display_snapshot's tournamentTitle OR slateTitle (board
-// teams registered before tournament attribution carry only a slate title).
+// teams registered before tournament attribution carry only a slate title) —
+// materialized as the arena_teams.featured STORED GENERATED column
+// (migration 016), which queries filter with eq('featured', true) so the
+// partial indexes serve them instead of an ilike detoast scan per request.
 // Keep in sync with the browser-side constant in
-// best-ball-manager/src/utils/arenaFeatured.js.
-// PostgREST or() syntax: `*` is the wildcard for ilike in URL filter strings.
+// best-ball-manager/src/utils/arenaFeatured.js AND the generated-column
+// expression in migration 016.
 // ---------------------------------------------------------------------------
 export const FEATURED_TOURNAMENT_LABEL = "Best Ball Mania VII";
-export const FEATURED_TOURNAMENT_OR_FILTER =
-  "display_snapshot->>tournamentTitle.ilike.*best ball mania*," +
-  "display_snapshot->>slateTitle.ilike.*best ball mania*";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

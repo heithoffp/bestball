@@ -117,9 +117,20 @@ leaderboard and My Teams are scoped to match, and all platform/slate labels
 (Underdog/DraftKings chips, per-card tournament lines, filter chips) are removed —
 the context bar and a BBM7 season tag carry the scope instead. The full database
 (every platform + tournament) keeps registering and retaining Elo so more slates can
-be presented later. The featured pattern lives in
-`supabase/functions/_shared/arena.ts` (`FEATURED_TOURNAMENT_OR_FILTER`) and
-`src/utils/arenaFeatured.js` (`FEATURED_TOURNAMENT`) — keep them in sync.
+be presented later. **Featured matching (2026-07-09, TASK-316):** the match is
+materialized as the `arena_teams.featured` **stored generated column**
+(migration 016) — snapshots are frozen at registration, so it's a write-time fact.
+Pairing and every leaderboard surface filter with `eq('featured', true)`, served by
+partial indexes on `(matches)` and `(elo desc)` `where enrolled and source='owned'
+and featured`; the old `ilike '%best ball mania%'` JSONB filters detoast-scanned
+the whole enrolled pool per request and were a major Disk IO Budget consumer. The
+leaderboard's exact total is fetched once per (platform, tournament) per session
+and cached in `arenaClient.js` (cleared on registration / enrollment changes).
+The label constant lives in `supabase/functions/_shared/arena.ts`
+(`FEATURED_TOURNAMENT_LABEL`) and `src/utils/arenaFeatured.js`
+(`FEATURED_TOURNAMENT`) — keep them AND the migration-016 generated-column
+expression in sync; featuring a different tournament means dropping and re-adding
+the column.
 
 **Tournament attribution for board teams:** board picks carry no tournament of their
 own, so board snapshots historically had `tournamentTitle: null` and were invisible
@@ -252,7 +263,7 @@ unique), `arena_config` (beta gate; `arena_eligibility_mode` retired in place),
 - `src/components/Arena.jsx` — container + sub-nav + contextual help
 - `src/components/arena/ArenaVote.jsx` — blind voting + reveal + states
 - `src/components/arena/ArenaLeaderboard.jsx` — ranked leaderboard (BBM7-scoped) + your-rank
-- `src/utils/arenaFeatured.js` — the featured tournament (label, filter, matcher)
+- `src/utils/arenaFeatured.js` — the featured tournament (label, snapshot matcher; DB filtering uses the `featured` generated column)
 - `scripts/arena-stamp-board-tournaments.mjs` — pod-join tournament attribution backfill
 - `src/components/arena/ArenaMyTeams.jsx` — standings + account-level enrollment switch
 - `src/components/arena/ArenaRosterCard.jsx` — anonymized roster card (shared)

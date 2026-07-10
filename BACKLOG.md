@@ -15,6 +15,8 @@
 - TASK-240: Roster Viewer — full Draft Board view (Underdog)
 - TASK-268: Add Avg CLV column to Exposures tab
 - TASK-313: Arena leaderboard pagination
+- TASK-315: Precompute combo-board aggregate: stop full-table draft_boards_admin downloads
+- TASK-316: Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -36,6 +38,8 @@
 | TASK-237 | Risk note: iOS App Store rejection scenarios and fallbacks | Todo | P1 | [Plan](docs/plans/TASK-237.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-238 | L5 config-update loop design (gated on TASK-234) | Todo | P1 | [Plan](docs/plans/TASK-238.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-188 | Weekly portfolio digest email — retention loop | In Progress | P1 | [Plan](docs/plans/TASK-188.md) | No | 2026-06-03 | 2026-06-03 |
+| TASK-315 | Precompute combo-board aggregate: stop full-table draft_boards_admin downloads | In Progress | P1 | [Plan](docs/plans/TASK-315.md) | No | 2026-07-09 | 2026-07-09 |
+| TASK-316 | Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard | In Progress | P1 | [Plan](docs/plans/TASK-316.md) | No | 2026-07-09 | 2026-07-09 |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No | 2026-04-08 | 2026-04-08 |
@@ -94,6 +98,7 @@
 | TASK-292 | Arena monetization-funnel rework (post opt-out) | Todo | P3 | [Plan](docs/plans/TASK-292.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-307 | Arena pairing sample mix after full-DB backfill | Todo | P3 | [Plan](docs/plans/TASK-307.md) -- Draft | No | 2026-07-01 | 2026-07-01 |
 | TASK-313 | Arena leaderboard pagination | In Progress | P3 | [Plan](docs/plans/TASK-313.md) | No | 2026-07-02 | 2026-07-02 |
+| TASK-317 | Boards IO follow-ups: artifact refresh cadence + client cache for user boards | Todo | P3 | [Plan](docs/plans/TASK-317.md) -- Draft | No | 2026-07-09 | 2026-07-09 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |

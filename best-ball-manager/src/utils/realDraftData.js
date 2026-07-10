@@ -1,8 +1,12 @@
 // src/utils/realDraftData.js
 // Real-draft frequency tables — computed from actual drafts:
-//   1. Every seat of every captured pod board in draft_boards_admin
-//      (participant-authorized capture per ADR-009 + admin scraper per ADR-008).
-//      Each board holds all 12 real rosters of a pod.
+//   1. Every seat of every captured pod board (participant-authorized capture
+//      per ADR-009 + admin scraper per ADR-008), consumed via the PRECOMPUTED
+//      slim artifact in Storage (app-data/combo-boards-v1.json, built by
+//      scripts/build-combo-boards.mjs — TASK-315). The artifact carries each
+//      board's id, slate title, and first-4 pick names per seat; fetching the
+//      full draft_boards_admin table here (~62 MB of picks JSONB per app load)
+//      was the dominant consumer of the Supabase Disk IO Budget.
 //   2. The user's own extension-synced rosters for drafts that have no stored
 //      board (DK entries, uncaptured UD pods). Drafts WITH a board are skipped
 //      here — the board already contains the user's seat, and counting both
@@ -21,13 +25,16 @@
 // everywhere), while first-3 combos spread 1×–47× with a mean near 7 — an
 // actually differentiating rarity signal (2026-07-05 evaluation).
 //
-// All reads fail soft: guests, missing grants, and fetch errors yield empty
-// tables and consumers render an em-dash / empty state.
+// All reads fail soft: guests (the artifact's bucket is private —
+// authenticated reads only, matching draft_boards_admin's old boundary),
+// missing grants, and fetch errors yield empty tables and consumers render an
+// em-dash / empty state.
 
 import { supabase } from './supabaseClient';
 import { canonicalName } from './helpers';
 
-const PAGE = 250;
+const BOARDS_BUCKET = 'app-data';
+const BOARDS_OBJECT = 'combo-boards-v1.json';
 const PATH_ROUNDS = 4;
 
 /** Number of earliest picks that form the Early Combo key. */
@@ -62,48 +69,18 @@ export function isExcludedSlate(slateTitle) {
   return slate.includes('superflex') || slate.includes('eliminator');
 }
 
-async function fetchAllBoardsSequential() {
-  const out = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from('draft_boards_admin')
-      .select('draft_id, slate_title, picks')
-      .order('draft_id')
-      .range(from, from + PAGE - 1);
-    if (error || !data) break;
-    out.push(...data);
-    if (data.length < PAGE) break;
-  }
-  return out;
-}
-
+// Fetch the precomputed slim-board artifact (TASK-315). One small object read
+// from Storage replaces what used to be a full-table download of
+// draft_boards_admin. Returns [{ id, slate, seats: [[first-4 names], ...] }].
 async function fetchAllBoards() {
   if (!supabase) return [];
   try {
-    // Count first, then fetch every page in parallel — the sequential
-    // page-by-page walk was the dominant cost of the Early Combo column
-    // (each page waits a full round-trip before the next starts). A row
-    // landing between count and fetch shifts a page boundary by one; the
-    // frequency tables tolerate that.
-    const { count, error: countError } = await supabase
-      .from('draft_boards_admin')
-      .select('draft_id', { count: 'exact', head: true });
-    if (countError || !Number.isFinite(count)) return await fetchAllBoardsSequential();
-    if (count === 0) return [];
-    const pages = Math.ceil(count / PAGE);
-    const responses = await Promise.all(Array.from({ length: pages }, (_, i) =>
-      supabase
-        .from('draft_boards_admin')
-        .select('draft_id, slate_title, picks')
-        .order('draft_id')
-        .range(i * PAGE, i * PAGE + PAGE - 1)
-        .then(res => res, () => ({ data: null, error: true }))
-    ));
-    const out = [];
-    for (const { data, error } of responses) {
-      if (!error && data) out.push(...data);
-    }
-    return out;
+    const { data, error } = await supabase.storage
+      .from(BOARDS_BUCKET)
+      .download(BOARDS_OBJECT);
+    if (error || !data) return [];
+    const artifact = JSON.parse(await data.text());
+    return Array.isArray(artifact?.boards) ? artifact.boards : [];
   } catch {
     // fail soft — callers see empty tables
     return [];
@@ -185,31 +162,19 @@ async function build(masterPlayers, rosterRows) {
   const boardIds = new Set();
 
   for (const b of boards) {
-    const draftId = String(b.draft_id);
+    const draftId = String(b.id);
     boardIds.add(draftId);
-    const title = (b.slate_title || '').toLowerCase();
-    if (isExcludedSlate(b.slate_title) || excludedTitles.has(title)) continue;
-    const picks = Array.isArray(b.picks) ? b.picks : [];
-    // Boards from the pre-fix scraper hold null player names — unusable.
-    if (picks.length === 0 || picks[0]?.name == null) continue;
+    const title = (b.slate || '').toLowerCase();
+    if (isExcludedSlate(b.slate) || excludedTitles.has(title)) continue;
     const status = entryStatus.get(draftId)
       ?? titleStatus.get(title)
-      ?? (isPreDraftSlate(b.slate_title, b.slate_title) ? 'pre' : 'post');
+      ?? (isPreDraftSlate(b.slate, b.slate) ? 'pre' : 'post');
     const tables = status === 'pre' ? data.pre : data.post;
 
-    const bySeat = new Map();
-    for (const pk of picks) {
-      // draftEntryId can be an empty string on older captures — fall back to
-      // the seat's slot index rather than lumping those picks together.
-      let seat = pk?.draftEntryId;
-      if (seat == null || seat === '') seat = pk?.slot;
-      if (seat == null) continue;
-      if (!bySeat.has(seat)) bySeat.set(seat, []);
-      bySeat.get(seat).push(pk);
-    }
-    for (const seatPicks of bySeat.values()) {
-      seatPicks.sort((a, b) => (Number(a.pick) || 0) - (Number(b.pick) || 0));
-      addSeat(tables, seatPicks.slice(0, PATH_ROUNDS).map(pk => resolvePid(pk.name, nameToPid)));
+    // Seats arrive pre-grouped and pre-sorted from the artifact builder
+    // (scripts/build-combo-boards.mjs) — each is the seat's first-4 pick names.
+    for (const seatNames of (b.seats ?? [])) {
+      addSeat(tables, seatNames.slice(0, PATH_ROUNDS).map(n => resolvePid(n, nameToPid)));
     }
   }
 

@@ -5,16 +5,15 @@
 // database is retained — other slates/platforms just aren't presented yet).
 // Matched against the frozen display_snapshot's tournamentTitle OR slateTitle
 // (board teams registered before tournament attribution carry only a slate
-// title). Keep in sync with the server-side constants in
-// supabase/functions/_shared/arena.ts.
+// title). Queries filter on the arena_teams.featured GENERATED column
+// (migration 016) — index-served, instead of ilike-scanning JSONB per request.
+// Keep in sync with the server-side constants in
+// supabase/functions/_shared/arena.ts AND the generated-column expression in
+// supabase/migrations/016_arena_featured_flag_and_app_data_bucket.sql.
 
 export const FEATURED_TOURNAMENT = {
   label: 'Best Ball Mania VII',
   shortLabel: 'BBM7',
-  // PostgREST or() filter string — `*` is the ilike wildcard in URL filter syntax.
-  orFilter:
-    'display_snapshot->>tournamentTitle.ilike.*best ball mania*,' +
-    'display_snapshot->>slateTitle.ilike.*best ball mania*',
   match: /best ball mania/i,
 };
 

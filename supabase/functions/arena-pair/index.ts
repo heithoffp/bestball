@@ -11,7 +11,6 @@ import {
   betaGate,
   corsHeaders,
   ELO_WINDOW,
-  FEATURED_TOURNAMENT_OR_FILTER,
   getClientIp,
   inMemoryRateLimit,
   json,
@@ -93,8 +92,10 @@ Deno.serve(async (req) => {
     // The Arena presents ONE tournament for now (BBM7): pairing is featured-only,
     // with no full-pool fallback — a non-BBM matchup would contradict every
     // BBM7-scoped surface in the UI. The rest of the database stays enrolled for
-    // when more slates are presented.
-    query = query.or(FEATURED_TOURNAMENT_OR_FILTER);
+    // when more slates are presented. `featured` is a stored generated column
+    // (migration 016) served by a partial index — the old ilike-over-JSONB
+    // filter detoast-scanned the whole enrolled pool on every pairing request.
+    query = query.eq("featured", true);
 
     const { data: pool, error } = await query;
     if (error) return { teams: null, error };

@@ -19,3 +19,4 @@
 | [ADR-015](adr-015-launch-best-ball-arena-as-a-private-beta-behind-a.md) | Launch Best Ball Arena as a private beta behind a server-enforced email-allowlist gate | Accepted | 2026-06-27 |
 | [ADR-016](adr-016-full-database-arena-pool-with-claim-on-sync-and-ac.md) | Full-database Arena pool with claim-on-sync and account-level enrollment | Accepted | 2026-07-01 |
 | [ADR-017](adr-017-arena-public-launch-vote-integrity-and-data-harden.md) | Arena public-launch vote-integrity and data hardening (ADR-013 amendment) | Accepted | 2026-07-02 |
+| [ADR-018](adr-018-serve-heavy-client-aggregations-from-precomputed-s.md) | Serve heavy client aggregations from precomputed Storage artifacts | Accepted | 2026-07-09 |
