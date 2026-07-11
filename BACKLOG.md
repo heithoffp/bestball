@@ -36,6 +36,7 @@
 | TASK-237 | Risk note: iOS App Store rejection scenarios and fallbacks | Todo | P1 | [Plan](docs/plans/TASK-237.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-238 | L5 config-update loop design (gated on TASK-234) | Todo | P1 | [Plan](docs/plans/TASK-238.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-188 | Weekly portfolio digest email — retention loop | In Progress | P1 | [Plan](docs/plans/TASK-188.md) | No | 2026-06-03 | 2026-06-03 |
+| TASK-318 | Spike: iOS draft-capture feasibility (capture visibility, OCR accuracy, toolchain) | Todo | P1 | [Plan](docs/plans/TASK-318.md) | No | 2026-07-11 | 2026-07-11 |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No | 2026-04-08 | 2026-04-08 |
@@ -58,6 +59,11 @@
 | TASK-239 | Combos — Playoff Stacks sub-tab (portfolio-level W15/16/17 game stacks) | In Progress | P2 | [Plan](docs/plans/TASK-239.md) | No | 2026-05-15 | 2026-05-15 |
 | TASK-250 | Ignore non-football UD slates (e.g. 'UD 2026 World Cup' soccer) in extension sync and/or web app | Todo | P2 | [Plan](docs/plans/TASK-250.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-255 | Blog SEO — per-post meta/OG, canonical, Article schema & sitemap for /blog routes | Todo | P2 | [Plan](docs/plans/TASK-255.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
+| TASK-319 | Mobile app scaffold: Expo RN app, Supabase auth, shared analytics package | Todo | P2 | [Plan](docs/plans/TASK-319.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
+| TASK-320 | iOS screen-capture module: ScreenCaptureKit FrameSource and draft session UX | Todo | P2 | [Plan](docs/plans/TASK-320.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
+| TASK-321 | Parse engine v1: Underdog pick-ledger OCR with remote parse templates | Todo | P2 | [Plan](docs/plans/TASK-321.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
+| TASK-322 | Live Activity companion: ActivityKit widget, Dynamic Island, push relay | Todo | P2 | [Plan](docs/plans/TASK-322.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
+| TASK-323 | In-app Draft Assistant screen and manual fallback mode | Todo | P2 | [Plan](docs/plans/TASK-323.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -95,6 +101,7 @@
 | TASK-307 | Arena pairing sample mix after full-DB backfill | Todo | P3 | [Plan](docs/plans/TASK-307.md) -- Draft | No | 2026-07-01 | 2026-07-01 |
 | TASK-313 | Arena leaderboard pagination | In Progress | P3 | [Plan](docs/plans/TASK-313.md) | No | 2026-07-02 | 2026-07-02 |
 | TASK-317 | Boards IO follow-ups: artifact refresh cadence + client cache for user boards | Todo | P3 | [Plan](docs/plans/TASK-317.md) -- Draft | No | 2026-07-09 | 2026-07-09 |
+| TASK-324 | App Store readiness: review notes, privacy disclosures, distribution strategy | Todo | P3 | [Plan](docs/plans/TASK-324.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |

@@ -20,3 +20,7 @@
 | [ADR-016](adr-016-full-database-arena-pool-with-claim-on-sync-and-ac.md) | Full-database Arena pool with claim-on-sync and account-level enrollment | Accepted | 2026-07-01 |
 | [ADR-017](adr-017-arena-public-launch-vote-integrity-and-data-harden.md) | Arena public-launch vote-integrity and data hardening (ADR-013 amendment) | Accepted | 2026-07-02 |
 | [ADR-018](adr-018-serve-heavy-client-aggregations-from-precomputed-s.md) | Serve heavy client aggregations from precomputed Storage artifacts | Accepted | 2026-07-09 |
+| [ADR-019](adr-019-mobile-draft-capture-via-on-device-screen-reading.md) | Mobile draft capture via on-device screen reading | Accepted | 2026-07-11 |
+| [ADR-020](adr-020-ios-capture-via-screencapturekit-with-replaykit-fa.md) | iOS capture via ScreenCaptureKit with ReplayKit fallback | Accepted | 2026-07-11 |
+| [ADR-021](adr-021-parse-engine-as-incremental-pick-ledger-with-remot.md) | Parse engine as incremental pick ledger with remote templates | Accepted | 2026-07-11 |
+| [ADR-022](adr-022-mobile-app-shell-expo-react-native-with-eas-builds.md) | Mobile app shell Expo React Native with EAS builds | Accepted | 2026-07-11 |

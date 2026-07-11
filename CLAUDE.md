@@ -37,6 +37,13 @@ Roster sync utility — reads Underdog/DraftKings draft pages, writes entries to
 
 Bundled by **Vite + @crxjs/vite-plugin** into `chrome-extension/dist/` — the dist directory is what Edge / Chrome / Firefox load, not `src/`. **Any change to files under `chrome-extension/src/` requires `cd chrome-extension && npm run build` before the developer can reload-and-test in the browser.** Skipping the build silently runs the previous bundle and looks like the fix didn't work.
 
+### Mobile app (`mobile-app/`)
+**Pre-implementation (EPIC-08, P1).** iOS-first live draft assistant: on-device screen
+capture + OCR of the user's Underdog draft (ADR-019/020/021), glanceable Live Activity /
+Dynamic Island companion, Expo React Native shell built via EAS cloud builds from Windows
+(ADR-022). Design docs live in `mobile-app/docs/` (ARCHITECTURE, RESEARCH_NOTES,
+DEVELOPMENT_NOTES). All product code is gated on the TASK-318 feasibility spike.
+
 ### Auxiliary code (out of scope unless explicitly working on it)
 - `scrapers/` — Python ADP scrapers
 - `simulation/` — Python Monte Carlo / projection tools
@@ -201,6 +208,7 @@ When modifying a feature, update its Feature Spec. Vision_and_Scope changes only
 | `docs/` | All other documentation (specs, ADRs, plans, strategy) |
 | `best-ball-manager/` | The web application |
 | `chrome-extension/` | Roster-sync extension |
+| `mobile-app/` | Mobile Live Draft Assistant (EPIC-08, iOS-first; design docs, pre-implementation) |
 | `scrapers/` | Python ADP scrapers |
 | `simulation/` | Python simulation / projection tools |
 | `scripts/` | Node admin scripts |

@@ -181,3 +181,40 @@
 **Status:** Complete
 **Description:** Governance and positioning for the pivot per ADR-013 — update Vision_and_Scope.md to add the Arena pillar and amend the three relaxed boundaries (social features, server-side backend, Mirror-Not-Advisor scope), and add the Best_Ball_Arena.md Feature Spec.
 **Tasks:** TASK-286
+
+---
+
+## EPIC-08: Mobile Live Draft Assistant
+**Goal:** (P1) A native mobile companion that reads the user's live Underdog draft from their own screen (on-device capture + OCR, per ADR-019) and surfaces glanceable portfolio-aware draft context — iOS first via Live Activities / Dynamic Island (ADR-020), Android overlay later. Targets the ~75% of drafters who draft on phones, whom no existing tool can reach. Architecture and research notes live in `mobile-app/docs/`.
+**Verification:** During a real Underdog fast draft on the developer's iPhone, the user drafts entirely in the Underdog app while the Dynamic Island shows current pick, picks-until-turn, and top available players by the user's own rankings, updating within ~3 seconds of each pick; tapping opens the full in-app assistant with portfolio context; when OCR confidence drops, the app visibly degrades to manual pick entry rather than showing wrong data.
+**Status:** Not Started
+**ADRs:** ADR-019, ADR-020, ADR-021, ADR-022
+
+### FEAT-027: Feasibility & Foundations
+**Status:** Not Started
+**Description:** The go/no-go spike (capture visibility of the Underdog iOS app, OCR accuracy on real draft screenshots, ScreenCaptureKit background semantics on the iOS 27 beta, Windows→EAS→TestFlight toolchain) followed by the Expo RN app scaffold with Supabase auth and extraction of the shared JS analytics package consumed by both web and mobile.
+**Tasks:** TASK-318, TASK-319
+
+### FEAT-028: Draft Capture & Parse Engine
+**Status:** Not Started
+**Description:** The iOS screen-capture module (ScreenCaptureKit FrameSource, draft-session lifecycle and consent UX, ReplayKit-fallback-compatible architecture per ADR-020) and the parse engine per ADR-021: OCR over template-defined regions, closed-pool fuzzy matching, monotonic pick ledger, DraftState derivation, confidence scoring, calibration-sweep recovery, remote parse templates served from Supabase, and a screenshot fixture corpus. DraftKings support later arrives as a second template set within this feature's architecture.
+**Tasks:** TASK-320, TASK-321
+
+### FEAT-029: Live Activity Draft Companion
+**Status:** Not Started
+**Description:** The glanceable layer per the epic goal: ActivityKit Live Activity with minimal/compact/expanded Dynamic Island presentations and lock-screen view (picks-until-turn, top available by user rankings, archetype/stack flags), a throttle-aware update policy, Supabase Edge Function → APNs push relay for background updates, and deep linking into the in-app assistant.
+**Tasks:** TASK-322
+
+### FEAT-030: In-App Assistant & Manual Fallback
+**Status:** Not Started
+**Description:** The full-screen draft companion in the RN app consuming DraftState from the parse engine, porting the web Draft Assistant analytics (archetype viability, stacks, exposure/ADP context), plus manual pick entry as the graceful degradation path when capture/OCR is unavailable. Slow drafts use an on-demand session model (open, capture briefly, pick, close) rather than continuous watching.
+**Tasks:** TASK-323
+
+### FEAT-031: Distribution & Store Readiness
+**Status:** Not Started
+**Description:** App Review posture for a screen-capturing companion to real-money fantasy apps: 2.5.14 consent/indication notes, privacy disclosures (frames on-device only, derived picks only), age rating, the 5.2.2 third-party-authorization contingency (including possible Underdog outreach), and a TestFlight beta program for early subscribers.
+**Tasks:** TASK-324
+
+### FEAT-032: Android Overlay Assistant (future phase)
+**Status:** Not Started
+**Description:** The Android half of the dream, deferred until iOS proves the product: MediaProjection capture + ML Kit OCR + floating overlay bubble, reusing the RN shell, shared analytics package, and remote parse templates. Blocked on a FLAG_SECURE go/no-go test of the Android UD/DK apps (research 2026-07: MediaProjection consent is per-session; AccessibilityService is a high-policy-risk fallback only; Google Play's gambling "companion functionality" clause is the primary distribution risk).
