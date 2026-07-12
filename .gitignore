@@ -12,3 +12,6 @@ scripts/node_modules
 
 # Admin script output (user data dumps, etc.)
 tmp/
+
+# Raw spike/test screen recordings (kept local; stills committed as evidence)
+mobile-app/docs/*.mp4

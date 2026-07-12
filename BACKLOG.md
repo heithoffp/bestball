@@ -15,6 +15,7 @@
 - TASK-240: Roster Viewer — full Draft Board view (Underdog)
 - TASK-268: Add Avg CLV column to Exposures tab
 - TASK-313: Arena leaderboard pagination
+- TASK-318: Spike: iOS draft-capture feasibility (capture visibility, OCR accuracy, toolchain)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -36,7 +37,7 @@
 | TASK-237 | Risk note: iOS App Store rejection scenarios and fallbacks | Todo | P1 | [Plan](docs/plans/TASK-237.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-238 | L5 config-update loop design (gated on TASK-234) | Todo | P1 | [Plan](docs/plans/TASK-238.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-188 | Weekly portfolio digest email — retention loop | In Progress | P1 | [Plan](docs/plans/TASK-188.md) | No | 2026-06-03 | 2026-06-03 |
-| TASK-318 | Spike: iOS draft-capture feasibility (capture visibility, OCR accuracy, toolchain) | Todo | P1 | [Plan](docs/plans/TASK-318.md) | No | 2026-07-11 | 2026-07-11 |
+| TASK-318 | Spike: iOS draft-capture feasibility (capture visibility, OCR accuracy, toolchain) | In Progress | P1 | [Plan](docs/plans/TASK-318.md) | No | 2026-07-11 | 2026-07-11 |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | [Plan](docs/plans/TASK-184.md) | No | 2026-04-08 | 2026-04-08 |
@@ -119,6 +120,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-325 | Android FLAG_SECURE go/no-go: UD app capture visibility on Pixel 3 | Done | P3 | [Plan](docs/archive/plans/TASK-325.md) | Yes | 2026-07-12 |
 | TASK-283 | Arena: leaderboard view | Done | P2 | [Plan](docs/archive/plans/TASK-283.md) | Yes | 2026-07-02 |
 | TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | Done | P1 | [Plan](docs/archive/plans/TASK-282.md) | Yes | 2026-07-02 |
 | TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | Done | P1 | [Plan](docs/archive/plans/TASK-281.md) | Yes | 2026-07-02 |

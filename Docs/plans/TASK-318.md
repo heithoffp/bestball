@@ -183,3 +183,20 @@ dependencies).
 
 ---
 *Approved by: PH — 2026-07-11*
+
+## Decision
+
+- **Question:** iOS 27 beta for Part C: daily iPhone now, or defer?
+- **Chosen:** Install the dev beta on the daily iPhone now — Part C proceeds as soon as Part D toolchain passes
+- **Decided by:** PH
+- **Date:** 2026-07-11
+
+- **Question:** Spike draft budget for Parts A/B?
+- **Chosen:** Confirmed — $1–$5 total in cheapest UD fast-draft entries, expensed to the spike
+- **Decided by:** PH
+- **Date:** 2026-07-11
+
+- **Question:** Apple Developer Program entity?
+- **Chosen:** Personal enrollment (fastest approval; can migrate to a business entity later)
+- **Decided by:** PH
+- **Date:** 2026-07-11
