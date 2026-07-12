@@ -8,38 +8,45 @@ Active
 
 ## User-Facing Behavior
 
-### Desktop
-- Multi-player line chart (Recharts) at 585px height with legend
-- Player selection panel with checkboxes to toggle chart visibility
-- "Select Top 5" button auto-populates highest-exposure players
-- Time scale buttons: 1 week, 1 month, All
-- Pick Range toggle shows quartile box plots (min/Q1/median/Q3/max) from user's actual picks
-- Tooltip shows both ADP value and pick statistics on hover
+Two stacked panes, each owning its controls (no global control bar):
+
+### Chart pane (hero, top)
+- Header: "ADP over time" eyebrow + "lower = drafted earlier" caption; platform toggle (Both / Underdog / DraftKings, two-platform accounts only), time window (1W / 1M / All), and a "My pick ranges" toggle chip (hidden in Both mode, replaced by a solid-UD / dashed-DK line key)
+- **Watchlist chips row** — doubles as the chart legend. One chip per selected player: color dot (matches line color), name, current ADP, windowed trend. Hovering a chip spotlights its line (others dim); × removes the player. "+ Top 5" replaces the selection with the table's top 5 rows; "Clear" empties it; an `n/10` counter shows capacity
+- Multi-player line chart (Recharts) filling the pane: 2px lines, validated 10-color CVD-safe palette assigned by selection order (never cycled — selection hard-capped at 10)
+- **Round-ruler y-axis** — ticks anchor to draft-round boundaries, showing pick number with the round beneath (e.g. `37 / R4`); horizontal gridlines mark rounds
+- Tooltip: entries sorted by ADP, each with color dot, value, round annotation, and the user's pick stats (avg · range) in single-platform mode
+- Both mode overlays UD (solid) vs DK (dashed) per player; color follows the player
+
+### Table pane (bottom, fills remaining height)
+- Toolbar: search (player/team/position), "Trend" calc-mode toggle (% / Spots), player count
+- Virtualized table; clicking a row toggles the player on the chart. Selection shown as a color-filled swatch (hollow ring when unselected) plus a colored left edge
+- Player cell: position badge + name + compact team code (team merged into the cell — no separate column)
+- Sort indicator only on the active column (gold); "Rosters →" link revealed on row hover (always visible on touch devices)
 
 ### Mobile
-- Chart height reduced to 280px
-- Font size 11px
-- Some table columns hidden for space
-- Search bar for player filtering
-
-### Tablet
-- Chart height 460px (intermediate)
+- Chart body fixed at 220px, compact y ticks (pick number only), platform labels shortened (UD / DK)
+- Watchlist chips collapse to one horizontally scrollable strip
+- Table shows ADP + Trend columns (platform-aware when filtered); team code hidden
 
 ### Empty States
 - If no ADP snapshots exist, chart area is empty with no crash (graceful degradation)
-- Players in rosters but not in ADP snapshots remain visible in the selection panel
+- Zero selection shows an inline prompt with an "Add top 5" action
+- Players in rosters but not in ADP snapshots remain visible in the selection table
 
 ## Key Controls & Interactions
 
 | Control | Behavior |
 |---------|----------|
-| Player Checkboxes | Toggle individual player lines on/off |
-| Select Top 5 | Auto-selects 5 highest-exposure players |
-| Search | Filter player list by name/team/position |
-| Time Scale | 1w / 1m / All — clips chart data to window |
-| Calc Mode | % / ADP — shows Trend and Δ UD-DK columns as percentage change (default) or raw ADP spots. Affects table columns only; the chart always plots absolute ADP |
-| Pick Range | Checkbox to overlay quartile box plots from user's draft picks |
-| Sort | Name, Exposure %, ADP, Value (ADP - avg pick), Trend |
+| Row click / swatch | Toggle a player's line on the chart (max 10; further adds are no-ops with an explanatory tooltip) |
+| Watchlist chip | Hover spotlights the line; × removes the player |
+| Top 5 | Replaces selection with the top 5 rows of the current table sort |
+| Search | Filter player table by name/team/position |
+| Platform | Both / Underdog / DraftKings — scopes chart snapshots; Both overlays solid (UD) vs dashed (DK) |
+| Time Scale | 1w / 1m / All — clips chart data to window and scopes trend calculations |
+| Trend mode | % / Spots — shows Trend and Δ UD-DK columns (and chip trends) as percentage change (default) or raw ADP spots. The chart always plots absolute ADP |
+| My pick ranges | Toggle chip overlaying quartile box plots from user's draft picks (single-platform modes only) |
+| Sort | Click column headers; active column highlighted with direction arrow. ADP columns sink platform-missing players to the tail |
 
 ## Computations & Data Dependencies
 
@@ -49,9 +56,9 @@ Active
 - Box plot statistics: quartiles, median, mean from user's pick distribution per player
 - Value metric: `ADP - userAvgPick` (positive = user got value relative to market)
 - Time window filtering: clips history array to last 7/30 days or shows all
-- Trend (ADP mode): `lastAdpInWindow - firstAdpInWindow` (negative trend = player being drafted earlier = rising)
+- Trend (spots mode): `lastAdpInWindow - firstAdpInWindow` (negative trend = player being drafted earlier = rising)
 - Trend (% mode, default): `(lastAdpInWindow - firstAdpInWindow) / firstAdpInWindow × 100` — a fixed spot move registers larger in early rounds than late
-- Δ UD-DK (ADP mode): `udAdp - min(dkAdp, 216)` (DK clamped to Underdog's 18-round depth)
+- Δ UD-DK (spots mode): `udAdp - min(dkAdp, 216)` (DK clamped to Underdog's 18-round depth)
 - Δ UD-DK (% mode, default): `(udAdp - dkClamped) / ((udAdp + dkClamped) / 2) × 100` — mean-relative, symmetric across platforms (`dkClamped = min(dkAdp, 216)`)
 - Custom domain padding on chart axes
 

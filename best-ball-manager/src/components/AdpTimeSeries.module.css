@@ -4,125 +4,327 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 20px;
+  min-height: 0;
+  gap: 12px;
   animation: fadeSlideIn var(--duration-normal) var(--ease-default) both;
 }
 
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
 
-/* --- Controls bar --- */
-.controls {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
+@media (prefers-reduced-motion: reduce) {
+  .root { animation: none; }
 }
 
-.buttonGroup {
-  display: flex;
-  gap: 8px;
-}
-
-/* --- Main stacked layout --- */
-.mainLayout {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex: 1;
-  min-height: 0;
-}
-
-/* --- Table pane (top strip) --- */
+/* ── Pane shells ── */
+.chartPane,
 .tablePane {
-  flex: 0 0 auto;
-  height: 220px;
-  padding: 0 !important;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 
-/* --- Table header --- */
+.chartPane { flex: 1.15 1 0; min-height: 280px; }
+.tablePane { flex: 1 1 0; min-height: 200px; }
+
+/* ── Chart header ── */
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  padding: 10px 16px 8px;
+}
+
+.chartTitleBlock {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.chartTitle {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.chartSubtitle {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chartControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Solid/dashed key for Both mode (color = player, dash = platform) */
+.lineKey {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Watchlist chips (the chart's legend) ── */
+.watchlist {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 10px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 13px;
+  cursor: default;
+  transition: border-color var(--duration-fast) var(--ease-default),
+              background var(--duration-fast) var(--ease-default);
+}
+
+.chip:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-3);
+}
+
+.chipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chipName {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipAdp {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chipTrend {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--duration-fast), background var(--duration-fast);
+}
+
+.chipRemove:hover {
+  color: var(--text-primary);
+  background: var(--surface-1);
+}
+
+.chipAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px dashed var(--border-default);
+  border-radius: 13px;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--duration-fast), border-color var(--duration-fast),
+              background var(--duration-fast);
+}
+
+.chipAction:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.watchCount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Chart body ── */
+.chartBody {
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 8px 4px;
+}
+
+.chartEmpty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+}
+
+.chartEmptyHint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* ── Table toolbar ── */
+.tableToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tableToolbar :global(.filter-search) { max-width: 380px; }
+
+.trendMode {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.trendModeLabel {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Table header ── */
 .tableHeader {
   display: grid;
-  column-gap: 8px;
-  padding: 7px 18px;
+  column-gap: 10px;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px 0 11px; /* 11 + 3px row border-left keeps columns aligned */
   background: var(--surface-2);
   border-bottom: 1px solid var(--border-subtle);
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .colHeader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: var(--text-xs, 0.7rem);
+  font-size: 0.66rem;
   font-family: var(--font-mono);
-  color: var(--text-secondary);
-  text-align: right;
+  font-weight: 600;
+  color: var(--text-muted);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
   transition: color var(--duration-fast) var(--ease-default);
 }
 
-.colHeader:hover {
-  color: var(--text-primary);
-}
+.colHeader:hover { color: var(--text-primary); }
 
-/* --- Table body --- */
+.colHeaderActive { color: var(--accent); }
+
+.sortArrow { font-size: 8px; }
+
+/* ── Table body ── */
 .tableBody {
   flex: 1;
   overflow-y: auto;
 }
 
-/* --- Player row --- */
+/* ── Player row ── */
 .playerRow {
   display: grid;
-  column-gap: 8px;
-  padding: 6px 18px;
-  border-bottom: 1px solid var(--border-subtle);
+  column-gap: 10px;
   align-items: center;
-  cursor: pointer;
+  padding: 0 14px 0 11px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-left: 3px solid transparent;
   transition: background var(--duration-fast) var(--ease-default);
 }
 
-.playerRowSelected {
-  background: var(--surface-2);
+.playerRow:hover { background: var(--surface-2); }
+
+.playerRowSelected { background: var(--surface-2); }
+
+/* Selection swatch — hollow ring that fills with the line color */
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  flex-shrink: 0;
+  transition: border-color var(--duration-fast) var(--ease-default),
+              background var(--duration-fast) var(--ease-default);
 }
 
-.navBtnCell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
+.playerRow:hover .swatch:not(.swatchOn) { border-color: var(--text-muted); }
 
-.seeRostersBtn {
-  background: none;
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  padding: 2px 6px;
-  white-space: nowrap;
-  opacity: 0.8;
-}
-
-.seeRostersBtn:hover {
-  opacity: 1;
-  text-decoration: underline;
-}
-
-/* --- Player cell: badge + name inline --- */
+/* ── Player cell: badge + name + team inline ── */
 .playerCell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   overflow: hidden;
   min-width: 0;
 }
@@ -136,7 +338,15 @@
   color: var(--text-primary);
 }
 
-/* --- Position badge --- */
+.playerTeam {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Position badge ── */
 .posBadge {
   display: inline-flex;
   align-items: center;
@@ -151,33 +361,33 @@
   white-space: nowrap;
 }
 
-.posBadge[data-pos="QB"]    { background: rgba(191, 68, 239, 0.15); color: #BF44EF; }
-.posBadge[data-pos="RB"]    { background: rgba(16, 185, 129, 0.15); color: #10B981; }
-.posBadge[data-pos="WR"]    { background: rgba(245, 158, 11, 0.15);  color: #F59E0B; }
-.posBadge[data-pos="TE"]    { background: rgba(59, 130, 246, 0.15);  color: #3B82F6; }
+.posBadge[data-pos="QB"]    { background: var(--pos-qb-bg); color: var(--pos-qb); }
+.posBadge[data-pos="RB"]    { background: var(--pos-rb-bg); color: var(--pos-rb); }
+.posBadge[data-pos="WR"]    { background: var(--pos-wr-bg); color: var(--pos-wr); }
+.posBadge[data-pos="TE"]    { background: var(--pos-te-bg); color: var(--pos-te); }
 .posBadge[data-pos="OTHER"] { background: rgba(90, 106, 128, 0.15); color: #5A6A80; }
 
-/* --- Data cells --- */
+/* ── Data cells ── */
 .monoCell {
   text-align: right;
   font-family: var(--font-mono);
   font-size: var(--text-sm, 0.8rem);
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.dimCell {
-  text-align: right;
-  font-size: var(--text-sm, 0.8rem);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-}
+.dimCell { color: var(--text-secondary); }
 
 .trendCell {
   text-align: right;
   font-family: var(--font-mono);
   font-size: var(--text-sm, 0.8rem);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .valueCell {
@@ -185,35 +395,43 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm, 0.8rem);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-/* --- Chart pane (bottom) --- */
-.chartPane {
-  flex: 1;
-  min-height: 0;
-  padding: 1rem;
-}
-
-.chartEmpty {
-  height: 100%;
+/* ── Roster nav — hover reveal ── */
+.navBtnCell {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  font-size: var(--text-base, 0.9rem);
+  justify-content: flex-end;
 }
 
-/* --- Sort icon --- */
-.sortIcon {
-  opacity: 0.3;
-  font-size: 11px;
+.seeRostersBtn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  padding: 2px 4px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
 }
 
-/* --- Tooltip --- */
+.playerRow:hover .seeRostersBtn,
+.seeRostersBtn:focus-visible { opacity: 1; }
+
+@media (hover: none) {
+  .seeRostersBtn { opacity: 0.85; }
+}
+
+/* ── Tooltip ── */
 .tooltip {
-  padding: 10px 14px;
-  min-width: 200px;
-  max-width: 280px;
+  padding: 10px 12px;
+  min-width: 210px;
+  max-width: 290px;
   border: 1px solid var(--border-default);
   border-radius: 8px;
   background-color: var(--surface-3);
@@ -229,61 +447,110 @@
   padding-bottom: 5px;
 }
 
-.tooltipEntry {
-  margin-bottom: 6px;
-}
+.tooltipEntry { margin-bottom: 6px; }
+.tooltipEntry:last-child { margin-bottom: 0; }
 
 .tooltipEntryHeader {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: center;
+  gap: 7px;
   font-size: var(--text-sm, 0.8rem);
-  font-family: var(--font-mono);
+}
+
+.tooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .tooltipEntryName {
   font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tooltipEntryValue {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tooltipRound {
+  font-size: 0.65rem;
+  color: var(--text-muted);
 }
 
 .tooltipStats {
   font-size: var(--text-xs, 0.7rem);
   color: var(--text-secondary);
   margin-top: 2px;
-}
-
-/* ===================== */
-/* Mobile overrides      */
-/* ===================== */
-@media (max-width: 599px) {
-  .controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .buttonGroup {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .tablePane {
-    height: 170px;
-  }
-
-  .tooltip {
-    min-width: 160px;
-    font-size: 12px;
-  }
+  padding-left: 15px;
 }
 
 /* ===================== */
 /* Tablet overrides      */
 /* ===================== */
 @media (min-width: 600px) and (max-width: 899px) {
-  .tablePane {
-    height: 200px;
-  }
+  .chartPane { min-height: 250px; }
+  .chartHeader { padding: 8px 12px 6px; }
+  .watchlist { padding: 0 12px 8px; }
+}
+
+/* ===================== */
+/* Mobile overrides      */
+/* ===================== */
+@media (max-width: 599px) {
+  .root { gap: 8px; }
 
   .chartPane {
-    padding: 0.75rem;
+    flex: 0 0 auto;
+    min-height: 0;
   }
+
+  .chartBody {
+    flex: 0 0 auto;
+    height: 220px;
+  }
+
+  .chartHeader {
+    padding: 8px 10px 6px;
+    gap: 6px 10px;
+  }
+
+  .chartSubtitle { display: none; }
+
+  /* Chips become a single scrollable strip */
+  .watchlist {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0 10px 8px;
+  }
+  .watchlist::-webkit-scrollbar { display: none; }
+  .watchCount { margin-left: 0; }
+  .chipName { max-width: 92px; }
+
+  .tablePane { min-height: 180px; }
+
+  .tableToolbar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .tableToolbar :global(.filter-search) { max-width: none; }
+
+  /* Give the name every pixel — team code is a desktop nicety */
+  .playerTeam { display: none; }
+
+  .tableHeader { padding: 0 10px 0 7px; }
+  .playerRow { padding: 0 10px 0 7px; }
+
+  .tooltip { min-width: 170px; font-size: 12px; }
 }

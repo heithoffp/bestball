@@ -1,14 +1,26 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
-  Tooltip, Legend, CartesianGrid, ReferenceArea, ReferenceLine
+  Tooltip, CartesianGrid, ReferenceArea, ReferenceLine
 } from 'recharts';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { X, Plus } from 'lucide-react';
 import { parseAdpString, canonicalName } from '../utils/helpers';
 import styles from './AdpTimeSeries.module.css';
 import { SearchInput } from './filters';
 import useMediaQuery from '../hooks/useMediaQuery';
 import TabLayout from './TabLayout';
+
+// Categorical line palette — 10 fixed slots validated against the card surface
+// (#0C1A30) for OKLCH lightness band, CVD separation, and 3:1 contrast.
+// Colors are assigned by selection order and never cycled: selection is capped
+// at MAX_SELECTED so identity stays unambiguous.
+const LINE_PALETTE = [
+  '#3b82f6', '#ea580c', '#8b5cf6', '#059669', '#ec4899',
+  '#0d9488', '#d97706', '#6366f1', '#65a30d', '#ef4444'
+];
+const MAX_SELECTED = 10;
+const SURFACE_CARD = '#0C1A30';
 
 // --- Math Helper for Quartiles + mean ---
 const calculateBoxPlot = (values) => {
@@ -27,29 +39,58 @@ const calculateBoxPlot = (values) => {
 };
 
 // --- Formatting helpers ---
-const fmtAdp  = v => v !== null ? v.toFixed(1) : '-';
-const fmtDelta = v => v === null ? '-' : `${v > 0 ? '+' : ''}${v.toFixed(1)}`;
-const fmtDeltaPct = v => v === null ? '-' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
+const fmtAdp  = v => v !== null && v !== undefined ? v.toFixed(1) : '-';
+const fmtDelta = v => v == null ? '-' : `${v > 0 ? '+' : ''}${v.toFixed(1)}`;
+const fmtDeltaPct = v => v == null ? '-' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
 const fmtTrend = v => {
-  if (v === null) return '-';
+  if (v == null) return '-';
   const icon = v < 0 ? '▲' : v > 0 ? '▼' : '';
   return `${icon} ${Math.abs(v).toFixed(1)}`;
 };
 const fmtTrendPct = v => {
-  if (v === null) return '-';
+  if (v == null) return '-';
   const icon = v < 0 ? '▲' : v > 0 ? '▼' : '';
   return `${icon} ${Math.abs(v).toFixed(1)}%`;
 };
-const trendColor = v => v === null ? 'var(--text-muted)' : v < 0 ? 'var(--positive)' : v > 0 ? 'var(--negative)' : 'var(--text-muted)';
+const trendColor = v => v == null ? 'var(--text-muted)' : v < 0 ? 'var(--positive)' : v > 0 ? 'var(--negative)' : 'var(--text-muted)';
 
-function DiamondDot({ cx, cy, fill, r = 4 }) {
-  if (cx == null || cy == null) return null;
-  return <polygon points={`${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`} fill={fill} />;
-}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const fmtDate = d => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d));
+  return m ? `${MONTHS[+m[2] - 1]} ${+m[3]}` : d;
+};
 
-function SortIcon({ col, sortConfig }) {
-  if (sortConfig.key !== col) return <span className={styles.sortIcon}>⇅</span>;
-  return sortConfig.direction === 'asc' ? '▲' : '▼';
+const pickRound = (pick, teams) => Math.floor((pick - 1) / teams) + 1;
+
+// Demo/CSV data can carry full team names ("San Francisco 49ers") that wrap
+// table rows. Compress to a compact code: initials for multi-word (dropping
+// digit-led words like "49ers"), first 3 letters otherwise.
+const abbrevTeam = t => {
+  if (!t || t === 'N/A') return '';
+  const clean = String(t).trim();
+  if (clean.length <= 4) return clean.toUpperCase();
+  const words = clean.split(/\s+/).filter(w => !/^\d/.test(w));
+  if (words.length === 0) return clean.slice(0, 3).toUpperCase();
+  const code = words.length > 1 ? words.map(w => w[0]).join('') : words[0].slice(0, 3);
+  return code.toUpperCase().slice(0, 3);
+};
+
+// Y-axis tick anchored to draft-round boundaries: pick number with the round
+// beneath it. compact mode (mobile) drops the round line.
+function RoundTick({ x, y, payload, teams, compact }) {
+  const pick = payload.value;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={-6} dy={compact ? 3 : -1} textAnchor="end" fill="#8A9BB5" fontSize={compact ? 10 : 12} fontFamily="'JetBrains Mono', monospace">
+        {pick}
+      </text>
+      {!compact && (
+        <text x={-6} dy={11} textAnchor="end" fill="#5a6a80" fontSize={9.5} fontFamily="'JetBrains Mono', monospace">
+          R{pickRound(pick, teams)}
+        </text>
+      )}
+    </g>
+  );
 }
 
 function PosBadge({ pos }) {
@@ -62,26 +103,49 @@ function PosBadge({ pos }) {
   );
 }
 
-function CustomTooltip({ active, label, payload, playerById }) {
-  if (!active || !label) return null;
+function HeaderCell({ label, col, sortConfig, onSort, alignLeft = false, helpId }) {
+  const active = sortConfig.key === col;
+  return (
+    <button
+      type="button"
+      className={`${styles.colHeader} ${active ? styles.colHeaderActive : ''}`}
+      style={alignLeft ? { justifyContent: 'flex-start' } : undefined}
+      onClick={() => onSort(col)}
+      data-help-id={helpId}
+    >
+      {label}
+      {active && <span className={styles.sortArrow}>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+    </button>
+  );
+}
+
+function CustomTooltip({ active, label, payload, playerById, teams }) {
+  if (!active || !label || !payload?.length) return null;
+  const entries = [...payload].sort((a, b) => (a.value ?? Infinity) - (b.value ?? Infinity));
   return (
     <div className={styles.tooltip}>
-      <div className={styles.tooltipDate}>{label}</div>
-      {payload && payload.map((entry) => {
+      <div className={styles.tooltipDate}>{fmtDate(label)}</div>
+      {entries.map((entry) => {
         const baseId = entry.dataKey.replace(/_ud$|_dk$/, '');
         const player = playerById.get(baseId);
-        const platformLabel = entry.dataKey.endsWith('_ud') ? ' (UD)' : entry.dataKey.endsWith('_dk') ? ' (DK)' : '';
+        const platformLabel = entry.dataKey.endsWith('_ud') ? 'UD' : entry.dataKey.endsWith('_dk') ? 'DK' : null;
         const stats = player?.pickStats;
         const hasStats = stats && stats.count > 0;
         return (
           <div key={entry.dataKey} className={styles.tooltipEntry}>
-            <div className={styles.tooltipEntryHeader} style={{ color: entry.stroke }}>
-              <span className={styles.tooltipEntryName}>{player?.name || baseId}{platformLabel}:</span>
-              <span>{entry.value?.toFixed(1)} ADP</span>
+            <div className={styles.tooltipEntryHeader}>
+              <span className={styles.tooltipDot} style={{ background: entry.stroke }} />
+              <span className={styles.tooltipEntryName}>
+                {player?.name || baseId}{platformLabel ? ` · ${platformLabel}` : ''}
+              </span>
+              <span className={styles.tooltipEntryValue}>
+                {entry.value?.toFixed(1)}
+                <span className={styles.tooltipRound}> R{pickRound(entry.value, teams)}</span>
+              </span>
             </div>
             {hasStats && !platformLabel && (
               <div className={styles.tooltipStats}>
-                My picks: avg {stats.mean.toFixed(1)} • med {stats.median.toFixed(1)} (range {stats.min}–{stats.max})
+                My picks: avg {stats.mean.toFixed(1)} · range {stats.min}–{stats.max}
               </div>
             )}
           </div>
@@ -96,14 +160,10 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
   const { isMobile, isTablet } = useMediaQuery();
   const [showPickRanges, setShowPickRanges] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [highlightId, setHighlightId] = useState(null);
   const [timeScale, setTimeScale] = useState('1m');
   const [calcMode, setCalcMode] = useState('pct'); // 'pct' = % change | 'raw' = raw ADP spots
   const [sortConfig, setSortConfig] = useState({ key: 'udTrend', direction: 'asc' });
-
-  const colorPalette = [
-    '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
-    '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#84cc16'
-  ];
 
   // Derive which platforms have data
   const availablePlatforms = useMemo(
@@ -127,15 +187,18 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
 
   const helpAnnotations = useMemo(() => {
     const items = [
-      { id: 'controls', label: 'Search & Filters', description: 'Filter players by name, team, or position. Switch the time window to scope trend calculations, and toggle % / ADP to show Trend and Δ UD-DK as percentage change or raw ADP spots.' },
-      { id: 'player-table', label: 'Player Selection', description: 'Click a row to add that player to the chart. Up to 10 players can be tracked at once.' },
-      { id: 'trend-col', label: 'Trend Column', description: 'ADP movement over the selected time window — rising means going earlier in drafts. Shown as % change or raw ADP spots per the %/ADP toggle.' },
-      { id: 'value-col', label: 'Value Column', description: 'Difference between your average pick and current ADP — positive means you drafted them later than market.' },
+      { id: 'chart-controls', label: 'Chart Controls', description: 'Scope the page: platform (Both overlays Underdog solid vs DraftKings dashed), and the time window that clips the chart and drives Trend calculations.' },
+      { id: 'watchlist', label: 'Watchlist', description: `The players on the chart, each with current ADP and trend. Hover a chip to spotlight its line, click × to remove, or use Top 5 to grab the top of the table. Up to ${MAX_SELECTED} at once.` },
     ];
     if (!isBothMode) {
       items.push({ id: 'pick-ranges', label: 'My Pick Ranges', description: 'Overlays a quartile box on the chart showing where you actually picked each player.' });
     }
-    items.push({ id: 'chart-area', label: 'ADP History Chart', description: 'ADP over time for selected players. Lower = drafted earlier. Hover for exact values.', anchor: 'above' });
+    items.push(
+      { id: 'chart-area', label: 'ADP History', description: 'ADP over time — lower means drafted earlier. Gridlines mark draft rounds. Hover for exact values.', anchor: 'above' },
+      { id: 'player-table', label: 'Player Table', description: 'Click a row to add or remove that player from the chart. Search by name, team, or position; click column headers to sort.', anchor: 'above' },
+      { id: 'trend-col', label: 'Trend Column', description: 'ADP movement over the selected time window — rising means going earlier in drafts. The Trend toggle switches between % change and raw ADP spots.' },
+      { id: 'value-col', label: 'Value Column', description: 'Difference between your average pick and current ADP — positive means you drafted them later than market.' },
+    );
     return items;
   }, [isBothMode]);
 
@@ -296,9 +359,10 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     });
   }, [richPlayerList, activeSnapshots, timeScale]);
 
-  // 4. Filter, enrich with platStats, and sort
-  const filteredAndSortedList = useMemo(() => {
-    // Max ADP per platform — used as sort fallback for players missing on one platform
+  // 4. Enrich with platStats. Display fields (udAdp/dkAdp) stay raw — a missing
+  // platform renders "-" — while *Sort variants substitute the platform's max
+  // ADP so those players sink to the tail when sorting by ADP.
+  const enrichedPlayers = useMemo(() => {
     const allPs = Object.values(platStats);
     const maxUdAdp = allPs.reduce((m, ps) => Math.max(m, ps.underdog?.adp ?? 0), 0) || null;
     const maxDkAdp = allPs.reduce((m, ps) => Math.max(m, ps.draftkings?.adp ?? 0), 0) || null;
@@ -308,33 +372,48 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     // doesn't show an artificially negative delta. Display columns keep the true DK ADP.
     const UD_MAX_PICK = 216;
 
-    let list = timeFilteredPlayers
+    return timeFilteredPlayers
       .filter(p => p.lastAdp !== null)
       .map(p => {
         const ps = platStats[canonicalName(p.name)] ?? {};
-        const rawUd = ps.underdog?.adp ?? null;
-        const rawDk = ps.draftkings?.adp ?? null;
-        const udAdp   = rawUd ?? maxDkAdp;
-        const dkAdp   = rawDk ?? maxUdAdp;
-        const udTrend = ps.underdog?.trend  ?? null;
+        const udAdp = ps.underdog?.adp ?? null;
+        const dkAdp = ps.draftkings?.adp ?? null;
+        const udTrend = ps.underdog?.trend ?? null;
         const dkTrend = ps.draftkings?.trend ?? null;
-        const udTrendPct = ps.underdog?.trendPct  ?? null;
+        const udTrendPct = ps.underdog?.trendPct ?? null;
         const dkTrendPct = ps.draftkings?.trendPct ?? null;
-        const dkClamped = rawDk !== null ? Math.min(rawDk, UD_MAX_PICK) : null;
-        const deltaAdp = rawUd !== null && rawDk !== null ? rawUd - dkClamped : null;
-        const deltaAdpPct = rawUd !== null && rawDk !== null ? ((rawUd - dkClamped) / ((rawUd + dkClamped) / 2)) * 100 : null;
-        return { ...p, udAdp, dkAdp, deltaAdp, deltaAdpPct, udTrend, dkTrend, udTrendPct, dkTrendPct };
+        const dkClamped = dkAdp !== null ? Math.min(dkAdp, UD_MAX_PICK) : null;
+        const deltaAdp = udAdp !== null && dkAdp !== null ? udAdp - dkClamped : null;
+        const deltaAdpPct = udAdp !== null && dkAdp !== null ? ((udAdp - dkClamped) / ((udAdp + dkClamped) / 2)) * 100 : null;
+        return {
+          ...p, udAdp, dkAdp, deltaAdp, deltaAdpPct, udTrend, dkTrend, udTrendPct, dkTrendPct,
+          udAdpSort: udAdp ?? maxDkAdp, dkAdpSort: dkAdp ?? maxUdAdp,
+        };
       });
+  }, [timeFilteredPlayers, platStats]);
 
+  const enrichedById = useMemo(() => {
+    const m = new Map();
+    for (const p of enrichedPlayers) m.set(p.id, p);
+    return m;
+  }, [enrichedPlayers]);
+
+  // 5. Filter + sort for the table
+  const filteredAndSortedList = useMemo(() => {
+    let list = enrichedPlayers;
     const q = (query || '').toLowerCase().trim();
     if (q) list = list.filter(p => (`${p.name} ${p.team} ${p.position}`).toLowerCase().includes(q));
 
     const numericKeys = ['lastAdp', 'udAdp', 'dkAdp', 'deltaAdp', 'deltaAdpPct', 'udTrend', 'dkTrend', 'udTrendPct', 'dkTrendPct', 'value', 'myAvg', 'exposure', 'change', 'changePct'];
-    // In % mode, sort the toggleable metric columns by their percentage variant so the
+    // ADP columns sort on the fallback-substituted variant; in % mode the
+    // toggleable metric columns sort by their percentage variant so the
     // displayed values drive the order. Headers still emit the raw base key.
+    const SORT_FIELD_MAP = { udAdp: 'udAdpSort', dkAdp: 'dkAdpSort' };
     const METRIC_KEYS = new Set(['deltaAdp', 'udTrend', 'dkTrend', 'change']);
-    const sortKey = calcMode === 'pct' && METRIC_KEYS.has(sortConfig.key) ? `${sortConfig.key}Pct` : sortConfig.key;
-    return list.sort((a, b) => {
+    let sortKey = SORT_FIELD_MAP[sortConfig.key] ?? sortConfig.key;
+    if (calcMode === 'pct' && METRIC_KEYS.has(sortConfig.key)) sortKey = `${sortConfig.key}Pct`;
+
+    return [...list].sort((a, b) => {
       if (sortConfig.key === 'myPickMedian') {
         const vA = a.pickStats?.median ?? null;
         const vB = b.pickStats?.median ?? null;
@@ -357,7 +436,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
       if (vA > vB) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [timeFilteredPlayers, query, sortConfig, platStats, calcMode]);
+  }, [enrichedPlayers, query, sortConfig, calcMode]);
 
   // Auto-select top 5 on load
   const initialSelectionDone = useRef(false);
@@ -374,7 +453,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     [selectedIds, playerById]
   );
 
-  // 5. Chart data — deduplicate by date so UD + DK snapshots on the same date merge into one x-axis point
+  // 6. Chart data — deduplicate by date so UD + DK snapshots on the same date merge into one x-axis point
   const chartData = useMemo(() => {
     const now = new Date();
     let cutoff = null;
@@ -402,7 +481,7 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     return Array.from(dateMap.values());
   }, [activeSnapshots, selectedPlayers, timeScale, isBothMode]);
 
-  // 6. Y-axis domain
+  // 7. Y-axis domain
   const chartDomain = useMemo(() => {
     let min = Infinity, max = -Infinity;
     const keys = isBothMode ? selectedIds.flatMap(id => [`${id}_ud`, `${id}_dk`]) : selectedIds;
@@ -417,9 +496,24 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
     return [Math.floor(min - pad), Math.ceil(max + pad)];
   }, [chartData, selectedIds, selectedPlayers, showPickRanges, isBothMode]);
 
+  // 8. Round-boundary y ticks — the gridlines double as a draft-round ruler.
+  // Falls back to Recharts auto ticks when the window spans less than a round.
+  const roundTicks = useMemo(() => {
+    const [lo, hi] = chartDomain;
+    if (typeof lo !== 'number' || typeof hi !== 'number') return undefined;
+    const t = teams || 12;
+    const starts = [];
+    for (let pick = Math.floor((lo - 1) / t) * t + 1; pick <= hi; pick += t) {
+      if (pick >= lo) starts.push(pick);
+    }
+    if (starts.length < 2) return undefined;
+    const step = Math.ceil(starts.length / 7);
+    return starts.filter((_, i) => i % step === 0);
+  }, [chartDomain, teams]);
+
   // Virtualize the player table body — avoids rendering hundreds of rows per filter change
   const tableBodyRef = useRef(null);
-  const rowHeight = isMobile ? 36 : 34;
+  const rowHeight = isMobile ? 40 : 34;
   const rowVirtualizer = useVirtualizer({
     count: filteredAndSortedList.length,
     getScrollElement: () => tableBodyRef.current,
@@ -429,235 +523,171 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
 
   // Handlers
   const handleSort = key => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
-  const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const atCap = selectedIds.length >= MAX_SELECTED;
+  const toggleSelect = id => setSelectedIds(prev => {
+    if (prev.includes(id)) return prev.filter(x => x !== id);
+    return prev.length >= MAX_SELECTED ? prev : [...prev, id];
+  });
   const selectTopN = (n = 5) => setSelectedIds(filteredAndSortedList.slice(0, n).map(p => p.id));
-  const handlePlatformChange = val => setPlatformFilter(val);
+  const clearSelection = () => setSelectedIds([]);
 
-  // Responsive grid template — switches between two-platform and single-platform layouts
-  const navCol = onNavigateToRosters ? ' 72px' : '';
+  // Watchlist chip stats — platform-aware, mirroring the table's calc mode
+  const isPct = calcMode === 'pct';
+  const chipStats = p => {
+    if (!p) return { adp: null, trend: null };
+    if (!isTwoPlat) return { adp: p.lastAdp, trend: isPct ? p.changePct : p.change };
+    if (platformFilter === 'draftkings') return { adp: p.dkAdp, trend: isPct ? p.dkTrendPct : p.dkTrend };
+    return { adp: p.udAdp, trend: isPct ? p.udTrendPct : p.udTrend };
+  };
+  const fmtTrendActive = isPct ? fmtTrendPct : fmtTrend;
+  const fmtDeltaActive = isPct ? fmtDeltaPct : fmtDelta;
+
+  // Responsive grid template — team lives inside the player cell, so columns are purely numeric
+  const navCol = onNavigateToRosters ? (isMobile ? ' 34px' : ' 76px') : '';
   const tableGrid = isMobile
-    ? `28px 2fr 1fr${navCol}`
+    ? `26px minmax(0, 1fr) 58px 82px${navCol}`
     : isTablet
-      ? (isTwoPlat ? `28px 2fr 1fr 1fr 1fr 1fr 1fr${navCol}` : `28px 2fr 1fr 1fr 1fr${navCol}`)
-      : (isTwoPlat ? `28px 2fr 0.7fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr${navCol}` : `28px 2fr 0.7fr 1fr 1fr 1fr 1fr${navCol}`);
+      ? (isTwoPlat ? `26px 1.6fr 1fr 1fr 1.1fr 0.8fr${navCol}` : `26px 1.6fr 1fr 1.1fr 0.8fr${navCol}`)
+      : (isTwoPlat ? `26px 1.8fr 1fr 1fr 1fr 1.1fr 1.1fr 0.8fr 0.9fr${navCol}` : `26px 2fr 1fr 1.1fr 0.8fr 0.9fr${navCol}`);
 
-  const tickFontSize = isMobile ? 11 : 14;
-  const chartHeight = isMobile ? 260 : isTablet ? 420 : 540;
+  const mobileAdpKey = isTwoPlat ? (platformFilter === 'draftkings' ? 'dkAdp' : 'udAdp') : 'lastAdp';
+  const mobileTrendKey = isTwoPlat ? (platformFilter === 'draftkings' ? 'dkTrend' : 'udTrend') : 'change';
+
+  const dimFor = id => highlightId && highlightId !== id ? 0.18 : 1;
 
   return (
     <TabLayout flush helpAnnotations={helpAnnotations} helpOpen={helpOpen} onHelpToggle={onHelpToggle}>
     <div className={styles.root}>
 
-      {/* --- Controls --- */}
-      <div className={styles.controls} data-help-id="controls">
-        <SearchInput value={query} onChange={setQuery} placeholder="Filter by name, team, pos..." />
-
-        <div className={styles.buttonGroup}>
-          <button className="load-button" onClick={() => selectTopN(5)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>Top 5</button>
-          <button className="load-button" onClick={() => setSelectedIds([])} style={{ width: 'auto', padding: '0.5rem 1rem' }}>Clear</button>
-        </div>
-
-        <div className="filter-btn-group">
-          {[['1w', '1W'], ['1m', '1M'], ['all', 'All']].map(([value, label]) => (
-            <button key={value} className={`filter-btn-group__item ${timeScale === value ? 'filter-btn-group__item--active' : ''}`} onClick={() => setTimeScale(value)}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="filter-btn-group" title="Show Trend and Δ UD-DK as % change or raw ADP spots">
-          {[['pct', '%'], ['raw', 'ADP']].map(([value, label]) => (
-            <button key={value} className={`filter-btn-group__item ${calcMode === value ? 'filter-btn-group__item--active' : ''}`} onClick={() => setCalcMode(value)}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {isTwoPlat && (
-          <div className="filter-btn-group">
-            {[['all', 'All'], ['underdog', 'Underdog'], ['draftkings', 'DraftKings']]
-              .filter(([val]) => val === 'all' || availablePlatforms.includes(val))
-              .map(([value, label]) => (
-                <button key={value} className={`filter-btn-group__item ${platformFilter === value ? 'filter-btn-group__item--active' : ''}`} onClick={() => handlePlatformChange(value)}>
+      {/* --- Chart hero --- */}
+      <section className={styles.chartPane}>
+        <div className={styles.chartHeader}>
+          <div className={styles.chartTitleBlock}>
+            <span className={styles.chartTitle}>ADP over time</span>
+            <span className={styles.chartSubtitle}>lower = drafted earlier</span>
+          </div>
+          <div className={styles.chartControls} data-help-id="chart-controls">
+            {isTwoPlat && (
+              <div className="filter-btn-group" title="Which platform's ADP to chart">
+                {[['all', 'Both'], ['underdog', isMobile ? 'UD' : 'Underdog'], ['draftkings', isMobile ? 'DK' : 'DraftKings']]
+                  .filter(([val]) => val === 'all' || availablePlatforms.includes(val))
+                  .map(([value, label]) => (
+                    <button key={value} className={`filter-btn-group__item ${platformFilter === value ? 'filter-btn-group__item--active' : ''}`} onClick={() => setPlatformFilter(value)}>
+                      {label}
+                    </button>
+                  ))}
+              </div>
+            )}
+            <div className="filter-btn-group" title="Time window — clips the chart and scopes trend calculations">
+              {[['1w', '1W'], ['1m', '1M'], ['all', 'All']].map(([value, label]) => (
+                <button key={value} className={`filter-btn-group__item ${timeScale === value ? 'filter-btn-group__item--active' : ''}`} onClick={() => setTimeScale(value)}>
                   {label}
                 </button>
               ))}
-          </div>
-        )}
-
-        {!isBothMode && (
-          <label className="filter-checkbox" data-help-id="pick-ranges">
-            <input type="checkbox" checked={showPickRanges} onChange={e => setShowPickRanges(e.target.checked)} />
-            My Pick Ranges
-          </label>
-        )}
-
-        <span className="filter-count">
-          <strong>{filteredAndSortedList.length}</strong> players ({selectedIds.length} selected)
-        </span>
-      </div>
-
-      <div className={styles.mainLayout}>
-
-        {/* --- Top strip: player selector table --- */}
-        <div className={`card ${styles.tablePane}`} data-help-id="player-table">
-
-          {/* Header */}
-          <div className={styles.tableHeader} style={{ gridTemplateColumns: tableGrid }}>
-            <div />
-            <div className={styles.colHeader} style={{ textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('name')}>
-              Player <SortIcon col="name" sortConfig={sortConfig} />
             </div>
-            {/* Team — desktop only */}
-            {!isMobile && !isTablet && (
-              <div className={styles.colHeader} onClick={() => handleSort('team')}>Team</div>
+            {!isBothMode && (
+              <button
+                type="button"
+                className={`filter-chip ${showPickRanges ? 'filter-chip--active' : ''}`}
+                onClick={() => setShowPickRanges(v => !v)}
+                data-help-id="pick-ranges"
+                title="Overlay quartile boxes of where you actually picked each player"
+              >
+                My pick ranges
+              </button>
             )}
-            {/* Platform-dependent ADP + Trend columns */}
-            {isTwoPlat && !isMobile ? (
-              <>
-                <div className={styles.colHeader} onClick={() => handleSort('udAdp')}>UD ADP <SortIcon col="udAdp" sortConfig={sortConfig} /></div>
-                <div className={styles.colHeader} onClick={() => handleSort('dkAdp')}>DK ADP <SortIcon col="dkAdp" sortConfig={sortConfig} /></div>
-                {!isTablet && <div className={styles.colHeader} onClick={() => handleSort('deltaAdp')}>Δ UD-DK <SortIcon col="deltaAdp" sortConfig={sortConfig} /></div>}
-                <div className={styles.colHeader} data-help-id="trend-col" onClick={() => handleSort('udTrend')}>UD Trend <SortIcon col="udTrend" sortConfig={sortConfig} /></div>
-                {!isTablet && <div className={styles.colHeader} onClick={() => handleSort('dkTrend')}>DK Trend <SortIcon col="dkTrend" sortConfig={sortConfig} /></div>}
-              </>
-            ) : !isTwoPlat && !isMobile ? (
-              <>
-                <div className={styles.colHeader} onClick={() => handleSort('lastAdp')}>ADP <SortIcon col="lastAdp" sortConfig={sortConfig} /></div>
-                <div className={styles.colHeader} data-help-id="trend-col" onClick={() => handleSort('change')}>Trend <SortIcon col="change" sortConfig={sortConfig} /></div>
-              </>
-            ) : null}
-            {!isMobile && <div className={styles.colHeader} onClick={() => handleSort('exposure')}>Exp <SortIcon col="exposure" sortConfig={sortConfig} /></div>}
-            {!isMobile && !isTablet && <div className={styles.colHeader} data-help-id="value-col" onClick={() => handleSort('value')}>Value <SortIcon col="value" sortConfig={sortConfig} /></div>}
-            {isMobile && <div className={styles.colHeader} onClick={() => handleSort(isTwoPlat ? 'udTrend' : 'change')}>Trend <SortIcon col={isTwoPlat ? 'udTrend' : 'change'} sortConfig={sortConfig} /></div>}
-            {onNavigateToRosters && <div />}
-          </div>
-
-          {/* Body */}
-          <div className={styles.tableBody} ref={tableBodyRef}>
-          <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
-            {rowVirtualizer.getVirtualItems().map(virtualRow => {
-              const p = filteredAndSortedList[virtualRow.index];
-              const checked = selectedIds.includes(p.id);
-              const colorIndex = selectedIds.indexOf(p.id);
-              const strokeColor = colorIndex >= 0 ? colorPalette[colorIndex % colorPalette.length] : 'transparent';
-              const valueColor = p.value === null ? 'inherit' : p.value > 0 ? 'var(--positive)' : p.value < 0 ? 'var(--negative)' : 'inherit';
-              const valueDisplay = p.value !== null ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)}` : '-';
-
-              // Active trend/delta values + formatters per the %/ADP calc-mode toggle
-              const isPct = calcMode === 'pct';
-              const udTrendVal = isPct ? p.udTrendPct : p.udTrend;
-              const dkTrendVal = isPct ? p.dkTrendPct : p.dkTrend;
-              const changeVal  = isPct ? p.changePct  : p.change;
-              const deltaVal   = isPct ? p.deltaAdpPct : p.deltaAdp;
-              const fmtTrendActive = isPct ? fmtTrendPct : fmtTrend;
-              const fmtDeltaActive = isPct ? fmtDeltaPct : fmtDelta;
-
-              return (
-                <div
-                  key={p.id}
-                  data-index={virtualRow.index}
-                  onClick={() => toggleSelect(p.id)}
-                  className={`hover-row ${styles.playerRow} ${checked ? styles.playerRowSelected : ''}`}
-                  style={{
-                    gridTemplateColumns: tableGrid,
-                    borderLeft: checked ? `3px solid ${strokeColor}` : '3px solid transparent',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: virtualRow.size,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <input type="checkbox" checked={checked} readOnly style={{ cursor: 'pointer' }} />
-
-                  {/* Player: badge + name */}
-                  <div className={styles.playerCell}>
-                    <PosBadge pos={p.position} />
-                    <span className={styles.playerName}>{p.name}</span>
-                  </div>
-
-                  {/* Team */}
-                  {!isMobile && !isTablet && (
-                    <div className={styles.dimCell}>{p.team !== 'N/A' ? p.team : '-'}</div>
-                  )}
-
-                  {/* ADP + Trend columns */}
-                  {isTwoPlat && !isMobile ? (
-                    <>
-                      <div className={styles.monoCell}>{fmtAdp(p.udAdp)}</div>
-                      <div className={styles.monoCell}>{fmtAdp(p.dkAdp)}</div>
-                      {!isTablet && <div className={styles.monoCell} style={{ color: 'var(--text-secondary)' }}>{fmtDeltaActive(deltaVal)}</div>}
-                      <div className={styles.trendCell} style={{ color: trendColor(udTrendVal) }}>{fmtTrendActive(udTrendVal)}</div>
-                      {!isTablet && <div className={styles.trendCell} style={{ color: trendColor(dkTrendVal) }}>{fmtTrendActive(dkTrendVal)}</div>}
-                    </>
-                  ) : !isTwoPlat && !isMobile ? (
-                    <>
-                      <div className={styles.monoCell}>{p.displayAdp}</div>
-                      <div className={styles.trendCell} style={{ color: trendColor(changeVal) }}>{fmtTrendActive(changeVal)}</div>
-                    </>
-                  ) : null}
-
-                  {/* Exposure */}
-                  {!isMobile && <div className={styles.monoCell}>{p.exposure > 0 ? `${p.exposure}%` : '-'}</div>}
-
-                  {/* Value (CLV) */}
-                  {!isMobile && !isTablet && (
-                    <div className={styles.valueCell} style={{ color: valueColor }}>{valueDisplay}</div>
-                  )}
-
-                  {/* Mobile: trend only */}
-                  {isMobile && (
-                    <div className={styles.trendCell} style={{ color: trendColor(isTwoPlat ? udTrendVal : changeVal) }}>
-                      {fmtTrendActive(isTwoPlat ? udTrendVal : changeVal)}
-                    </div>
-                  )}
-
-                  {/* Roster nav */}
-                  {onNavigateToRosters && (
-                    <div className={styles.navBtnCell}>
-                      {p.exposure > 0 && (
-                        <button
-                          className={styles.seeRostersBtn}
-                          onClick={e => { e.stopPropagation(); onNavigateToRosters({ players: [p.name] }); }}
-                        >
-                          Rosters →
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+            {isBothMode && (
+              <span className={styles.lineKey} aria-hidden="true">
+                <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke="#8A9BB5" strokeWidth="2" /></svg>UD
+                <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke="#8A9BB5" strokeWidth="2" strokeDasharray="4 3" /></svg>DK
+              </span>
+            )}
           </div>
         </div>
 
-        {/* --- Chart --- */}
-        <div className={`card ${styles.chartPane}`} data-help-id="chart-area">
+        {/* Watchlist — doubles as the chart legend */}
+        <div className={styles.watchlist} data-help-id="watchlist">
+          {selectedIds.map((id, idx) => {
+            const player = enrichedById.get(id) ?? playerById.get(id);
+            if (!player) return null;
+            const color = LINE_PALETTE[idx];
+            const stats = chipStats(player);
+            return (
+              <div
+                key={id}
+                className={styles.chip}
+                onMouseEnter={() => setHighlightId(id)}
+                onMouseLeave={() => setHighlightId(null)}
+              >
+                <span className={styles.chipDot} style={{ background: color }} />
+                <span className={styles.chipName}>{player.name}</span>
+                <span className={styles.chipAdp}>{fmtAdp(stats.adp)}</span>
+                {stats.trend != null && (
+                  <span className={styles.chipTrend} style={{ color: trendColor(stats.trend) }}>{fmtTrendActive(stats.trend)}</span>
+                )}
+                <button className={styles.chipRemove} onClick={() => toggleSelect(id)} aria-label={`Remove ${player.name} from chart`}>
+                  <X size={11} />
+                </button>
+              </div>
+            );
+          })}
+          <button className={styles.chipAction} onClick={() => selectTopN(5)} title="Replace the selection with the top 5 rows of the table">
+            <Plus size={12} />Top 5
+          </button>
+          {selectedIds.length > 0 && (
+            <button className={styles.chipAction} onClick={clearSelection}>Clear</button>
+          )}
+          <span className={styles.watchCount} title={`Up to ${MAX_SELECTED} players on the chart`}>
+            {selectedIds.length}/{MAX_SELECTED}
+          </span>
+        </div>
+
+        <div className={styles.chartBody} data-help-id="chart-area">
           {selectedIds.length === 0 ? (
-            <div className={styles.chartEmpty}>Select players from the list to view ADP history</div>
+            <div className={styles.chartEmpty}>
+              <p>No players on the chart</p>
+              <p className={styles.chartEmptyHint}>Click rows in the table below to add up to {MAX_SELECTED}, or</p>
+              <button className={styles.chipAction} onClick={() => selectTopN(5)}><Plus size={12} />Add top 5</button>
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={chartHeight}>
-              <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="date" tick={{ fontSize: tickFontSize, fill: '#9ca3af', fontFamily: 'var(--font-mono)' }} stroke="#4b5563" />
-                <YAxis reversed domain={chartDomain} tick={{ fontSize: tickFontSize, fill: '#9ca3af', fontFamily: 'var(--font-mono)' }} stroke="#4b5563" width={isMobile ? 40 : 50} />
-                <Tooltip content={<CustomTooltip playerById={playerById} />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
-                {!isMobile && <Legend wrapperStyle={{ paddingTop: 13, fontFamily: 'var(--font-sans)', fontSize: 13 }} />}
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 8, right: 14, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 4" stroke="rgba(138, 155, 181, 0.10)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={fmtDate}
+                  tick={{ fontSize: isMobile ? 10 : 12, fill: '#8A9BB5', fontFamily: 'var(--font-mono)' }}
+                  stroke="#1a2d50"
+                  tickLine={false}
+                  tickMargin={8}
+                  minTickGap={32}
+                />
+                <YAxis
+                  reversed
+                  domain={chartDomain}
+                  ticks={roundTicks}
+                  interval={0}
+                  tick={<RoundTick teams={teams} compact={isMobile} />}
+                  axisLine={false}
+                  tickLine={false}
+                  width={isMobile ? 40 : 52}
+                />
+                <Tooltip
+                  content={<CustomTooltip playerById={playerById} teams={teams} />}
+                  cursor={{ stroke: 'rgba(138, 155, 181, 0.3)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                />
 
                 {showPickRanges && !isBothMode && selectedIds.map((id, idx) => {
                   const player = playerById.get(id);
                   const stats = player?.pickStats;
                   if (!player || !stats || stats.count === 0) return null;
-                  const color = colorPalette[idx % colorPalette.length];
+                  const color = LINE_PALETTE[idx];
                   return (
                     <React.Fragment key={`box-${id}`}>
-                      <ReferenceArea y1={stats.q1} y2={stats.q3} fill={color} fillOpacity={0.25} stroke={color} strokeOpacity={0.5} ifOverflow="visible" />
-                      <ReferenceLine y={stats.median} stroke={color} strokeDasharray="4 4" strokeWidth={2} strokeOpacity={0.8} ifOverflow="visible" />
-                      <ReferenceLine y={stats.min} stroke={color} strokeOpacity={0.3} strokeDasharray="2 2" />
-                      <ReferenceLine y={stats.max} stroke={color} strokeOpacity={0.3} strokeDasharray="2 2" />
+                      <ReferenceArea y1={stats.q1} y2={stats.q3} fill={color} fillOpacity={0.18} stroke={color} strokeOpacity={0.4} ifOverflow="visible" />
+                      <ReferenceLine y={stats.median} stroke={color} strokeDasharray="4 4" strokeWidth={2} strokeOpacity={0.7} ifOverflow="visible" />
+                      <ReferenceLine y={stats.min} stroke={color} strokeOpacity={0.25} strokeDasharray="2 2" />
+                      <ReferenceLine y={stats.max} stroke={color} strokeOpacity={0.25} strokeDasharray="2 2" />
                     </React.Fragment>
                   );
                 })}
@@ -665,24 +695,177 @@ export default function AdpTimeSeries({ adpSnapshots = [], adpByPlatform = {}, m
                 {selectedIds.map((id, idx) => {
                   const player = playerById.get(id);
                   if (!player) return null;
-                  const color = colorPalette[idx % colorPalette.length];
+                  const color = LINE_PALETTE[idx];
+                  const dim = dimFor(id);
+                  const active = highlightId === id;
                   if (isBothMode) {
                     return (
                       <React.Fragment key={id}>
-                        <Line type="monotone" dataKey={`${id}_ud`} name={`${player.name} (UD)`} stroke={color} strokeWidth={3} dot={{ r: 3, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls animationDuration={500} />
-                        <Line type="monotone" dataKey={`${id}_dk`} name={`${player.name} (DK)`} stroke={color} strokeWidth={2} strokeDasharray="6 3" dot={<DiamondDot fill={color} r={3} />} activeDot={{ r: 6 }} connectNulls animationDuration={500} />
+                        <Line type="monotone" dataKey={`${id}_ud`} name={`${player.name} (UD)`} stroke={color} strokeWidth={active ? 3 : 2} strokeOpacity={dim} dot={{ r: 2, strokeWidth: 0, fill: color, fillOpacity: dim }} activeDot={{ r: 4.5, strokeWidth: 2, stroke: SURFACE_CARD }} connectNulls animationDuration={350} />
+                        <Line type="monotone" dataKey={`${id}_dk`} name={`${player.name} (DK)`} stroke={color} strokeWidth={active ? 2.5 : 1.75} strokeOpacity={dim} strokeDasharray="5 4" dot={{ r: 2, strokeWidth: 0, fill: color, fillOpacity: dim }} activeDot={{ r: 4.5, strokeWidth: 2, stroke: SURFACE_CARD }} connectNulls animationDuration={350} />
                       </React.Fragment>
                     );
                   }
                   return (
-                    <Line key={id} type="monotone" dataKey={id} name={player.name} stroke={color} strokeWidth={3} dot={{ r: 3, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls animationDuration={500} />
+                    <Line key={id} type="monotone" dataKey={id} name={player.name} stroke={color} strokeWidth={active ? 3 : 2} strokeOpacity={dim} dot={{ r: 2, strokeWidth: 0, fill: color, fillOpacity: dim }} activeDot={{ r: 4.5, strokeWidth: 2, stroke: SURFACE_CARD }} connectNulls animationDuration={350} />
                   );
                 })}
               </LineChart>
             </ResponsiveContainer>
           )}
         </div>
-      </div>
+      </section>
+
+      {/* --- Player table --- */}
+      <section className={styles.tablePane} data-help-id="player-table">
+        <div className={styles.tableToolbar}>
+          <SearchInput value={query} onChange={setQuery} placeholder="Search player, team, pos…" />
+          <div className={styles.trendMode} title="Show Trend and Δ UD-DK as % change or raw ADP spots">
+            <span className={styles.trendModeLabel}>Trend</span>
+            <div className="filter-btn-group">
+              {[['pct', '%'], ['raw', 'Spots']].map(([value, label]) => (
+                <button key={value} className={`filter-btn-group__item ${calcMode === value ? 'filter-btn-group__item--active' : ''}`} onClick={() => setCalcMode(value)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <span className="filter-count"><strong>{filteredAndSortedList.length}</strong> players</span>
+        </div>
+
+        {/* Header */}
+        <div className={styles.tableHeader} style={{ gridTemplateColumns: tableGrid }}>
+          <div />
+          <HeaderCell label="Player" col="name" sortConfig={sortConfig} onSort={handleSort} alignLeft />
+          {isTwoPlat && !isMobile ? (
+            <>
+              <HeaderCell label="UD ADP" col="udAdp" sortConfig={sortConfig} onSort={handleSort} />
+              <HeaderCell label="DK ADP" col="dkAdp" sortConfig={sortConfig} onSort={handleSort} />
+              {!isTablet && <HeaderCell label="Δ UD-DK" col="deltaAdp" sortConfig={sortConfig} onSort={handleSort} />}
+              <HeaderCell label="UD Trend" col="udTrend" sortConfig={sortConfig} onSort={handleSort} helpId="trend-col" />
+              {!isTablet && <HeaderCell label="DK Trend" col="dkTrend" sortConfig={sortConfig} onSort={handleSort} />}
+            </>
+          ) : !isTwoPlat && !isMobile ? (
+            <>
+              <HeaderCell label="ADP" col="lastAdp" sortConfig={sortConfig} onSort={handleSort} />
+              <HeaderCell label="Trend" col="change" sortConfig={sortConfig} onSort={handleSort} helpId="trend-col" />
+            </>
+          ) : null}
+          {isMobile && <HeaderCell label="ADP" col={mobileAdpKey} sortConfig={sortConfig} onSort={handleSort} />}
+          {isMobile && <HeaderCell label="Trend" col={mobileTrendKey} sortConfig={sortConfig} onSort={handleSort} helpId="trend-col" />}
+          {!isMobile && <HeaderCell label="Exp" col="exposure" sortConfig={sortConfig} onSort={handleSort} />}
+          {!isMobile && !isTablet && <HeaderCell label="Value" col="value" sortConfig={sortConfig} onSort={handleSort} helpId="value-col" />}
+          {onNavigateToRosters && <div />}
+        </div>
+
+        {/* Body */}
+        <div className={styles.tableBody} ref={tableBodyRef}>
+        <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+          {rowVirtualizer.getVirtualItems().map(virtualRow => {
+            const p = filteredAndSortedList[virtualRow.index];
+            const checked = selectedIds.includes(p.id);
+            const colorIndex = selectedIds.indexOf(p.id);
+            const strokeColor = colorIndex >= 0 ? LINE_PALETTE[colorIndex] : null;
+            const valueColor = p.value === null ? 'inherit' : p.value > 0 ? 'var(--positive)' : p.value < 0 ? 'var(--negative)' : 'inherit';
+            const valueDisplay = p.value !== null ? `${p.value > 0 ? '+' : ''}${p.value.toFixed(1)}` : '-';
+            const blocked = atCap && !checked;
+
+            const udTrendVal = isPct ? p.udTrendPct : p.udTrend;
+            const dkTrendVal = isPct ? p.dkTrendPct : p.dkTrend;
+            const changeVal  = isPct ? p.changePct  : p.change;
+            const deltaVal   = isPct ? p.deltaAdpPct : p.deltaAdp;
+            const mobileTrendVal = isTwoPlat ? (platformFilter === 'draftkings' ? dkTrendVal : udTrendVal) : changeVal;
+            const teamCode = abbrevTeam(p.team);
+
+            return (
+              <div
+                key={p.id}
+                data-index={virtualRow.index}
+                role="checkbox"
+                aria-checked={checked}
+                tabIndex={0}
+                onClick={() => toggleSelect(p.id)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSelect(p.id); } }}
+                className={`${styles.playerRow} ${checked ? styles.playerRowSelected : ''}`}
+                title={blocked ? `Chart is full — remove a player first (max ${MAX_SELECTED})` : undefined}
+                style={{
+                  gridTemplateColumns: tableGrid,
+                  borderLeftColor: checked ? strokeColor : 'transparent',
+                  cursor: blocked ? 'not-allowed' : 'pointer',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: virtualRow.size,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                {/* Selection swatch — filled with the player's line color */}
+                <span
+                  className={`${styles.swatch} ${checked ? styles.swatchOn : ''}`}
+                  style={checked ? { background: strokeColor, borderColor: strokeColor } : undefined}
+                  aria-hidden="true"
+                />
+
+                {/* Player: badge + name + team */}
+                <div className={styles.playerCell}>
+                  <PosBadge pos={p.position} />
+                  <span className={styles.playerName}>{p.name}</span>
+                  {teamCode && <span className={styles.playerTeam}>{teamCode}</span>}
+                </div>
+
+                {/* ADP + Trend columns */}
+                {isTwoPlat && !isMobile ? (
+                  <>
+                    <div className={styles.monoCell}>{fmtAdp(p.udAdp)}</div>
+                    <div className={styles.monoCell}>{fmtAdp(p.dkAdp)}</div>
+                    {!isTablet && <div className={`${styles.monoCell} ${styles.dimCell}`}>{fmtDeltaActive(deltaVal)}</div>}
+                    <div className={styles.trendCell} style={{ color: trendColor(udTrendVal) }}>{fmtTrendActive(udTrendVal)}</div>
+                    {!isTablet && <div className={styles.trendCell} style={{ color: trendColor(dkTrendVal) }}>{fmtTrendActive(dkTrendVal)}</div>}
+                  </>
+                ) : !isTwoPlat && !isMobile ? (
+                  <>
+                    <div className={styles.monoCell}>{p.displayAdp}</div>
+                    <div className={styles.trendCell} style={{ color: trendColor(changeVal) }}>{fmtTrendActive(changeVal)}</div>
+                  </>
+                ) : null}
+
+                {/* Mobile: ADP + trend */}
+                {isMobile && <div className={styles.monoCell}>{fmtAdp(isTwoPlat ? p[mobileAdpKey] : p.lastAdp)}</div>}
+                {isMobile && (
+                  <div className={styles.trendCell} style={{ color: trendColor(mobileTrendVal) }}>
+                    {fmtTrendActive(mobileTrendVal)}
+                  </div>
+                )}
+
+                {/* Exposure */}
+                {!isMobile && <div className={styles.monoCell}>{p.exposure > 0 ? `${p.exposure}%` : '-'}</div>}
+
+                {/* Value (CLV) */}
+                {!isMobile && !isTablet && (
+                  <div className={styles.valueCell} style={{ color: valueColor }}>{valueDisplay}</div>
+                )}
+
+                {/* Roster nav — revealed on hover (always visible on touch) */}
+                {onNavigateToRosters && (
+                  <div className={styles.navBtnCell}>
+                    {p.exposure > 0 && (
+                      <button
+                        className={styles.seeRostersBtn}
+                        onClick={e => { e.stopPropagation(); onNavigateToRosters({ players: [p.name] }); }}
+                        aria-label={`See rosters with ${p.name}`}
+                      >
+                        {isMobile ? '→' : 'Rosters →'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        </div>
+      </section>
     </div>
     </TabLayout>
   );
