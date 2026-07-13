@@ -1,0 +1,40 @@
+{
+  "name": "bbe-mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "build:data": "node scripts/build-data.mjs",
+    "prebuild": "expo prebuild",
+    "eas:dev": "eas build --profile development --platform ios",
+    "eas:preview": "eas build --profile preview --platform ios"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.110.2",
+    "expo": "~57.0.4",
+    "expo-constants": "~57.0.3",
+    "expo-haptics": "~57.0.0",
+    "expo-linking": "~57.0.2",
+    "expo-router": "~57.0.4",
+    "expo-sharing": "~57.0.3",
+    "expo-splash-screen": "~57.0.2",
+    "expo-status-bar": "~57.0.0",
+    "expo-web-browser": "~57.0.0",
+    "lucide-react-native": "^1.24.0",
+    "papaparse": "^5.5.4",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2",
+    "react-native-svg": "15.15.4",
+    "react-native-url-polyfill": "^3.0.0",
+    "react-native-view-shot": "5.1.0"
+  },
+  "private": true,
+  "devDependencies": {
+    "babel-preset-expo": "^57.0.2"
+  }
+}

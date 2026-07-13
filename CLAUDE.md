@@ -38,11 +38,16 @@ Roster sync utility — reads Underdog/DraftKings draft pages, writes entries to
 Bundled by **Vite + @crxjs/vite-plugin** into `chrome-extension/dist/` — the dist directory is what Edge / Chrome / Firefox load, not `src/`. **Any change to files under `chrome-extension/src/` requires `cd chrome-extension && npm run build` before the developer can reload-and-test in the browser.** Skipping the build silently runs the previous bundle and looks like the fix didn't work.
 
 ### Mobile app (`mobile-app/`)
-**Pre-implementation (EPIC-08, P1).** iOS-first live draft assistant: on-device screen
-capture + OCR of the user's Underdog draft (ADR-019/020/021), glanceable Live Activity /
-Dynamic Island companion, Expo React Native shell built via EAS cloud builds from Windows
-(ADR-022). Design docs live in `mobile-app/docs/` (ARCHITECTURE, RESEARCH_NOTES,
-DEVELOPMENT_NOTES). All product code is gated on the TASK-318 feasibility spike.
+**Implemented (iOS-first full app port + EPIC-08 assistant host).** Expo (SDK 57) /
+React Native / expo-router app at the `mobile-app/` root — a native port of every web
+tab (Dashboard, Exposures, Rosters, ADP Tracker, Combos, Rankings, Draft Assistant,
+Arena) with desktop hand-offs for roster sync, checkout, and CSV upload. Built via EAS
+cloud builds from Windows (ADR-022). `mobile-app/shared/utils/` is a port snapshot of
+`best-ball-manager/src/utils/` — **the web files remain the source of truth**; keep them
+in lockstep when the pipeline changes. Bundled CSVs are compacted at build time with
+`npm run build:data` (run before every EAS build). The live draft capture spike
+(TASK-318, ADR-019/020/021) continues in `mobile-app/spike/`; the assistant consumes its
+future DraftState output through `src/draft/draftFeed.js`. See `mobile-app/README.md`.
 
 ### Auxiliary code (out of scope unless explicitly working on it)
 - `scrapers/` — Python ADP scrapers

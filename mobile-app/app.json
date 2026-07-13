@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Best Ball Exposures",
+    "slug": "bbe-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "bbexposures",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#060E1F",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bestballexposures.app",
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.bestballexposures.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#060E1F",
+        "foregroundImage": "./assets/adaptive-icon.png"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-web-browser",
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "backgroundColor": "#060E1F"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ed6afe8b-faea-438b-a5fc-9e95f3b826f3"
+      }
+    }
+  }
+}

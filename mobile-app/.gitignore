@@ -1,0 +1,22 @@
+# Expo / React Native
+node_modules/
+.expo/
+dist/
+web-build/
+ios/
+android/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Env — EXPO_PUBLIC_ values are publishable, but keep local overrides out of git
+.env.local
+
+# macOS
+.DS_Store
