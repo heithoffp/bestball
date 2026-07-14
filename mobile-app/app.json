@@ -11,9 +11,16 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bestballexposures.app",
+      "appleTeamId": "WNGNQ89YJ2",
+      "entitlements": {
+        "aps-environment": "development",
+        "com.apple.security.application-groups": ["group.com.bestballexposures.app"]
+      },
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSSupportsLiveActivities": true,
+        "NSSupportsLiveActivitiesFrequentUpdates": true
       }
     },
     "android": {
@@ -35,7 +42,14 @@
           "imageWidth": 180,
           "backgroundColor": "#060E1F"
         }
-      ]
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "BBE reads your new draft-room screenshots during a Live Draft Session to keep your assistant and Live Activity in sync. Images never leave your device."
+        }
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": false
@@ -43,7 +57,26 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "ed6afe8b-faea-438b-a5fc-9e95f3b826f3"
+        "projectId": "ed6afe8b-faea-438b-a5fc-9e95f3b826f3",
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "DraftGlance",
+                  "bundleIdentifier": "com.bestballexposures.app.draftglance"
+                },
+                {
+                  "targetName": "DraftBroadcast",
+                  "bundleIdentifier": "com.bestballexposures.app.draftbroadcast",
+                  "entitlements": {
+                    "com.apple.security.application-groups": ["group.com.bestballexposures.app"]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     }
   }

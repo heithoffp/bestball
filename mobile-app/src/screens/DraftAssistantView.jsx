@@ -21,6 +21,7 @@ import { SearchBar, Segmented } from '../components/ui';
 import { colors, spacing, radii, type } from '../theme';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { subscribeDraftFeed, isDraftFeedActive } from '../draft/draftFeed';
+import LiveSessionPanel from './LiveSessionPanel';
 
 const ELIMINATOR_MODE_KEY = 'bbe.eliminatorMode';
 
@@ -623,6 +624,8 @@ export default function DraftAssistantView() {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: spacing.lg }}>
+        {/* Live capture session (screenshot -> OCR -> Live Activity) */}
+        <LiveSessionPanel />
         {/* Context bar */}
         <View style={styles.contextBar}>
           <Text style={type.secondary}>R<Text style={{ color: colors.textPrimary, fontWeight: '800' }}>{currentRound}</Text></Text>

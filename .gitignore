@@ -4,6 +4,10 @@ simulation/Historical_Data/*.csv
 .env.local
 .env.*.local
 
+# APNs auth keys and other local secrets (never commit .p8 private keys)
+supabase/.secrets/
+*.p8
+
 # Script-local installs
 scripts/node_modules
 

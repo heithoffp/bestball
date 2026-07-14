@@ -1,0 +1,204 @@
+{"app_name":"BestBallExposures","timestamp":"2026-07-13 07:54:42.00 -0500","app_version":"1.0.0","slice_uuid":"3528c0c4-e9f6-31b1-897e-2c126e4f7c66","build_version":"1","platform":2,"bundleID":"com.bestballexposures.app","share_with_app_devs":1,"is_first_party":0,"bug_type":"309","os_version":"iPhone OS 26.5 (23F77)","roots_installed":0,"name":"BestBallExposures","incident_id":"0B656AB8-4B24-48E1-9583-6250B8D61696"}
+{
+  "uptime" : 340,
+  "procRole" : "Foreground",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "iPhone15,4",
+  "coalitionID" : 587,
+  "osVersion" : {
+    "isEmbedded" : true,
+    "train" : "iPhone OS 26.5",
+    "releaseType" : "User",
+    "build" : "23F77"
+  },
+  "captureTime" : "2026-07-13 07:54:41.1693 -0500",
+  "codeSigningMonitor" : 2,
+  "incident" : "0B656AB8-4B24-48E1-9583-6250B8D61696",
+  "pid" : 610,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procLaunch" : "2026-07-13 07:54:41.0537 -0500",
+  "procStartAbsTime" : 8205155090,
+  "procExitAbsTime" : 8207869012,
+  "procName" : "BestBallExposures",
+  "procPath" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/BestBallExposures",
+  "bundleInfo" : {"CFBundleShortVersionString":"1.0.0","CFBundleVersion":"1","CFBundleIdentifier":"com.bestballexposures.app"},
+  "storeInfo" : {"deviceIdentifierForVendor":"268F765E-C2A3-4746-AD7E-92DCCFF8F6EE","thirdParty":true},
+  "parentProc" : "launchd",
+  "parentPid" : 1,
+  "coalitionName" : "com.bestballexposures.app",
+  "crashReporterKey" : "ff849f256a5c90a0918a35e952ba235b7409ae43",
+  "appleIntelligenceStatus" : {"reasons":["deviceNotCapable"],"state":"unavailable"},
+  "developerMode" : 1,
+  "bootProgressRegister" : "0x20800004",
+  "wasUnlockedSinceBoot" : 1,
+  "isLocked" : 0,
+  "codeSigningID" : "com.bestballexposures.app",
+  "codeSigningTeamID" : "WNGNQ89YJ2",
+  "codeSigningFlags" : 570434305,
+  "codeSigningValidationCategory" : 5,
+  "codeSigningTrustLevel" : 4,
+  "codeSigningAuxiliaryInfo" : 9007199254740992,
+  "instructionByteStream" : {"beforePC":"AByhTgCoMW4DACYeY0AA0QRoYzglaGM4gAAFy8ADX9YwQYDSARAA1A==","atPC":"AwEAVH8jA9X9e7+p\/QMAkcSV\/5e\/AwCR\/XvBqP8PX9bAA1\/WEC2A0g=="},
+  "bootSessionUUID" : "6112575E-5846-4DC9-9A16-61FF8272235E",
+  "basebandVersion" : "3.50.08",
+  "exception" : {"codes":"0x0000000000000000, 0x0000000000000000","rawCodes":[0,0],"type":"EXC_CRASH","signal":"SIGABRT"},
+  "termination" : {"code":1,"flags":518,"namespace":"DYLD","indicator":"Library missing","details":["(terminated at launch; ignore backtrace)"],"reasons":["Library not loaded: @rpath\/RNWorklets.framework\/RNWorklets","Referenced from: <5ABC43B7-19BD-346F-8498-A6F7323DDCE0> \/Volumes\/VOLUME\/*\/BestBallExposures.app\/Frameworks\/RNReanimated.framework\/RNReanimated","Reason: tried: '\/usr\/lib\/swift\/RNWorklets.framework\/RNWorklets' (no such file, not in dyld cache), '\/private\/preboot\/Cryptexes\/OS\/usr\/lib\/swift\/RNWorklets.framework\/RNWorklets' (no such file), '\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/RNWorklets.framework\/RNWorklets' (no such file), '\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/RNWorklets.framework\/RNWorklets' (no such file), '\/usr\/lib\/swift\/RNWorklets.framework\/RNWorklets' (no such file, not in dyld cache), '\/private\/preboot\/Cryptexes\/OS\/usr\/lib\/swift\/RNWorklets.framework\/RNWorklets' (no such file), '\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-"]},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":14370,"threadState":{"x":[{"value":6},{"value":1},{"value":6125075008},{"value":208},{"value":6125073984},{"value":0},{"value":0},{"value":0},{"value":32},{"value":8816094068702576852},{"value":8625036824,"symbolLocation":40152,"symbol":"lsl::sPoolBytes"},{"value":8625127744},{"value":131072},{"value":6812844272,"symbolLocation":0,"symbol":"_dyld_start"},{"value":10},{"value":101},{"value":521},{"value":6125073520},{"value":0},{"value":0},{"value":6125073984},{"value":208},{"value":6125075008},{"value":1},{"value":6},{"value":0},{"value":0},{"value":1},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6813431560},"cpsr":{"value":2147487744},"fp":{"value":6125073936},"sp":{"value":6125073872},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6813114932,"matchesCrashFrame":1},"far":{"value":0}},"frames":[{"imageOffset":283188,"symbol":"__abort_with_payload","symbolLocation":8,"imageIndex":10},{"imageOffset":599816,"symbol":"abort_with_payload_wrapper_internal","symbolLocation":104,"imageIndex":10},{"imageOffset":599868,"symbol":"abort_with_payload","symbolLocation":16,"imageIndex":10},{"imageOffset":74776,"symbol":"dyld4::halt(char const*, dyld4::StructuredError const*)","symbolLocation":312,"imageIndex":10},{"imageOffset":326880,"symbol":"dyld4::prepare(dyld4::APIs&, mach_o::UnsafeHeader const*)","symbolLocation":4932,"imageIndex":10},{"imageOffset":321920,"symbol":"dyld4::start(dyld4::KernelArgs*, void*, void*, unsigned long long)::$_1::operator()() const","symbolLocation":320,"imageIndex":10},{"imageOffset":19396,"symbol":"start","symbolLocation":6840,"imageIndex":10}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4341792768,
+    "size" : 4358144,
+    "uuid" : "3528c0c4-e9f6-31b1-897e-2c126e4f7c66",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/BestBallExposures",
+    "name" : "BestBallExposures"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4351787008,
+    "size" : 376832,
+    "uuid" : "343b3132-8ef3-3c97-928b-da37a15d820a",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/ExpoFileSystem.framework\/ExpoFileSystem",
+    "name" : "ExpoFileSystem"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4347985920,
+    "size" : 65536,
+    "uuid" : "a48b655a-4ee1-3763-9093-73c40231272e",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/ExpoFont.framework\/ExpoFont",
+    "name" : "ExpoFont"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4356669440,
+    "size" : 1228800,
+    "uuid" : "1fd34821-da46-33c7-b7e6-9f0b9d99623a",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/ExpoModulesCore.framework\/ExpoModulesCore",
+    "name" : "ExpoModulesCore"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4354359296,
+    "size" : 393216,
+    "uuid" : "e520532c-a557-3882-89f1-b6afa3330b15",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/ExpoModulesJSI.framework\/ExpoModulesJSI",
+    "name" : "ExpoModulesJSI"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4348919808,
+    "size" : 49152,
+    "uuid" : "775e80e7-54fc-39e7-855f-3549ad4ea544",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/ExpoModulesWorklets.framework\/ExpoModulesWorklets",
+    "name" : "ExpoModulesWorklets"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4363927552,
+    "size" : 1130496,
+    "uuid" : "5abc43b7-19bd-346f-8498-a6f7323ddce0",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/RNReanimated.framework\/RNReanimated",
+    "name" : "RNReanimated"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4379590656,
+    "size" : 4554752,
+    "uuid" : "b84240b6-1b7b-37cf-a6e4-bd19f2d6cbd8",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/React.framework\/React",
+    "name" : "React"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4360404992,
+    "size" : 540672,
+    "uuid" : "db4e1216-70c6-36f0-8a46-fdd48fcae1f2",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/ReactNativeDependencies.framework\/ReactNativeDependencies",
+    "name" : "ReactNativeDependencies"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4372578304,
+    "size" : 2195456,
+    "uuid" : "5a86b6fb-ce4e-331e-96e2-ca2281ad05ed",
+    "path" : "\/private\/var\/containers\/Bundle\/Application\/CAD00052-DF13-4747-8F50-D6E5EF4C6960\/BestBallExposures.app\/Frameworks\/hermesvm.framework\/hermesvm",
+    "name" : "hermesvm"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6812831744,
+    "size" : 676224,
+    "uuid" : "41de795b-9283-37fd-917e-d674bb73f541",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  }
+],
+  "sharedCache" : {
+  "base" : 6811664384,
+  "size" : 5386469376,
+  "uuid" : "6ede0d01-11dd-34bb-acac-8567e3368f4f"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=2.0G resident=0K(0%) swapped_out_or_unallocated=2.0G(100%)\nWritable regions: Total=2656K written=96K(4%) resident=96K(4%) swapped_out=0K(0%) unallocated=2560K(96%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nSTACK GUARD                         16K        1 \nStack                             1008K        1 \n__AUTH                            11.5M      947 \n__AUTH_CONST                     124.9M     1393 \n__CTF                               824        1 \n__DATA                            54.1M     1350 \n__DATA_CONST                      41.7M     1410 \n__DATA_DIRTY                      12.1M     1219 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       196.2M       11 \n__LLVM_COV                          64K        1 \n__OBJC_RO                         85.1M        1 \n__OBJC_RW                         3210K        1 \n__TEXT                             1.8G     1426 \n__TPRO_CONST                       128K        2 \ndyld private memory               1040K        2 \npage table in kernel                96K        1 \n===========                     =======  ======= \nTOTAL                              2.3G     7768 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+
+  }
+},
+  "logWritingSignature" : "1d3d2e4103e86e6aa5f92c4ec4cde5515d667328",
+  "roots_installed" : 0,
+  "bug_type" : "309",
+  "trmStatus" : 1,
+  "sandboxProfileName" : "container",
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "645197bf528fbf3c3af54105",
+      "factorPackIds" : [
+        "663e65b4a1526e1ca0e288a1"
+      ],
+      "deploymentId" : 240000002
+    },
+    {
+      "rolloutId" : "63f9578e238e7b23a1f3030a",
+      "factorPackIds" : [
+        "64af1347f38420572631a103"
+      ],
+      "deploymentId" : 240000005
+    }
+  ],
+  "experiments" : [
+    {
+      "treatmentId" : "79ab2405-38c9-4893-8257-dd75d3536a8e",
+      "experimentId" : "6a39873949f37f57cc6838ec",
+      "deploymentId" : 400000005
+    },
+    {
+      "treatmentId" : "b94e9aec-71bd-46f0-b53b-72fe0d8e9aa4",
+      "experimentId" : "67e32776f470dc0e83d9e147",
+      "deploymentId" : 400000014
+    }
+  ]
+}
+}

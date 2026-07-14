@@ -21,3 +21,10 @@ verify_jwt = false
 # the 403, keeping the gate logic in one place.
 [functions.arena-register]
 verify_jwt = false
+
+# live-activity-relay (EPIC-08): called by the iOS broadcast extension, which
+# holds no user JWT — it authenticates with the publishable key, and the
+# unguessable ActivityKit push token scopes what a caller can affect (see the
+# function header for the full security model).
+[functions.live-activity-relay]
+verify_jwt = false

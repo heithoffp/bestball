@@ -7,17 +7,22 @@
     "ios": "expo start --ios",
     "android": "expo start --android",
     "build:data": "node scripts/build-data.mjs",
+    "build:engine": "node scripts/build-extension-engine.mjs",
+    "test:draft": "node scripts/build-extension-engine.mjs && node scripts/test-draft-parser.mjs",
     "prebuild": "expo prebuild",
     "eas:dev": "eas build --profile development --platform ios",
     "eas:preview": "eas build --profile preview --platform ios"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^4.0.7",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.110.2",
     "expo": "~57.0.4",
     "expo-constants": "~57.0.3",
+    "expo-dev-client": "~57.0.5",
     "expo-haptics": "~57.0.0",
     "expo-linking": "~57.0.2",
+    "expo-media-library": "~57.0.1",
     "expo-router": "~57.0.4",
     "expo-sharing": "~57.0.3",
     "expo-splash-screen": "~57.0.2",
@@ -28,14 +33,19 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
     "react-native-svg": "15.15.4",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-view-shot": "5.1.0"
+    "react-native-view-shot": "5.1.0",
+    "react-native-worklets": "0.10.0"
   },
   "private": true,
   "devDependencies": {
-    "babel-preset-expo": "^57.0.2"
+    "babel-preset-expo": "^57.0.2",
+    "esbuild": "^0.28.1",
+    "typescript": "~6.0.3"
   }
 }

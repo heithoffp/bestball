@@ -43,14 +43,14 @@ export function isDraftFeedActive() {
 }
 
 /**
- * Availability of the native capture module (spike-native's successor).
+ * Availability of the native capture/OCR module (modules/bbe-draft-native).
  * Lazy require so the app runs fine in Expo Go / before the module exists.
  */
 export function captureModuleAvailable() {
   try {
     // eslint-disable-next-line no-undef
     const { requireOptionalNativeModule } = require('expo');
-    return requireOptionalNativeModule?.('BBECapture') != null;
+    return requireOptionalNativeModule?.('BBEDraftNative') != null;
   } catch {
     return false;
   }

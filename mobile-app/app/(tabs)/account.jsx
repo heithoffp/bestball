@@ -6,7 +6,7 @@ import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import {
-  CircleUserRound, LogOut, ExternalLink, Chrome, BookOpen, Sparkles, RefreshCw,
+  CircleUserRound, LogOut, ExternalLink, Puzzle, BookOpen, Sparkles, RefreshCw,
 } from 'lucide-react-native';
 import ScreenScaffold, { HelpSection } from '../../src/components/ScreenScaffold';
 import { Card, SectionTitle, Button } from '../../src/components/ui';
@@ -158,7 +158,7 @@ export default function AccountTab() {
               : 'No rosters yet — sync happens on your desktop with the Chrome extension.'}
           </Text>
           <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
-            <Row icon={Chrome} label="Extension install guide (desktop)" onPress={() => WebBrowser.openBrowserAsync(INSTALL_URL)} />
+            <Row icon={Puzzle} label="Extension install guide (desktop)" onPress={() => WebBrowser.openBrowserAsync(INSTALL_URL)} />
             <Pressable style={styles.linkRow} onPress={reload}>
               <RefreshCw size={16} color={colors.textSecondary} />
               <Text style={[type.body, { flex: 1 }]}>Refresh portfolio data</Text>

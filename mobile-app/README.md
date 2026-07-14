@@ -7,10 +7,24 @@ Rankings, Draft Assistant (with Eliminator mode), and the Best Ball Arena. Deskt
 steps (Chrome-extension roster sync, subscription checkout, rankings CSV upload) hand
 off to the website.
 
-**Status:** implemented; pending first EAS build + on-device test once the Apple
-Developer Program enrollment completes. The TASK-318 capture/OCR spike continues in
-`spike/` — the assistant already consumes its future output via `src/draft/draftFeed.js`
-(DraftState contract, ADR-021).
+**Status:** implemented and running on-device via EAS dev builds. **Live Draft
+Session** (docs/LIVE_SESSION_V1.md) is in, with two capture modes:
+
+- **Live capture (default, hands-free):** a ReplayKit broadcast extension
+  (`targets/draft-broadcast/`) watches the screen while you draft in Underdog —
+  Vision OCR → the shared JS parse engine running in JavaScriptCore → pick
+  ledger → Live Activity updates pushed through the `live-activity-relay` Edge
+  Function (APNs). One-time APNs key setup required for background pushes (see
+  the doc's runbook).
+- **Screenshots (fallback):** screenshot the draft room, hop to BBE, it syncs
+  on-device — no broadcast, no server.
+
+Both feed the Draft Assistant screen and the lock-screen/Dynamic Island Live
+Activity (`targets/draft-glance/`) through the same `src/draft/` engine and
+`draftFeed.js` seam (DraftState contract, ADR-021). A ScreenCaptureKit mode is
+planned for iOS 27 (spike Q3) — the extension core is already capture-agnostic.
+`npm run test:draft` runs the parse-engine regression (including the JSC bundle
+the extension executes) against the real OCR fixture from a live UD draft.
 
 ## Layout
 
