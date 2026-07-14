@@ -120,6 +120,7 @@ export default function DraftAssistantView() {
 
   const [currentPicks, setCurrentPicks] = useState([]);
   const [draftSlot, setDraftSlot] = useState(1);
+  const [feedRound, setFeedRound] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTournaments, setSelectedTournaments] = useState([]);
   const [eliminatorMode, setEliminatorMode] = useState(false);
@@ -144,9 +145,10 @@ export default function DraftAssistantView() {
   useEffect(() => {
     const nameToMaster = new Map(masterPlayers.map(p => [canonicalName(p.name), p]));
     return subscribeDraftFeed((draftState) => {
-      if (!draftState) { setFeedActive(false); return; }
+      if (!draftState) { setFeedActive(false); setFeedRound(null); return; }
       setFeedActive(true);
       if (Number.isFinite(draftState.draftSlot)) setDraftSlot(draftState.draftSlot);
+      setFeedRound(Number.isFinite(draftState.currentRound) ? draftState.currentRound : null);
       if (Array.isArray(draftState.myPicks)) {
         setCurrentPicks(draftState.myPicks.map((pick, i) => {
           const mp = nameToMaster.get(canonicalName(pick.name || ''));
@@ -207,7 +209,10 @@ export default function DraftAssistantView() {
     return map;
   }, [allRosters]);
 
-  const currentRound = currentPicks.length + 1;
+  // Live feed: the engine's round is the truth — the ledger can lag the
+  // draft (mid-draft resume, missed confirmation cards), so "picks made + 1"
+  // under-counts. Manual entry keeps the picks-based derivation.
+  const currentRound = feedRound ?? (currentPicks.length + 1);
 
   const matchingPathRosters = useMemo(() => {
     if (currentPicks.length === 0) return allRosters;

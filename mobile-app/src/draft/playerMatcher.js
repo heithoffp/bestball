@@ -170,6 +170,58 @@ export function matchPlayer(pool, raw, hints = {}) {
 }
 
 /**
+ * OCR-tolerant username equality. Usernames render ALL-CAPS on Underdog and
+ * may garble a character, but edge-clipped carousel cards also truncate them
+ * ("BIRDENTHUSIAST" -> "BIRD…") — a truncation must NEVER count as a match,
+ * so length may differ by at most one.
+ */
+export function usernameMatches(a, b) {
+  if (!a || !b) return false;
+  const na = String(a).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const nb = String(b).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (na.length < 4 || nb.length < 4) return false;
+  if (na === nb) return true;
+  if (Math.abs(na.length - nb.length) > 1) return false;
+  return na.length >= 8 && levenshtein(na, nb, 1) <= 1;
+}
+
+/**
+ * Match a carousel pick-confirmation card name ("D. London", "K. Walker III",
+ * "J. Smith-Nji…") against the pool. The card renders first-initial + surname,
+ * so the general matcher's thresholds don't fit; team is a strong hint here
+ * because the card always carries it ("ATL / D. London").
+ */
+export function matchAbbrevPlayer(pool, raw, teamHint) {
+  if (!pool || !raw) return null;
+  const scrubbed = scrubOcr(raw);
+  const m = scrubbed.match(/^([A-Za-z])[.\s]+(.{2,})$/);
+  if (!m) return matchPlayer(pool, scrubbed, { team: teamHint });
+  const initial = m[1].toLowerCase();
+  const rest = canonicalName(m[2]);
+  if (!rest || rest.length < 3) return null;
+  const team = teamHint ? String(teamHint).toUpperCase() : null;
+  let best = null;
+  for (const p of pool.players) {
+    if (p.tokens.length < 2) continue;
+    if (p.tokens[0][0] !== initial) continue;
+    const surname = p.tokens.slice(1).join(' ');
+    let s = similarity(rest, surname);
+    if (rest.length >= 4 && surname.startsWith(rest)) s = Math.max(s, 0.9); // truncated card
+    if (s < 0.7) continue;
+    // Team scoring must break same-surname ties ("J. Taylor" → Jonathan
+    // Taylor/IND vs J.J. Taylor/no-team), so the bonus is uncapped and a
+    // missing team is penalized too — never let it tie a confirmed team hit.
+    if (team) {
+      if (p.team === team) s += 0.15;
+      else if (p.team === 'N/A') s -= 0.05;
+      else s -= 0.2;
+    }
+    if (!best || s > best.score) best = { player: p, score: s, method: 'abbrev' };
+  }
+  return best && best.score >= 0.78 ? best : null;
+}
+
+/**
  * Cheap test used by the parser to decide whether a line even looks like a
  * player name (vs usernames, labels, numbers). Usernames render ALL-CAPS on
  * Underdog; player rows are Title Case.

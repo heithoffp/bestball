@@ -7,12 +7,19 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
-import { buildPool, matchPlayer } from '../src/draft/playerMatcher.js';
+import {
+  buildPool, matchPlayer, usernameMatches, matchAbbrevPlayer,
+} from '../src/draft/playerMatcher.js';
 import { parseUnderdogScreen, textToItems } from '../src/draft/underdogParser.js';
 import { createDraftSession } from '../src/draft/sessionEngine.js';
 import {
   PLAYERS_TAB, BOARD_TAB_1, BOARD_TAB_2, QUEUE_TAB,
 } from '../src/draft/__fixtures__/underdogOcrFixture.js';
+import {
+  FAST_LOBBY_EARLY, FAST_LOBBY_FULL, FAST_UP_NEXT, FAST_YOUR_PICK,
+  FAST_POST_PICK, FAST_DETAIL_PANEL, FAST_TRUNCATED_CARD, FAST_DRAFT_SEQUENCE,
+  SELF_ACTIVITY_OVERLAY,
+} from '../src/draft/__fixtures__/underdogFastDraftFixture.js';
 
 // Synthetic pool mirroring the fixture draft's slate (name, pos, team, adp).
 const POOL_ROWS = [
@@ -22,6 +29,7 @@ const POOL_ROWS = [
   ["Ja'Marr Chase", 'WR', 'CIN', 4.0],
   ['Saquon Barkley', 'RB', 'PHI', 5.2],
   ['Puka Nacua', 'WR', 'LAR', 6.1],
+  ['Christian McCaffrey', 'RB', 'SF', 6.5],
   ['Amon-Ra St. Brown', 'WR', 'DET', 7.9],
   ['Jonathan Taylor', 'RB', 'IND', 9.1],
   ['Justin Jefferson', 'WR', 'MIN', 10.2],
@@ -173,6 +181,181 @@ session2.ingest({ ...players, picksUntil: 0, onClock: true, upcomingOveralls: [3
 check('onClock phase', session2.getGlance().phase, 'onClock');
 check('onClock headline', session2.getGlance().headline, "You're on the clock!");
 
+// ---- TASK-328: usernames + abbreviated confirmation-card names ----
+console.log('usernames & abbreviated names (TASK-328):');
+check('usernameMatches exact (case-insensitive)', usernameMatches('BIRDENTHUSIAST', 'birdenthusiast'), true);
+check('usernameMatches 1-char OCR garble', usernameMatches('BIRDENTHUSIAST', 'BIRDENTHUS1AST'), true);
+check('usernameMatches rejects truncation', usernameMatches('BIRDENTHUSIAST', 'BIRD'), false);
+check('usernameMatches rejects other user', usernameMatches('BIRDENTHUSIAST', 'NORFHEAD'), false);
+check('abbrev name + team', matchAbbrevPlayer(pool, 'J. Taylor', 'IND')?.player.name, 'Jonathan Taylor');
+check('abbrev multi-token surname', matchAbbrevPlayer(pool, 'A. St. Brown', 'DET')?.player.name, 'Amon-Ra St. Brown');
+check('abbrev truncated surname', matchAbbrevPlayer(pool, 'J. Smith-Nji', 'SEA')?.player.name, 'Jaxon Smith-Njigba');
+check('abbrev garbage rejected', matchAbbrevPlayer(pool, 'Q. Zzyzx', 'AAA'), null);
+
+// ---- TASK-328: fast-draft screen parsing ----
+console.log('fast-draft parser (TASK-328):');
+const lobbyEarly = parseUnderdogScreen(textToItems(FAST_LOBBY_EARLY), ctx);
+check('lobby flag', lobbyEarly.lobby, true);
+check('lobby usernames (only named card)', lobbyEarly.lobbyUsernames, ['BIRDENTHUSIAST']);
+check('lobby filled placeholders', lobbyEarly.filledCount, 3);
+
+const lobbyFull = parseUnderdogScreen(textToItems(FAST_LOBBY_FULL), ctx);
+check('drafter cards extracted', lobbyFull.drafterCards.map(c => c.username),
+  ['ABLEVINS', 'FREDZ238', 'BIRDENTHUSIAST', 'NORFHEAD']);
+check('card next overall', lobbyFull.drafterCards.find(c => c.username === 'BIRDENTHUSIAST')?.nextOverall, 7);
+check('card tally with O-for-0 garble', lobbyFull.drafterCards.find(c => c.username === 'NORFHEAD')?.tally,
+  { QB: 0, RB: 0, WR: 0, TE: 0 });
+
+const yourPick = parseUnderdogScreen(textToItems(FAST_YOUR_PICK), ctx);
+check('your-pick header onClock', [yourPick.onClock, yourPick.picksUntil], [true, 0]);
+check('your-pick inline clock', yourPick.clockSeconds, 15);
+check('your-pick on-clock card is the user', yourPick.drafterCards.find(c => c.onClock)?.username, 'BIRDENTHUSIAST');
+
+const postPick = parseUnderdogScreen(textToItems(FAST_POST_PICK), ctx);
+check('confirmation card (one line)', [postPick.confirmCard?.team, postPick.confirmCard?.nameRaw], ['IND', 'J. Taylor']);
+check('confirmation card (two lines)',
+  parseUnderdogScreen(['UP IN 9 PICKS', 'ATL', 'D. London'], ctx).confirmCard?.nameRaw, 'D. London');
+
+// Windows-OCR-observed garbles: pipe merged into the digits, or label split
+// across two fragments (see docs/task-328-evidence).
+check('card label pipe-merged "1.717"',
+  parseUnderdogScreen(['UP NEXT', 'BIRDENTHUSIAST', '1.717'], ctx).drafterCards[0]?.nextOverall, 7);
+check('card label pipe-merged "3.6130"',
+  parseUnderdogScreen(['UP IN 3 PICKS', 'FREDZ238', '3.6130'], ctx).drafterCards[0]?.nextOverall, 30);
+check('card label split "2.7" / "19"',
+  parseUnderdogScreen(['UP NEXT', 'FREDZ238', '2.7', '19'], ctx).drafterCards[0]?.nextOverall, 19);
+check('ADP decimal never recovers as a card',
+  parseUnderdogScreen(['UP NEXT', 'FREDZ238', '29.5'], ctx).drafterCards.length, 0);
+
+const detail = parseUnderdogScreen(textToItems(FAST_DETAIL_PANEL), ctx);
+check('detail panel kind', detail.kind, 'detail');
+check('detail panel never feeds availability', detail.availability, null);
+
+// ---- TASK-328: fast-draft session (slot anchoring, event ledger) ----
+console.log('fast-draft session (TASK-328):');
+const fast = createDraftSession({ pool, teams: 12, rounds: 18 });
+const fastSummaries = FAST_DRAFT_SEQUENCE.map(s => fast.ingest(parseUnderdogScreen(textToItems(s), ctx)));
+const fs = fast.getStatus();
+check('username auto-learned from lobby', fs.learnedUsername, 'BIRDENTHUSIAST');
+check('slot anchored from own card', [fs.slot, fs.slotSource, fs.anchoredSlot], [7, 'anchored', 7]);
+check('current pick tracked through fast picks', fs.currentPick, 9);
+check('my pick captured without Board tab', fs.myPicks.map(p => p.name), ['Jonathan Taylor']);
+check('opponent pick captured from confirm card', fs.ledgerSize, 2);
+check('picksUntil survives ticker dropout', fs.picksUntil, 9);
+check('my next pick via snake math', fs.myNextPick, 18);
+check('myPickEvent fired on your-pick exit', fastSummaries[4].myPickEvent, true);
+check('confirm pick attributed', fastSummaries[4].confirmPick, 'Jonathan Taylor');
+check('lobby capture is not a resume', fs.isResume, false);
+check('user tally harvested from card', fs.opponentTallies.BIRDENTHUSIAST, { QB: 0, RB: 1, WR: 0, TE: 0 });
+check('fast glance roster bar', fast.getGlance().rosterBar, 'QB 0 · RB 1 · WR 0 · TE 0');
+
+// Configured username anchors without ever seeing the lobby.
+const fastCfg = createDraftSession({ pool, teams: 12, rounds: 18, username: 'birdenthusiast' });
+fastCfg.ingest(parseUnderdogScreen(textToItems(FAST_UP_NEXT), ctx));
+check('configured username anchors mid-draft',
+  [fastCfg.getStatus().anchoredSlot, fastCfg.getStatus().currentPick], [7, 6]);
+
+// Manual slot in conflict with the username anchor surfaces, manual wins.
+const fastManual = createDraftSession({ pool, teams: 12, rounds: 18, slot: 3, username: 'BIRDENTHUSIAST' });
+fastManual.ingest(parseUnderdogScreen(textToItems(FAST_LOBBY_FULL), ctx));
+check('manual slot beats anchor but flags conflict',
+  [fastManual.getStatus().slot, fastManual.getStatus().slotConflict, fastManual.getStatus().anchoredSlot],
+  [3, true, 7]);
+
+// Edge-truncated username fragment must never pin the slot.
+const fastTrunc = createDraftSession({ pool, teams: 12, rounds: 18, username: 'BIRDENTHUSIAST' });
+fastTrunc.ingest(parseUnderdogScreen(textToItems(FAST_TRUNCATED_CARD), ctx));
+check('truncated card fragment never anchors', fastTrunc.getStatus().anchoredSlot, null);
+
+// v2 snapshot round-trip carries the anchor + learned username.
+const fastRestored = createDraftSession({ pool, teams: 12, rounds: 18 });
+check('v2 hydrate accepted', fastRestored.hydrate(fast.serialize()), true);
+check('v2 hydrated anchor + username',
+  [fastRestored.getStatus().slot, fastRestored.getStatus().slotSource, fastRestored.getStatus().learnedUsername],
+  [7, 'anchored', 'BIRDENTHUSIAST']);
+check('v2 hydrated my picks', fastRestored.getStatus().myPicks.map(p => p.name), ['Jonathan Taylor']);
+
+// ---- TASK-328 iteration 2: on-device defect regressions (2026-07-14) ----
+console.log('on-device defect regressions (TASK-328 iter 2):');
+
+// Self-capture: our expanded Live Activity over the draft room is inert.
+const selfObs = parseUnderdogScreen(textToItems(SELF_ACTIVITY_OVERLAY), ctx);
+check('self overlay classified', selfObs.kind, 'self');
+const selfSession = createDraftSession({ pool, teams: 12, rounds: 18, username: 'BIRDENTHUSIAST' });
+selfSession.ingest(selfObs);
+check('self overlay is fully inert', [
+  selfSession.getStatus().syncCount,
+  selfSession.getStatus().currentPick,
+  selfSession.getStatus().anchoredSlot,
+], [0, 1, null]);
+// ...and must not resurrect players marked gone (its target rows are ours).
+const resSession = createDraftSession({ pool, teams: 12, rounds: 18 });
+resSession.ingest(parseUnderdogScreen(textToItems(PLAYERS_TAB), ctx)); // marks ADP<29.5 gone
+const goneBefore = !resSession.getDraftState().availablePlayers.some(p => p.name === 'Saquon Barkley');
+resSession.ingest(parseUnderdogScreen(textToItems(SELF_ACTIVITY_OVERLAY), ctx));
+const goneAfter = !resSession.getDraftState().availablePlayers.some(p => p.name === 'Saquon Barkley');
+check('self overlay does not resurrect drafted players', [goneBefore, goneAfter], [true, true]);
+
+// Abbreviated-name team tie-break: same surname + initial, hint team must win
+// regardless of pool order (on-device: "J. Taylor"/IND matched J.J. Taylor/N/A).
+const taylorPoolA = buildPool([
+  { name: 'J.J. Taylor', position: 'RB', team: 'N/A', adp: null },
+  { name: 'Jonathan Taylor', position: 'RB', team: 'IND', adp: 9.1 },
+]);
+const taylorPoolB = buildPool([
+  { name: 'Jonathan Taylor', position: 'RB', team: 'IND', adp: 9.1 },
+  { name: 'J.J. Taylor', position: 'RB', team: 'N/A', adp: null },
+]);
+check('abbrev tie-break (dup surname first)', matchAbbrevPlayer(taylorPoolA, 'J. Taylor', 'IND')?.player.name, 'Jonathan Taylor');
+check('abbrev tie-break (dup surname last)', matchAbbrevPlayer(taylorPoolB, 'J. Taylor', 'IND')?.player.name, 'Jonathan Taylor');
+
+// Cumulative inferred-gone: a later, smaller scroll window must not clear
+// marks made by an earlier, deeper one.
+const cumSession = createDraftSession({ pool, teams: 12, rounds: 18 });
+cumSession.ingest(parseUnderdogScreen(textToItems(PLAYERS_TAB), ctx)); // top ADP 29.5 -> Barkley gone
+cumSession.ingest({
+  kind: 'players', boardPicks: [], rows: [], upcomingOveralls: [], queueNames: [],
+  picksUntil: 2, picksAwayDivider: null, clockSeconds: null, onClock: false,
+  drafterCards: [], confirmCard: null, lobby: false, filledCount: 0, detailPanel: false,
+  availability: { topVisibleAdp: 5.0, positionsSeen: ['RB'], visibleCanonicals: ['jahmyr gibbs'] },
+  stats: { lines: 0, matchedRows: 0, boardMatches: 0, unmatchedNames: [] },
+});
+check('inferred-gone accumulates across scroll windows',
+  cumSession.getDraftState().availablePlayers.some(p => p.name === 'Saquon Barkley'), false);
+
+// Boxed board cells: the y-sort interleaves side-by-side columns, so name
+// association must be geometric. Reproduces the on-device 2026-07-14 failure
+// ("Jonathan / Taylor / RB - IND (1.9)" recorded as a different player because
+// the meta line grabbed the neighbor column's fragments).
+const BOXED_BOARD = [
+  { text: 'UP IN 3 PICKS', x: 0.35, y: 0.08, w: 0.30 },
+  { text: 'SEANJDUNN', x: 0.05, y: 0.14, w: 0.11 },
+  { text: '1hr', x: 0.07, y: 0.17, w: 0.04 },
+  // Row band 1 — two adjacent columns; y-sort interleaves their fragments.
+  { text: '9', x: 0.30, y: 0.300, w: 0.02 },
+  { text: '10', x: 0.55, y: 0.301, w: 0.03 },
+  { text: 'Jonathan', x: 0.30, y: 0.330, w: 0.10 },
+  { text: 'Justin', x: 0.55, y: 0.331, w: 0.08 },
+  { text: 'Taylor', x: 0.30, y: 0.360, w: 0.08 },
+  { text: 'Jefferson', x: 0.55, y: 0.361, w: 0.11 },
+  { text: 'RB - IND (1.9)', x: 0.30, y: 0.390, w: 0.13 },
+  { text: 'WR - MIN (1.10)', x: 0.55, y: 0.391, w: 0.14 },
+  // Row band 2, snake return.
+  { text: '16', x: 0.30, y: 0.470, w: 0.03 },
+  { text: '15', x: 0.55, y: 0.471, w: 0.03 },
+  { text: 'Chase', x: 0.30, y: 0.500, w: 0.07 },
+  { text: 'Omarion', x: 0.55, y: 0.501, w: 0.09 },
+  { text: 'Brown', x: 0.30, y: 0.530, w: 0.07 },
+  { text: 'Hampton', x: 0.55, y: 0.531, w: 0.10 },
+  { text: 'RB - CIN (2.4)', x: 0.30, y: 0.560, w: 0.13 },
+  { text: 'RB - LAC (2.3)', x: 0.55, y: 0.561, w: 0.13 },
+];
+const boxedBoard = parseUnderdogScreen(BOXED_BOARD, ctx);
+check('boxed board: kind', boxedBoard.kind, 'board');
+check('boxed board: geometric cell association',
+  boxedBoard.boardPicks.map(p => `${p.overall}:${p.player.name}`).sort(),
+  ['10:Justin Jefferson', '15:Omarion Hampton', '16:Chase Brown', '9:Jonathan Taylor']);
+
 // ---- serialize -> hydrate round-trip (extension <-> app handoff) ----
 console.log('serialize/hydrate:');
 const snapshotData = session.serialize();
@@ -215,6 +398,8 @@ if (!existsSync(bundlePath)) {
     last = JSON.parse(raw);
   }
   check('bundle ingest ok', last.ok, true);
+  check('bundle reports engine version', last.engine, 'task328.3');
+  check('bundle carries diag ring buffer', Array.isArray(last.diag) && last.diag.length > 0, true);
   check('bundle glance matches direct engine', {
     phase: last.glance.phase,
     headline: last.glance.headline,

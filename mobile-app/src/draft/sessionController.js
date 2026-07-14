@@ -25,6 +25,7 @@ export const BROADCAST_EXTENSION_ID = 'com.bestballexposures.app.draftbroadcast'
 const SESSION_CONFIG_KEY = 'bbe.sessionConfig';
 const RESULT_KEY = 'bbe.extensionResult';
 const HEARTBEAT_KEY = 'bbe.extensionHeartbeat';
+const USERNAME_KEY = 'bbe.udUsername';
 
 const HEARTBEAT_POLL_MS = 4000;
 const HEARTBEAT_FRESH_S = 8;
@@ -48,6 +49,10 @@ const state = {
   appStateSub: null,
   heartbeatTimer: null,
   listeners: new Set(),
+  baseConfig: null,        // config minus `state`, for warm-restart rewrites
+  lastPersistedKey: '',
+  lastDiag: null,          // extension's recent-ingest ring buffer (debugging)
+  extensionEngine: null,   // version reported by the extension's engine bundle
 };
 
 function notify() {
@@ -99,6 +104,7 @@ export function getSnapshot() {
     activityStarted: state.activityStarted,
     activityError: state.activityError,
     lastError: state.lastError,
+    extensionEngine: state.extensionEngine,
     capabilities: {
       nativeModule: nativeModuleAvailable(),
       liveActivity: liveActivitySupported(),
@@ -120,7 +126,7 @@ export function subscribeSession(fn) {
  * rankMap / exposureMap: Map keyed by canonical name (optional)
  */
 export async function startSession({
-  poolRows, rankMap, exposureMap, slot = null, teams = 12, rounds = 18,
+  poolRows, rankMap, exposureMap, slot = null, teams = 12, rounds = 18, username = null,
 }) {
   if (state.active) endSession();
   if (!poolRows?.length) {
@@ -128,9 +134,14 @@ export async function startSession({
     notify();
     return false;
   }
+  // Username anchors the slot (TASK-328): configured > remembered from a
+  // previous draft > auto-learned mid-session (lobby / "Your pick" card).
+  const knownUsername = username || readSharedValue(USERNAME_KEY) || null;
   state.pool = buildPool(poolRows);
   state.teams = teams;
-  state.session = createDraftSession({ pool: state.pool, teams, rounds, slot, rankMap, exposureMap });
+  state.session = createDraftSession({
+    pool: state.pool, teams, rounds, slot, username: knownUsername, rankMap, exposureMap,
+  });
   state.active = true;
   state.lastSyncEpoch = 0;
   state.lastAbsorbedRaw = null;
@@ -154,16 +165,21 @@ export async function startSession({
   }
   // Hand the session to the broadcast extension through the App Group.
   writeSharedValue(RESULT_KEY, null);
-  writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
+  state.baseConfig = {
     poolRows,
     teams,
     rounds,
     slot,
+    username: knownUsername,
     rankMap: rankMap ? Object.fromEntries(rankMap) : {},
     exposureMap: exposureMap ? Object.fromEntries(exposureMap) : {},
     pushToken: state.pushToken,
     relayUrl: `${SUPABASE_FUNCTIONS_URL}/live-activity-relay`,
     anonKey: SUPABASE_ANON_KEY,
+  };
+  state.lastPersistedKey = '';
+  writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
+    ...state.baseConfig,
     state: state.session.serialize(),
   }));
   state.heartbeatTimer = setInterval(pollExtension, HEARTBEAT_POLL_MS);
@@ -201,15 +217,40 @@ function absorbExtensionState() {
   state.lastAbsorbedRaw = raw;
   try {
     const result = JSON.parse(raw);
+    if (result?.diag) state.lastDiag = result.diag;
+    // Version handshake: an extension without `engine` predates TASK-328 —
+    // the phone is running a stale EAS build and needs a rebuild.
+    const reportedEngine = result?.engine || 'stale (rebuild needed)';
+    if (reportedEngine !== state.extensionEngine) {
+      state.extensionEngine = reportedEngine;
+      pushLog(`Extension engine: ${reportedEngine}`);
+    }
     if (result?.ok && result.state && state.session.hydrate(result.state)) {
       publishAll({ freshSync: true });
       const s = state.session.getStatus();
+      // Persist the merged state back so a broadcast RESTART resumes warm —
+      // the extension inits from this config, and the snapshot written at
+      // session start is empty (an attempt-2 extension pushed empty-roster
+      // glances for the rest of the draft). Rewrite when anything durable
+      // (ledger, anchor, username) changed.
+      const persistKey = `${s.ledgerSize}:${s.anchoredSlot ?? ''}:${s.learnedUsername ?? ''}`;
+      if (state.baseConfig && persistKey !== state.lastPersistedKey) {
+        state.lastPersistedKey = persistKey;
+        writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
+          ...state.baseConfig,
+          state: state.session.serialize(),
+        }));
+      }
       // One-time note when we've joined a draft already underway.
       if (s.isResume && !state.resumeLogged) {
         state.resumeLogged = true;
         pushLog(`Resumed mid-draft — ${s.picksAtStart} picks already on the board`);
       }
       pushLog(`capture · P${s.currentPick}${s.picksUntil != null ? ` · up in ${s.picksUntil}` : ''} · ${s.ledgerSize} picks known`);
+      // Remember the auto-learned username for the next draft.
+      if (s.learnedUsername && s.learnedUsername !== readSharedValue(USERNAME_KEY)) {
+        writeSharedValue(USERNAME_KEY, s.learnedUsername);
+      }
       notify();
     }
   } catch { /* partial write — next poll gets it */ }
@@ -229,6 +270,36 @@ export function demoSync() {
   haptic('success');
   notify();
   return true;
+}
+
+/**
+ * Debug bundle for the confidence hub's share button: app-side session status
+ * plus the extension's recent-ingest ring buffer (what it actually OCR'd).
+ */
+export function exportDebug() {
+  const s = state.session ? state.session.getStatus() : null;
+  return JSON.stringify({
+    at: new Date().toISOString(),
+    status: s && {
+      slot: s.slot,
+      slotSource: s.slotSource,
+      learnedUsername: s.learnedUsername,
+      currentPick: s.currentPick,
+      picksUntil: s.picksUntil,
+      myNextPick: s.myNextPick,
+      ledgerSize: s.ledgerSize,
+      inferredGone: s.inferredGone,
+      syncCount: s.syncCount,
+      slotConflict: s.slotConflict,
+      myPicks: s.myPicks,
+      opponentTallies: s.opponentTallies,
+      usernameSlots: s.usernameSlots,
+    },
+    captureLive: state.captureLive,
+    extensionEngine: state.extensionEngine,
+    log: state.log,
+    extensionDiag: state.lastDiag,
+  }, null, 1);
 }
 
 export function setSessionSlot(slot) {
@@ -257,6 +328,9 @@ export function endSession() {
   state.pushToken = null;
   state.session = null;
   state.pool = null;
+  state.baseConfig = null;
+  state.lastPersistedKey = '';
+  state.extensionEngine = null;
   endDraftFeed();
   pushLog('Session ended');
   notify();

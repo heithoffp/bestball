@@ -4,14 +4,14 @@
 // 'shots' (screenshot sweep fallback). Active state doubles as the
 // confidence hub: capture heartbeat, parse log, slot conflicts, warnings.
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Modal, TextInput, Share } from 'react-native';
 import {
-  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History,
+  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History, Bug,
 } from 'lucide-react-native';
 import { canonicalName } from '../../shared/utils/helpers';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import {
-  subscribeSession, startSession, endSession, demoSync, setSessionSlot,
+  subscribeSession, startSession, endSession, demoSync, setSessionSlot, exportDebug,
   BROADCAST_EXTENSION_ID,
 } from '../draft/sessionController';
 import {
@@ -106,8 +106,10 @@ export default function LiveSessionPanel() {
   const { masterPlayers, adpByPlatform, rankingsByPlatform, rosterData } = usePortfolio();
   const [snap, setSnap] = useState(null);
   const [slotChoice, setSlotChoice] = useState(null); // null = auto-detect
+  const [usernameChoice, setUsernameChoice] = useState(''); // '' = auto-learn
   const [expanded, setExpanded] = useState(false);
   const [showPreflight, setShowPreflight] = useState(false);
+  const [debugText, setDebugText] = useState(null); // debug bundle modal
 
   useEffect(() => subscribeSession(setSnap), []);
 
@@ -153,13 +155,15 @@ export default function LiveSessionPanel() {
   if (!snap) return null;
   const {
     active, status, log, capabilities, activityStarted, activityError,
-    lastError, captureLive, pushToken,
+    lastError, captureLive, pushToken, extensionEngine,
   } = snap;
+  const engineStale = !!extensionEngine && extensionEngine.startsWith('stale');
 
   const handleStart = () => {
     startSession({
       poolRows, rankMap, exposureMap,
       slot: slotChoice, teams: TEAMS, rounds: ROUNDS,
+      username: usernameChoice.trim() || null,
     });
   };
 
@@ -181,6 +185,18 @@ export default function LiveSessionPanel() {
               draft in Underdog. Your lock-screen Live Activity updates automatically as picks come in.
               Join a draft already in progress and BBE backfills every pick the first time it sees the board.
             </Text>
+            <View style={styles.slotRow}>
+              <Text style={type.muted}>Username</Text>
+              <TextInput
+                style={styles.usernameInput}
+                value={usernameChoice}
+                onChangeText={setUsernameChoice}
+                placeholder="Auto-detect from the draft"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
             <View style={styles.slotRow}>
               <Text style={type.muted}>Slot</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 3 }}>
@@ -231,7 +247,9 @@ export default function LiveSessionPanel() {
         status.picksUntil == null ? null
           : status.picksUntil === 0 ? 'ON THE CLOCK'
           : `up in ${status.picksUntil}`,
-        status.slot ? `slot ${status.slot}${status.manualSlot ? '' : ' (auto)'}` : 'slot pending',
+        status.slot
+          ? `slot ${status.slot}${status.slotSource === 'anchored' ? ' (pinned)' : status.slotSource === 'inferred' ? ' (auto)' : ''}`
+          : 'slot pending',
       ].filter(Boolean).join(' · ')
     : '';
 
@@ -301,6 +319,15 @@ export default function LiveSessionPanel() {
           <FlaskConical size={12} color={colors.textSecondary} />
           <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Demo</Text>
         </Pressable>
+        <Pressable
+          style={styles.actionBtn}
+          onPress={() => {
+            try { setDebugText(exportDebug()); } catch (e) { setDebugText(`export failed: ${e?.message}`); }
+          }}
+        >
+          <Bug size={12} color={colors.textSecondary} />
+          <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Debug</Text>
+        </Pressable>
         <Pressable style={[styles.actionBtn, { borderColor: `${colors.negative}66` }]} onPress={() => endSession()}>
           <Square size={11} color={colors.negative} />
           <Text style={[styles.actionTxt, { color: colors.negative }]}>End</Text>
@@ -313,12 +340,25 @@ export default function LiveSessionPanel() {
             <View style={styles.warnRow}>
               <TriangleAlert size={11} color={GOLD} />
               <Text style={[styles.warnTxt, { color: GOLD }]}>
-                Screen evidence says slot {status.inferredSlot}, you set {status.manualSlot}.
+                Screen evidence says slot {status.anchoredSlot || status.inferredSlot}
+                {status.anchoredSlot ? ` (your card${status.learnedUsername ? `, ${status.learnedUsername}` : ''})` : ''}, you set {status.manualSlot}.
               </Text>
               <Pressable onPress={() => setSessionSlot(null)}>
-                <Text style={{ color: colors.accent, fontSize: 10.5, fontWeight: '700' }}> Use {status.inferredSlot}</Text>
+                <Text style={{ color: colors.accent, fontSize: 10.5, fontWeight: '700' }}> Use {status.anchoredSlot || status.inferredSlot}</Text>
               </Pressable>
             </View>
+          )}
+          {status?.learnedUsername && !status?.slotConflict && (
+            <Text style={[type.muted, { fontSize: 10.5, marginTop: 6 }]}>
+              Tracking {status.learnedUsername}
+              {status.slotSource === 'anchored' ? ` · slot ${status.slot} pinned from your card` : ''}
+            </Text>
+          )}
+          {engineStale && (
+            <WarnRow>
+              The broadcast extension is running an OLD engine build — parsing fixes are not live.
+              Install the latest EAS build to update it (Metro reload is not enough).
+            </WarnRow>
           )}
           {!activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
           {activityStarted && !pushToken && (
@@ -344,6 +384,39 @@ export default function LiveSessionPanel() {
           launchBroadcastPicker(BROADCAST_EXTENSION_ID);
         }}
       />
+
+      <Modal visible={debugText != null} transparent animationType="fade" onRequestClose={() => setDebugText(null)}>
+        <View style={styles.preflightScrim}>
+          <View style={[styles.preflightCard, { maxHeight: '80%' }]}>
+            <View style={styles.preflightHead}>
+              <Bug size={16} color={colors.accent} />
+              <Text style={styles.preflightTitle}>Session debug</Text>
+            </View>
+            <ScrollView style={{ flexShrink: 1 }}>
+              <Text selectable style={{ fontSize: 10, lineHeight: 14, color: colors.textSecondary, fontFamily: 'Courier' }}>
+                {debugText}
+              </Text>
+            </ScrollView>
+            <View style={styles.preflightActions}>
+              <Pressable style={[styles.preflightBtn, styles.preflightBtnGhost]} onPress={() => setDebugText(null)}>
+                <Text style={[styles.preflightBtnTxt, { color: colors.textSecondary }]}>Close</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.preflightBtn, styles.preflightBtnPrimary]}
+                onPress={async () => {
+                  try {
+                    await Share.share({ message: debugText });
+                  } catch (e) {
+                    setDebugText(`share failed: ${e?.message}\n\n${debugText}`);
+                  }
+                }}
+              >
+                <Text style={[styles.preflightBtnTxt, { color: colors.textInverse }]}>Share</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -385,6 +458,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   slotBtnOn: { borderColor: colors.accent, backgroundColor: colors.accentMuted },
+  usernameInput: {
+    flex: 1, height: 30, borderRadius: radii.sm,
+    borderWidth: 1, borderColor: colors.borderDefault, backgroundColor: colors.surface2 ?? colors.surface1,
+    paddingHorizontal: 8, paddingVertical: 0,
+    fontSize: 11.5, fontWeight: '600', color: colors.textPrimary,
+  },
   slotTxt: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
   startBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

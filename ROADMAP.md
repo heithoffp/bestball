@@ -198,7 +198,7 @@
 ### FEAT-028: Draft Capture & Parse Engine
 **Status:** Not Started
 **Description:** The iOS screen-capture module (ScreenCaptureKit FrameSource, draft-session lifecycle and consent UX, ReplayKit-fallback-compatible architecture per ADR-020) and the parse engine per ADR-021: OCR over template-defined regions, closed-pool fuzzy matching, monotonic pick ledger, DraftState derivation, confidence scoring, calibration-sweep recovery, remote parse templates served from Supabase, and a screenshot fixture corpus. DraftKings support later arrives as a second template set within this feature's architecture.
-**Tasks:** TASK-320, TASK-321
+**Tasks:** TASK-320, TASK-321, TASK-328
 
 ### FEAT-029: Live Activity Draft Companion
 **Status:** Not Started

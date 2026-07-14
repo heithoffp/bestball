@@ -70,13 +70,33 @@ in `docs/task-318 artifacts/`.
 ## What the parser reads (fixture-derived, from the 4 shared screenshots)
 
 Header (visible on every tab):
-- `UP IN N PICKS` → picks-until-turn. `YOUR PICK` / on-the-clock variants → 0.
+- `UP IN N PICKS` → picks-until-turn. `YOUR PICK` / `Your pick: 0:19` /
+  on-the-clock variants → 0 (header zone only — the Board also renders
+  "On the clock" inside the current pick's cell for *whoever* is picking).
+  `UP NEXT` → 1. `Drafting starts soon` / `Draft starts in M:SS` → lobby.
 - Drafter cards: `3.8 | 32` = round.pickInRound | overall pick, for upcoming
-  drafters; the on-clock drafter shows a timer (`1hr`, `59:50`) instead.
-  → current pick = min(visible upcoming overalls) − 1. OCR noise like `310 | 34`
-  is solved using the overall as ground truth ((r−1)·teams + p == overall).
-- Slot inference: myNextOverall = currentPick + picksUntil → snake math → slot.
-  (Manual slot confirm remains as fallback/override.)
+  drafters; the on-clock drafter shows a timer (`1hr`, `59:50`, `0:14`) instead.
+  OCR noise like `310 | 34` (dropped dot), `1.717` (pipe merged into digits),
+  and `2.7` + `19` (split fragments) is solved using the overall as ground
+  truth ((r−1)·teams + p == overall). Card fragments are paired geometrically
+  (x-centers aligned, label below username) when boxes exist — the y-sorted
+  line order interleaves side-by-side cards.
+- Slot: **anchored from the user's own drafter card** (TASK-328) — username
+  match → card label overall → snake math → slot, knowable in the lobby before
+  pick one. The username is configured, remembered from a prior draft, or
+  auto-learned (lobby: the only named card among "Filled" seats; in-draft: the
+  on-clock card while the header reads "Your pick"). Truncated edge-clipped
+  fragments ("BIRD…") never anchor; re-pinning an established anchor takes 3
+  consecutive contradicting reads. Precedence: manual > anchored > legacy
+  ticker inference (myNextOverall = currentPick + N → slot), which remains the
+  unanchored fallback. Manual-vs-evidence conflicts surface in the panel.
+- Current pick, in evidence order: board-grade ledger max + 1; carousel
+  min(visible upcoming) − 1 — only while the on-clock card is visible (proves
+  the carousel is auto-tracking; a hand-scrolled carousel says nothing) and
+  treated as an upper bound; with an anchored slot the ticker is exact:
+  currentPick = (my rung overall) − N, rung chosen near the position estimate
+  with a small backward tolerance so an inflated carousel bound can't skip a
+  snake round.
 
 Players tab: ordered rows of name / `WR13` pos-rank pill / `NO, Bye 8` team line.
 Names are matched against the pool; the top visible player's ADP lets us infer
@@ -95,6 +115,40 @@ ahead of your next pick.
 OCR-noise handled by the matcher (all present in the fixture): `Je Von Achane` →
 De'Von Achane, `Amon-Ra st. Brown`, `VR`/`:B` position garbling, `J LAR`/`] CIN`
 team prefixes, split names across lines, `3.10` → `310`.
+
+### Fast drafts: event capture from the pick-confirmation card (TASK-328)
+
+In a 30s fast draft the Board tab is rarely opened, so board cells alone leave
+the ledger (and my-picks) empty. Every completed pick also injects a
+confirmation card at the carousel's left edge — position badge first, then
+`TEAM / F. Lastname` (`ATL / D. London`, often OCR-split into `ATL` +
+`D. London`). The engine attributes a *newly seen* card (deduped on raw text)
+to overall = currentPick − 1 when the same frame carries a fresh position read,
+matches the abbreviated name against the pool (first initial + surname + team
+hint), and appends at score 0.6 with `src: 'event'` — board cells (≥0.74)
+overwrite, and event entries never feed the ledger-max pick ratchet (they
+derive from currentPick, so feeding back would compound any error). A pick
+whose card name never renders in a captured frame is simply missed until board
+evidence fills it; a "fall" of 30+ picks past ADP is rejected as misattribution.
+The `Your pick` → `UP IN N` header transition marks the landed pick as the
+user's (`myPickLanded` significance for push pacing).
+
+Carousel cards also carry each drafter's `QB RB WR TE` roster tally and
+username → slot mapping (`opponentTallies` / `usernameSlots` in status) — the
+raw material for a future other-rosters surface.
+
+Availability inference no longer ratchets the current pick (ADP is not a pick
+number, and a slightly-scrolled list inflates the top-ADP read); it also only
+applies when the top visible ADP is plausibly at the list top
+(≤ currentPick + 12).
+
+Regression: `npm run test:draft` (fixtures incl. the hand-transcribed fast-draft
+screens in `underdogFastDraftFixture.js`), plus a full-recording replay —
+`node scripts/test-draft-replay.mjs` over `docs/task-328-evidence/frames-ocr.jsonl`
+(Windows OCR of the 366-frame fast-draft recording; regenerate with
+`scripts/ocr-frames.ps1`). The replay asserts slot anchoring, my-pick capture,
+exact final position, and ≥98% agreement between the derived countdown and
+every legible header (291/291 at check-in).
 
 ## Live Activity content (the "useful information")
 
