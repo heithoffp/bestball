@@ -1,4 +1,4 @@
-<!-- Completed: 2026-07-14 | Commit: 3c6af87 -->
+<!-- Completed: 2026-07-14 | Commit: d1edfe9 -->
 # TASK-328: Draft parser: pin slot from the user's username on the board; harden screen classification + picks-until countdown
 
 **Status:** Approved
