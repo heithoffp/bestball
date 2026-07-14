@@ -19,3 +19,6 @@ tmp/
 
 # Raw spike/test screen recordings (kept local; stills committed as evidence)
 mobile-app/docs/*.mp4
+
+# Local-only draft recordings (>100MB, exceed GitHub limits; OCR corpus is checked in instead)
+mobile-app/docs/live_draft_recording/
