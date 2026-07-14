@@ -8,18 +8,20 @@ steps (Chrome-extension roster sync, subscription checkout, rankings CSV upload)
 off to the website.
 
 **Status:** implemented and running on-device via EAS dev builds. **Live Draft
-Session** (docs/LIVE_SESSION_V1.md) is in, with two capture modes:
+Session** (docs/LIVE_SESSION_V1.md) is in, with a single hands-free capture path:
 
-- **Live capture (default, hands-free):** a ReplayKit broadcast extension
+- **Live capture (hands-free):** a ReplayKit broadcast extension
   (`targets/draft-broadcast/`) watches the screen while you draft in Underdog —
   Vision OCR → the shared JS parse engine running in JavaScriptCore → pick
   ledger → Live Activity updates pushed through the `live-activity-relay` Edge
   Function (APNs). One-time APNs key setup required for background pushes (see
-  the doc's runbook).
-- **Screenshots (fallback):** screenshot the draft room, hop to BBE, it syncs
-  on-device — no broadcast, no server.
+  the doc's runbook). **Mid-draft resume:** joining a draft already in progress
+  is detected automatically — the ledger backfills every existing pick the first
+  time the capture sees the board, and the panel shows a "Resumed mid-draft"
+  banner. (The earlier screenshot/Shortcuts fallbacks were removed in TASK-327
+  once live capture was proven on device.)
 
-Both feed the Draft Assistant screen and the lock-screen/Dynamic Island Live
+Capture feeds the Draft Assistant screen and the lock-screen/Dynamic Island Live
 Activity (`targets/draft-glance/`) through the same `src/draft/` engine and
 `draftFeed.js` seam (DraftState contract, ADR-021). A ScreenCaptureKit mode is
 planned for iOS 27 (spike Q3) — the extension core is already capture-agnostic.

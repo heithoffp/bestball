@@ -43,12 +43,6 @@
           "backgroundColor": "#060E1F"
         }
       ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "BBE reads your new draft-room screenshots during a Live Draft Session to keep your assistant and Live Activity in sync. Images never leave your device."
-        }
-      ],
       "@bacons/apple-targets"
     ],
     "experiments": {

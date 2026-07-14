@@ -126,6 +126,10 @@ check('picks until', status.picksUntil, 2);
 check('my next pick', status.myNextPick, 33);
 check('ledger size', status.ledgerSize, 20);
 check('my picks reconstructed', status.myPicks.map(p => `${p.round}:${p.name}`), ['1:Jonathan Taylor', '2:Chase Brown']);
+// Resume detection: the fixture is a capture of a draft already deep into R3,
+// so joining it must register as a mid-draft resume.
+check('resume detected (mid-draft capture)', status.isResume, true);
+check('picks already made at start (> 1 round)', status.picksAtStart > 12, true);
 
 const ds = session.getDraftState();
 check('DraftState currentPick', ds.currentPick, 31);
@@ -148,6 +152,20 @@ check('glance roster bar', glance.rosterBar, 'QB 0 · RB 2 · WR 0 · TE 0');
 check('glance targets count', glance.targets.length, 3);
 check('glance queue-risk flag', glance.targets.some(t => t.includes('Chris Olave') && t.includes('QUEUE RISK')), true);
 
+// Fresh draft: a round-1 board must NOT be flagged as a resume.
+const freshSession = createDraftSession({ pool, teams: 12, rounds: 18 });
+freshSession.ingest({
+  kind: 'board',
+  boardPicks: [
+    { overall: 1, player: { canonical: 'jahmyr gibbs', name: 'Jahmyr Gibbs', position: 'RB', team: 'DET' }, round: 1, pickInRound: 1, score: 1, raw: 'x' },
+    { overall: 2, player: { canonical: 'jaxon smith-njigba', name: 'Jaxon Smith-Njigba', position: 'WR', team: 'SEA' }, round: 1, pickInRound: 2, score: 1, raw: 'y' },
+  ],
+  rows: [], upcomingOveralls: [], availability: null, queueNames: [],
+  picksUntil: null, picksAwayDivider: null, clockSeconds: null,
+});
+check('fresh draft not flagged as resume', freshSession.getStatus().isResume, false);
+check('fresh draft picksAtStart', freshSession.getStatus().picksAtStart, 2);
+
 // On-the-clock phase: simulate the board reaching the user's pick.
 const session2 = createDraftSession({ pool, teams: 12, rounds: 18, slot: 9 });
 session2.ingest(players);
@@ -164,6 +182,7 @@ check('hydrated slot', restored.getStatus().slot, 9);
 check('hydrated current pick', restored.getStatus().currentPick, 31);
 check('hydrated ledger', restored.getStatus().ledgerSize, 20);
 check('hydrated my picks', restored.getStatus().myPicks.map(p => p.name), ['Jonathan Taylor', 'Chase Brown']);
+check('hydrated resume flag', restored.getStatus().isResume, true);
 check('hydrated glance headline', restored.getGlance().headline, 'Up in 2 picks');
 
 // ---- JSC bundle smoke test (what the broadcast extension actually runs) ----

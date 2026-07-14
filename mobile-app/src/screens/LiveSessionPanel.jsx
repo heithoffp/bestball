@@ -4,18 +4,19 @@
 // 'shots' (screenshot sweep fallback). Active state doubles as the
 // confidence hub: capture heartbeat, parse log, slot conflicts, warnings.
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
 import {
-  Radio, Camera, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast,
+  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History,
 } from 'lucide-react-native';
 import { canonicalName } from '../../shared/utils/helpers';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import {
-  subscribeSession, startSession, endSession, syncNow, demoSync, setSessionSlot,
+  subscribeSession, startSession, endSession, demoSync, setSessionSlot,
   BROADCAST_EXTENSION_ID,
 } from '../draft/sessionController';
-import { getBroadcastPickerComponent } from '../draft/liveActivity';
-import { Segmented } from '../components/ui';
+import {
+  getBroadcastPickerComponent, broadcastPickerLaunchable, launchBroadcastPicker,
+} from '../draft/liveActivity';
 import { colors, spacing, radii, type } from '../theme';
 
 const TEAMS = 12;
@@ -52,12 +53,61 @@ function WarnRow({ color = colors.negative, children }) {
   );
 }
 
+// Pre-flight privacy explainer (TASK-326). Shown before we launch the iOS
+// system broadcast picker so users understand what BBE actually captures —
+// Apple's own "Everything on your screen…" sheet is system UI we can't reword.
+// Everything stated here is what FrameProcessor.swift already enforces:
+// on-device processing, draft-screen-only OCR, derived pick JSON only.
+const PREFLIGHT_POINTS = [
+  'Reads only the Underdog draft board to follow your picks.',
+  'Processes each frame on your device, then discards it instantly.',
+  'Sends only draft data (picks, your slot) — never screenshots, notifications, or messages.',
+];
+
+function PreflightExplainer({ visible, onStart, onCancel }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <Pressable style={styles.preflightScrim} onPress={onCancel}>
+        <Pressable style={styles.preflightCard} onPress={() => {}}>
+          <View style={styles.preflightHead}>
+            <ShieldCheck size={18} color={colors.positive} />
+            <Text style={styles.preflightTitle}>Before you start recording</Text>
+          </View>
+          <Text style={styles.preflightBody}>
+            iOS will ask to record your screen next. That prompt is Apple's standard wording and it
+            covers every app — but here's exactly what BBE does:
+          </Text>
+          <View style={{ gap: 6, marginTop: 8 }}>
+            {PREFLIGHT_POINTS.map((line) => (
+              <View key={line} style={styles.preflightBullet}>
+                <Text style={styles.preflightDot}>•</Text>
+                <Text style={styles.preflightBulletTxt}>{line}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={[styles.preflightBody, { marginTop: 8 }]}>
+            You can stop capture anytime from the red status icon.
+          </Text>
+          <View style={styles.preflightActions}>
+            <Pressable style={[styles.preflightBtn, styles.preflightBtnGhost]} onPress={onCancel}>
+              <Text style={[styles.preflightBtnTxt, { color: colors.textSecondary }]}>Not now</Text>
+            </Pressable>
+            <Pressable style={[styles.preflightBtn, styles.preflightBtnPrimary]} onPress={onStart}>
+              <Text style={[styles.preflightBtnTxt, { color: colors.textInverse }]}>Start recording</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export default function LiveSessionPanel() {
   const { masterPlayers, adpByPlatform, rankingsByPlatform, rosterData } = usePortfolio();
   const [snap, setSnap] = useState(null);
   const [slotChoice, setSlotChoice] = useState(null); // null = auto-detect
-  const [mode, setMode] = useState('live');
   const [expanded, setExpanded] = useState(false);
+  const [showPreflight, setShowPreflight] = useState(false);
 
   useEffect(() => subscribeSession(setSnap), []);
 
@@ -102,15 +152,14 @@ export default function LiveSessionPanel() {
 
   if (!snap) return null;
   const {
-    active, syncing, status, log, capabilities, activityStarted, activityError,
-    photoAccess, lastError, captureLive, pushToken,
+    active, status, log, capabilities, activityStarted, activityError,
+    lastError, captureLive, pushToken,
   } = snap;
 
   const handleStart = () => {
     startSession({
       poolRows, rankMap, exposureMap,
       slot: slotChoice, teams: TEAMS, rounds: ROUNDS,
-      mode: capabilities.nativeModule ? mode : 'shots',
     });
   };
 
@@ -127,19 +176,10 @@ export default function LiveSessionPanel() {
         </Pressable>
         {expanded && (
           <>
-            <Segmented
-              options={[
-                { key: 'live', label: 'Live capture' },
-                { key: 'shots', label: 'Screenshots' },
-              ]}
-              value={mode}
-              onChange={setMode}
-              style={{ marginTop: spacing.sm }}
-            />
-            <Text style={[type.muted, { marginTop: 6, lineHeight: 16 }]}>
-              {mode === 'live'
-                ? 'Hands-free: start the session, tap the record button and pick "BBE Draft Capture", then just draft in Underdog. Your lock-screen Live Activity updates automatically as picks come in.'
-                : 'Manual: screenshot the Underdog draft room (Players or Board tab) and flip back to BBE to sync. No broadcast, no server — everything stays on-device.'}
+            <Text style={[type.muted, { marginTop: spacing.sm, lineHeight: 16 }]}>
+              Hands-free: start the session, tap the record button, confirm Start Broadcast, then just
+              draft in Underdog. Your lock-screen Live Activity updates automatically as picks come in.
+              Join a draft already in progress and BBE backfills every pick the first time it sees the board.
             </Text>
             <View style={styles.slotRow}>
               <Text style={type.muted}>Slot</Text>
@@ -168,7 +208,11 @@ export default function LiveSessionPanel() {
               <WarnRow color={GOLD}>Live Activities look disabled — check Settings → Best Ball Exposures.</WarnRow>
             )}
             {lastError && <WarnRow>{lastError}</WarnRow>}
-            <Pressable style={styles.startBtn} onPress={handleStart}>
+            <Pressable
+              style={[styles.startBtn, !capabilities.nativeModule && { opacity: 0.5 }]}
+              onPress={handleStart}
+              disabled={!capabilities.nativeModule}
+            >
               <Zap size={13} color={colors.textInverse} />
               <Text style={styles.startTxt}>Start session</Text>
             </Pressable>
@@ -179,7 +223,6 @@ export default function LiveSessionPanel() {
   }
 
   // ---------- active ----------
-  const isLiveMode = snap.mode === 'live';
   const phaseColor = status?.picksUntil === 0 ? colors.negative
     : status?.picksUntil === 1 ? GOLD : colors.positive;
   const statusLine = status
@@ -197,22 +240,27 @@ export default function LiveSessionPanel() {
       <Pressable style={styles.headerRow} onPress={() => setExpanded(v => !v)}>
         <Radio size={13} color={phaseColor} />
         <Text style={[styles.title, { color: phaseColor }]}>LIVE</Text>
-        {isLiveMode && (
-          <View style={[styles.capChip, { borderColor: captureLive ? colors.positive : colors.textMuted }]}>
-            <Cast size={9} color={captureLive ? colors.positive : colors.textMuted} />
-            <Text style={{ fontSize: 9, fontWeight: '800', color: captureLive ? colors.positive : colors.textMuted }}>
-              {captureLive ? 'CAPTURING' : 'NO CAPTURE'}
-            </Text>
-          </View>
-        )}
+        <View style={[styles.capChip, { borderColor: captureLive ? colors.positive : colors.textMuted }]}>
+          <Cast size={9} color={captureLive ? colors.positive : colors.textMuted} />
+          <Text style={{ fontSize: 9, fontWeight: '800', color: captureLive ? colors.positive : colors.textMuted }}>
+            {captureLive ? 'CAPTURING' : 'NO CAPTURE'}
+          </Text>
+        </View>
         <Text style={[type.secondary, { fontSize: 11.5, flexShrink: 1 }]} numberOfLines={1}>{statusLine}</Text>
         <View style={{ flex: 1 }} />
         {expanded ? <ChevronUp size={14} color={colors.textMuted} /> : <ChevronDown size={14} color={colors.textMuted} />}
       </Pressable>
 
-      {isLiveMode && !captureLive && (
+      {!captureLive && (
         <View style={styles.broadcastRow}>
-          {BroadcastPicker ? (
+          {broadcastPickerLaunchable() ? (
+            <Pressable
+              style={({ pressed }) => [styles.recordBtnWrap, pressed && { opacity: 0.6 }]}
+              onPress={() => setShowPreflight(true)}
+            >
+              <View style={styles.recordDot} />
+            </Pressable>
+          ) : BroadcastPicker ? (
             <View style={styles.recordBtnWrap}>
               <BroadcastPicker preferredExtension={BROADCAST_EXTENSION_ID} style={{ width: 44, height: 44 }} />
             </View>
@@ -220,30 +268,35 @@ export default function LiveSessionPanel() {
             <Cast size={22} color={colors.textMuted} />
           )}
           <Text style={[type.muted, { flex: 1, lineHeight: 15 }]}>
-            {BroadcastPicker ? (
+            {broadcastPickerLaunchable() || BroadcastPicker ? (
               <>
-                Tap the record button, choose <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>BBE Draft Capture</Text>,
-                then switch to Underdog. Stop it anytime from the red status icon.
+                Tap the record button, then <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Start Broadcast</Text> on
+                the iOS sheet, then switch to Underdog. Stop anytime from the red status icon.{' '}
+                BBE reads only the Underdog draft board on your device and discards every frame instantly — nothing else is stored or sent.
               </>
             ) : (
               <>
                 This build has no in-app record button. Open Control Center, long-press
                 <Text style={{ color: colors.textPrimary, fontWeight: '700' }}> Screen Recording</Text>, choose
                 <Text style={{ color: colors.textPrimary, fontWeight: '700' }}> BBE Draft Capture</Text>, then Start Broadcast.
-                If it isn't listed, install the latest EAS build.
+                If it isn't listed, install the latest EAS build.{' '}
+                BBE reads only the Underdog draft board on your device and discards every frame instantly — nothing else is stored or sent.
               </>
             )}
           </Text>
         </View>
       )}
 
+      {status?.isResume && (
+        <View style={styles.resumeRow}>
+          <History size={12} color={colors.accent} />
+          <Text style={styles.resumeTxt}>
+            Resumed mid-draft · {status.picksAtStart} picks already on the board
+          </Text>
+        </View>
+      )}
+
       <View style={styles.btnRow}>
-        {!isLiveMode && (
-          <Pressable style={[styles.actionBtn, syncing && { opacity: 0.5 }]} onPress={() => syncNow('manual')} disabled={syncing}>
-            <Camera size={12} color={colors.textPrimary} />
-            <Text style={styles.actionTxt}>{syncing ? 'Syncing…' : 'Sync now'}</Text>
-          </Pressable>
-        )}
         <Pressable style={styles.actionBtn} onPress={() => demoSync()}>
           <FlaskConical size={12} color={colors.textSecondary} />
           <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Demo</Text>
@@ -268,13 +321,10 @@ export default function LiveSessionPanel() {
             </View>
           )}
           {!activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
-          {isLiveMode && activityStarted && !pushToken && (
+          {activityStarted && !pushToken && (
             <WarnRow color={GOLD}>
               No push token — the Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).
             </WarnRow>
-          )}
-          {!isLiveMode && photoAccess === false && (
-            <WarnRow>No Photos access — allow "All Photos" in Settings, or use the Shortcut link path.</WarnRow>
           )}
           <View style={{ marginTop: 6, gap: 2 }}>
             {log.map((entry) => (
@@ -285,6 +335,15 @@ export default function LiveSessionPanel() {
           </View>
         </>
       )}
+
+      <PreflightExplainer
+        visible={showPreflight}
+        onCancel={() => setShowPreflight(false)}
+        onStart={() => {
+          setShowPreflight(false);
+          launchBroadcastPicker(BROADCAST_EXTENSION_ID);
+        }}
+      />
     </View>
   );
 }
@@ -315,6 +374,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.negative,
     alignItems: 'center', justifyContent: 'center',
   },
+  recordDot: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.negative,
+  },
   slotRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   slotBtn: {
     width: 26, height: 26, borderRadius: radii.sm,
@@ -338,4 +401,37 @@ const styles = StyleSheet.create({
   actionTxt: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
   warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, flexWrap: 'wrap' },
   warnTxt: { fontSize: 10.5, color: colors.negative, flexShrink: 1 },
+  resumeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: spacing.sm, paddingVertical: 6, paddingHorizontal: spacing.sm,
+    borderRadius: radii.md, borderWidth: 1, borderColor: colors.accentMuted,
+    backgroundColor: colors.accentMuted,
+  },
+  resumeTxt: { fontSize: 11, fontWeight: '700', color: colors.accent, flexShrink: 1 },
+  preflightScrim: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center', justifyContent: 'center', padding: spacing.lg,
+  },
+  preflightCard: {
+    width: '100%', maxWidth: 400,
+    backgroundColor: colors.surface1, borderRadius: radii.lg,
+    borderWidth: 1, borderColor: colors.borderDefault, padding: spacing.lg,
+  },
+  preflightHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  preflightTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary, flexShrink: 1 },
+  preflightBody: { fontSize: 12.5, lineHeight: 18, color: colors.textSecondary },
+  preflightBullet: { flexDirection: 'row', gap: 6 },
+  preflightDot: { color: colors.positive, fontSize: 13, lineHeight: 18 },
+  preflightBulletTxt: { flex: 1, fontSize: 12.5, lineHeight: 18, color: colors.textPrimary },
+  preflightActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  preflightBtn: {
+    flex: 1, paddingVertical: 11, borderRadius: radii.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  preflightBtnGhost: {
+    borderWidth: 1, borderColor: colors.borderDefault,
+    backgroundColor: colors.surface2 ?? colors.surface1,
+  },
+  preflightBtnPrimary: { backgroundColor: colors.accent },
+  preflightBtnTxt: { fontSize: 13, fontWeight: '800' },
 });

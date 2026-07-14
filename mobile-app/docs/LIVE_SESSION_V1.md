@@ -1,15 +1,27 @@
 # Live Draft Session — iOS Underdog assistant "overlay"
 
-Status: implemented 2026-07-13 (this doc doubles as the auto-approved plan and the
-as-built record). Two capture modes ship:
+Status: implemented 2026-07-13; **live capture proven end-to-end on device and
+made the sole capture path 2026-07-14 (TASK-327)**. This doc doubles as the
+as-built record.
 
-- **v1.1 Live capture (default)** — ReplayKit broadcast extension; fully
-  hands-free. See "Live capture" section below.
-- **v1 Screenshots (fallback)** — manual shutter, zero infrastructure, fully
-  on-device. Documented first because the live path reuses all of its pieces.
+> **2026-07-14 (TASK-327):** live capture is now the *only* capture path. The
+> screenshot (Photos-sweep) fallback and the Shortcuts/deep-link OCR route were
+> removed — along with the `expo-media-library` dependency and Photos
+> permission — once live capture was confirmed working on device. The "v1
+> Screenshots" section below is retained for historical context only; those
+> pieces (`screenshotSync.js`, `app/draft-ocr.jsx`, `syncNow`, `ingestOcrText`)
+> no longer exist. `demoSync` (fixture replay) and the pure parse engine remain.
+>
+> **Mid-draft resume detection** was added the same day: the engine records the
+> draft position at first capture (`observedStartPick`) and exposes
+> `picksAtStart` / `isResume` (resume = more than one full round already
+> drafted). Because board picks are ingested idempotently by overall pick
+> number, joining an in-progress slow draft backfills the whole ledger on the
+> first board frame; the panel then shows a "Resumed mid-draft — N picks already
+> on the board" banner. The flag round-trips through the App Group handoff.
 
-Both were built for the developer's device (iPhone 15, iOS 26.5) — no
-ScreenCaptureKit (iOS 27 beta only, spike Q3 unanswered on iOS).
+Built for the developer's device (iPhone 15, iOS 26.5) — no ScreenCaptureKit
+(iOS 27 beta only, spike Q3 unanswered on iOS).
 
 ## What v1 is
 
@@ -122,13 +134,13 @@ the module is absent (`liveActivity.js` no-ops and the panel says so).
 | `src/draft/snake.js` | pure snake-draft math (overall↔round/slot, my picks) |
 | `src/draft/playerMatcher.js` | pool build + canonical/fuzzy name matching |
 | `src/draft/underdogParser.js` | OCR lines/boxes → screen observations |
-| `src/draft/sessionEngine.js` | ledger + merge + DraftState + glance payload (pure) |
+| `src/draft/sessionEngine.js` | ledger + merge + DraftState + glance payload + resume detection (pure) |
 | `src/draft/liveActivity.js` | lazy native wrapper (no-op off device) |
-| `src/draft/screenshotSync.js` | Photos sweep → OCR items (expo-media-library) |
-| `src/draft/sessionController.js` | singleton glue: AppState foreground → sweep → ingest → publish + activity update |
-| `src/screens/LiveSessionPanel.jsx` | start/stop UI, status, sync log, slot confirm |
-| `app/draft-ocr.jsx` | deep-link text ingestion route |
+| `src/draft/sessionController.js` | singleton glue: App Group handoff → extension state absorption on foreground → publish + activity update |
+| `src/screens/LiveSessionPanel.jsx` | start/stop UI, capture chip, status, sync log, slot confirm, resume banner, preflight modal |
 | `scripts/test-draft-parser.mjs` | Node regression test against the OCR fixture |
+
+(`src/draft/screenshotSync.js` and `app/draft-ocr.jsx` were removed in TASK-327 — see the status note at the top.)
 
 Pure modules (`snake/playerMatcher/underdogParser/sessionEngine`) import nothing
 from React Native so the Node fixture test can run them directly.

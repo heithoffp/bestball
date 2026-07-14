@@ -67,6 +67,16 @@ export function readSharedDouble(key) {
   try { return native()?.readSharedDouble(key) ?? 0; } catch { return 0; }
 }
 
+/** True when the build can present the broadcast sheet programmatically. */
+export function broadcastPickerLaunchable() {
+  return typeof native()?.launchBroadcastPicker === 'function';
+}
+
+/** Present the system broadcast sheet (Start Broadcast confirmation). */
+export function launchBroadcastPicker(preferredExtension) {
+  try { native()?.launchBroadcastPicker?.(preferredExtension ?? null); return true; } catch { return false; }
+}
+
 /** Native RPSystemBroadcastPickerView component (null off-device). */
 export function getBroadcastPickerComponent() {
   if (!native()) return null;

@@ -65,6 +65,7 @@
 | TASK-321 | Parse engine v1: Underdog pick-ledger OCR with remote parse templates | Todo | P2 | [Plan](docs/plans/TASK-321.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
 | TASK-322 | Live Activity companion: ActivityKit widget, Dynamic Island, push relay | Todo | P2 | [Plan](docs/plans/TASK-322.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
 | TASK-323 | In-app Draft Assistant screen and manual fallback mode | Todo | P2 | [Plan](docs/plans/TASK-323.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
+| TASK-328 | Draft parser: pin slot from the user's username on the board; harden screen classification + picks-until countdown | Todo | P2 | [Plan](docs/plans/TASK-328.md) -- Draft | No | 2026-07-14 | 2026-07-14 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -120,6 +121,8 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-327 | Live Draft Session: remove screenshot capture mode, make live capture the sole path, add mid-draft resume detection | Done | P2 | [Plan](docs/archive/plans/TASK-327.md) | Yes | 2026-07-14 |
+| TASK-326 | Mobile live capture: pre-flight privacy explainer + inline helper copy for broadcast picker | Done | P3 | [Plan](docs/archive/plans/TASK-326.md) | Yes | 2026-07-14 |
 | TASK-325 | Android FLAG_SECURE go/no-go: UD app capture visibility on Pixel 3 | Done | P3 | [Plan](docs/archive/plans/TASK-325.md) | Yes | 2026-07-12 |
 | TASK-283 | Arena: leaderboard view | Done | P2 | [Plan](docs/archive/plans/TASK-283.md) | Yes | 2026-07-02 |
 | TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | Done | P1 | [Plan](docs/archive/plans/TASK-282.md) | Yes | 2026-07-02 |

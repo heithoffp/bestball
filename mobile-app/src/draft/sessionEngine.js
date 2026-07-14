@@ -29,6 +29,7 @@ export function createDraftSession(cfg) {
     inferredSlot: null,
     slotConflict: false,
     currentPick: 1,          // monotonic floor; only ratchets upward
+    observedStartPick: null, // pick position the first time we saw real evidence
     explicitPicksUntil: null, // last header reading (may go stale between syncs)
     ledger: new Map(),        // overall -> { player, round, pickInRound, score, raw }
     inferredGone: new Set(),  // canonicals implied gone by Players-tab availability
@@ -114,6 +115,15 @@ export function createDraftSession(cfg) {
     }
     // Any tab: visible available rows can clear stale inferred-gone marks.
     for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+
+    // Resume detection: the first time a screen gives us a real read on draft
+    // position, remember how far along the draft already was. currentPick has
+    // fully ratcheted for this observation by now (board/upcoming/availability
+    // above). A high value means we joined a draft already in progress.
+    if (state.observedStartPick == null
+      && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability || picksUntil != null)) {
+      state.observedStartPick = state.currentPick;
+    }
 
     return summary;
   }
@@ -208,7 +218,7 @@ export function createDraftSession(cfg) {
 
     const round = roundForOverall(Math.min(state.currentPick, teams * rounds), teams);
     let headline;
-    if (phase === 'armed') headline = 'Screenshot your draft to sync';
+    if (phase === 'armed') headline = 'Waiting for capture to start';
     else if (phase === 'done') headline = 'Draft complete';
     else if (phase === 'onClock') headline = "You're on the clock!";
     else if (phase === 'onDeck') headline = "You're up next";
@@ -249,6 +259,7 @@ export function createDraftSession(cfg) {
       manualSlot: state.manualSlot,
       inferredSlot: state.inferredSlot,
       currentPick: state.currentPick,
+      osp: state.observedStartPick,
       explicitPicksUntil: state.explicitPicksUntil,
       syncCount: state.syncCount,
       ledger: [...state.ledger.entries()].map(([overall, e]) => ({
@@ -277,6 +288,7 @@ export function createDraftSession(cfg) {
       }
     }
     ratchetCurrentPick(data.currentPick);
+    if (data.osp != null && state.observedStartPick == null) state.observedStartPick = data.osp;
     if (data.explicitPicksUntil != null) state.explicitPicksUntil = data.explicitPicksUntil;
     if (data.inferredSlot != null) state.inferredSlot = data.inferredSlot;
     if (data.manualSlot != null && state.manualSlot == null) state.manualSlot = data.manualSlot;
@@ -304,6 +316,8 @@ export function createDraftSession(cfg) {
         round: roundForOverall(Math.min(state.currentPick, teams * rounds), teams),
         picksUntil: myNextOverall() != null ? Math.max(0, myNextOverall() - state.currentPick) : null,
         myNextPick: myNextOverall(),
+        picksAtStart: state.observedStartPick != null ? state.observedStartPick - 1 : null,
+        isResume: state.observedStartPick != null && (state.observedStartPick - 1) > teams,
         ledgerSize: state.ledger.size,
         inferredGone: state.inferredGone.size,
         queueSize: state.queue.size,

@@ -438,6 +438,8 @@
       slotConflict: false,
       currentPick: 1,
       // monotonic floor; only ratchets upward
+      observedStartPick: null,
+      // pick position the first time we saw real evidence
       explicitPicksUntil: null,
       // last header reading (may go stale between syncs)
       ledger: /* @__PURE__ */ new Map(),
@@ -513,6 +515,9 @@
         state.queue = new Set(obs.queueNames);
       }
       for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+      if (state.observedStartPick == null && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability || picksUntil != null)) {
+        state.observedStartPick = state.currentPick;
+      }
       return summary;
     }
     function draftedCanonicals() {
@@ -590,7 +595,7 @@
       else if (picksUntil === 1) phase = "onDeck";
       const round = roundForOverall(Math.min(state.currentPick, teams * rounds), teams);
       let headline;
-      if (phase === "armed") headline = "Screenshot your draft to sync";
+      if (phase === "armed") headline = "Waiting for capture to start";
       else if (phase === "done") headline = "Draft complete";
       else if (phase === "onClock") headline = "You're on the clock!";
       else if (phase === "onDeck") headline = "You're up next";
@@ -621,6 +626,7 @@
         manualSlot: state.manualSlot,
         inferredSlot: state.inferredSlot,
         currentPick: state.currentPick,
+        osp: state.observedStartPick,
         explicitPicksUntil: state.explicitPicksUntil,
         syncCount: state.syncCount,
         ledger: [...state.ledger.entries()].map(([overall, e]) => ({
@@ -651,6 +657,7 @@
         }
       }
       ratchetCurrentPick(data.currentPick);
+      if (data.osp != null && state.observedStartPick == null) state.observedStartPick = data.osp;
       if (data.explicitPicksUntil != null) state.explicitPicksUntil = data.explicitPicksUntil;
       if (data.inferredSlot != null) state.inferredSlot = data.inferredSlot;
       if (data.manualSlot != null && state.manualSlot == null) state.manualSlot = data.manualSlot;
@@ -681,6 +688,8 @@
           round: roundForOverall(Math.min(state.currentPick, teams * rounds), teams),
           picksUntil: myNextOverall() != null ? Math.max(0, myNextOverall() - state.currentPick) : null,
           myNextPick: myNextOverall(),
+          picksAtStart: state.observedStartPick != null ? state.observedStartPick - 1 : null,
+          isResume: state.observedStartPick != null && state.observedStartPick - 1 > teams,
           ledgerSize: state.ledger.size,
           inferredGone: state.inferredGone.size,
           queueSize: state.queue.size,
