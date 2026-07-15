@@ -16,8 +16,10 @@ import { createDraftSession } from './sessionEngine';
 import {
   startActivity, updateActivity, endActivity, getActivityPushToken,
   nativeModuleAvailable, liveActivitySupported, activitiesEnabled, frequentPushesEnabled,
-  writeSharedValue, readSharedValue, readSharedDouble,
+  writeSharedValue, readSharedValue, readSharedDouble, latestFrameLogPath,
+  writeSharedFile,
 } from './liveActivity';
+import { ENGINE_SOURCE, ENGINE_BUILD, ENGINE_VERSION } from './generated/engineSource';
 import { SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '../../shared/config';
 
 export const BROADCAST_EXTENSION_ID = 'com.bestballexposures.app.draftbroadcast';
@@ -26,6 +28,12 @@ const SESSION_CONFIG_KEY = 'bbe.sessionConfig';
 const RESULT_KEY = 'bbe.extensionResult';
 const HEARTBEAT_KEY = 'bbe.extensionHeartbeat';
 const USERNAME_KEY = 'bbe.udUsername';
+// ADR-023 engine hot-load: the app hands its current parse engine to the
+// broadcast extension through the App Group, so parser fixes reach the
+// extension via a JS reload with no native rebuild.
+const ENGINE_FILE = 'engine-hotload.js';
+const ENGINE_BUILD_KEY = 'bbe.engineBuild';
+const ENGINE_VERSION_KEY = 'bbe.engineVersion';
 
 const HEARTBEAT_POLL_MS = 4000;
 const HEARTBEAT_FRESH_S = 8;
@@ -163,6 +171,16 @@ export async function startSession({
       pushLog('No push token — glance updates only while BBE is open');
     }
   }
+  // Hand the current parse engine to the broadcast extension (ADR-023) BEFORE
+  // the session config that triggers capture, so the extension's setUp reads a
+  // fresh engine. The extension only adopts it when its build is newer than
+  // the one baked into the native bundle and it passes a sanity-eval; else it
+  // falls back to its bundled asset. The engine text rides this JS bundle, so
+  // a Metro reload updates it with no native rebuild.
+  writeSharedFile(ENGINE_FILE, ENGINE_SOURCE);
+  writeSharedValue(ENGINE_BUILD_KEY, String(ENGINE_BUILD));
+  writeSharedValue(ENGINE_VERSION_KEY, ENGINE_VERSION);
+
   // Hand the session to the broadcast extension through the App Group.
   writeSharedValue(RESULT_KEY, null);
   state.baseConfig = {
@@ -176,6 +194,10 @@ export async function startSession({
     pushToken: state.pushToken,
     relayUrl: `${SUPABASE_FUNCTIONS_URL}/live-activity-relay`,
     anonKey: SUPABASE_ANON_KEY,
+    // TASK-331: the extension records every OCR frame (JSONL in the App
+    // Group) so whole drafts replay offline via scripts/replay-frames.mjs.
+    // Developer-build default; revisit before public TestFlight.
+    recordFrames: true,
   };
   state.lastPersistedKey = '';
   writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
@@ -300,6 +322,11 @@ export function exportDebug() {
     log: state.log,
     extensionDiag: state.lastDiag,
   }, null, 1);
+}
+
+/** Newest session frame recording written by the extension (or null). */
+export function getFrameLogPath() {
+  return latestFrameLogPath();
 }
 
 export function setSessionSlot(slot) {

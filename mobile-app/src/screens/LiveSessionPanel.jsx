@@ -6,13 +6,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal, TextInput, Share } from 'react-native';
 import {
-  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History, Bug,
+  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History, Bug, Film,
 } from 'lucide-react-native';
 import { canonicalName } from '../../shared/utils/helpers';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import {
   subscribeSession, startSession, endSession, demoSync, setSessionSlot, exportDebug,
-  BROADCAST_EXTENSION_ID,
+  getFrameLogPath, BROADCAST_EXTENSION_ID,
 } from '../draft/sessionController';
 import {
   getBroadcastPickerComponent, broadcastPickerLaunchable, launchBroadcastPicker,
@@ -327,6 +327,28 @@ export default function LiveSessionPanel() {
         >
           <Bug size={12} color={colors.textSecondary} />
           <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Debug</Text>
+        </Pressable>
+        <Pressable
+          style={styles.actionBtn}
+          onPress={async () => {
+            // TASK-331: share the extension's full-session OCR recording so
+            // the whole draft can be replayed offline (replay-frames.mjs).
+            try {
+              const path = getFrameLogPath();
+              if (!path) {
+                setDebugText('No frame recording found — the extension writes it during a live broadcast (needs the task329.3+ build).');
+                return;
+              }
+              // eslint-disable-next-line global-require
+              const Sharing = require('expo-sharing');
+              await Sharing.shareAsync(`file://${path}`, { mimeType: 'application/json', dialogTitle: 'Session frames' });
+            } catch (e) {
+              setDebugText(`frames export failed: ${e?.message}`);
+            }
+          }}
+        >
+          <Film size={12} color={colors.textSecondary} />
+          <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Frames</Text>
         </Pressable>
         <Pressable style={[styles.actionBtn, { borderColor: `${colors.negative}66` }]} onPress={() => endSession()}>
           <Square size={11} color={colors.negative} />

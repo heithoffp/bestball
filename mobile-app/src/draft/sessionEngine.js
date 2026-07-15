@@ -259,26 +259,53 @@ export function createDraftSession(cfg) {
       state.wasOnClock = !!obs.onClock;
     }
 
-    // Players-tab availability: everything below the top visible ADP that isn't
-    // visible (and plays a position we could see) is gone. Rebuilt per snapshot.
-    // Only when the list is plausibly at its top: a user-scrolled list is also
-    // clean and ADP-sorted, but its top row says nothing about who's gone —
-    // trusting it marked whole rounds of available players drafted (replay
-    // corpus, TASK-328). currentPick has already ratcheted from carousel /
-    // ticker / board evidence this frame, so compare against it.
+    // Players-tab availability, two inference passes over the visible window.
     // Marks accumulate across snapshots (each scroll window contributes what
     // it can see); a stale mark is cleared the moment the player is visible
     // again in any row. Rebuilding per-snapshot made the LAST scroll position
     // the only truth and left mid-draft resumes mostly unmarked.
-    if (obs.availability && obs.availability.topVisibleAdp <= state.currentPick + 12) {
-      const { topVisibleAdp, positionsSeen, visibleCanonicals } = obs.availability;
+    if (obs.availability) {
+      const {
+        topVisibleAdp, bottomVisibleAdp, positionsSeen, visibleCanonicals, unmatchedCount,
+      } = obs.availability;
       const visible = new Set(visibleCanonicals);
       const posSet = new Set(positionsSeen);
-      for (const p of pool.players) {
-        if (!Number.isFinite(p.adp) || p.adp >= topVisibleAdp - 0.05) continue;
-        if (!posSet.has(p.position)) continue;
-        if (visible.has(p.canonical)) continue;
-        state.inferredGone.add(p.canonical);
+      // The position guard protects against chip-filtered lists (a WR-only
+      // view proves nothing about TEs) — but rows spanning ≥3 distinct
+      // positions prove the list is unfiltered, and then the inference holds
+      // for EVERY position. Keeping the guard there surfaced long-gone elite
+      // TEs as top targets on a mid-draft resume whose visible window had no
+      // TE row (debug 2026-07-15, TASK-329 scope item).
+      const unfiltered = posSet.size >= 3;
+      // (a) Window pass: the visible rows of the ADP-sorted list are
+      // contiguous, so a pool player whose ADP falls strictly inside the
+      // visible window and who isn't visible is drafted — valid at ANY scroll
+      // position, which is what keeps targets honest for players drafted
+      // mid-window (TASK-329). Skipped on garbled frames: an unmatched row is
+      // a gap that would false-mark the players behind the misread name.
+      if (Number.isFinite(bottomVisibleAdp) && (unmatchedCount ?? 0) < 2) {
+        for (const p of pool.players) {
+          if (!Number.isFinite(p.adp)) continue;
+          if (p.adp <= topVisibleAdp + 0.05 || p.adp >= bottomVisibleAdp - 0.05) continue;
+          if (!unfiltered && !posSet.has(p.position)) continue;
+          if (visible.has(p.canonical)) continue;
+          state.inferredGone.add(p.canonical);
+        }
+      }
+      // (b) Below-top pass: everything below the top visible ADP that isn't
+      // visible (and plays a position we could see) is gone. Only when the
+      // list is plausibly at its top: a user-scrolled list is also clean and
+      // ADP-sorted, but its top row says nothing about who's gone — trusting
+      // it marked whole rounds of available players drafted (replay corpus,
+      // TASK-328). currentPick has already ratcheted from carousel / ticker /
+      // board evidence this frame, so compare against it.
+      if (topVisibleAdp <= state.currentPick + 12) {
+        for (const p of pool.players) {
+          if (!Number.isFinite(p.adp) || p.adp >= topVisibleAdp - 0.05) continue;
+          if (!unfiltered && !posSet.has(p.position)) continue;
+          if (visible.has(p.canonical)) continue;
+          state.inferredGone.add(p.canonical);
+        }
       }
       // NOTE: availability deliberately does NOT ratchet currentPick — ADP is
       // not a pick number, and a slightly-scrolled list inflates the top-ADP
@@ -288,8 +315,12 @@ export function createDraftSession(cfg) {
     if (obs.kind === 'queue') {
       state.queue = new Set(obs.queueNames);
     }
-    // Any tab: visible available rows can clear stale inferred-gone marks.
-    for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+    // Any tab: visible available rows can clear stale inferred-gone marks —
+    // except roster panels, whose rows are drafted players by definition
+    // (an opponent's roster view would resurrect their picks, TASK-329).
+    if (obs.kind !== 'roster') {
+      for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+    }
 
     // Resume detection: the first time a screen gives us a real read on draft
     // position, remember how far along the draft already was. currentPick has

@@ -19,7 +19,13 @@ import { createDraftSession } from './sessionEngine.js';
 // bundle ships inside the native broadcast extension, so a stale EAS build
 // silently runs old parsing. The version rides in every result so the panel
 // can prove which engine is actually running.
-export const ENGINE_VERSION = 'task328.3';
+export const ENGINE_VERSION = 'task329.4';
+
+// Monotonic build counter (ADR-023). ENGINE_VERSION is a task-string with no
+// ordering, so the App Group hot-load path uses this integer to decide whether
+// the app-written engine is newer than the one baked into the extension
+// bundle. BUMP THIS (by 1) with every engine change, alongside ENGINE_VERSION.
+export const ENGINE_BUILD = 1;
 
 let session = null;
 let config = null;
@@ -80,6 +86,12 @@ function buildResult(obsKind, summary) {
 }
 
 globalThis.BBEEngine = {
+  // Self-describing identity so an evaluated copy (e.g. the App Group hot-load
+  // sanity-eval in FrameProcessor, ADR-023) can read version/build without
+  // parsing the source text.
+  version: ENGINE_VERSION,
+  build: ENGINE_BUILD,
+
   init(configJson) {
     try {
       config = JSON.parse(configJson);

@@ -15,9 +15,12 @@ import { matchPlayer, fuzzyPosition, looksLikeNameLine } from './playerMatcher.j
 import { resolveRoundDotPick } from './snake.js';
 
 const PATTERNS = {
-  // "UP IN 2 PICKS" header ticker; on-the-clock variants.
+  // "UP IN 2 PICKS" header ticker; on-the-clock variants. "YOUR PICK" must
+  // reject the plural: the UD home screen's tagline "Your players. Your
+  // picks." sits in the header zone and flashed a false "on the clock" at P1
+  // for as long as the user browsed the lobby (frames-1784120786 #2-#11).
   upInPicks: /UP\s+IN\s+(\d{1,2})\s+PICKS?/i,
-  onTheClock: /(YOUR\s+PICK|ON\s+THE\s+CLOCK|YOU'?RE\s+UP)/i,
+  onTheClock: /(YOUR\s+PICK(?!S)|ON\s+THE\s+CLOCK|YOU'?RE\s+UP)/i,
   upNext: /\bUP\s+NEXT\b/i,
   // "Your pick: 0:19" carries the pick clock inline in the header.
   yourPickClock: /YOUR\s+PICK\W*?(\d{1,2}):(\d{2})/i,
@@ -41,10 +44,25 @@ const PATTERNS = {
   // Our own Live Activity, when expanded over the draft room, is captured
   // like any other screen content ("synced 8 sec ago", target rows, the
   // roster bar). Ingesting it feeds our output back into the parser — target
-  // names read as visible available rows and resurrect drafted players.
+  // names read as visible available rows and resurrect drafted players, and
+  // the glance headline reads as the header ticker. The overlay is a
+  // top-anchored card, so these signals bound an excision region (TASK-329)
+  // rather than poisoning the whole frame.
   selfSynced: /^synced\b/i,
   selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED)$/,
-  selfRosterBar: /^QB \d+\s*[·•.]\s*RB \d+\s*[·•.]\s*WR \d+\s*[·•.]\s*TE \d+$/,
+  // Separator garbles observed on device: "·" reads as "•", ".", or "-";
+  // zeros read as the letter "O" and may merge into the label ("QBO - RB O").
+  // A missed roster bar shrinks the excision region and our own target rows
+  // survive as "visible" player rows (frames-1784120786 #1/#5).
+  selfRosterBar: /^QB\s*[0-9O]+\s*[·•.-]\s*RB\s*[0-9O]+\s*[·•.-]\s*WR\s*[0-9O]+\s*[·•.-]\s*TE\s*[0-9O]+$/,
+  // Glance headlines are sentence case; Underdog renders its header ALL-CAPS,
+  // so the case-sensitive match cannot swallow a real "UP IN 4 PICKS".
+  // Observed garbles keep the lowercase body but mangle the leading capital
+  // and truncate ("fou're on the clo....", "fracking • R1 • P1").
+  selfHeadline: /^(Up in \d{1,2} picks?$|[A-Za-z]?ou'?re (on the clo|up next)|Waiting for capture to start$|Draft complete$|Session ended$|[A-Za-z]?racking\s*[·•.]\s*R\d+\s*[·•.]\s*P\d+$)/,
+  selfBrand: /^BB ?EXPOSURES$/i,
+  // Merged-form glance target row: "RB · Jaylen Warren · FALLING".
+  selfTargetRow: /^(QB|RB|WR|TE)\s*[·•.]\s+\S/,
   // Drafter card "3.8 | 32" (round.pickInRound | overall); OCR may drop the dot
   // ("310 | 34") or garble the pipe.
   upcomingCard: /(\d[\d.,·]{0,4})\s*[|Il¦]\s*(\d{1,3})\s*$/,
@@ -61,6 +79,9 @@ const PATTERNS = {
   // Queue tab repeats unit labels under each value ("29.5 / ADP / 189.8 / Proj");
   // the Players tab shows "ADP =" / "Proj =" column headers instead.
   unitLabel: /^(ADP|Proj)$/i,
+  // Drafter-card roster panel repeats "Pick" under each pick number ("57 /
+  // Pick / 9 / Pick"); the real Players list never shows a standalone "Pick".
+  rosterPickLabel: /^Pick$/,
 };
 
 // ALL-CAPS UI strings that would otherwise pass the username shape test.
@@ -275,6 +296,7 @@ function normalizeItems(items) {
       x: typeof it === 'object' && Number.isFinite(it?.x) ? it.x : null,
       y: typeof it === 'object' && Number.isFinite(it?.y) ? it.y : null,
       w: typeof it === 'object' && Number.isFinite(it?.w) ? it.w : null,
+      h: typeof it === 'object' && Number.isFinite(it?.h) ? it.h : null,
       confidence: typeof it === 'object' && Number.isFinite(it?.confidence) ? it.confidence : null,
     });
   }
@@ -288,8 +310,7 @@ function normalizeItems(items) {
 /** Parse one OCR'd screen. ctx: { pool, teams }. */
 export function parseUnderdogScreen(items, ctx) {
   const { pool, teams = 12 } = ctx || {};
-  const lines = normalizeItems(items);
-  const texts = lines.map(l => l.text);
+  let lines = normalizeItems(items);
 
   const obs = {
     kind: 'unknown',
@@ -307,21 +328,48 @@ export function parseUnderdogScreen(items, ctx) {
     lobby: false,
     filledCount: 0,
     detailPanel: false,
+    rosterPanel: false,
     stats: { lines: lines.length, matchedRows: 0, boardMatches: 0, unmatchedNames: [] },
   };
 
-  // ---- Self-capture guard: our Live Activity expanded over the draft room.
-  // One strong signal ("synced … ago") or two weak ones (target flag + roster
-  // bar) poisons the whole frame — rows/availability would be our own output.
+  // ---- Self-overlay excision: our Live Activity expanded over the draft
+  // room. One strong signal ("synced … ago") or two weak kinds (target flag,
+  // roster bar, glance headline, brand, merged target row) marks the overlay.
+  // The expanded panel is a top-anchored card, so everything at or above the
+  // lowest signal is our own output — drop that region and parse what remains
+  // below (the Players rows and the "N picks away" divider stay valid).
+  // Discarding the whole frame froze capture for as long as the panel stayed
+  // expanded (TASK-329); returning 'self' is reserved for frames with nothing
+  // usable left after excision (e.g. the overlay over a blurred background).
   {
-    const strong = texts.some(t => PATTERNS.selfSynced.test(t));
-    const weak = (texts.some(t => PATTERNS.selfFlag.test(t)) ? 1 : 0)
-      + (texts.some(t => PATTERNS.selfRosterBar.test(t)) ? 1 : 0);
-    if (strong || weak >= 2) {
-      obs.kind = 'self';
-      return obs;
+    const isSignal = l => PATTERNS.selfSynced.test(l.text)
+      || PATTERNS.selfFlag.test(l.text)
+      || PATTERNS.selfRosterBar.test(l.text)
+      || PATTERNS.selfHeadline.test(l.text)
+      || PATTERNS.selfBrand.test(l.text)
+      || PATTERNS.selfTargetRow.test(l.text);
+    const strong = lines.some(l => PATTERNS.selfSynced.test(l.text));
+    const weakKinds = ['selfFlag', 'selfRosterBar', 'selfHeadline', 'selfBrand', 'selfTargetRow']
+      .filter(k => lines.some(l => PATTERNS[k].test(l.text))).length;
+    if (strong || weakKinds >= 2) {
+      const withBoxes = lines.every(l => l.y != null);
+      if (withBoxes) {
+        const overlayBottom = Math.max(
+          ...lines.filter(isSignal).map(l => l.y + (l.h ?? 0)),
+        ) + 0.02;
+        lines = lines.filter(l => l.y >= overlayBottom && !isSignal(l));
+      } else {
+        // Boxless input is roughly top-to-bottom: drop through the last signal.
+        const lastIdx = lines.reduce((acc, l, i) => (isSignal(l) ? i : acc), -1);
+        lines = lines.slice(lastIdx + 1).filter(l => !isSignal(l));
+      }
+      if (lines.length < 4) {
+        obs.kind = 'self';
+        return obs;
+      }
     }
   }
+  const texts = lines.map(l => l.text);
 
   // ---- Header signals (any tab) ----
   for (const ln of lines) {
@@ -398,6 +446,12 @@ export function parseUnderdogScreen(items, ctx) {
     obs.detailPanel = hasStats && hasDraftAction;
   }
 
+  // ---- Drafter-card roster panel (tap a card -> that drafter's picks) ----
+  // Its rows are DRAFTED players grouped by position, so it must never feed
+  // availability or clear inferred-gone marks (an opponent's roster view
+  // would resurrect their picks into the targets).
+  obs.rosterPanel = texts.filter(t => PATTERNS.rosterPickLabel.test(t)).length >= 2;
+
   // ---- Board cells: "<Name lines> / RB - DET (1.1)" -> exact ledger picks ----
   // With boxes, name fragments are associated GEOMETRICALLY (same column,
   // directly above the meta line). The y-sorted line order interleaves
@@ -466,11 +520,18 @@ export function parseUnderdogScreen(items, ctx) {
   }
 
   // ---- Players/Queue rows: name line + lookahead posRank / team-bye ----
+  // Abbreviated "F. Surname" forms never appear on the Players list (it
+  // renders full names) — they are carousel/confirmation-card artifacts. In
+  // slow drafts every completed drafter card shows its LAST pick that way
+  // ("J. Tyson" under the label), and matching those as visible rows
+  // resurrected just-drafted players into the targets (frames-1784120786).
+  // Double initials ("A.J. Brown") are real list names and stay eligible.
+  const isAbbrevNameForm = t => /^[A-Za-z]\.\s*[A-Z][a-z]/.test(t);
   if (obs.boardPicks.length < 2) {
     for (let i = 0; i < texts.length; i++) {
       if (consumedIdx.has(i) || consumedLines.has(lines[i])) continue;
       const t = texts[i];
-      if (!looksLikeNameLine(t)) continue;
+      if (!looksLikeNameLine(t) || isAbbrevNameForm(t)) continue;
       const nameMatch = matchPlayer(pool, t);
       if (!nameMatch) {
         if (t.split(' ').length >= 2) obs.stats.unmatchedNames.push(t);
@@ -510,6 +571,8 @@ export function parseUnderdogScreen(items, ctx) {
     obs.queueNames = obs.rows.map(r => r.player.canonical);
   } else if (obs.detailPanel && obs.rows.length <= 3) {
     obs.kind = 'detail';
+  } else if (obs.rosterPanel && obs.rows.length >= 1) {
+    obs.kind = 'roster';
   } else if (obs.rows.length >= 1) {
     obs.kind = 'players';
   } else if (obs.lobby) {
@@ -532,8 +595,12 @@ export function parseUnderdogScreen(items, ctx) {
         const positionsSeen = [...new Set(obs.rows.map(r => r.pos || r.player.position).filter(Boolean))];
         obs.availability = {
           topVisibleAdp: withAdp[0].player.adp,
+          bottomVisibleAdp: withAdp[withAdp.length - 1].player.adp,
           positionsSeen,
           visibleCanonicals: obs.rows.map(r => r.player.canonical),
+          // Rows whose name OCR'd too garbled to match — a high count means
+          // gaps in the window are misreads, not drafted players.
+          unmatchedCount: obs.stats.unmatchedNames.length,
         };
       }
     }

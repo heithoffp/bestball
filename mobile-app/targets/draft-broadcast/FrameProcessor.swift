@@ -38,6 +38,14 @@ final class FrameProcessor {
   private var lastPushAt: CFAbsoluteTime = 0
   private var lastThumb: [UInt8]?
 
+  // Session frame recorder (TASK-331): every ingested frame's OCR items are
+  // appended as one JSONL line so the whole draft can be replayed through the
+  // engine offline. Append-only file I/O on the processing queue — nothing
+  // accumulates in memory.
+  private var frameLog: FileHandle?
+  private var frameLogBytes = 0
+  private static let frameLogCap = 20 * 1024 * 1024
+
   var onSessionEnded: (() -> Void)?
 
   private var defaults: UserDefaults? { UserDefaults(suiteName: Self.appGroup) }
@@ -56,6 +64,46 @@ final class FrameProcessor {
     queue.async {
       self.sessionActive = false
       self.defaults?.set(false, forKey: "bbe.extensionCapturing")
+      try? self.frameLog?.close()
+      self.frameLog = nil
+    }
+  }
+
+  // MARK: frame recorder (TASK-331)
+
+  /// One recording retained at a time: stale frames-*.jsonl are deleted on
+  /// every session start; a new file is created only when recording is on.
+  private func setUpFrameLog(enabled: Bool) {
+    guard let container = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: Self.appGroup
+    ) else { return }
+    let old = (try? FileManager.default.contentsOfDirectory(at: container, includingPropertiesForKeys: nil)) ?? []
+    for url in old where url.lastPathComponent.hasPrefix("frames-") && url.pathExtension == "jsonl" {
+      try? FileManager.default.removeItem(at: url)
+    }
+    guard enabled else { return }
+    let url = container.appendingPathComponent("frames-\(Int(Date().timeIntervalSince1970)).jsonl")
+    FileManager.default.createFile(atPath: url.path, contents: nil)
+    frameLog = try? FileHandle(forWritingTo: url)
+    frameLogBytes = 0
+    if frameLog == nil {
+      os_log("frame recorder unavailable (file create failed)", log: log, type: .error)
+    }
+  }
+
+  private func recordFrame(_ items: [[String: Any]]) {
+    guard let handle = frameLog, frameLogBytes < Self.frameLogCap else { return }
+    let line: [String: Any] = ["t": Int(Date().timeIntervalSince1970), "items": items]
+    guard var data = try? JSONSerialization.data(withJSONObject: line) else { return }
+    data.append(0x0A) // newline
+    do {
+      try handle.write(contentsOf: data)
+      frameLogBytes += data.count
+      if frameLogBytes >= Self.frameLogCap {
+        os_log("frame recorder cap reached — recording stopped", log: log, type: .info)
+      }
+    } catch {
+      frameLog = nil
     }
   }
 
@@ -66,12 +114,15 @@ final class FrameProcessor {
       onSessionEnded?()
       return
     }
+    var recordFrames = false
     if let data = configJson.data(using: .utf8),
        let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
       relayUrl = obj["relayUrl"] as? String
       anonKey = obj["anonKey"] as? String
       pushToken = obj["pushToken"] as? String
+      recordFrames = (obj["recordFrames"] as? Bool) ?? false
     }
+    setUpFrameLog(enabled: recordFrames)
 
     guard let ctx = JSContext() else {
       os_log("JSContext creation failed", log: log, type: .fault)
@@ -82,11 +133,8 @@ final class FrameProcessor {
       os_log("engine JS exception: %{public}@", log: self.log, type: .error,
              exception?.toString() ?? "unknown")
     }
-    guard
-      let engineUrl = Bundle(for: FrameProcessor.self).url(forResource: "engine", withExtension: "js"),
-      let source = try? String(contentsOf: engineUrl, encoding: .utf8)
-    else {
-      os_log("engine.js missing from extension bundle", log: log, type: .fault)
+    guard let source = resolveEngineSource() else {
+      os_log("no usable parse engine (bundled asset missing)", log: log, type: .fault)
       return
     }
     ctx.evaluateScript(source)
@@ -102,6 +150,69 @@ final class FrameProcessor {
     defaults?.set(true, forKey: "bbe.extensionCapturing")
     defaults?.set(Date().timeIntervalSince1970, forKey: "bbe.extensionHeartbeat")
     os_log("live capture started", log: log, type: .info)
+  }
+
+  // MARK: engine resolution (ADR-023)
+
+  /// The parse engine baked into this extension bundle, or nil if missing.
+  private func bundledEngineSource() -> String? {
+    guard
+      let url = Bundle(for: FrameProcessor.self).url(forResource: "engine", withExtension: "js"),
+      let source = try? String(contentsOf: url, encoding: .utf8)
+    else { return nil }
+    return source
+  }
+
+  /// Evaluate `source` in a throwaway context and return its declared build
+  /// number iff it exposes a well-formed engine (a `version` string, an integer
+  /// `build`, and a callable `init`). This is the integrity gate: a partial or
+  /// corrupt engine fails to expose these and is rejected (returns nil).
+  private func engineBuildIfValid(_ source: String) -> Int? {
+    guard let probe = JSContext() else { return nil }
+    var threw = false
+    probe.exceptionHandler = { _, _ in threw = true }
+    probe.evaluateScript(source)
+    if threw { return nil }
+    guard let engine = probe.objectForKeyedSubscript("BBEEngine"),
+          !engine.isUndefined, !engine.isNull,
+          let version = engine.objectForKeyedSubscript("version"), version.isString,
+          let build = engine.objectForKeyedSubscript("build"), build.isNumber,
+          let initFn = engine.objectForKeyedSubscript("init"), !initFn.isUndefined
+    else { return nil }
+    return Int(build.toInt32())
+  }
+
+  /// Choose between the App Group hot-loaded engine (written by the app) and
+  /// the bundled asset. Prefer the App Group copy ONLY when it is strictly
+  /// newer than the bundled build AND passes the integrity eval; otherwise the
+  /// bundled asset is the always-safe floor (ADR-023 higher-build-wins).
+  private func resolveEngineSource() -> String? {
+    let bundled = bundledEngineSource()
+    let bundledBuild = bundled.flatMap(engineBuildIfValid) ?? -1
+
+    // Cheap pre-check: the app stamps the hot-load build into the App Group KV
+    // store, so we only read + evaluate the (~50 KB) engine file when the
+    // marker claims it is newer than what we ship.
+    let markerBuild = defaults.flatMap { Int($0.string(forKey: "bbe.engineBuild") ?? "") } ?? -1
+    if markerBuild > bundledBuild,
+       let container = FileManager.default.containerURL(
+         forSecurityApplicationGroupIdentifier: Self.appGroup
+       ) {
+      let url = container.appendingPathComponent("engine-hotload.js")
+      if let hot = try? String(contentsOf: url, encoding: .utf8),
+         let hotBuild = engineBuildIfValid(hot),
+         hotBuild > bundledBuild {
+        os_log("engine: hot-loaded from App Group (build %d > bundled %d)",
+               log: log, type: .info, hotBuild, bundledBuild)
+        return hot
+      }
+      os_log("engine: hot-load marker %d but file missing/invalid — using bundled %d",
+             log: log, type: .info, markerBuild, bundledBuild)
+    }
+    if bundled == nil {
+      os_log("engine.js missing from extension bundle", log: log, type: .fault)
+    }
+    return bundled
   }
 
   // MARK: frames
@@ -151,6 +262,7 @@ final class FrameProcessor {
 
     let items = recognize(cgImage: cgImage, orientation: orientation, fast: tight)
     guard items.count >= 4 else { return } // not a text-dense screen
+    recordFrame(items)
     ingest(items)
   }
 
