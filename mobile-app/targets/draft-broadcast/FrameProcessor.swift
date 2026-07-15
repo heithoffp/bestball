@@ -8,8 +8,10 @@
 //   os_proc_available_memory() guard degrades scale + recognition level.
 // - ActivityKit is unreachable from extensions: pushes go through the relay.
 // - Raw frames never leave the process; only derived glance JSON is sent.
-// - Priority-10 APNs budget: p10 only for "significant" transitions (engine
-//   decides), p5 otherwise, paced to one push per 3 s.
+// - Event-driven push policy (ADR-024): a priority-10 push on each detected pick
+//   (currentPick advance) or "significant" transition, floored to 3 s; nothing
+//   pushed while idle. Priority 5 is not used — iOS defers it ("opportunistic"),
+//   which froze the card whenever the user was more than a few picks away.
 import CoreImage
 import CoreMedia
 import Darwin
@@ -36,6 +38,7 @@ final class FrameProcessor {
   private var busy = false
   private var lastProcessedAt: CFAbsoluteTime = 0
   private var lastPushAt: CFAbsoluteTime = 0
+  private var lastPushedPick = 0   // highest currentPick already pushed (ADR-024)
   private var lastThumb: [UInt8]?
 
   // Session frame recorder (TASK-331): every ingested frame's OCR items are
@@ -341,10 +344,23 @@ final class FrameProcessor {
     let significant = result["significant"] as? Bool ?? false
     guard changed, let glance = result["glance"] as? [String: Any] else { return }
 
+    // Event-driven push policy (ADR-024): push only on a real draft event — a
+    // newly-detected pick (currentPick ratchets solely from board/ticker/carousel
+    // evidence, never from OCR availability inference) or a "significant"
+    // crunch/my-pick transition. Everything goes priority 10 (delivered
+    // immediately); iOS delivers priority-5 pushes opportunistically (deferred),
+    // which froze the card whenever the user was more than 3 picks away.
+    // `significant` bypasses the 3 s floor so an on-clock moment is never delayed;
+    // a routine pick is floored so a rapid autopick burst coalesces into a single
+    // push carrying the newest full-snapshot state. Nothing advanced -> no push,
+    // so an idle slow draft costs zero ActivityKit budget.
+    let pick = glance["currentPick"] as? Int ?? 0
+    let newPick = pick > lastPushedPick
     let now = CFAbsoluteTimeGetCurrent()
-    guard significant || now - lastPushAt >= 3.0 else { return }
+    guard significant || (newPick && now - lastPushAt >= 3.0) else { return }
     lastPushAt = now
-    pushGlance(glance, priority: significant ? 10 : 5)
+    lastPushedPick = max(lastPushedPick, pick)
+    pushGlance(glance, priority: 10)
   }
 
   private func pushGlance(_ glance: [String: Any], priority: Int) {

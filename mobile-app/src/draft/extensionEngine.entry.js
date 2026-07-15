@@ -50,8 +50,13 @@ function buildResult(obsKind, summary) {
   glance.syncedAtEpoch = Math.floor(Date.now() / 1000);
   const status = session.getStatus();
 
-  // Change detection drives push pacing in Swift. "Significant" events get
-  // priority-10 pushes; keep them rare (DEVELOPMENT_NOTES p10 budget).
+  // Change detection + currentPick drive the event-driven push policy in Swift
+  // (ADR-024): Swift pushes priority 10 on each currentPick advance OR on a
+  // "significant" transition, floored to 3 s; nothing is pushed while idle.
+  // `significant` is retained as the crunch/my-pick guarantee — it bypasses the
+  // floor so on-clock is never delayed — but it is no longer the *only* p10
+  // trigger (priority 5 is gone; iOS deferred it and the card froze far from
+  // the pick).
   const core = JSON.stringify([
     glance.phase, glance.picksUntil, glance.currentPick, glance.myNextPick,
     glance.rosterBar, glance.targets,

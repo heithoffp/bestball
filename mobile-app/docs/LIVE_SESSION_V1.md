@@ -261,7 +261,8 @@ Underdog on screen
           Prefers the app's hot-loaded engine from the App Group when newer
           (ADR-023), else this bundled asset
         → ledger/glance; App Group handoff (bbe.extensionResult/Heartbeat)
-        → on change: POST glance → live-activity-relay Edge Function → APNs
+        → on detected pick / significant event: POST glance →
+          live-activity-relay Edge Function → APNs
           (apns-push-type: liveactivity) → lock screen / Dynamic Island
   BBE app (suspended while drafting):
       on foreground: hydrate serialized engine state from the App Group →
@@ -272,11 +273,21 @@ Underdog on screen
 - ActivityKit is unreachable from extensions — the push relay is the only
   update path while backgrounded (ADR-020). Locally-computed updates still
   happen whenever the app is foregrounded.
-- Push pacing (DEVELOPMENT_NOTES budget): priority 10 only for "significant"
-  transitions (entering ≤3-away / on deck / on clock, your pick landing),
-  priority 5 for routine movement, max one push per 3 s, and only when the
-  glance actually changed. Frames of non-Underdog apps parse to kind
-  "unknown" and produce no change — nothing is pushed while you check Messages.
+- Push policy — event-driven (ADR-024): a **priority-10** push on each detected
+  pick (`currentPick` advances, which happens only from board/ticker/carousel
+  evidence — never OCR availability) or on a "significant" transition (entering
+  ≤3-away / on deck / on clock, your pick landing). A 3 s floor coalesces
+  autopick bursts into one newest-state push; a "significant" event bypasses the
+  floor so on-clock is never delayed. Nothing advanced → no push, so an idle
+  slow draft costs zero ActivityKit budget and the card's "synced Ns ago" line
+  self-ticks in SwiftUI. **Priority 5 is not used** — iOS delivers it
+  "opportunistically" (deferred), which froze the card whenever you were more
+  than a few picks from your turn (the bug ADR-024 fixes). This p10-only policy
+  relies on `NSSupportsLiveActivitiesFrequentUpdates` (`app.json`) for the higher
+  p10 budget a full fast draft (~216 pushes) needs. Frames of non-Underdog apps
+  parse to kind "unknown" and produce no change — nothing is pushed while you
+  check Messages. Offline-checkable via `node scripts/replay-frames.mjs <frames>
+  --pool <adp.csv> --push-sim`.
 - Session handoff: app writes `bbe.sessionConfig` (pool, slot, rankings,
   exposure, push token, relay URL, serialized engine state) to the App Group
   (`group.com.bestballexposures.app`); ending the session clears it, which the

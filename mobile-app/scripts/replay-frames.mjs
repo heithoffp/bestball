@@ -8,15 +8,24 @@
 //   node scripts/replay-frames.mjs <frames.jsonl> --pool <adp.csv>
 //        [--username BIRDENTHUSIAST] [--slot N] [--teams 12] [--rounds 18]
 //        [--from <epochSec>] [--to <epochSec>] [--dump <frameIndex>] [--quiet]
+//        [--push-sim]
 //
 // Prints a per-frame timeline (kind · picksUntil · currentPick · ledger ·
 // inferredGone, with deltas), then the final status, glance, and top targets.
 // --dump N prints frame N's raw OCR lines and exits (close inspection).
+// --push-sim (TASK-335 / ADR-024): instead of the timeline, run every frame
+//   through the REAL extension entry (BBEEngine.ingest, so changed/significant/
+//   currentPick are genuine engine outputs) and apply the event-driven push gate
+//   the broadcast extension uses, printing each push decision + a summary. This
+//   verifies the push policy offline against a recorded draft.
 
 import { readFileSync } from 'node:fs';
 import { buildPool } from '../src/draft/playerMatcher.js';
 import { parseUnderdogScreen } from '../src/draft/underdogParser.js';
 import { createDraftSession } from '../src/draft/sessionEngine.js';
+// Side-effect import: defines globalThis.BBEEngine (the extension's JSC entry),
+// used by --push-sim so the simulated push decision runs on the exact engine.
+import '../src/draft/extensionEngine.entry.js';
 
 function arg(name, fallback = null) {
   const i = process.argv.indexOf(`--${name}`);
@@ -93,6 +102,60 @@ if (dumpIdx != null) {
     const pos = typeof it === 'object' && it.y != null ? `  (x=${it.x?.toFixed(2)} y=${it.y?.toFixed(2)})` : '';
     console.log(`  ${JSON.stringify(text)}${pos}`);
   }
+  process.exit(0);
+}
+
+// ---- push-sim (TASK-335 / ADR-024): simulate the extension's event-driven
+// push decision over the recording, using the REAL engine change-detection.
+// A push fires priority 10 on a significant transition (bypasses the floor) or
+// a newly-detected pick (currentPick advance, floored to 3 s). Priority 5 is
+// never used. The frame's epoch `t` is the simulated clock (1 s resolution). ----
+if (has('push-sim')) {
+  const teams = parseInt(arg('teams', '12'), 10);
+  const initRes = globalThis.BBEEngine.init(JSON.stringify({
+    poolRows,
+    teams,
+    rounds: parseInt(arg('rounds', '18'), 10),
+    slot: arg('slot') ? parseInt(arg('slot'), 10) : null,
+    username: arg('username') || null,
+  }));
+  if (initRes !== 'ok') { console.error(`engine init failed: ${initRes}`); process.exit(1); }
+
+  const quiet = has('quiet');
+  let lastPushedPick = 0;
+  let lastPushAt = -Infinity;
+  let pushes = 0; let p5 = 0; let skipped = 0; let idleSkipped = 0;
+  frames.forEach((f, i) => {
+    const r = JSON.parse(globalThis.BBEEngine.ingest(JSON.stringify(f.items)));
+    const glance = r.glance || {};
+    const pick = glance.currentPick ?? 0;
+    const sig = !!r.significant;
+    const newPick = pick > lastPushedPick;
+    const now = f.t;
+    const willPush = !!r.changed && (sig || (newPick && now - lastPushAt >= 3.0));
+    if (willPush) {
+      lastPushAt = now;
+      lastPushedPick = Math.max(lastPushedPick, pick);
+      pushes++;
+      console.log(
+        `#${String(i).padStart(4)} t=${f.t} PUSH p10 cp=${pick}`
+        + `${newPick ? ' [newpick]' : ''}${sig ? ' [sig]' : ''}`,
+      );
+    } else {
+      skipped++;
+      if (!newPick && !sig) idleSkipped++;
+      if (!quiet) {
+        console.log(
+          `#${String(i).padStart(4)} t=${f.t} skip     cp=${pick}`
+          + ` (changed=${!!r.changed} newPick=${newPick} sig=${sig})`,
+        );
+      }
+    }
+  });
+  console.log('\n---- push-sim summary (ADR-024) ----');
+  console.log(`frames:  ${frames.length}`);
+  console.log(`pushes:  ${pushes}  (p10: ${pushes}, p5: ${p5})`);
+  console.log(`skipped: ${skipped}  (${idleSkipped} with nothing advanced)`);
   process.exit(0);
 }
 
