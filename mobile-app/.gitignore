@@ -3,8 +3,13 @@ node_modules/
 .expo/
 dist/
 web-build/
-ios/
-android/
+# Anchored to the project root so these ignore ONLY the prebuild-generated
+# native projects (mobile-app/ios, mobile-app/android) — NOT committed native
+# source in nested dirs like modules/*/ios (local Expo module source). An
+# unanchored `ios/` swallowed modules/bbe-draft-native/ios and kept the native
+# module out of clean-room/CI builds (TASK-334).
+/ios/
+/android/
 *.orig.*
 *.jks
 *.p8
