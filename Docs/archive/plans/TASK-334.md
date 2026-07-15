@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-15 | Commit: 66103df -->
 # TASK-334: Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows
 
 **Status:** Approved
@@ -71,6 +72,9 @@ None (blocking). Related: unblocks on-device verification of **TASK-329** and **
 1. **Install path: ad-hoc OTA via `itms-services`** (developer-selected). Windows-side, no USB, no 7-day expiry; relies on the paid Apple Developer account. Host TBD at implementation — default **GitHub Release asset** (simplest, versioned); the workflow may auto-publish `.ipa` + `manifest.plist` to a Release. The dev `.ipa` becomes publicly downloadable — acceptable (dev build, not App Store artifact).
 2. **UDID: already registered** (developer confirmed prior EAS builds installed on the device). No `eas device:create` step needed for the current device; runbook still documents it for future devices.
 3. **No ADR.** The install-path choice is easily reversible (switch to sideload anytime), single-subsystem (mobile distribution), and not architecturally load-bearing — it does not meet the ADR gate. Revisit if distribution moves to App Store/TestFlight at scale.
+
+## Scope expansion (folded in during execution, developer-approved 2026-07-15)
+The first preview build surfaced a latent bug: `modules/bbe-draft-native/ios/` (the `BBEDraftNative` Expo module's Swift source) was gitignored by the blanket `ios/` rule in `mobile-app/.gitignore`, so it was absent from clean-room/CI builds — the module didn't compile and the Live Draft Session was gated (`requireOptionalNativeModule('BBEDraftNative')` → null). Fold-in fix (scope-drift gate: flagged → developer chose "fold into TASK-334"): anchor the rules to `/ios/` + `/android/` (still ignore the prebuild-generated root native projects; stop swallowing nested module source) and commit `BBEDraftNativeModule.swift` + `BBEDraftNative.podspec`. Verification: a preview `.ipa` from CI resolves the native module and the Live Draft Session is not gated.
 
 ## Handoff Notes
 - Access prerequisite discovered during planning: `pheithoffklein` currently has **read-only** access to the repo (`push:false, admin:false`); needs Write+Admin (or Write + developer-set secret) before the workflow can be pushed and the secret created.

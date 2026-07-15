@@ -19,7 +19,6 @@
 - TASK-329: Players-tab live capture: salvage frames under expanded Live Activity, divider-driven position, window-based availability
 - TASK-331: Live-capture session frame recorder: full OCR frame log + export + local replay harness
 - TASK-333: Broadcast extension hot-loads engine.js from the App Group (decouple parser fixes from EAS builds)
-- TASK-334: Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -73,7 +72,8 @@
 | TASK-331 | Live-capture session frame recorder: full OCR frame log + export + local replay harness | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-331.md) | No | 2026-07-15 | 2026-07-15 |
 | TASK-332 | Roster-panel roster intake: harvest drafter roster views as a first-class pick-ledger source | Todo | P2 | S | Opus | [Plan](docs/plans/TASK-332.md) -- Draft | No | 2026-07-15 | 2026-07-15 |
 | TASK-333 | Broadcast extension hot-loads engine.js from the App Group (decouple parser fixes from EAS builds) | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-333.md) | No | 2026-07-15 | 2026-07-15 |
-| TASK-334 | Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-334.md) | No | 2026-07-15 | 2026-07-15 |
+| TASK-324 | App Store readiness: review notes, privacy disclosures, distribution strategy | Todo | P2 | M | Opus | [Plan](docs/plans/TASK-324.md) -- Draft | No | 2026-07-11 | 2026-07-15 |
+| TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P2 | - | - | [Plan](docs/plans/TASK-209.md) -- Draft | No | 2026-05-07 | 2026-07-15 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -96,7 +96,6 @@
 | TASK-197 | PlayerRankings — projections.csv as authoritative projection source | In Progress | P3 | - | - | [Plan](docs/plans/TASK-197.md) -- Pending Approval | No | 2026-04-29 | 2026-04-29 |
 | TASK-199 | Clean up duplicate Supabase users created during TASK-192 Google OAuth window | Todo | P3 | - | - | [Plan](docs/plans/TASK-199.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-203 | ADR: Comp access modeled separately from beta access | Todo | P3 | - | - | [Plan](docs/plans/TASK-203.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
-| TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P3 | - | - | [Plan](docs/plans/TASK-209.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
 | TASK-220 | Fix release script changelog-gate flow (placeholder vs pre-flight order) | Todo | P3 | - | - | [Plan](docs/plans/TASK-220.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-225 | Release artifact smoke test before tagging extension versions | Todo | P3 | - | - | [Plan](docs/plans/TASK-225.md) -- Draft | No | 2026-05-08 | 2026-05-08 |
 | TASK-240 | Roster Viewer — full Draft Board view (Underdog) | In Progress | P3 | - | - | [Plan](docs/plans/TASK-240.md) -- Pending Approval | No | 2026-05-21 | 2026-06-10 |
@@ -111,7 +110,6 @@
 | TASK-307 | Arena pairing sample mix after full-DB backfill | Todo | P3 | - | - | [Plan](docs/plans/TASK-307.md) -- Draft | No | 2026-07-01 | 2026-07-01 |
 | TASK-313 | Arena leaderboard pagination | In Progress | P3 | - | - | [Plan](docs/plans/TASK-313.md) | No | 2026-07-02 | 2026-07-02 |
 | TASK-317 | Boards IO follow-ups: artifact refresh cadence + client cache for user boards | Todo | P3 | - | - | [Plan](docs/plans/TASK-317.md) -- Draft | No | 2026-07-09 | 2026-07-09 |
-| TASK-324 | App Store readiness: review notes, privacy disclosures, distribution strategy | Todo | P3 | - | - | [Plan](docs/plans/TASK-324.md) -- Draft | No | 2026-07-11 | 2026-07-11 |
 | TASK-330 | Record the user's own pick while parked on the Players tab (confirm-card/queue-diff inference) | Todo | P3 | S | Opus | [Plan](docs/plans/TASK-330.md) -- Draft | No | 2026-07-15 | 2026-07-15 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | - | - | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | - | - | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
@@ -130,6 +128,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-334 | Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows | Done | P2 | [Plan](docs/archive/plans/TASK-334.md) | Yes | 2026-07-15 |
 | TASK-328 | Draft parser: pin slot from the user's username on the board; harden screen classification + picks-until countdown | Done | P2 | [Plan](docs/archive/plans/TASK-328.md) | Yes | 2026-07-14 |
 | TASK-327 | Live Draft Session: remove screenshot capture mode, make live capture the sole path, add mid-draft resume detection | Done | P2 | [Plan](docs/archive/plans/TASK-327.md) | Yes | 2026-07-14 |
 | TASK-326 | Mobile live capture: pre-flight privacy explainer + inline helper copy for broadcast picker | Done | P3 | [Plan](docs/archive/plans/TASK-326.md) | Yes | 2026-07-14 |
