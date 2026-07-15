@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install Best Ball Exposures</title>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:48px 24px;background:#060E1F;color:#fff;margin:0">
+  <h1 style="font-size:26px;margin-bottom:8px">BB Exposures</h1>
+  <p id="tagline" style="opacity:.75;margin-top:0">Loading build…</p>
+  <a id="btn" href="#"
+     style="display:inline-block;margin-top:16px;padding:18px 40px;background:#2563eb;color:#fff;border-radius:14px;text-decoration:none;font-size:20px;font-weight:700">
+    Install
+  </a>
+  <p style="margin-top:32px;font-size:14px;opacity:.7;max-width:340px;margin-left:auto;margin-right:auto;line-height:1.5">
+    Open this page in <b>Safari</b> on the iPhone, then tap Install.<br><br>
+    If iOS shows <b>"Untrusted Developer"</b> after install:
+    Settings → General → VPN &amp; Device Management → trust the developer profile.
+  </p>
+  <script>
+    // itms-services OTA install. The manifest + .ipa are HTTPS GitHub Release
+    // assets. Pass ?tag=ios-build-N to target a specific build (default: newest known).
+    var REPO = 'heithoffp/bestball';
+    var tag = new URLSearchParams(location.search).get('tag') || 'ios-build-3';
+    var manifest = 'https://github.com/' + REPO + '/releases/download/' + tag + '/manifest.plist';
+    var link = 'itms-services://?action=download-manifest&url=' + manifest;
+    document.getElementById('btn').setAttribute('href', link);
+    document.getElementById('tagline').textContent = 'Build: ' + tag;
+  </script>
+</body>
+</html>

@@ -60,6 +60,13 @@ jobs:
       - name: EAS local iOS build
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # Archive the freshly-checked-out working tree directly instead of via
+          # git. The repo has a Docs/ vs docs/ case collision (TASK-209) that trips
+          # EAS's git-based archival on the case-insensitive macOS runner
+          # ("inconsistent filename casing"). The CI checkout is clean, so a
+          # non-VCS archive is equivalent to the committed tree. Remove once
+          # TASK-209 normalizes the casing.
+          EAS_NO_VCS: "1"
         run: |
           npx eas-cli@latest build \
             --platform ios \
