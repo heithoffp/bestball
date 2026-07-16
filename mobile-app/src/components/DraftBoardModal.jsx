@@ -7,23 +7,12 @@ import { View, Text, Modal, Pressable, ScrollView, ActivityIndicator, StyleSheet
 import { X, LayoutGrid } from 'lucide-react-native';
 import { fetchDraftBoard } from '../../shared/utils/draftBoards';
 import { calcCLV, clvLabel } from '../../shared/utils/clvHelpers';
-import { classifyRosterPath, ARCHETYPE_METADATA } from '../../shared/utils/rosterArchetypes';
 import { posColor } from '../../shared/utils/positionColors';
 import { advanceLabel } from '../../shared/utils/advanceModel';
 import { derivePodModel } from '../../shared/utils/podAdvance';
 import { colors, spacing, radii, type } from '../theme';
 
 const CLV_ALPHA = 0.5; // matches RosterViewer's balanced CLV curve
-
-function MiniArchetypePill({ archetypeKey }) {
-  const meta = ARCHETYPE_METADATA[archetypeKey];
-  if (!meta) return null;
-  return (
-    <View style={[styles.miniPill, { backgroundColor: meta.color + '1a', borderColor: meta.color + '44' }]}>
-      <Text style={{ color: meta.color, fontSize: 9, fontWeight: '700' }}>{meta.name}</Text>
-    </View>
-  );
-}
 
 export default function DraftBoardModal({ roster, adpByPlatform, onClose, actuals = null, boardOverride = null }) {
   const [board, setBoard] = useState(boardOverride);
@@ -62,12 +51,10 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
       const avgCLV = clvValues.length
         ? clvValues.reduce((a, b) => a + b, 0) / clvValues.length
         : null;
-      const path = players.length ? classifyRosterPath(players) : null;
       slotSummaries[slot] = {
         avgCLV,
         projectedPoints: outlookBySlot[slot]?.projectedPoints ?? null,
         adv: advBySlot[i],
-        path,
       };
     });
 
@@ -142,18 +129,11 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
                           </Text>
                           <Text style={{ color: colors.textMuted, fontSize: 10 }}>#{slot}</Text>
                         </View>
-                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 3 }}>
+                        <View style={{ gap: 2, marginTop: 3 }}>
                           <Text style={styles.colStat}>P <Text style={{ color: '#60a5fa' }}>{s?.projectedPoints > 0 ? s.projectedPoints.toFixed(0) : '—'}</Text></Text>
-                          <Text style={styles.colStat}>A <Text style={{ color: adv.color }}>{adv.text}</Text></Text>
-                          <Text style={styles.colStat}>C <Text style={{ color: clv.color }}>{clv.text}</Text></Text>
+                          <Text style={styles.colStat}>Adv <Text style={{ color: adv.color }}>{adv.text}</Text></Text>
+                          <Text style={styles.colStat}>CLV <Text style={{ color: clv.color }}>{clv.text}</Text></Text>
                         </View>
-                        {s?.path && (
-                          <View style={{ flexDirection: 'row', gap: 3, marginTop: 3, flexWrap: 'wrap' }}>
-                            <MiniArchetypePill archetypeKey={s.path.rb} />
-                            <MiniArchetypePill archetypeKey={s.path.qb} />
-                            <MiniArchetypePill archetypeKey={s.path.te} />
-                          </View>
-                        )}
                       </View>
                       {Array.from({ length: derived.rounds }, (_, i) => i + 1).map(round => {
                         const pick = derived.byRoundSlot[round]?.[slot];
@@ -218,5 +198,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   userCell: { borderWidth: 1, borderColor: colors.accentMuted },
-  miniPill: { borderRadius: 3, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 1 },
 });

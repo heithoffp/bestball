@@ -4,7 +4,7 @@
 // Explorer (real-draft pick-path frequencies). Computations are line-for-line
 // ports; rendering is rebuilt for phones.
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, FlatList, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, FlatList, StyleSheet, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FolderSync, ChevronRight, ChevronDown, Minus, Plus } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
@@ -356,7 +356,7 @@ export default function ComboView() {
     <View style={{ paddingHorizontal: spacing.lg }}>
       <Segmented options={VIEW_TABS} value={activeTab} onChange={handleTabClick} style={{ marginBottom: spacing.sm }} />
       <TournamentFilter slateGroups={slateGroups} selected={selectedTournaments} onChange={setSelectedTournaments} />
-      {activeTab !== 'explorer' && activeTab !== 'playoffs' && (
+      {activeTab !== 'explorer' && activeTab !== 'playoffs' && activeTab !== 'stacks' && (
         <View style={styles.stepperRow}>
           <Text style={type.secondary}>{minLabel}</Text>
           <View style={styles.stepper}>
@@ -396,7 +396,7 @@ export default function ComboView() {
           {playerSuggestions.length > 0 && (
             <View style={styles.suggestBox}>
               {playerSuggestions.map(name => (
-                <Pressable key={name} style={styles.suggestRow} onPress={() => { setSelectedPlayer(name); setPlayerSearch(name); setExpandedQBs(new Set()); }}>
+                <Pressable key={name} style={styles.suggestRow} onPress={() => { setSelectedPlayer(name); setPlayerSearch(name); setExpandedQBs(new Set()); Keyboard.dismiss(); }}>
                   <Text style={{ color: colors.textPrimary, fontSize: 13 }}>{name}</Text>
                 </Pressable>
               ))}
@@ -555,7 +555,7 @@ export default function ComboView() {
           {includeSuggestions.length > 0 && (
             <View style={styles.suggestBox}>
               {includeSuggestions.map(n => (
-                <Pressable key={n} style={styles.suggestRow} onPress={() => { setIncludePlayers(prev => [...prev, n]); setIncludeSearch(''); }}>
+                <Pressable key={n} style={styles.suggestRow} onPress={() => { setIncludePlayers(prev => [...prev, n]); setIncludeSearch(''); Keyboard.dismiss(); }}>
                   <Text style={{ color: '#00e5a0', fontSize: 13 }}>+ {n}</Text>
                 </Pressable>
               ))}
@@ -565,7 +565,7 @@ export default function ComboView() {
           {excludeSuggestions.length > 0 && (
             <View style={styles.suggestBox}>
               {excludeSuggestions.map(n => (
-                <Pressable key={n} style={styles.suggestRow} onPress={() => { setExcludePlayers(prev => [...prev, n]); setExcludeSearch(''); }}>
+                <Pressable key={n} style={styles.suggestRow} onPress={() => { setExcludePlayers(prev => [...prev, n]); setExcludeSearch(''); Keyboard.dismiss(); }}>
                   <Text style={{ color: colors.negative, fontSize: 13 }}>− {n}</Text>
                 </Pressable>
               ))}

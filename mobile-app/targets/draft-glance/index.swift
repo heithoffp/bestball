@@ -141,14 +141,21 @@ private struct TargetCell: View {
         .font(.system(size: 9, weight: .heavy))
         .foregroundStyle(positionColor(pos))
         .frame(width: TargetColumns.pos, alignment: .leading)
-      Text(name)
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(.white)
-        .lineLimit(1)
-        .fixedSize(horizontal: true, vertical: false)   // lay out at full width, don't truncate
-        .frame(maxWidth: .infinity, alignment: .leading) // flexible leftover box, left-aligned
-        .clipped()                                        // hard-clip overflow — no "…"
-      Spacer(minLength: 0)
+      // Name occupies only the leftover space after the fixed metric columns.
+      // A full-width Color.clear defines that flexible box; the name is drawn
+      // as an overlay at full intrinsic width and hard-clipped to the box —
+      // so it renders as many letters as fit and never pushes the table (no
+      // ellipsis, no column shove; TASK-337).
+      Color.clear
+        .frame(maxWidth: .infinity, minHeight: 15, maxHeight: 15)
+        .overlay(alignment: .leading) {
+          Text(name)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .clipped()
       playoffText(weeks)
         .frame(width: TargetColumns.playoff, alignment: .center)
       Text(stack.isEmpty ? "–" : "✓")
@@ -231,6 +238,8 @@ private struct LockScreenView: View {
       Text(state.rosterBar)
         .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
         .foregroundStyle(bbeMuted)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
     }
     .padding(14)
   }

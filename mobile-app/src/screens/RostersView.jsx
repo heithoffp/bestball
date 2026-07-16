@@ -5,7 +5,7 @@
 // navigation contexts (players / teams / archetype / entry) arrive via
 // PortfolioContext.rosterNavContext.
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { View, Text, Pressable, FlatList, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Pressable, FlatList, StyleSheet, ScrollView, Keyboard } from 'react-native';
 import { FolderSync, Download, LayoutGrid, Trash2, ArrowUp, ArrowDown, X } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import ViewShot from 'react-native-view-shot';
@@ -536,13 +536,11 @@ export default function RostersView() {
           <Text style={{ color: colors.textMuted }}>{isOpen ? '▲' : '▼'}</Text>
         </View>
 
-        <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+        <View style={{ marginTop: spacing.sm, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 }}>
           <PositionSnapshot snap={roster.posSnap} />
-          <View style={{ flexDirection: 'row', gap: 5, flexWrap: 'wrap' }}>
-            <ArchetypePill archetypeKey={roster.path.rb} />
-            <ArchetypePill archetypeKey={roster.path.qb} />
-            <ArchetypePill archetypeKey={roster.path.te} />
-          </View>
+          <ArchetypePill archetypeKey={roster.path.rb} />
+          <ArchetypePill archetypeKey={roster.path.qb} />
+          <ArchetypePill archetypeKey={roster.path.te} />
         </View>
 
         <View style={styles.cardFooter}>
@@ -679,12 +677,12 @@ export default function RostersView() {
         {(playerSuggestions.length > 0 || teamSuggestions.length > 0) && (
           <View style={styles.suggestBox}>
             {playerSuggestions.map(n => (
-              <Pressable key={n} style={styles.suggestRow} onPress={() => { setSelectedPlayers(prev => [...prev, n]); setCombinedSearch(''); }}>
+              <Pressable key={n} style={styles.suggestRow} onPress={() => { setSelectedPlayers(prev => [...prev, n]); setCombinedSearch(''); Keyboard.dismiss(); }}>
                 <Text style={{ color: '#00e5a0', fontSize: 13 }}>+ {n}</Text>
               </Pressable>
             ))}
             {teamSuggestions.map(t => (
-              <Pressable key={t} style={styles.suggestRow} onPress={() => { setSelectedTeams(prev => [...prev, t]); setCombinedSearch(''); }}>
+              <Pressable key={t} style={styles.suggestRow} onPress={() => { setSelectedTeams(prev => [...prev, t]); setCombinedSearch(''); Keyboard.dismiss(); }}>
                 <Text style={{ color: '#60a5fa', fontSize: 13 }}>+ {NFL_TEAMS[t] || t} (team)</Text>
               </Pressable>
             ))}
@@ -796,13 +794,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: 6,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start' },
   entryId: { fontSize: 13, fontWeight: '700', color: colors.accent, fontVariant: ['tabular-nums'] },
   cardFooter: {
-    flexDirection: 'row', marginTop: spacing.md, paddingTop: spacing.sm,
+    flexDirection: 'row', marginTop: spacing.sm, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.borderSubtle,
   },
   stat: { flex: 1 },
