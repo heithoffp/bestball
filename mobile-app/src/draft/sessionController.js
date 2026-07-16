@@ -14,7 +14,7 @@ import { buildPool } from './playerMatcher';
 import { parseUnderdogScreen, textToItems } from './underdogParser';
 import { createDraftSession } from './sessionEngine';
 import {
-  startActivity, updateActivity, endActivity, getActivityPushToken,
+  startActivity, updateActivity, endActivity, getActivityPushToken, hasLiveActivity,
   nativeModuleAvailable, liveActivitySupported, activitiesEnabled, frequentPushesEnabled,
   writeSharedValue, readSharedValue, readSharedDouble, latestFrameLogPath,
   writeSharedFile,
@@ -28,6 +28,12 @@ const SESSION_CONFIG_KEY = 'bbe.sessionConfig';
 const RESULT_KEY = 'bbe.extensionResult';
 const HEARTBEAT_KEY = 'bbe.extensionHeartbeat';
 const USERNAME_KEY = 'bbe.udUsername';
+// TASK-338: single source of truth for the activity's APNs push token. The
+// native pushTokenUpdates observer keeps this current (initial token, iOS
+// rotation, every recovery re-request); FrameProcessor reads it fresh per push
+// so a restarted activity's new token reaches the running extension without an
+// engine-destroying epoch bump. The app also writes it belt-and-braces below.
+const PUSH_TOKEN_KEY = 'bbe.pushToken';
 // TASK-336 reset flow: bumping this epoch tells a RUNNING broadcast extension
 // to re-init its engine from the (rewritten) session config — the board
 // resets for the next draft room without ending the broadcast.
@@ -56,6 +62,7 @@ const state = {
   resumeLogged: false,
   activityStarted: false,
   activityError: null,
+  lastActivityRestartAt: 0,  // debounce for the loss-detection re-request
   lastError: null,
   log: [],
   appStateSub: null,
@@ -103,7 +110,9 @@ function publishAll({ freshSync = false } = {}) {
   }
   if (state.activityStarted) {
     const res = updateActivity(stampedGlance());
-    if (!res.ok) state.activityError = res.error;
+    // Clear on success so a transient failure doesn't leave a permanent warning
+    // (TASK-338: this row was only ever set, never cleared).
+    state.activityError = res.ok ? null : res.error;
   }
 }
 
@@ -138,9 +147,12 @@ export function subscribeSession(fn) {
  * Start a Live Draft Session (live capture — ReplayKit broadcast).
  * poolRows: [{ name, position, team, adp }] (UD ADP snapshot)
  * rankMap / exposureMap: Map keyed by canonical name (optional)
+ * rosterIndexMap: Map(canonical -> Set(entryId)) for the glance correlation
+ * column (TASK-337, optional)
  */
 export async function startSession({
-  poolRows, rankMap, exposureMap, slot = null, teams = 12, rounds = 18, username = null,
+  poolRows, rankMap, exposureMap, rosterIndexMap,
+  slot = null, teams = 12, rounds = 18, username = null,
 }) {
   if (state.active) endSession();
   if (!poolRows?.length) {
@@ -154,7 +166,8 @@ export async function startSession({
   state.pool = buildPool(poolRows);
   state.teams = teams;
   state.session = createDraftSession({
-    pool: state.pool, teams, rounds, slot, username: knownUsername, rankMap, exposureMap,
+    pool: state.pool, teams, rounds, slot, username: knownUsername,
+    rankMap, exposureMap, rosterIndexMap,
   });
   state.active = true;
   state.lastSyncEpoch = 0;
@@ -165,6 +178,7 @@ export async function startSession({
   state.log = [];
   state.lastError = null;
   state.activityError = null;
+  state.lastActivityRestartAt = 0;
 
   const res = startActivity(stampedGlance(), { withPushToken: true });
   state.activityStarted = res.ok;
@@ -173,7 +187,11 @@ export async function startSession({
 
   if (res.ok) {
     state.pushToken = await getActivityPushToken();
-    if (!state.pushToken) {
+    if (state.pushToken) {
+      // Belt-and-braces for builds where the native pushTokenUpdates observer
+      // hasn't landed; harmless duplication otherwise (TASK-338).
+      writeSharedValue(PUSH_TOKEN_KEY, state.pushToken);
+    } else {
       pushLog('No push token — glance updates only while BBE is open');
     }
   }
@@ -189,7 +207,7 @@ export async function startSession({
 
   // Hand the session to the broadcast extension through the App Group.
   writeSharedValue(RESULT_KEY, null);
-  state.startInputs = { poolRows, rankMap, exposureMap, teams, rounds };
+  state.startInputs = { poolRows, rankMap, exposureMap, rosterIndexMap, teams, rounds };
   state.configEpoch += 1;
   state.baseConfig = {
     poolRows,
@@ -199,6 +217,9 @@ export async function startSession({
     username: knownUsername,
     rankMap: rankMap ? Object.fromEntries(rankMap) : {},
     exposureMap: exposureMap ? Object.fromEntries(exposureMap) : {},
+    // Sets don't survive JSON — entry-id Sets ride as arrays (TASK-337).
+    rosterIndexMap: rosterIndexMap
+      ? Object.fromEntries([...rosterIndexMap].map(([k, ids]) => [k, [...ids]])) : {},
     pushToken: state.pushToken,
     relayUrl: `${SUPABASE_FUNCTIONS_URL}/live-activity-relay`,
     anonKey: SUPABASE_ANON_KEY,
@@ -239,7 +260,58 @@ function pollExtension() {
   if (state.captureLive && !wasLive) pushLog('Broadcast capture is live');
   if (!state.captureLive && wasLive) pushLog('Broadcast capture stopped or stalled');
   absorbExtensionState();
+  // Runs on the 4 s foreground poll and on the AppState 'active' handoff (which
+  // calls pollExtension): exactly when the app can legally re-request an
+  // activity (Activity.request requires foreground). Fire-and-forget — the
+  // debounce inside guards re-entrancy across overlapping polls.
+  ensureActivityAlive();
   if (state.captureLive !== wasLive) notify();
+}
+
+/**
+ * Loss detection + auto-restart (TASK-338). iOS ends a Live Activity at its
+ * 8-hour lifetime cap, and the user can swipe it off the lock screen; either
+ * leaves `activityStarted` true forever while the extension keeps pushing to a
+ * dead APNs token for the rest of the draft. When the activity is gone,
+ * silently re-request it and re-hand the fresh token to the running extension.
+ */
+async function ensureActivityAlive() {
+  if (!state.active || !state.activityStarted || !nativeModuleAvailable()) return;
+  if (hasLiveActivity()) return;
+  // Debounce: a device refusing requests (e.g. Live Activities toggled off
+  // mid-draft) must not spin. Stamp BEFORE the await so overlapping polls can't
+  // launch a second attempt while the token poll is in flight (~8 s).
+  const now = Date.now();
+  if (now - state.lastActivityRestartAt < 30000) return;
+  state.lastActivityRestartAt = now;
+
+  // The native start ends lingering orphan cards first, so the dead card is
+  // cleaned up as part of the re-request.
+  const res = startActivity(stampedGlance(), { withPushToken: true });
+  if (!state.active) return;
+  if (!res.ok) {
+    state.activityError = res.error; // panel row surfaces it; retry after debounce
+    notify();
+    return;
+  }
+  const token = await getActivityPushToken();
+  if (!state.active || !state.session) return; // endSession() ran during the poll
+  state.pushToken = token;
+  if (token) writeSharedValue(PUSH_TOKEN_KEY, token);
+  // Rewrite the session config with the new token so a future broadcast RESTART
+  // inits warm. Do NOT bump configEpoch — that re-inits the LIVE extension's
+  // engine mid-draft; the extension already adopts the new token per push from
+  // bbe.pushToken (written above + by the native observer).
+  if (state.baseConfig) {
+    state.baseConfig.pushToken = token;
+    writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
+      ...state.baseConfig,
+      state: state.session.serialize(),
+    }));
+  }
+  state.activityError = null;
+  pushLog('Live Activity restarted — it was ended by iOS or dismissed');
+  notify();
 }
 
 function absorbExtensionState() {
@@ -331,6 +403,17 @@ export function exportDebug() {
       usernameSlots: s.usernameSlots,
     },
     captureLive: state.captureLive,
+    // TASK-338: answer "was the Live Activity alive?" directly in the bundle.
+    activityStarted: state.activityStarted,
+    activityError: state.activityError,
+    pushToken: !!state.pushToken,
+    lastHeartbeatAt: state.lastHeartbeatAt,
+    capabilities: {
+      nativeModule: nativeModuleAvailable(),
+      liveActivity: liveActivitySupported(),
+      activitiesEnabled: nativeModuleAvailable() ? activitiesEnabled() : false,
+      frequentPushes: nativeModuleAvailable() ? frequentPushesEnabled() : false,
+    },
     extensionEngine: state.extensionEngine,
     log: state.log,
     extensionDiag: state.lastDiag,
@@ -358,10 +441,11 @@ export function setSessionSlot(slot) {
  */
 export function resetDraftBoard() {
   if (!state.active || !state.startInputs || !state.session) return false;
-  const { rankMap, exposureMap, teams, rounds } = state.startInputs;
+  const { rankMap, exposureMap, rosterIndexMap, teams, rounds } = state.startInputs;
   const knownUsername = readSharedValue(USERNAME_KEY) || state.baseConfig?.username || null;
   state.session = createDraftSession({
-    pool: state.pool, teams, rounds, slot: null, username: knownUsername, rankMap, exposureMap,
+    pool: state.pool, teams, rounds, slot: null, username: knownUsername,
+    rankMap, exposureMap, rosterIndexMap,
   });
   state.configEpoch += 1;
   state.lastSyncEpoch = 0;
@@ -401,6 +485,7 @@ export function endSession() {
   // Clearing the config tells the extension to end its broadcast.
   writeSharedValue(SESSION_CONFIG_KEY, null);
   writeSharedValue(RESULT_KEY, null);
+  writeSharedValue(PUSH_TOKEN_KEY, null);
   if (state.heartbeatTimer) { clearInterval(state.heartbeatTimer); state.heartbeatTimer = null; }
   state.appStateSub?.remove?.();
   state.appStateSub = null;

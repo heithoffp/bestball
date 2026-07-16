@@ -31,6 +31,14 @@ export function activitiesEnabled() {
   try { return !!native()?.areActivitiesEnabled(); } catch { return false; }
 }
 
+/** True iff a draft Live Activity is currently alive on screen. False when the
+ *  module is unavailable (Expo Go / web / Android) — loss detection only runs
+ *  behind a nativeModuleAvailable() guard, so this never false-triggers a
+ *  restart off-device. */
+export function hasLiveActivity() {
+  try { return !!native()?.hasLiveActivity(); } catch { return false; }
+}
+
 export function startActivity(glance, { withPushToken = false } = {}) {
   const m = native();
   if (!m) return { ok: false, error: 'native module unavailable' };

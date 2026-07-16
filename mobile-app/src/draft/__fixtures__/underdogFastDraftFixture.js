@@ -311,6 +311,9 @@ BAL, Bye 13
 // region is excised (TASK-329): none of our own output may be ingested, but
 // the real content beneath it (here a drafter-card label and an unmatchable
 // row) still parses instead of freezing capture.
+// Kept in the PRE-TASK-337 card format on purpose: recorded frame logs from
+// older builds replay through the same parser, so the legacy signals
+// ("synced …", FALLING, "Round N") must keep working.
 export const SELF_ACTIVITY_OVERLAY = `Up in 3 picks
 P54
 synced 8 sec
@@ -346,16 +349,17 @@ CHI, Bye 10
 // reads instead), but the list below it — including the gold "N picks away"
 // divider — is real draft content and must survive excision. Modeled on
 // IMG_2805 + fastdraft.txt (2026-07-15 fast draft, stuck at "up in 11").
+// Card content is the TASK-337 P/S/C/E table: the header strip is the strong
+// self signal, target rows read as position/name/table-cell fragments.
 // Javonte Williams (ADP 36.3) is deliberately absent from the visible
 // 29.5–38.6 window: the window pass must infer him gone.
-export const SELF_OVERLAY_WITH_LIST = `Up in 11 picks
-P70
-synced 12 sec
-ago
-Round 6
+export const SELF_OVERLAY_WITH_LIST = `BB EXPOSURES
+Up in 11 picks
+P70 · R6
+P S C E
 RB
 Zay Flowers
-FALLING
+15 – 12% 9%
 QB 1 · RB 3 · WR 2 · TE 0
 Players
 Queue
@@ -399,18 +403,18 @@ NYG, Bye 11
 
 // TASK-329: the overlay alone (background blurred/unreadable) — nothing
 // usable remains after excision, so the frame must still classify 'self'
-// and stay fully inert.
-export const PURE_SELF_OVERLAY = `Up in 3 picks
-P54
-synced 8 sec
-ago
-Round 5
+// and stay fully inert. TASK-337 card format: header strips per grid column
+// (OCR may merge them into one line), medal weeks, checks, percent pairs.
+export const PURE_SELF_OVERLAY = `BB EXPOSURES
+Up in 3 picks
+P54 · R5
+P S C E P S C E
 TE
 Brock Bowers
-FALLING
+17 ✓ 24% 12%
 WR
 George Pickens
-FALLING
+– – 9% 8%
 QB 0 · RB 2 · WR 0 · TE 0`;
 
 // TASK-329: a later clean Players frame where Javonte Williams is visible

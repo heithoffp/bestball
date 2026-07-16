@@ -42,16 +42,28 @@ const PATTERNS = {
   statsHeader: /^(Rushing|Receiving)$/i,
   draftAction: /^Draft$/,
   // Our own Live Activity, when expanded over the draft room, is captured
-  // like any other screen content ("synced 8 sec ago", target rows, the
+  // like any other screen content (the P·S·C·E table, target rows, the
   // roster bar). Ingesting it feeds our output back into the parser — target
   // names read as visible available rows and resurrect drafted players, and
   // the glance headline reads as the header ticker. The overlay is a
   // top-anchored card, so these signals bound an excision region (TASK-329)
   // rather than poisoning the whole frame.
+  // "synced … ago" left the card in TASK-337; kept for replaying frame logs
+  // recorded by older builds.
   selfSynced: /^synced\b/i,
-  // Legacy long-form flags plus the TASK-336 compact flag glyphs ("SP", "QF").
-  // "SF" is excluded — it's a real team abbreviation, not one of our flags.
+  // Legacy long-form flags plus the TASK-336 compact flag glyphs ("SP", "QF")
+  // — pre-TASK-337 replay compatibility. "SF" is excluded — it's a real team
+  // abbreviation, not one of our flags.
   selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED|(?!SF$)[SPQF]{2,4})$/,
+  // TASK-337 table: the P·S·C·E header strip (one per grid column; OCR may
+  // merge both strips into one line or squeeze the spaces out)...
+  selfTableHeader: /^P\s*S\s*C\s*E(\s+P\s*S\s*C\s*E)?$/,
+  // ...and metric-cell runs: two or more tokens drawn ONLY from the table
+  // vocabulary — playoff weeks ("16", "15+"), check/dash glyphs, percents —
+  // e.g. "16 ✓ 24% 10%", "– – 9% 8%". A lone "15" or "9%" is deliberately
+  // NOT a signal: it could be real screen content and would stretch the
+  // excision region downward over live rows.
+  selfTableCells: /^(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%)(?:\s+(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%))+$/,
   // Separator garbles observed on device: "·" reads as "•", ".", or "-";
   // zeros read as the letter "O" and may merge into the label ("QBO - RB O").
   // A missed roster bar shrinks the excision region and our own target rows
@@ -347,13 +359,19 @@ export function parseUnderdogScreen(items, ctx) {
   {
     const isSignal = l => PATTERNS.selfSynced.test(l.text)
       || PATTERNS.selfFlag.test(l.text)
+      || PATTERNS.selfTableHeader.test(l.text)
+      || PATTERNS.selfTableCells.test(l.text)
       || PATTERNS.selfRosterBar.test(l.text)
       || PATTERNS.selfHeadline.test(l.text)
       || PATTERNS.selfBrand.test(l.text)
       || PATTERNS.selfTargetRow.test(l.text);
-    const strong = lines.some(l => PATTERNS.selfSynced.test(l.text));
-    const weakKinds = ['selfFlag', 'selfRosterBar', 'selfHeadline', 'selfBrand', 'selfTargetRow']
-      .filter(k => lines.some(l => PATTERNS[k].test(l.text))).length;
+    // Strong = unmistakably ours: the legacy "synced …" line, or the TASK-337
+    // P·S·C·E header strip — nothing on a real Underdog screen renders either.
+    const strong = lines.some(l => PATTERNS.selfSynced.test(l.text)
+      || PATTERNS.selfTableHeader.test(l.text));
+    const weakKinds = [
+      'selfFlag', 'selfTableCells', 'selfRosterBar', 'selfHeadline', 'selfBrand', 'selfTargetRow',
+    ].filter(k => lines.some(l => PATTERNS[k].test(l.text))).length;
     if (strong || weakKinds >= 2) {
       const withBoxes = lines.every(l => l.y != null);
       if (withBoxes) {

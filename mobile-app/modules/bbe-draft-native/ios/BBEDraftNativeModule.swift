@@ -42,6 +42,38 @@ struct DraftActivityAttributes: ActivityAttributes {
 enum DraftActivityBridge {
   static var currentActivity: Activity<DraftActivityAttributes>?
 
+  /// The activity we should be talking to: a live one wins over any lingering
+  /// `.ended`/`.dismissed` card (a system-ended card can stay in `.activities`
+  /// up to 4 h). Prefer the tracked handle, then the first `.active`, then any.
+  static var liveActivity: Activity<DraftActivityAttributes>? {
+    let all = Activity<DraftActivityAttributes>.activities
+    return currentActivity ?? all.first { $0.activityState == .active } ?? all.first
+  }
+
+  /// True iff an activity is actually alive on screen. `.ended`/`.dismissed`
+  /// cards linger in `.activities`, so non-emptiness is not liveness — this is
+  /// the loss-detection signal the app polls (TASK-338).
+  static func hasLiveActivity() -> Bool {
+    Activity<DraftActivityAttributes>.activities.contains {
+      $0.activityState == .active || $0.activityState == .stale
+    }
+  }
+
+  /// Stream this activity's APNs push token to the App Group KV `bbe.pushToken`
+  /// so the running broadcast extension always pushes to the current token
+  /// (TASK-338). Self-maintaining: covers the initial token, iOS mid-activity
+  /// rotation, and every recovery re-request (a new activity's observer
+  /// overwrites the key). Only activities requested with `pushType: .token`
+  /// ever yield here.
+  static func observePushToken(_ activity: Activity<DraftActivityAttributes>) {
+    Task {
+      for await tokenData in activity.pushTokenUpdates {
+        let hex = tokenData.map { String(format: "%02x", $0) }.joined()
+        UserDefaults(suiteName: bbeAppGroup)?.set(hex, forKey: "bbe.pushToken")
+      }
+    }
+  }
+
   static func decodeState(_ json: String) throws -> DraftActivityAttributes.ContentState {
     guard let data = json.data(using: .utf8) else {
       throw NSError(domain: "BBEDraftNative", code: 1, userInfo: [NSLocalizedDescriptionKey: "State JSON is not UTF-8"])
@@ -78,20 +110,20 @@ enum DraftActivityBridge {
       activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
     }
     currentActivity = activity
+    observePushToken(activity)
     return activity.id
   }
 
   /// APNs push token for the running activity, hex-encoded. Arrives async
   /// after request — callers poll (see getActivityPushToken).
   static func currentPushTokenHex() -> String? {
-    guard let activity = currentActivity ?? Activity<DraftActivityAttributes>.activities.first,
-          let token = activity.pushToken else { return nil }
+    guard let activity = liveActivity, let token = activity.pushToken else { return nil }
     return token.map { String(format: "%02x", $0) }.joined()
   }
 
   static func update(stateJson: String) throws {
     let state = try decodeState(stateJson)
-    guard let activity = currentActivity ?? Activity<DraftActivityAttributes>.activities.first else {
+    guard let activity = liveActivity else {
       throw NSError(domain: "BBEDraftNative", code: 2, userInfo: [NSLocalizedDescriptionKey: "No draft Live Activity is running"])
     }
     Task {
@@ -284,6 +316,18 @@ public class BBEDraftNativeModule: Module {
     Function("isLiveActivitySupported") { () -> Bool in
       #if canImport(ActivityKit)
       if #available(iOS 16.2, *) { return true }
+      #endif
+      return false
+    }
+
+    // True iff a draft Live Activity is actually alive (state .active/.stale).
+    // The app polls this to detect an activity iOS ended or the user dismissed,
+    // then silently re-requests it (TASK-338).
+    Function("hasLiveActivity") { () -> Bool in
+      #if canImport(ActivityKit)
+      if #available(iOS 16.2, *) {
+        return DraftActivityBridge.hasLiveActivity()
+      }
       #endif
       return false
     }

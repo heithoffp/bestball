@@ -117,8 +117,9 @@ Board tab: cells like `Jahmyr / Gibbs / RB - DET (1.1)` → exact ledger appends
 (overall = (r−1)·teams + pickInRound), idempotent by pick number. This is the
 highest-fidelity source; my picks fall out of ledger ∩ my snake overalls.
 
-Queue tab: queued player names → "queue risk" flag when a queued player's ADP is
-ahead of your next pick.
+Queue tab: queued player names feed availability logic (a queued player is by
+definition still available). The old "queue risk" glance flag was retired with
+the TASK-337 table redesign.
 
 OCR-noise handled by the matcher (all present in the fixture): `Je Von Achane` →
 De'Von Achane, `Amon-Ra st. Brown`, `VR`/`:B` position garbling, `J LAR`/`] CIN`
@@ -167,19 +168,34 @@ ContentState (flat, small, local-update only):
 - `picksUntil`, `currentPick`, `round`, `myNextPick`
 - `headline` ("Up in 2 picks", "You're on the clock!", "Waiting to enter
   draft", "Left draft room — R8 · P89 held")
-- `targets[]` (TASK-336): top-6 available at your pick by **your UD custom
-  rankings** (fallback ADP), compact-encoded `POS·LastName·EXP·FLAGS`
-  (e.g. `WR·Olave·23·SP`) — exposure % plus flag glyphs S (stack with a
-  current pick, QB involved), P (W15/16/17 playoff game stack vs a current
-  pick), Q (queued + ADP risk before your next pick), F (falling past ADP).
+- `targets[]` (TASK-336, table format TASK-337): top-6 available at your pick
+  by **your UD custom rankings** (fallback ADP), six `·`-separated fields
+  `POS·LastName·P·S·C·E` (e.g. `WR·Downs·16·S·24·10`) rendered as a
+  fixed-column table with a P·S·C·E header strip per grid column:
+  - `P` — W15/16/17 playoff game-stack week(s) vs a current pick, ascending,
+    joined with `/` (`15/17`; never `·`, the field separator). Swift colors
+    single weeks bronze/silver/gold to match the extension's pills and
+    renders multi-week as red `15+`.
+  - `S` — team stack with a current pick, QB involved (rendered as a gold ✓).
+  - `C` — roster correlation %: avg P(candidate | each current pick) across
+    the synced portfolio (the extension overlay's Corr math), fed by
+    `rosterIndexMap` (canonical → entry-id set) handed in at session start.
+    Blank until the first pick lands.
+  - `E` — portfolio exposure %.
+  Blank fields stay empty between separators (Swift renders muted dashes).
   Empty outside the tracking phases. Last-name collisions render `F.Surname`.
+  The old Q (queue risk) and F (falling) glyphs were removed in TASK-337.
 - `rosterBar`: "QB 0 · RB 2 · WR 0 · TE 0"
-- `syncedAtEpoch` → rendered as a self-ticking relative time (no updates needed)
+- `syncedAtEpoch` still rides the payload (ContentState unchanged) but is no
+  longer rendered — the synced-ago line left the card in TASK-337, with no
+  staleness indicator replacing it (per the recorded TASK-337 decision).
 
-Surfaces: lock screen card (headline + 3×2 two-column target grid, column-major
-so ranks 1–3 fill the left column + roster bar + synced-ago); Dynamic Island
-compact leading `⏳N` / trailing `P31`; minimal `N`; expanded = lock-screen
-content. Tap → deep link `bbexposures:///draft?view=assistant`.
+Surfaces: lock screen card (brand + `P91 · R8` readout row, full-width
+headline, header strip + 3×2 two-column target table, column-major so ranks
+1–3 fill the left column, roster bar); Dynamic Island compact leading `⏳N` /
+trailing `P31`; minimal `N`; expanded = headline leading, `P91 · R8` trailing,
+table + roster bar in the bottom region. Tap → deep link
+`bbexposures:///draft?view=assistant`.
 
 ## Room presence + reset-for-next-draft (TASK-336)
 
@@ -212,6 +228,53 @@ Push policy (ADR-024, triggers extended by TASK-336): priority-10 on
 reshapes targets without advancing the pick; before this trigger the card
 froze on stale top-of-pool names for entire mid-draft resumes,
 frames-1784198568).
+
+## Live Activity loss detection + auto-restart (TASK-338)
+
+A slow draft outlives its Live Activity. iOS ends an activity at its **8-hour
+lifetime cap**, and the user can **swipe it off the lock screen** — either way
+the app used to keep `activityStarted` true forever while the broadcast
+extension pushed to a now-dead APNs token for the rest of the draft, silently.
+
+The recovery loop:
+
+- **Detect.** The native module exposes `hasLiveActivity()` — true iff an
+  `Activity<DraftActivityAttributes>` is `.active` or `.stale`. (`.ended` /
+  `.dismissed` cards linger in `.activities` up to ~4 h, so non-emptiness is not
+  liveness — the check filters on state.) `sessionController.ensureActivityAlive()`
+  runs on the 4 s foreground poll and the AppState `active` handoff — exactly
+  when the app may legally call `Activity.request` (foreground only). RN timers
+  suspend in the background, so this is the right cadence.
+- **Re-request.** When the guard
+  (`active && activityStarted && nativeModuleAvailable() && !hasLiveActivity()`)
+  fires, the app re-requests the activity with a push token. The native `start`
+  ends lingering orphans first, so the dead card is cleaned up in the same call.
+  A **30 s debounce** (`lastActivityRestartAt`, stamped before the token await)
+  keeps a device that refuses requests (e.g. Live Activities toggled off
+  mid-draft) from spinning and prevents overlapping polls from double-firing.
+- **Re-hand the token.** The new activity's APNs token reaches the running
+  extension through a dedicated App Group key, **`bbe.pushToken`** — the
+  established handoff pattern (ADR-020/023/024). It is self-maintaining: the
+  native `pushTokenUpdates` observer (spawned per successful `start`) writes it
+  for the initial token, iOS mid-activity rotation, and every recovery
+  re-request; `sessionController` also writes it belt-and-braces at session
+  start. `FrameProcessor.pushGlance` reads it **fresh per push**
+  (`defaults.string("bbe.pushToken") ?? self.pushToken`, the config-captured
+  token as fallback). The config is rewritten with the new token too, but
+  **`configEpoch` is NOT bumped** — an epoch bump re-inits the extension's
+  engine mid-draft (frame log recreated, push bookkeeping reset); the KV key is
+  strictly less invasive and also covers plain token rotation. The config
+  rewrite only matters for a future cold broadcast restart.
+- **Surface failure.** If recovery cannot fix it, the confidence hub shows a
+  gold warn row ("Live Activity issue: … — trying to restore it automatically");
+  `activityError` is now cleared on any successful update, so transient failures
+  don't leave a permanent warning.
+- **Diagnose.** The Debug bundle now includes `activityStarted`, `activityError`,
+  `pushToken` (presence), `lastHeartbeatAt`, and the `capabilities` block, so a
+  "no Live Activity" report can be triaged without a live repro.
+
+Out of scope: re-requesting after the app was killed and relaunched mid-draft
+(session state is gone then — that's the no-board resume flow).
 
 ## Native surface (all new, kept thin per DEVELOPMENT_NOTES)
 

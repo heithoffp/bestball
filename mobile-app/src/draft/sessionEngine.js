@@ -19,13 +19,14 @@ const IN_ROOM_KINDS = new Set(['board', 'players', 'queue', 'roster', 'detail', 
 // (when the sustained-evidence path hasn't already flipped it).
 const OUT_OF_ROOM_MS = 10000;
 
-// ---- Candidate playoff-stack check (TASK-336) ----
-// Boolean form of shared/utils/playoffStacks.js analyzeCandidatePlayoffStack —
+// ---- Candidate playoff-stack check (TASK-336, week list TASK-337) ----
+// Week-list form of shared/utils/playoffStacks.js analyzeCandidatePlayoffStack —
 // that module's extensionless './nflTeams' import doesn't resolve under Node
 // (fixture tests / replay harness run this engine directly), and the glance
-// only needs yes/no. Keep the pair rule in lockstep with the shared util:
-// W17 (championship week) is the only week that admits RB on either side.
-// Pool and pick teams are already abbreviations, matching the schedule keys.
+// only needs the qualifying weeks. Keep the pair rule in lockstep with the
+// shared util: W17 (championship week) is the only week that admits RB on
+// either side. Pool and pick teams are already abbreviations, matching the
+// schedule keys.
 const PLAYOFF_WEEKS = ['15', '16', '17'];
 const PLAYOFF_PAIRS_DEFAULT = {
   QB: ['QB', 'WR', 'TE'], WR: ['QB', 'WR', 'TE'], TE: ['QB', 'WR'],
@@ -35,9 +36,10 @@ const PLAYOFF_PAIRS_W17 = {
   TE: ['QB', 'WR', 'RB'], RB: ['QB', 'WR', 'TE', 'RB'],
 };
 
-function candidateHasPlayoffStack(p, picks) {
+function candidatePlayoffWeeks(p, picks) {
   const team = (p.team || '').toUpperCase();
-  if (!team || team === 'N/A') return false;
+  if (!team || team === 'N/A') return [];
+  const weeks = [];
   for (const week of PLAYOFF_WEEKS) {
     const allowed = (week === '17' ? PLAYOFF_PAIRS_W17 : PLAYOFF_PAIRS_DEFAULT)[p.position];
     if (!allowed) continue;
@@ -45,10 +47,10 @@ function candidateHasPlayoffStack(p, picks) {
     if (!opp) continue;
     for (const mine of picks) {
       if ((mine.team || '').toUpperCase() !== opp) continue; // same-team = S flag
-      if (allowed.includes(mine.position)) return true;
+      if (allowed.includes(mine.position)) { weeks.push(week); break; }
     }
   }
-  return false;
+  return weeks;
 }
 
 /** "Marvin Harrison Jr." -> "Harrison"; suffixes stripped, final token kept. */
@@ -71,6 +73,8 @@ function lastNameOf(name) {
  *                card while the header reads "Your pick"
  *   rankMap      Map(canonical -> rank) from the user's UD custom rankings
  *   exposureMap  Map(canonical -> global exposure %) from the synced portfolio
+ *   rosterIndexMap Map(canonical -> Set(entryId)) from the synced portfolio,
+ *                feeds the correlation column (TASK-337)
  */
 export function createDraftSession(cfg) {
   const teams = cfg.teams || 12;
@@ -78,6 +82,7 @@ export function createDraftSession(cfg) {
   const pool = cfg.pool;
   const rankMap = cfg.rankMap || new Map();
   const exposureMap = cfg.exposureMap || new Map();
+  const rosterIndexMap = cfg.rosterIndexMap || new Map();
 
   const state = {
     manualSlot: cfg.slot || null,
@@ -446,6 +451,7 @@ export function createDraftSession(cfg) {
       if (e) {
         out.push({
           name: e.player.name, position: e.player.position, team: e.player.team,
+          canonical: e.player.canonical,
           round: roundForOverall(overall, teams), overall,
         });
       }
@@ -488,28 +494,37 @@ export function createDraftSession(cfg) {
     };
   }
 
-  /** Compact flag glyphs for one glance target (TASK-336): S = stack with a
-   *  current pick (QB involved), P = playoff-week game stack, Q = queued and
-   *  at ADP risk before my next pick, F = falling past ADP. */
-  function targetFlags(p, picks, next) {
-    let flags = '';
+  /** Average conditional probability P(candidate | each current pick) across
+   *  the synced portfolio — the extension overlay's Corr column (port of
+   *  draft-overlay.js computeCorrelation), keyed on rosterIndexMap. Null
+   *  (blank cell) until a pick with portfolio presence lands. */
+  function correlationPct(p, picks) {
+    if (!rosterIndexMap.size || !picks.length) return null;
+    const candRosters = rosterIndexMap.get(p.canonical);
+    let sum = 0;
+    let comparisons = 0;
     for (const mine of picks) {
-      if (mine.team === p.team && mine.team !== 'N/A' && (p.position === 'QB' || mine.position === 'QB')) {
-        flags += 'S';
-        break;
+      const pickRosters = mine.canonical ? rosterIndexMap.get(mine.canonical) : null;
+      if (!pickRosters || !pickRosters.size) continue;
+      let intersection = 0;
+      if (candRosters && candRosters.size) {
+        const [small, large] = pickRosters.size < candRosters.size
+          ? [pickRosters, candRosters] : [candRosters, pickRosters];
+        for (const id of small) if (large.has(id)) intersection++;
       }
+      sum += intersection / pickRosters.size;
+      comparisons++;
     }
-    if (candidateHasPlayoffStack(p, picks)) flags += 'P';
-    if (state.queue.has(p.canonical) && Number.isFinite(p.adp) && next != null && p.adp < next - 1) {
-      flags += 'Q';
-    }
-    if (Number.isFinite(p.adp) && next != null && p.adp <= next - 4) flags += 'F';
-    return flags;
+    return comparisons > 0 ? Math.round((sum / comparisons) * 100) : null;
   }
 
-  /** Six compact target lines "POS·LastName·EXP·FLAGS" for the two-column
-   *  Live Activity grid (TASK-336). Last names collide -> "F.Surname". */
-  function buildTargets(picks, next) {
+  /** Six target lines "POS·Name·P·S·C·E" for the two-column Live Activity
+   *  table (TASK-337): P = playoff-week game stack week(s), ascending, joined
+   *  with "/" (never "·", the field separator); S = team stack with a current
+   *  pick (QB involved); C = roster correlation %; E = portfolio exposure %.
+   *  Blank fields stay empty between separators — Swift renders dashes and
+   *  appends "%". Last names collide -> "F.Surname". */
+  function buildTargets(picks) {
     const top = availablePlayers(12).slice(0, 6);
     const lastNames = top.map(p => lastNameOf(p.name));
     return top.map((p, i) => {
@@ -517,9 +532,18 @@ export function createDraftSession(cfg) {
       if (lastNames.filter(n => n === short).length > 1) {
         short = `${p.name.trim()[0]}.${short}`;
       }
+      let stack = '';
+      for (const mine of picks) {
+        if (mine.team === p.team && mine.team !== 'N/A' && (p.position === 'QB' || mine.position === 'QB')) {
+          stack = 'S';
+          break;
+        }
+      }
+      const weeks = candidatePlayoffWeeks(p, picks).join('/');
+      const corr = correlationPct(p, picks);
       const exp = exposureMap.get(p.canonical);
       const expStr = Number.isFinite(exp) ? String(Math.round(exp)) : '';
-      return `${p.position}·${short}·${expStr}·${targetFlags(p, picks, next)}`;
+      return `${p.position}·${short}·${weeks}·${stack}·${corr ?? ''}·${expStr}`;
     });
   }
 
@@ -562,7 +586,7 @@ export function createDraftSession(cfg) {
 
     // No target grid outside the room — nothing actionable to show there.
     const showTargets = phase === 'tracking' || phase === 'onClock' || phase === 'onDeck';
-    const targets = showTargets ? buildTargets(picks, next) : [];
+    const targets = showTargets ? buildTargets(picks) : [];
 
     return {
       phase,

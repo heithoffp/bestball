@@ -135,22 +135,24 @@ export default function LiveSessionPanel() {
     return map;
   }, [rankingsByPlatform]);
 
-  const exposureMap = useMemo(() => {
+  // One pass over the portfolio yields both glance inputs: exposure % and the
+  // per-player roster index the correlation column reads (TASK-337).
+  const { exposureMap, rosterIndexMap } = useMemo(() => {
     const rosters = new Set();
-    const counts = new Map();
+    const index = new Map();
     (rosterData || []).forEach(p => {
       const id = p.entry_id || p.entryId;
       if (!id || !p.name) return;
       rosters.add(id);
       const key = canonicalName(p.name);
-      if (!counts.has(key)) counts.set(key, new Set());
-      counts.get(key).add(id);
+      if (!index.has(key)) index.set(key, new Set());
+      index.get(key).add(id);
     });
-    const map = new Map();
+    const exposure = new Map();
     if (rosters.size > 0) {
-      counts.forEach((set, key) => map.set(key, (set.size / rosters.size) * 100));
+      index.forEach((set, key) => exposure.set(key, (set.size / rosters.size) * 100));
     }
-    return map;
+    return { exposureMap: exposure, rosterIndexMap: index };
   }, [rosterData]);
 
   if (!snap) return null;
@@ -162,7 +164,7 @@ export default function LiveSessionPanel() {
 
   const handleStart = () => {
     startSession({
-      poolRows, rankMap, exposureMap,
+      poolRows, rankMap, exposureMap, rosterIndexMap,
       slot: slotChoice, teams: TEAMS, rounds: ROUNDS,
       username: usernameChoice.trim() || null,
     });
@@ -420,6 +422,11 @@ export default function LiveSessionPanel() {
             </WarnRow>
           )}
           {!activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
+          {activityStarted && activityError && (
+            <WarnRow color={GOLD}>
+              Live Activity issue: {activityError} — trying to restore it automatically.
+            </WarnRow>
+          )}
           {activityStarted && !pushToken && (
             <WarnRow color={GOLD}>
               No push token — the Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).

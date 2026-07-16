@@ -165,10 +165,58 @@ check('glance phase', glance.phase, 'tracking');
 check('glance headline', glance.headline, 'Up in 2 picks');
 check('glance pick context', [glance.currentPick, glance.round, glance.myNextPick], [31, 3, 33]);
 check('glance roster bar', glance.rosterBar, 'QB 0 · RB 2 · WR 0 · TE 0');
-// TASK-336 compact grid format: "POS·LastName·EXP·FLAGS", six targets.
+// TASK-337 table format: "POS·LastName·P·S·C·E", six targets, fixed fields.
 check('glance targets count', glance.targets.length, 6);
-check('glance queue-risk flag', glance.targets.some(t => t.startsWith('WR·Olave·') && t.endsWith('·Q')), true);
-check('glance exposure shown (McConkey 30%)', glance.targets.some(t => t === 'WR·McConkey·30·'), true);
+check('glance targets are 6-field lines', glance.targets.every(t => t.split('·').length === 6), true);
+check('glance stack field only ""/"S" (Q/F flags gone)',
+  glance.targets.every(t => ['', 'S'].includes(t.split('·')[3])), true);
+check('glance exposure in field 6 (McConkey 30%)',
+  glance.targets.some(t => t.startsWith('WR·McConkey·') && t.split('·')[5] === '30'), true);
+check('glance correlation blank without rosterIndexMap',
+  glance.targets.every(t => t.split('·')[4] === ''), true);
+check('glance payload under relay content-state budget (3500 B)',
+  JSON.stringify(glance).length < 3500, true);
+
+// ---- TASK-337: correlation + playoff-week table fields ----
+// Correlation port (extension computeCorrelation): picks are Taylor + Brown.
+// P(Olave|Taylor) = |{e1,e2} ∩ {e1..e4}|/4 = 0.5; P(Olave|Brown) = 1/1 = 1.0
+// -> avg 75%.
+const corrSession = createDraftSession({
+  pool, teams: 12, rounds: 18,
+  rosterIndexMap: new Map([
+    ['chris olave', new Set(['e1', 'e2'])],
+    ['jonathan taylor', new Set(['e1', 'e2', 'e3', 'e4'])],
+    ['chase brown', new Set(['e1'])],
+  ]),
+});
+corrSession.ingest(board1);
+corrSession.ingest(board2);
+corrSession.ingest(players);
+corrSession.ingest(queue);
+check('correlation matches extension math (Olave 75%)',
+  corrSession.getGlance().targets.find(t => t.includes('Olave'))?.split('·')[4], '75');
+
+// Playoff weeks: BAL plays PIT in W15 and CIN in W17 (playoffSchedule.js).
+// Synthetic slot-9 picks on PIT (WR) and CIN (WR) plus a BAL QB -> Zay
+// Flowers (rank-pinned to targets[0]) reads "15/17" in P and "S" in S.
+const playoffSession = createDraftSession({
+  pool, teams: 12, rounds: 18, slot: 9,
+  rankMap: new Map([['zay flowers', 1]]),
+});
+playoffSession.ingest({
+  kind: 'board',
+  boardPicks: [
+    { overall: 9, player: { canonical: 'george pickens', name: 'George Pickens', position: 'WR', team: 'PIT' }, round: 1, pickInRound: 9, score: 1, raw: 'a' },
+    { overall: 16, player: { canonical: 'jamarr chase', name: "Ja'Marr Chase", position: 'WR', team: 'CIN' }, round: 2, pickInRound: 4, score: 1, raw: 'b' },
+    { overall: 33, player: { canonical: 'lamar jackson', name: 'Lamar Jackson', position: 'QB', team: 'BAL' }, round: 3, pickInRound: 9, score: 1, raw: 'c' },
+  ],
+  rows: [], upcomingOveralls: [], availability: null, queueNames: [],
+  picksUntil: null, picksAwayDivider: null, clockSeconds: null,
+});
+const flowersLine = playoffSession.getGlance().targets.find(t => t.includes('Flowers'));
+check('multi-week playoff field joined with "/" (BAL: W15 PIT + W17 CIN)',
+  flowersLine?.split('·')[2], '15/17');
+check('stack check rides the S field (BAL QB rostered)', flowersLine?.split('·')[3], 'S');
 
 // Fresh draft: a round-1 board must NOT be flagged as a resume.
 const freshSession = createDraftSession({ pool, teams: 12, rounds: 18 });

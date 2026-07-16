@@ -427,11 +427,18 @@ final class FrameProcessor {
   }
 
   private func pushGlance(_ glance: [String: Any], priority: Int) {
+    // Read the token fresh each push (TASK-338): when the app detects a dead
+    // activity and re-requests it, the new APNs token lands in the App Group KV
+    // `bbe.pushToken` — this running extension captured only the setUp-time
+    // token into `self.pushToken`, so it must prefer the live KV value and fall
+    // back to the captured one (stale-app-build mismatch). Reads are cheap at
+    // ≤1 push per 3 s.
+    let token = defaults?.string(forKey: "bbe.pushToken") ?? pushToken
     guard
       let relayUrl, let url = URL(string: relayUrl),
-      let pushToken, !pushToken.isEmpty,
+      let token, !token.isEmpty,
       let body = try? JSONSerialization.data(withJSONObject: [
-        "token": pushToken,
+        "token": token,
         "contentState": glance,
         "priority": priority,
       ] as [String: Any])

@@ -21,6 +21,8 @@
 - TASK-333: Broadcast extension hot-loads engine.js from the App Group (decouple parser fixes from EAS builds)
 - TASK-335: Event-driven Live Activity push policy: unfreeze the card far from the pick
 - TASK-336: Live draft: no-board mid-draft resume, room presence + reset flow, 6-target Live Activity
+- TASK-337: Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup
+- TASK-338: Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -78,6 +80,8 @@
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P2 | - | - | [Plan](docs/plans/TASK-209.md) -- Draft | No | 2026-05-07 | 2026-07-15 |
 | TASK-335 | Event-driven Live Activity push policy: unfreeze the card far from the pick | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-335.md) | No | 2026-07-15 | 2026-07-15 |
 | TASK-336 | Live draft: no-board mid-draft resume, room presence + reset flow, 6-target Live Activity | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-336.md) | No | 2026-07-16 | 2026-07-16 |
+| TASK-337 | Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-337.md) | No | 2026-07-16 | 2026-07-16 |
+| TASK-338 | Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session) | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-338.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |

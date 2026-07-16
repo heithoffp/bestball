@@ -41,6 +41,17 @@ private func positionColor(_ pos: String) -> Color {
   }
 }
 
+/// Playoff-week medal ramp — mirrors the extension's W15/16/17 pill colors
+/// (chrome-extension draft-overlay.js: bronze / silver / gold).
+private func playoffWeekColor(_ week: String) -> Color {
+  switch week {
+  case "15": return Color(red: 205 / 255, green: 127 / 255, blue: 50 / 255)   // #CD7F32
+  case "16": return Color(red: 201 / 255, green: 206 / 255, blue: 214 / 255)  // #C9CED6
+  case "17": return Color(red: 255 / 255, green: 215 / 255, blue: 0 / 255)    // #FFD700
+  default: return bbeMuted
+  }
+}
+
 private func headlineColor(_ phase: String) -> Color {
   switch phase {
   case "onClock": return bbeAlert
@@ -52,20 +63,68 @@ private func headlineColor(_ phase: String) -> Color {
 
 // MARK: - Shared views
 
-/// Per-character flag glyphs: S stack · P playoff stack · Q queue risk ·
-/// F falling. Q renders alert-red, the rest accent gold.
-/// (`foregroundColor`, not `foregroundStyle` — only the former returns Text
-/// for `+` concatenation on the 16.2 deployment target.)
-private func flagText(_ flags: String, size: CGFloat) -> Text {
-  flags.reduce(Text("")) { acc, ch in
-    acc + Text(String(ch))
-      .font(.system(size: size, weight: .heavy))
-      .foregroundColor(ch == "Q" ? bbeAlert : bbeAccent)
+/// Fixed metric-column widths shared by the header strip and every row so
+/// the P/S/C/E table stays aligned (TASK-337).
+private enum TargetColumns {
+  static let pos: CGFloat = 20
+  static let playoff: CGFloat = 23
+  static let stack: CGFloat = 12
+  static let corr: CGFloat = 24
+  static let exp: CGFloat = 24
+  static let spacing: CGFloat = 4
+}
+
+/// Blank table cells render a faint dash so the columns stay visually fixed.
+private let bbeDash = bbeMuted.opacity(0.5)
+
+/// P column: single week in its medal color; multiple weeks ("15/17") as
+/// "15+" in alert red — matching the extension's multi-week pill.
+private func playoffText(_ weeks: String) -> Text {
+  if weeks.isEmpty {
+    return Text("–").font(.system(size: 9, weight: .medium)).foregroundColor(bbeDash)
+  }
+  if weeks.contains("/") {
+    let first = weeks.components(separatedBy: "/").first ?? weeks
+    return Text("\(first)+").font(.system(size: 9, weight: .heavy)).foregroundColor(bbeAlert)
+  }
+  return Text(weeks)
+    .font(.system(size: 9, weight: .heavy).monospacedDigit())
+    .foregroundColor(playoffWeekColor(weeks))
+}
+
+/// C / E columns: bare integers from JS; "%" is appended here.
+private func metricText(_ value: String) -> Text {
+  if value.isEmpty {
+    return Text("–").font(.system(size: 9, weight: .medium)).foregroundColor(bbeDash)
+  }
+  return Text(value + "%")
+    .font(.system(size: 9, weight: .semibold).monospacedDigit())
+    .foregroundColor(bbeMuted)
+}
+
+/// P·S·C·E header strip; trailing fixed widths match TargetCell exactly.
+private struct TargetHeader: View {
+  private func label(_ s: String) -> some View {
+    Text(s)
+      .font(.system(size: 7, weight: .heavy))
+      .kerning(0.5)
+      .foregroundStyle(bbeMuted.opacity(0.65))
+  }
+
+  var body: some View {
+    HStack(spacing: TargetColumns.spacing) {
+      Spacer(minLength: 0)
+      label("P").frame(width: TargetColumns.playoff, alignment: .center)
+      label("S").frame(width: TargetColumns.stack, alignment: .center)
+      label("C").frame(width: TargetColumns.corr, alignment: .trailing)
+      label("E").frame(width: TargetColumns.exp, alignment: .trailing)
+    }
   }
 }
 
-/// One grid cell, pre-formatted by JS as "WR·Olave·23·SP"
-/// (position · last name · exposure % · flag glyphs; TASK-336).
+/// One table row, pre-formatted by JS as "WR·Downs·16·S·24·10"
+/// (position · last name · playoff week(s) · stack · correlation % ·
+/// exposure %; TASK-337). Blank fields arrive empty between separators.
 private struct TargetCell: View {
   let line: String
 
@@ -73,33 +132,38 @@ private struct TargetCell: View {
     let parts = line.components(separatedBy: "·").map { $0.trimmingCharacters(in: .whitespaces) }
     let pos = parts.first ?? ""
     let name = parts.count > 1 ? parts[1] : line
-    let exp = parts.count > 2 ? parts[2] : ""
-    let flags = parts.count > 3 ? parts[3] : ""
-    HStack(spacing: 4) {
+    let weeks = parts.count > 2 ? parts[2] : ""
+    let stack = parts.count > 3 ? parts[3] : ""
+    let corr = parts.count > 4 ? parts[4] : ""
+    let exp = parts.count > 5 ? parts[5] : ""
+    HStack(spacing: TargetColumns.spacing) {
       Text(pos)
         .font(.system(size: 9, weight: .heavy))
         .foregroundStyle(positionColor(pos))
-        .frame(width: 20, alignment: .leading)
+        .frame(width: TargetColumns.pos, alignment: .leading)
       Text(name)
         .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(.white)
         .lineLimit(1)
         .minimumScaleFactor(0.75)
-      Spacer(minLength: 2)
-      if !exp.isEmpty {
-        Text(exp + "%")
-          .font(.system(size: 9, weight: .semibold).monospacedDigit())
-          .foregroundStyle(bbeMuted)
-      }
-      if !flags.isEmpty {
-        flagText(flags, size: 9)
-      }
+      Spacer(minLength: 0)
+      playoffText(weeks)
+        .frame(width: TargetColumns.playoff, alignment: .center)
+      Text(stack.isEmpty ? "–" : "✓")
+        .font(.system(size: 9, weight: stack.isEmpty ? .medium : .heavy))
+        .foregroundStyle(stack.isEmpty ? bbeDash : bbeAccent)
+        .frame(width: TargetColumns.stack, alignment: .center)
+      metricText(corr)
+        .frame(width: TargetColumns.corr, alignment: .trailing)
+      metricText(exp)
+        .frame(width: TargetColumns.exp, alignment: .trailing)
     }
   }
 }
 
 /// Six targets in two columns, column-major so the top three (by the user's
-/// own rankings) stay in the left column where the eye lands first.
+/// own rankings) stay in the left column where the eye lands first. Each
+/// column carries its own P·S·C·E header strip.
 private struct TargetGrid: View {
   let targets: [String]
 
@@ -108,6 +172,7 @@ private struct TargetGrid: View {
     let rows = (items.count + 1) / 2
     HStack(alignment: .top, spacing: 12) {
       VStack(alignment: .leading, spacing: 3) {
+        TargetHeader()
         ForEach(0..<min(rows, items.count), id: \.self) { i in
           TargetCell(line: items[i])
         }
@@ -115,6 +180,7 @@ private struct TargetGrid: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       if items.count > rows {
         VStack(alignment: .leading, spacing: 3) {
+          TargetHeader()
           ForEach(rows..<items.count, id: \.self) { i in
             TargetCell(line: items[i])
           }
@@ -125,26 +191,14 @@ private struct TargetGrid: View {
   }
 }
 
-private struct SyncedAgoText: View {
-  let epoch: Double
-
-  var body: some View {
-    if epoch > 0 {
-      // Self-ticking relative timestamp — needs no activity updates.
-      HStack(spacing: 3) {
-        Text("synced")
-        Text(Date(timeIntervalSince1970: epoch), style: .relative)
-          .frame(maxWidth: 56, alignment: .leading)
-        Text("ago")
-      }
-      .font(.system(size: 10, weight: .medium))
-      .foregroundStyle(bbeMuted)
-    } else {
-      Text("not synced yet")
-        .font(.system(size: 10, weight: .medium))
-        .foregroundStyle(bbeMuted)
-    }
-  }
+/// "P91 · R8" — pick bold white, round muted (TASK-337: replaces the
+/// two-line pick/round readout and the synced-ago line).
+/// (`foregroundColor`, not `foregroundStyle` — only the former returns Text
+/// for `+` concatenation on the 16.2 deployment target.)
+private func pickRoundText(_ state: DraftActivityAttributes.ContentState, size: CGFloat) -> Text {
+  (Text("P\(state.currentPick)").foregroundColor(.white)
+    + Text(" · R\(state.round)").foregroundColor(bbeMuted))
+    .font(.system(size: size, weight: .heavy).monospacedDigit())
 }
 
 private struct LockScreenView: View {
@@ -152,27 +206,23 @@ private struct LockScreenView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      HStack {
+      HStack(alignment: .firstTextBaseline) {
         Text("BB EXPOSURES")
           .font(.system(size: 10, weight: .heavy))
           .kerning(1.1)
           .foregroundStyle(bbeAccent)
         Spacer()
-        SyncedAgoText(epoch: state.syncedAtEpoch)
-      }
-      HStack(alignment: .firstTextBaseline) {
-        Text(state.headline)
-          .font(.system(size: 19, weight: .bold))
-          .foregroundStyle(headlineColor(state.phase))
-          .lineLimit(1)
-          .minimumScaleFactor(0.7)
-        Spacer()
         if state.currentPick > 0 && state.phase != "armed" && state.phase != "waiting" {
-          Text("R\(state.round) · P\(state.currentPick)")
-            .font(.system(size: 12, weight: .bold).monospacedDigit())
-            .foregroundStyle(bbeMuted)
+          pickRoundText(state, size: 12)
         }
       }
+      // Full-width headline — the pick readout moved up beside the brand
+      // (TASK-337), keeping room for the long phase strings.
+      Text(state.headline)
+        .font(.system(size: 19, weight: .bold))
+        .foregroundStyle(headlineColor(state.phase))
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
       if !state.targets.isEmpty {
         TargetGrid(targets: state.targets)
       }
@@ -203,25 +253,15 @@ struct DraftGlanceLiveActivity: Widget {
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          VStack(alignment: .leading, spacing: 2) {
-            Text(context.state.headline)
-              .font(.system(size: 15, weight: .bold))
-              .foregroundStyle(headlineColor(context.state.phase))
-              .lineLimit(1)
-              .minimumScaleFactor(0.7)
-            SyncedAgoText(epoch: context.state.syncedAtEpoch)
-          }
+          Text(context.state.headline)
+            .font(.system(size: 15, weight: .bold))
+            .foregroundStyle(headlineColor(context.state.phase))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
         }
         DynamicIslandExpandedRegion(.trailing) {
           if context.state.currentPick > 0 {
-            VStack(alignment: .trailing, spacing: 2) {
-              Text("P\(context.state.currentPick)")
-                .font(.system(size: 15, weight: .heavy).monospacedDigit())
-                .foregroundStyle(.white)
-              Text("Round \(context.state.round)")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(bbeMuted)
-            }
+            pickRoundText(context.state, size: 13)
           }
         }
         DynamicIslandExpandedRegion(.bottom) {

@@ -116,6 +116,10 @@ globalThis.BBEEngine = {
         username: config.username || null,
         rankMap: toMap(config.rankMap),
         exposureMap: toMap(config.exposureMap),
+        // Entry-id arrays (JSON) -> Sets for the correlation column (TASK-337).
+        rosterIndexMap: new Map(
+          Object.entries(config.rosterIndexMap || {}).map(([k, ids]) => [k, new Set(ids)]),
+        ),
       });
       if (config.state) session.hydrate(config.state);
       lastCore = '';
