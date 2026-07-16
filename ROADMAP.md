@@ -203,12 +203,12 @@
 ### FEAT-029: Live Activity Draft Companion
 **Status:** Not Started
 **Description:** The glanceable layer per the epic goal: ActivityKit Live Activity with minimal/compact/expanded Dynamic Island presentations and lock-screen view (picks-until-turn, top available by user rankings, archetype/stack flags), a throttle-aware update policy, Supabase Edge Function → APNs push relay for background updates, and deep linking into the in-app assistant.
-**Tasks:** TASK-322, TASK-336
+**Tasks:** TASK-322, TASK-336, TASK-337
 
 ### FEAT-030: In-App Assistant & Manual Fallback
 **Status:** Not Started
 **Description:** The full-screen draft companion in the RN app consuming DraftState from the parse engine, porting the web Draft Assistant analytics (archetype viability, stacks, exposure/ADP context), plus manual pick entry as the graceful degradation path when capture/OCR is unavailable. Slow drafts use an on-demand session model (open, capture briefly, pick, close) rather than continuous watching.
-**Tasks:** TASK-323
+**Tasks:** TASK-323, TASK-339
 
 ### FEAT-031: Distribution & Store Readiness
 **Status:** Not Started

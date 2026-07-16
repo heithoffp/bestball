@@ -21,8 +21,8 @@
 - TASK-333: Broadcast extension hot-loads engine.js from the App Group (decouple parser fixes from EAS builds)
 - TASK-335: Event-driven Live Activity push policy: unfreeze the card far from the pick
 - TASK-336: Live draft: no-board mid-draft resume, room presence + reset flow, 6-target Live Activity
-- TASK-337: Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup
 - TASK-338: Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session)
+- TASK-339: Mobile Draft Assistant overhaul: live-session-first UX, retire manual pick entry
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -80,8 +80,8 @@
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P2 | - | - | [Plan](docs/plans/TASK-209.md) -- Draft | No | 2026-05-07 | 2026-07-15 |
 | TASK-335 | Event-driven Live Activity push policy: unfreeze the card far from the pick | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-335.md) | No | 2026-07-15 | 2026-07-15 |
 | TASK-336 | Live draft: no-board mid-draft resume, room presence + reset flow, 6-target Live Activity | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-336.md) | No | 2026-07-16 | 2026-07-16 |
-| TASK-337 | Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-337.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-338 | Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session) | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-338.md) | No | 2026-07-16 | 2026-07-16 |
+| TASK-339 | Mobile Draft Assistant overhaul: live-session-first UX, retire manual pick entry | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-339.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -113,12 +113,13 @@
 | TASK-257 | Teach /weekly-blog skill to set image: frontmatter + generate hero card per post | Todo | P3 | - | - | [Plan](docs/plans/TASK-257.md) -- Draft | No | 2026-06-09 | 2026-06-09 |
 | TASK-267 | Fix blog OG card gate for same-day-published posts | Todo | P3 | - | - | [Plan](docs/plans/TASK-267.md) -- Draft | No | 2026-06-16 | 2026-06-16 |
 | TASK-268 | Add Avg CLV column to Exposures tab | In Progress | P3 | - | - | [Plan](docs/plans/TASK-268.md) | No | 2026-06-16 | 2026-06-16 |
-| TASK-272 | Add ESLint config to the Chrome extension | Todo | P3 | - | - | [Plan](docs/plans/TASK-272.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
+| TASK-272 | Add ESLint config to the Chrome extension | Todo | P3 | - | - | [Plan](docs/plans/TASK-272.md) -- Draft | No | 2026-06-20 | 2026-07-16 |
 | TASK-292 | Arena monetization-funnel rework (post opt-out) | Todo | P3 | - | - | [Plan](docs/plans/TASK-292.md) -- Draft | No | 2026-06-26 | 2026-06-26 |
 | TASK-307 | Arena pairing sample mix after full-DB backfill | Todo | P3 | - | - | [Plan](docs/plans/TASK-307.md) -- Draft | No | 2026-07-01 | 2026-07-01 |
 | TASK-313 | Arena leaderboard pagination | In Progress | P3 | - | - | [Plan](docs/plans/TASK-313.md) | No | 2026-07-02 | 2026-07-02 |
 | TASK-317 | Boards IO follow-ups: artifact refresh cadence + client cache for user boards | Todo | P3 | - | - | [Plan](docs/plans/TASK-317.md) -- Draft | No | 2026-07-09 | 2026-07-09 |
 | TASK-330 | Record the user's own pick while parked on the Players tab (confirm-card/queue-diff inference) | Todo | P3 | S | Opus | [Plan](docs/plans/TASK-330.md) -- Draft | No | 2026-07-15 | 2026-07-15 |
+| TASK-341 | Fix failing slow-draft replay glance-format checks (target format + exposure cell) | Todo | P3 | S | Sonnet | [Plan](docs/plans/TASK-341.md) -- Draft | No | 2026-07-16 | 2026-07-16 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | - | - | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | - | - | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | - | - | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
@@ -129,6 +130,7 @@
 | TASK-276 | DraftBoardModal: use platform-correct ADP/proj maps for DK boards | Todo | P4 | - | - | [Plan](docs/plans/TASK-276.md) -- Draft | No | 2026-06-20 | 2026-06-20 |
 | TASK-309 | Clear pre-existing ESLint errors: HelpOverlay setState-in-effect, AuthContext chrome global, capture-screenshots process global | Todo | P4 | - | - | [Plan](docs/plans/TASK-309.md) -- Draft | No | 2026-07-02 | 2026-07-02 |
 | TASK-312 | Arena vote reveal polish: advance-bar duration on late responses + guest empty-state signup CTA | Todo | P4 | - | - | [Plan](docs/plans/TASK-312.md) -- Draft | No | 2026-07-02 | 2026-07-02 |
+| TASK-340 | Roadmap wording: FEAT-030/EPIC-08 no longer describe manual pick entry as the fallback path | Todo | P4 | S | Sonnet | [Plan](docs/plans/TASK-340.md) -- Draft | No | 2026-07-16 | 2026-07-16 |
 
 ## Completed Tasks
 
@@ -136,6 +138,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-337 | Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup | Done | P2 | [Plan](docs/archive/plans/TASK-337.md) | Yes | 2026-07-16 |
 | TASK-334 | Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows | Done | P2 | [Plan](docs/archive/plans/TASK-334.md) | Yes | 2026-07-15 |
 | TASK-328 | Draft parser: pin slot from the user's username on the board; harden screen classification + picks-until countdown | Done | P2 | [Plan](docs/archive/plans/TASK-328.md) | Yes | 2026-07-14 |
 | TASK-327 | Live Draft Session: remove screenshot capture mode, make live capture the sole path, add mid-draft resume detection | Done | P2 | [Plan](docs/archive/plans/TASK-327.md) | Yes | 2026-07-14 |

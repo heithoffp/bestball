@@ -25,6 +25,14 @@ Capture feeds the Draft Assistant screen and the lock-screen/Dynamic Island Live
 Activity (`targets/draft-glance/`) through the same `src/draft/` engine and
 `draftFeed.js` seam (DraftState contract, ADR-021). A ScreenCaptureKit mode is
 planned for iOS 27 (spike Q3) — the extension core is already capture-agnostic.
+
+**The live session IS the Draft Assistant (TASK-339).** The tab opens on a setup
+screen — a required Underdog username (it anchors automatic slot detection,
+TASK-328; remembered between drafts), a Start CTA, and a "Try a demo draft"
+that replays a real room through the full assistant UI. There is no draft-slot
+selector and no manual pick entry anywhere; picks, round, and slot arrive only
+from the capture feed, and a one-time three-step coach-mark overlay introduces
+the columns and badges in place.
 `npm run test:draft` runs the parse-engine regression (including the JSC bundle
 the extension executes) against the real OCR fixture from a live UD draft.
 

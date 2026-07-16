@@ -1,49 +1,25 @@
-// LiveSessionPanel — start/stop + status UI for the iOS Live Draft Session
-// (docs/LIVE_SESSION_V1.md). Renders at the top of the Draft Assistant.
-// Two capture modes: 'live' (ReplayKit broadcast — fully hands-free) and
-// 'shots' (screenshot sweep fallback). Active state doubles as the
-// confidence hub: capture heartbeat, parse log, slot conflicts, warnings.
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Modal, TextInput, Share, Alert } from 'react-native';
+// LiveSessionPanel — in-session status layer for the iOS Live Draft Session
+// (docs/LIVE_SESSION_V1.md). Session start lives in the AssistantSetup screen
+// (TASK-339); this renders only while a session is active and doubles as the
+// confidence hub: capture heartbeat, record CTA, room presence, parse log,
+// warnings, and session tools. Slot is auto-detected from the username's
+// drafter card (TASK-328) — there is no manual slot control anywhere.
+import React, { useMemo, useState } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Modal, Share, Alert } from 'react-native';
 import {
-  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History, Bug, Film,
-  DoorOpen, RotateCcw,
+  Radio, Square, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck,
+  History, Bug, Film, DoorOpen, RotateCcw, Play,
 } from 'lucide-react-native';
-import { canonicalName } from '../../shared/utils/helpers';
-import { usePortfolio } from '../contexts/PortfolioContext';
 import {
-  subscribeSession, startSession, endSession, demoSync, setSessionSlot, exportDebug,
-  resetDraftBoard, getFrameLogPath, BROADCAST_EXTENSION_ID,
+  subscribeSession, endSession, demoSync, exportDebug, resetDraftBoard,
+  getFrameLogPath, BROADCAST_EXTENSION_ID,
 } from '../draft/sessionController';
 import {
   getBroadcastPickerComponent, broadcastPickerLaunchable, launchBroadcastPicker,
 } from '../draft/liveActivity';
 import { colors, spacing, radii, type } from '../theme';
 
-const TEAMS = 12;
-const ROUNDS = 18;
 const GOLD = '#E8BF4A';
-
-// Underdog ADP CSV rows -> matcher pool rows (same field fallbacks as
-// shared/utils/dataLoader rowName/buildLookupsFromRows).
-function poolRowsFromAdpRows(rows) {
-  const out = [];
-  for (const row of rows || []) {
-    const name = (
-      `${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`.trim()
-      || row.Name || row['Player Name'] || row.player_name || row.Player || ''
-    ).trim().replace(/\s+/g, ' ');
-    if (!name) continue;
-    const adp = parseFloat(row.adp ?? row.ADP ?? row.Adp ?? '');
-    out.push({
-      name,
-      position: row.position || row.Position || row.pos || 'N/A',
-      team: (row.teamName || row.team || row.Team || 'N/A').toString().toUpperCase().slice(0, 3),
-      adp: Number.isFinite(adp) ? adp : null,
-    });
-  }
-  return out;
-}
 
 function WarnRow({ color = colors.negative, children }) {
   return (
@@ -104,145 +80,24 @@ function PreflightExplainer({ visible, onStart, onCancel }) {
 }
 
 export default function LiveSessionPanel() {
-  const { masterPlayers, adpByPlatform, rankingsByPlatform, rosterData } = usePortfolio();
   const [snap, setSnap] = useState(null);
-  const [slotChoice, setSlotChoice] = useState(null); // null = auto-detect
-  const [usernameChoice, setUsernameChoice] = useState(''); // '' = auto-learn
   const [expanded, setExpanded] = useState(false);
   const [showPreflight, setShowPreflight] = useState(false);
   const [debugText, setDebugText] = useState(null); // debug bundle modal
 
-  useEffect(() => subscribeSession(setSnap), []);
+  React.useEffect(() => subscribeSession(setSnap), []);
 
   const BroadcastPicker = useMemo(() => getBroadcastPickerComponent(), []);
 
-  const poolRows = useMemo(() => {
-    const udRows = poolRowsFromAdpRows(adpByPlatform?.underdog?.latestRows);
-    if (udRows.length >= 100) return udRows;
-    return (masterPlayers || [])
-      .filter(p => p?.name)
-      .map(p => ({ name: p.name, position: p.position, team: p.team, adp: p.adpPick }));
-  }, [adpByPlatform, masterPlayers]);
-
-  const rankMap = useMemo(() => {
-    const map = new Map();
-    (rankingsByPlatform?.underdog || []).forEach((row, i) => {
-      const name = row.Name || row.name || row.Player || row.player || row['Player Name'] || '';
-      if (!name) return;
-      const rank = parseInt(row.Rank ?? row.rank ?? '', 10);
-      map.set(canonicalName(name), Number.isFinite(rank) ? rank : i + 1);
-    });
-    return map;
-  }, [rankingsByPlatform]);
-
-  // One pass over the portfolio yields both glance inputs: exposure % and the
-  // per-player roster index the correlation column reads (TASK-337).
-  const { exposureMap, rosterIndexMap } = useMemo(() => {
-    const rosters = new Set();
-    const index = new Map();
-    (rosterData || []).forEach(p => {
-      const id = p.entry_id || p.entryId;
-      if (!id || !p.name) return;
-      rosters.add(id);
-      const key = canonicalName(p.name);
-      if (!index.has(key)) index.set(key, new Set());
-      index.get(key).add(id);
-    });
-    const exposure = new Map();
-    if (rosters.size > 0) {
-      index.forEach((set, key) => exposure.set(key, (set.size / rosters.size) * 100));
-    }
-    return { exposureMap: exposure, rosterIndexMap: index };
-  }, [rosterData]);
-
-  if (!snap) return null;
+  if (!snap?.active) return null;
   const {
-    active, status, log, capabilities, activityStarted, activityError,
-    lastError, captureLive, pushToken, extensionEngine,
+    demo, status, log, activityStarted, activityError,
+    captureLive, pushToken, extensionEngine,
   } = snap;
   const engineStale = !!extensionEngine && extensionEngine.startsWith('stale');
 
-  const handleStart = () => {
-    startSession({
-      poolRows, rankMap, exposureMap, rosterIndexMap,
-      slot: slotChoice, teams: TEAMS, rounds: ROUNDS,
-      username: usernameChoice.trim() || null,
-    });
-  };
-
-  // ---------- idle ----------
-  if (!active) {
-    return (
-      <View style={styles.card}>
-        <Pressable style={styles.headerRow} onPress={() => setExpanded(v => !v)}>
-          <Radio size={13} color={colors.accent} />
-          <Text style={styles.title}>Live Draft Session</Text>
-          <Text style={[type.muted, { fontSize: 10.5 }]}>iOS · Underdog</Text>
-          <View style={{ flex: 1 }} />
-          {expanded ? <ChevronUp size={14} color={colors.textMuted} /> : <ChevronDown size={14} color={colors.textMuted} />}
-        </Pressable>
-        {expanded && (
-          <>
-            <Text style={[type.muted, { marginTop: spacing.sm, lineHeight: 16 }]}>
-              Hands-free: start the session, tap the record button, confirm Start Broadcast, then just
-              draft in Underdog. Your lock-screen Live Activity updates automatically as picks come in.
-              Join a draft already in progress and BBE backfills every pick the first time it sees the board.
-            </Text>
-            <View style={styles.slotRow}>
-              <Text style={type.muted}>Username</Text>
-              <TextInput
-                style={styles.usernameInput}
-                value={usernameChoice}
-                onChangeText={setUsernameChoice}
-                placeholder="Auto-detect from the draft"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="characters"
-                autoCorrect={false}
-              />
-            </View>
-            <View style={styles.slotRow}>
-              <Text style={type.muted}>Slot</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 3 }}>
-                <Pressable
-                  onPress={() => setSlotChoice(null)}
-                  style={[styles.slotBtn, { width: 44 }, slotChoice == null && styles.slotBtnOn]}
-                >
-                  <Text style={[styles.slotTxt, slotChoice == null && { color: colors.accent }]}>Auto</Text>
-                </Pressable>
-                {Array.from({ length: TEAMS }, (_, i) => i + 1).map(n => (
-                  <Pressable
-                    key={n}
-                    onPress={() => setSlotChoice(n)}
-                    style={[styles.slotBtn, slotChoice === n && styles.slotBtnOn]}
-                  >
-                    <Text style={[styles.slotTxt, slotChoice === n && { color: colors.accent }]}>{n}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-            {!capabilities.nativeModule && (
-              <WarnRow>Needs the EAS dev/preview build — capture, OCR, and the Live Activity are native.</WarnRow>
-            )}
-            {capabilities.nativeModule && !capabilities.activitiesEnabled && (
-              <WarnRow color={GOLD}>Live Activities look disabled — check Settings → Best Ball Exposures.</WarnRow>
-            )}
-            {lastError && <WarnRow>{lastError}</WarnRow>}
-            <Pressable
-              style={[styles.startBtn, !capabilities.nativeModule && { opacity: 0.5 }]}
-              onPress={handleStart}
-              disabled={!capabilities.nativeModule}
-            >
-              <Zap size={13} color={colors.textInverse} />
-              <Text style={styles.startTxt}>Start session</Text>
-            </Pressable>
-          </>
-        )}
-      </View>
-    );
-  }
-
-  // ---------- active ----------
-  const phaseColor = status?.picksUntil === 0 ? colors.negative
+  const phaseColor = demo ? colors.accent
+    : status?.picksUntil === 0 ? colors.negative
     : status?.picksUntil === 1 ? GOLD : colors.positive;
   const statusLine = status
     ? [
@@ -250,9 +105,7 @@ export default function LiveSessionPanel() {
         status.picksUntil == null ? null
           : status.picksUntil === 0 ? 'ON THE CLOCK'
           : `up in ${status.picksUntil}`,
-        status.slot
-          ? `slot ${status.slot}${status.slotSource === 'anchored' ? ' (pinned)' : status.slotSource === 'inferred' ? ' (auto)' : ''}`
-          : 'slot pending',
+        status.slot ? `slot ${status.slot} · auto` : 'finding your slot…',
       ].filter(Boolean).join(' · ')
     : '';
 
@@ -260,19 +113,30 @@ export default function LiveSessionPanel() {
     <View style={[styles.card, { borderColor: `${phaseColor}55` }]}>
       <Pressable style={styles.headerRow} onPress={() => setExpanded(v => !v)}>
         <Radio size={13} color={phaseColor} />
-        <Text style={[styles.title, { color: phaseColor }]}>LIVE</Text>
-        <View style={[styles.capChip, { borderColor: captureLive ? colors.positive : colors.textMuted }]}>
-          <Cast size={9} color={captureLive ? colors.positive : colors.textMuted} />
-          <Text style={{ fontSize: 9, fontWeight: '800', color: captureLive ? colors.positive : colors.textMuted }}>
-            {captureLive ? 'CAPTURING' : 'NO CAPTURE'}
-          </Text>
-        </View>
+        <Text style={[styles.title, { color: phaseColor }]}>{demo ? 'DEMO' : 'LIVE'}</Text>
+        {!demo && (
+          <View style={[styles.capChip, { borderColor: captureLive ? colors.positive : colors.textMuted }]}>
+            <Cast size={9} color={captureLive ? colors.positive : colors.textMuted} />
+            <Text style={{ fontSize: 9, fontWeight: '800', color: captureLive ? colors.positive : colors.textMuted }}>
+              {captureLive ? 'CAPTURING' : 'NO CAPTURE'}
+            </Text>
+          </View>
+        )}
         <Text style={[type.secondary, { fontSize: 11.5, flexShrink: 1 }]} numberOfLines={1}>{statusLine}</Text>
         <View style={{ flex: 1 }} />
         {expanded ? <ChevronUp size={14} color={colors.textMuted} /> : <ChevronDown size={14} color={colors.textMuted} />}
       </Pressable>
 
-      {!captureLive && (
+      {demo && (
+        <View style={styles.roomRow}>
+          <Play size={12} color={colors.accent} />
+          <Text style={[styles.resumeTxt, { color: colors.textSecondary }]}>
+            Replaying a real draft room — start a live session when you draft for real
+          </Text>
+        </View>
+      )}
+
+      {!demo && !captureLive && (
         <View style={styles.broadcastRow}>
           {broadcastPickerLaunchable() ? (
             <Pressable
@@ -291,17 +155,17 @@ export default function LiveSessionPanel() {
           <Text style={[type.muted, { flex: 1, lineHeight: 15 }]}>
             {broadcastPickerLaunchable() || BroadcastPicker ? (
               <>
-                Tap the record button, then <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Start Broadcast</Text> on
-                the iOS sheet, then switch to Underdog. Stop anytime from the red status icon.{' '}
-                BBE reads only the Underdog draft board on your device and discards every frame instantly — nothing else is stored or sent.
+                Tap record → <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Start Broadcast</Text> →
+                switch to Underdog. BBE follows the board from there.
+                On-device only — every frame is read and instantly discarded.
               </>
             ) : (
               <>
                 This build has no in-app record button. Open Control Center, long-press
                 <Text style={{ color: colors.textPrimary, fontWeight: '700' }}> Screen Recording</Text>, choose
                 <Text style={{ color: colors.textPrimary, fontWeight: '700' }}> BBE Draft Capture</Text>, then Start Broadcast.
-                If it isn't listed, install the latest EAS build.{' '}
-                BBE reads only the Underdog draft board on your device and discards every frame instantly — nothing else is stored or sent.
+                If it isn't listed, install the latest EAS build.
+                On-device only — every frame is read and instantly discarded.
               </>
             )}
           </Text>
@@ -354,80 +218,72 @@ export default function LiveSessionPanel() {
       )}
 
       <View style={styles.btnRow}>
-        <Pressable style={styles.actionBtn} onPress={() => demoSync()}>
-          <FlaskConical size={12} color={colors.textSecondary} />
-          <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Demo</Text>
-        </Pressable>
-        <Pressable
-          style={styles.actionBtn}
-          onPress={() => {
-            try { setDebugText(exportDebug()); } catch (e) { setDebugText(`export failed: ${e?.message}`); }
-          }}
-        >
-          <Bug size={12} color={colors.textSecondary} />
-          <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Debug</Text>
-        </Pressable>
-        <Pressable
-          style={styles.actionBtn}
-          onPress={async () => {
-            // TASK-331: share the extension's full-session OCR recording so
-            // the whole draft can be replayed offline (replay-frames.mjs).
-            try {
-              const path = getFrameLogPath();
-              if (!path) {
-                setDebugText('No frame recording found — the extension writes it during a live broadcast (needs the task329.3+ build).');
-                return;
-              }
-              // eslint-disable-next-line global-require
-              const Sharing = require('expo-sharing');
-              await Sharing.shareAsync(`file://${path}`, { mimeType: 'application/json', dialogTitle: 'Session frames' });
-            } catch (e) {
-              setDebugText(`frames export failed: ${e?.message}`);
-            }
-          }}
-        >
-          <Film size={12} color={colors.textSecondary} />
-          <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Frames</Text>
-        </Pressable>
+        {expanded && !demo && (
+          <>
+            <Pressable style={styles.actionBtn} onPress={() => demoSync()}>
+              <FlaskConical size={12} color={colors.textSecondary} />
+              <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Demo</Text>
+            </Pressable>
+            <Pressable
+              style={styles.actionBtn}
+              onPress={() => {
+                try { setDebugText(exportDebug()); } catch (e) { setDebugText(`export failed: ${e?.message}`); }
+              }}
+            >
+              <Bug size={12} color={colors.textSecondary} />
+              <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Debug</Text>
+            </Pressable>
+            <Pressable
+              style={styles.actionBtn}
+              onPress={async () => {
+                // TASK-331: share the extension's full-session OCR recording so
+                // the whole draft can be replayed offline (replay-frames.mjs).
+                try {
+                  const path = getFrameLogPath();
+                  if (!path) {
+                    setDebugText('No frame recording found — the extension writes it during a live broadcast (needs the task329.3+ build).');
+                    return;
+                  }
+                  // eslint-disable-next-line global-require
+                  const Sharing = require('expo-sharing');
+                  await Sharing.shareAsync(`file://${path}`, { mimeType: 'application/json', dialogTitle: 'Session frames' });
+                } catch (e) {
+                  setDebugText(`frames export failed: ${e?.message}`);
+                }
+              }}
+            >
+              <Film size={12} color={colors.textSecondary} />
+              <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Frames</Text>
+            </Pressable>
+          </>
+        )}
         <Pressable style={[styles.actionBtn, { borderColor: `${colors.negative}66` }]} onPress={() => endSession()}>
           <Square size={11} color={colors.negative} />
-          <Text style={[styles.actionTxt, { color: colors.negative }]}>End</Text>
+          <Text style={[styles.actionTxt, { color: colors.negative }]}>{demo ? 'End demo' : 'End'}</Text>
         </Pressable>
       </View>
 
       {expanded && (
         <>
-          {status?.slotConflict && (
-            <View style={styles.warnRow}>
-              <TriangleAlert size={11} color={GOLD} />
-              <Text style={[styles.warnTxt, { color: GOLD }]}>
-                Screen evidence says slot {status.anchoredSlot || status.inferredSlot}
-                {status.anchoredSlot ? ` (your card${status.learnedUsername ? `, ${status.learnedUsername}` : ''})` : ''}, you set {status.manualSlot}.
-              </Text>
-              <Pressable onPress={() => setSessionSlot(null)}>
-                <Text style={{ color: colors.accent, fontSize: 10.5, fontWeight: '700' }}> Use {status.anchoredSlot || status.inferredSlot}</Text>
-              </Pressable>
-            </View>
-          )}
-          {status?.learnedUsername && !status?.slotConflict && (
+          {status?.learnedUsername && (
             <Text style={[type.muted, { fontSize: 10.5, marginTop: 6 }]}>
               Tracking {status.learnedUsername}
               {status.slotSource === 'anchored' ? ` · slot ${status.slot} pinned from your card` : ''}
             </Text>
           )}
-          {engineStale && (
+          {!demo && engineStale && (
             <WarnRow>
               The broadcast extension is running an OLD engine build — parsing fixes are not live.
               Install the latest EAS build to update it (Metro reload is not enough).
             </WarnRow>
           )}
-          {!activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
-          {activityStarted && activityError && (
+          {!demo && !activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
+          {!demo && activityStarted && activityError && (
             <WarnRow color={GOLD}>
               Live Activity issue: {activityError} — trying to restore it automatically.
             </WarnRow>
           )}
-          {activityStarted && !pushToken && (
+          {!demo && activityStarted && !pushToken && (
             <WarnRow color={GOLD}>
               No push token — the Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).
             </WarnRow>
@@ -517,26 +373,6 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: colors.negative,
   },
-  slotRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  slotBtn: {
-    width: 26, height: 26, borderRadius: radii.sm,
-    borderWidth: 1, borderColor: colors.borderDefault, backgroundColor: colors.surface2 ?? colors.surface1,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  slotBtnOn: { borderColor: colors.accent, backgroundColor: colors.accentMuted },
-  usernameInput: {
-    flex: 1, height: 30, borderRadius: radii.sm,
-    borderWidth: 1, borderColor: colors.borderDefault, backgroundColor: colors.surface2 ?? colors.surface1,
-    paddingHorizontal: 8, paddingVertical: 0,
-    fontSize: 11.5, fontWeight: '600', color: colors.textPrimary,
-  },
-  slotTxt: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
-  startBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: colors.accent, borderRadius: radii.md,
-    paddingVertical: 9, marginTop: spacing.sm,
-  },
-  startTxt: { color: colors.textInverse, fontSize: 13, fontWeight: '800' },
   btnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,

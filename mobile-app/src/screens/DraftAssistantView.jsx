@@ -1,29 +1,34 @@
-// DraftAssistantView — mobile port of DraftFlowAnalysis.jsx, the app's one
-// deliberately opinionated surface. Manual pick entry drives a live model:
-// multi-dimensional strategy viability (RB/QB/TE), candidate metrics (path /
-// strategy / global exposure, correlation with picks so far), stack + playoff
-// stack flags, falling-knife warnings, and the Eliminator bye rainbow.
-// A capture session from the on-device OCR engine (mobile-app/modules, ADR-021)
-// can drive the same screen through src/draft/draftFeed.js.
-import React, { useEffect, useMemo, useState } from 'react';
+// DraftAssistantView — the live-session-first Draft Assistant (TASK-339).
+// The live capture session (screen broadcast -> on-device OCR -> DraftState,
+// ADR-021) is the only input path: AssistantSetup owns the tab until a session
+// starts, LiveSessionPanel is the in-session confidence hub, and this screen
+// renders the analytics — multi-dimensional strategy viability (RB/QB/TE),
+// candidate metrics (path / strategy / global exposure, correlation with picks
+// so far), stack + playoff stack flags, falling-knife warnings, and the
+// Eliminator bye rainbow — fed exclusively through src/draft/draftFeed.js.
+// Manual pick entry was retired with the overhaul; picks are read-only.
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Target, Zap, Anchor, TriangleAlert, CalendarDays, Radio } from 'lucide-react-native';
+import { Target, Anchor, TriangleAlert, CalendarDays, Cast } from 'lucide-react-native';
 import { PROTOCOL_TREE, ARCHETYPE_METADATA, classifyRosterPath } from '../../shared/utils/rosterArchetypes';
 import { analyzeStack } from '../../shared/utils/stackAnalysis';
 import { analyzeCandidatePlayoffStack } from '../../shared/utils/playoffStacks';
 import { analyzeByeRainbow } from '../../shared/utils/eliminatorModel';
 import playoffSchedule from '../../shared/data/playoff-schedule-2026.json';
-import { trackEvent } from '../../shared/utils/analytics';
 import { canonicalName } from '../../shared/utils/helpers';
 import TournamentFilter from '../components/TournamentFilter';
 import { SearchBar, Segmented } from '../components/ui';
 import { colors, spacing, radii, type } from '../theme';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { subscribeDraftFeed, isDraftFeedActive } from '../draft/draftFeed';
+import { subscribeDraftFeed } from '../draft/draftFeed';
+import { subscribeSession } from '../draft/sessionController';
 import LiveSessionPanel from './LiveSessionPanel';
+import AssistantSetup from './draft/AssistantSetup';
+import CoachMarks, { introSeen, markIntroSeen } from './draft/CoachMarks';
 
 const ELIMINATOR_MODE_KEY = 'bbe.eliminatorMode';
+const TEAMS = 12;
 
 const getAdpDeltaColor = (delta) => {
   if (delta == null) return '#64748b';
@@ -116,19 +121,29 @@ function checkStrategyViability(strategyKey, currentPicks, currentRound) {
 
 export default function DraftAssistantView() {
   const { rosterData, masterPlayers } = usePortfolio();
-  useEffect(() => { trackEvent('draft_session_started'); }, []);
 
+  const [sessionActive, setSessionActive] = useState(false);
   const [currentPicks, setCurrentPicks] = useState([]);
-  const [draftSlot, setDraftSlot] = useState(1);
+  const [feedSlot, setFeedSlot] = useState(null);
   const [feedRound, setFeedRound] = useState(null);
+  const [feedPick, setFeedPick] = useState(null);
+  const [hasSync, setHasSync] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTournaments, setSelectedTournaments] = useState([]);
   const [eliminatorMode, setEliminatorMode] = useState(false);
   const [subView, setSubView] = useState('players');
   const [expandedBreakdowns, setExpandedBreakdowns] = useState(new Set());
   const [showStrategy, setShowStrategy] = useState(true);
-  const [draftToast, setDraftToast] = useState(null);
-  const [feedActive, setFeedActive] = useState(isDraftFeedActive());
+  const [showIntro, setShowIntro] = useState(false);
+
+  // Coach-mark anchors (TASK-339): the session status panel, the first row's
+  // metric strip, and the first player card.
+  const statusAnchorRef = useRef(null);
+  const metricsAnchorRef = useRef(null);
+  const cardAnchorRef = useRef(null);
+
+  useEffect(() => subscribeSession(snap => setSessionActive(!!snap?.active)), []);
+  useEffect(() => { introSeen().then(seen => { if (!seen) setShowIntro(true); }); }, []);
 
   // Persisted Eliminator toggle (web: localStorage)
   useEffect(() => {
@@ -140,15 +155,24 @@ export default function DraftAssistantView() {
     AsyncStorage.setItem(ELIMINATOR_MODE_KEY, eliminatorMode ? '1' : '0').catch(() => {});
   }, [eliminatorMode]);
 
-  // Live capture feed (spike/ADR-021 parse engine) — replaces manual entry
-  // whenever a session is publishing DraftState.
+  // The capture feed (ADR-021 parse engine) is the assistant's only input:
+  // picks, round, pick number, and slot all arrive as DraftState.
   useEffect(() => {
     const nameToMaster = new Map(masterPlayers.map(p => [canonicalName(p.name), p]));
     return subscribeDraftFeed((draftState) => {
-      if (!draftState) { setFeedActive(false); setFeedRound(null); return; }
-      setFeedActive(true);
-      if (Number.isFinite(draftState.draftSlot)) setDraftSlot(draftState.draftSlot);
+      if (!draftState) {
+        setHasSync(false);
+        setCurrentPicks([]);
+        setFeedRound(null);
+        setFeedPick(null);
+        setFeedSlot(null);
+        setSubView('players');
+        return;
+      }
+      setHasSync(true);
+      if (Number.isFinite(draftState.draftSlot)) setFeedSlot(draftState.draftSlot);
       setFeedRound(Number.isFinite(draftState.currentRound) ? draftState.currentRound : null);
+      setFeedPick(Number.isFinite(draftState.currentPick) ? draftState.currentPick : null);
       if (Array.isArray(draftState.myPicks)) {
         setCurrentPicks(draftState.myPicks.map((pick, i) => {
           const mp = nameToMaster.get(canonicalName(pick.name || ''));
@@ -160,12 +184,6 @@ export default function DraftAssistantView() {
       }
     });
   }, [masterPlayers]);
-
-  useEffect(() => {
-    if (!draftToast) return;
-    const timer = setTimeout(() => setDraftToast(null), 2000);
-    return () => clearTimeout(timer);
-  }, [draftToast]);
 
   // --- Tournament filter ---
   const slateGroups = useMemo(() => {
@@ -209,9 +227,8 @@ export default function DraftAssistantView() {
     return map;
   }, [allRosters]);
 
-  // Live feed: the engine's round is the truth — the ledger can lag the
-  // draft (mid-draft resume, missed confirmation cards), so "picks made + 1"
-  // under-counts. Manual entry keeps the picks-based derivation.
+  // The engine's round is the truth — the ledger can lag the draft (mid-draft
+  // resume, missed confirmation cards), so "picks made + 1" under-counts.
   const currentRound = feedRound ?? (currentPicks.length + 1);
 
   const matchingPathRosters = useMemo(() => {
@@ -442,9 +459,10 @@ export default function DraftAssistantView() {
     );
 
     const dynamicWindow = 14 + (currentRound * 3);
-    const TEAMS = 12;
-    const pickPos = getSnakePickPosition(currentRound, draftSlot, TEAMS) || 1;
-    const currentOverallPick = (currentRound - 1) * TEAMS + pickPos;
+    // The feed's overall pick centers the window; the snake fallback only
+    // covers the moment before the first full sync.
+    const pickPos = getSnakePickPosition(currentRound, feedSlot || 1, TEAMS) || 1;
+    const currentOverallPick = feedPick ?? ((currentRound - 1) * TEAMS + pickPos);
 
     availablePlayers.sort((a, b) => a._sortAdp - b._sortAdp);
 
@@ -464,7 +482,7 @@ export default function DraftAssistantView() {
     });
     return finalCandidates;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterPlayers, allRosters, matchingPathRosters, currentRound, draftSlot, currentPicks, playerIndexMap, strategyStatus, myAvgPickMap, metricsCtx]);
+  }, [masterPlayers, allRosters, matchingPathRosters, currentRound, feedSlot, feedPick, currentPicks, playerIndexMap, strategyStatus, myAvgPickMap, metricsCtx]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim() || !masterPlayers?.length) return [];
@@ -499,14 +517,6 @@ export default function DraftAssistantView() {
 
   const displayPlayers = searchQuery.trim() ? searchResults : candidatePlayers;
 
-  // --- Actions ---
-  const handleSelect = (player) => {
-    setCurrentPicks([...currentPicks, { ...player, round: currentRound }]);
-    setDraftToast({ name: player.name, position: player.position, round: currentRound });
-    setSearchQuery('');
-  };
-  const handleUndo = () => setCurrentPicks(prev => prev.slice(0, -1));
-
   const toggleBreakdown = (playerName) => {
     setExpandedBreakdowns(prev => {
       const next = new Set(prev);
@@ -515,10 +525,6 @@ export default function DraftAssistantView() {
       return next;
     });
   };
-
-  const slotNum = Number(draftSlot) || 1;
-  const snakePickPos = getSnakePickPosition(currentRound, slotNum, 12) || 1;
-  const snakeOverallPick = (currentRound - 1) * 12 + snakePickPos;
 
   const byeRainbow = useMemo(
     () => (eliminatorMode ? analyzeByeRainbow(currentPicks) : null),
@@ -554,14 +560,17 @@ export default function DraftAssistantView() {
     );
   };
 
-  const renderPlayerRow = ({ item: player }) => {
+  const renderPlayerRow = ({ item: player, index }) => {
     const stackInfo = analyzeStack(player, currentPicks);
     const playoffStack = player.playoffStack || null;
     const expanded = expandedBreakdowns.has(player.name);
     const adpText = Number.isFinite(player._sortAdp) && player._sortAdp !== Infinity ? player._sortAdp.toFixed(1) : '—';
     return (
-      <View style={[styles.playerCard, { borderLeftColor: getPosColor(player.position) }, player.killsStrategy && { opacity: 0.55 }]}>
-        <Pressable onPress={() => handleSelect(player)}>
+      <View
+        ref={index === 0 ? cardAnchorRef : undefined}
+        style={[styles.playerCard, { borderLeftColor: getPosColor(player.position) }, player.killsStrategy && { opacity: 0.55 }]}
+      >
+        <Pressable onPress={() => toggleBreakdown(player.name)}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <View style={[styles.posPill, { backgroundColor: `${getPosColor(player.position)}22` }]}>
               <Text style={{ color: getPosColor(player.position), fontSize: 10, fontWeight: '800' }}>{player.position}</Text>
@@ -582,11 +591,12 @@ export default function DraftAssistantView() {
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: 6, flexWrap: 'wrap' }}>
+          <View
+            ref={index === 0 ? metricsAnchorRef : undefined}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: 6, flexWrap: 'wrap' }}
+          >
             <Text style={styles.metric}>Path <Text style={{ color: colors.textPrimary }}>{player.portfolioExposure.toFixed(0)}%</Text></Text>
-            <Pressable onPress={() => toggleBreakdown(player.name)} hitSlop={6}>
-              <Text style={styles.metric}>Corr <Text style={{ color: colors.textPrimary }}>{player.correlationScore.toFixed(0)}%</Text>{currentPicks.length > 0 ? ' ▾' : ''}</Text>
-            </Pressable>
+            <Text style={styles.metric}>Corr <Text style={{ color: colors.textPrimary }}>{player.correlationScore.toFixed(0)}%</Text>{currentPicks.length > 0 ? ' ▾' : ''}</Text>
             <Text style={styles.metric}>
               Global <Text style={{ color: getGlobalExposureColor(player.globalExposure) }}>{player.globalExposure.toFixed(1)}%</Text>
             </Text>
@@ -626,48 +636,62 @@ export default function DraftAssistantView() {
     );
   };
 
+  // No session -> the setup screen owns the tab (TASK-339).
+  if (!sessionActive) {
+    return <AssistantSetup />;
+  }
+
+  const coachSteps = [
+    {
+      key: 'status',
+      title: 'Your turn, at a glance',
+      body: 'Pick, round, and how many picks until you’re up. Your slot is detected automatically from your username’s drafter card.',
+      anchorRef: statusAnchorRef,
+    },
+    {
+      key: 'metrics',
+      title: 'Your portfolio, per player',
+      body: 'Path, Corr, and Global show how often each player already appears across your rosters. Tap a row for the pick-by-pick correlation breakdown.',
+      anchorRef: metricsAnchorRef,
+    },
+    {
+      key: 'badges',
+      title: 'Stacks & warnings',
+      body: 'Badges flag stacks with your picks, playoff-week overlaps, falling ADP, and picks that would break your last viable build path.',
+      anchorRef: cardAnchorRef,
+    },
+  ];
+
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: spacing.lg }}>
-        {/* Live capture session (screenshot -> OCR -> Live Activity) */}
-        <LiveSessionPanel />
-        {/* Context bar */}
-        <View style={styles.contextBar}>
-          <Text style={type.secondary}>R<Text style={{ color: colors.textPrimary, fontWeight: '800' }}>{currentRound}</Text></Text>
-          <Text style={type.secondary}>Pick <Text style={{ color: colors.textPrimary, fontWeight: '800' }}>{snakeOverallPick}</Text></Text>
-          {feedActive && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-              <Radio size={11} color={colors.positive} />
-              <Text style={{ color: colors.positive, fontSize: 11, fontWeight: '700' }}>LIVE</Text>
-            </View>
-          )}
-          <View style={{ flex: 1 }} />
-          <Text style={type.muted}>Slot</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxWidth: 168 }} contentContainerStyle={{ gap: 3 }}>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-              <Pressable
-                key={n}
-                onPress={() => setDraftSlot(n)}
-                style={[styles.slotBtn, draftSlot === n && { borderColor: colors.accent, backgroundColor: colors.accentMuted }]}
-              >
-                <Text style={{ fontSize: 11.5, fontWeight: '700', color: draftSlot === n ? colors.accent : colors.textSecondary }}>{n}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+        {/* Live capture session status (broadcast -> OCR -> Live Activity) */}
+        <View ref={statusAnchorRef} collapsable={false}>
+          <LiveSessionPanel />
         </View>
 
-        <Segmented
-          options={[
-            { key: 'players', label: 'Available Players' },
-            { key: 'board', label: `Draft Board (${currentPicks.length})` },
-          ]}
-          value={subView}
-          onChange={setSubView}
-          style={{ marginBottom: spacing.sm }}
-        />
+        {hasSync && (
+          <Segmented
+            options={[
+              { key: 'players', label: 'Available Players' },
+              { key: 'board', label: `My Picks (${currentPicks.length})` },
+            ]}
+            value={subView}
+            onChange={setSubView}
+            style={{ marginBottom: spacing.sm }}
+          />
+        )}
       </View>
 
-      {subView === 'players' ? (
+      {!hasSync ? (
+        <View style={styles.waitingBox}>
+          <Cast size={30} color={colors.textMuted} />
+          <Text style={[type.h3, { marginTop: spacing.sm }]}>Waiting for the draft board</Text>
+          <Text style={[type.secondary, { textAlign: 'center', marginTop: 4 }]}>
+            Start recording above, then open your draft in Underdog.
+          </Text>
+        </View>
+      ) : subView === 'players' ? (
         <FlatList
           data={displayPlayers}
           keyExtractor={(p) => p.player_id || p.name}
@@ -678,7 +702,7 @@ export default function DraftAssistantView() {
           windowSize={7}
           ListHeaderComponent={
             <View>
-              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search any player..." style={{ marginBottom: spacing.sm }} />
+              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Look up any player..." style={{ marginBottom: spacing.sm }} />
               <TournamentFilter slateGroups={slateGroups} selected={selectedTournaments} onChange={setSelectedTournaments} />
               <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
                 <Pressable
@@ -740,7 +764,7 @@ export default function DraftAssistantView() {
               )}
 
               <Text style={[type.muted, { marginBottom: spacing.sm }]}>
-                {searchQuery.trim() ? `${displayPlayers.length} search results` : `~${displayPlayers.length} players in the R${currentRound} window`} · tap a player to draft them
+                {searchQuery.trim() ? `${displayPlayers.length} search results` : `~${displayPlayers.length} players in the R${currentRound} window`} · tap a player for the correlation breakdown
                 {allRosters.length > 0 ? ` · ${matchingPathRosters.length} of your rosters match this path` : ''}
               </Text>
             </View>
@@ -751,71 +775,51 @@ export default function DraftAssistantView() {
         <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 40 }}>
           {currentPicks.length === 0 ? (
             <View style={{ alignItems: 'center', padding: spacing.xl }}>
-              <Zap size={30} color={colors.accent} />
+              <Cast size={30} color={colors.accent} />
               <Text style={[type.h3, { marginTop: spacing.sm }]}>No picks yet</Text>
               <Text style={[type.secondary, { textAlign: 'center', marginTop: 4 }]}>
-                Draft players from the Available Players view as your live draft unfolds.
+                Your picks land here automatically as BBE reads the board.
               </Text>
             </View>
           ) : (
-            <>
-              {currentPicks.map((pick, i) => {
-                const stackInfo = analyzeStack(pick, currentPicks.filter((_, j) => j !== i));
-                return (
-                  <View key={`${pick.name}-${i}`} style={[styles.playerCard, { borderLeftColor: getPosColor(pick.position) }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                      <Text style={[type.mono, { width: 28, color: colors.textMuted }]}>R{pick.round}</Text>
-                      <View style={[styles.posPill, { backgroundColor: `${getPosColor(pick.position)}22` }]}>
-                        <Text style={{ color: getPosColor(pick.position), fontSize: 10, fontWeight: '800' }}>{pick.position}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[type.body, { fontWeight: '700' }]}>{pick.name}</Text>
-                        <Text style={type.muted}>{pick.team}</Text>
-                      </View>
-                      {stackInfo && (
-                        <View style={[styles.badge, { borderColor: stackInfo.color }]}>
-                          <Text style={{ color: stackInfo.color, fontSize: 9.5, fontWeight: '800' }}>{stackInfo.type}</Text>
-                        </View>
-                      )}
+            currentPicks.map((pick, i) => {
+              const stackInfo = analyzeStack(pick, currentPicks.filter((_, j) => j !== i));
+              return (
+                <View key={`${pick.name}-${i}`} style={[styles.playerCard, { borderLeftColor: getPosColor(pick.position) }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Text style={[type.mono, { width: 28, color: colors.textMuted }]}>R{pick.round}</Text>
+                    <View style={[styles.posPill, { backgroundColor: `${getPosColor(pick.position)}22` }]}>
+                      <Text style={{ color: getPosColor(pick.position), fontSize: 10, fontWeight: '800' }}>{pick.position}</Text>
                     </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[type.body, { fontWeight: '700' }]}>{pick.name}</Text>
+                      <Text style={type.muted}>{pick.team}</Text>
+                    </View>
+                    {stackInfo && (
+                      <View style={[styles.badge, { borderColor: stackInfo.color }]}>
+                        <Text style={{ color: stackInfo.color, fontSize: 9.5, fontWeight: '800' }}>{stackInfo.type}</Text>
+                      </View>
+                    )}
                   </View>
-                );
-              })}
-              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
-                <Pressable style={[styles.chip, { flex: 1, justifyContent: 'center' }]} onPress={handleUndo}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>Undo last pick</Text>
-                </Pressable>
-                <Pressable style={[styles.chip, { flex: 1, justifyContent: 'center', borderColor: colors.negative + '66' }]} onPress={() => setCurrentPicks([])}>
-                  <Text style={{ color: colors.negative, fontSize: 13, fontWeight: '600' }}>Clear board</Text>
-                </Pressable>
-              </View>
-            </>
+                </View>
+              );
+            })
           )}
         </ScrollView>
       )}
 
-      {/* Draft toast */}
-      {draftToast && (
-        <View style={styles.toast}>
-          <Text style={{ color: colors.textInverse, fontWeight: '700', fontSize: 13 }}>
-            R{draftToast.round} · {draftToast.name} drafted
-          </Text>
-        </View>
+      {/* One-time show-don't-tell intro (TASK-339) — first live or demo session. */}
+      {showIntro && hasSync && subView === 'players' && displayPlayers.length > 0 && (
+        <CoachMarks
+          steps={coachSteps}
+          onDone={() => { markIntroSeen(); setShowIntro(false); }}
+        />
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  contextBar: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  slotBtn: {
-    width: 26, height: 26, borderRadius: radii.sm,
-    borderWidth: 1, borderColor: colors.borderDefault, backgroundColor: colors.surface1,
-    alignItems: 'center', justifyContent: 'center',
-  },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: radii.md,
@@ -845,9 +849,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(52,211,153,0.35)',
     padding: spacing.md, marginBottom: spacing.sm,
   },
-  toast: {
-    position: 'absolute', bottom: 18, alignSelf: 'center',
-    backgroundColor: colors.accent, borderRadius: radii.pill,
-    paddingHorizontal: 18, paddingVertical: 10,
-  },
+  waitingBox: { alignItems: 'center', padding: spacing.xl, marginTop: spacing.lg },
 });

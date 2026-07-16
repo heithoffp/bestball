@@ -13,3 +13,9 @@ None
 
 ## Open Questions
 <!-- Unknowns or decisions to resolve before planning. Delete if none. -->
+
+## Scope Items
+
+### Add ESLint config to mobile-app (discovered in TASK-337: no lint exists there, verification fell back to esbuild parse-checks)
+- **Added:** 2026-07-16
+- **Verification:** cd mobile-app && npx eslint src scripts exits 0

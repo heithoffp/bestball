@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-16 | Commit: bedec85 -->
 # TASK-337: Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup
 
 **Status:** Approved

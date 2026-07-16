@@ -302,7 +302,10 @@ the module is absent (`liveActivity.js` no-ops and the panel says so).
 | `src/draft/sessionEngine.js` | ledger + merge + DraftState + glance payload + resume detection (pure) |
 | `src/draft/liveActivity.js` | lazy native wrapper (no-op off device) |
 | `src/draft/sessionController.js` | singleton glue: App Group handoff → extension state absorption on foreground → publish + activity update |
-| `src/screens/LiveSessionPanel.jsx` | start/stop UI, capture chip, status, sync log, slot confirm, resume banner, preflight modal |
+| `src/screens/LiveSessionPanel.jsx` | in-session status layer: capture chip, record CTA + preflight modal, presence/reset + resume banners, sync log, session tools (TASK-339 — start moved to AssistantSetup) |
+| `src/screens/draft/AssistantSetup.jsx` | the assistant's front door (TASK-339): required username (anchors auto slot detection, remembered between drafts), Start CTA, demo draft; no slot selector |
+| `src/screens/draft/CoachMarks.jsx` | one-time three-step overlay introducing the live assistant in place (TASK-339) |
+| `src/screens/draft/useSessionInputs.js` | pool/rankings/exposure/roster-index inputs for `startSession` (extracted from the panel) |
 | `scripts/test-draft-parser.mjs` | Node regression test against the OCR fixture |
 
 (`src/draft/screenshotSync.js` and `app/draft-ocr.jsx` were removed in TASK-327 — see the status note at the top.)
