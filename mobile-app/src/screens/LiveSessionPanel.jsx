@@ -7,11 +7,11 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal, Share, Alert } from 'react-native';
 import {
-  Radio, Square, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck,
-  History, Bug, Film, DoorOpen, RotateCcw, Play,
+  Radio, Square, TriangleAlert, ChevronDown, ChevronUp, Cast, ShieldCheck,
+  History, Bug, Film, DoorOpen, RotateCcw,
 } from 'lucide-react-native';
 import {
-  subscribeSession, endSession, demoSync, exportDebug, resetDraftBoard,
+  subscribeSession, endSession, exportDebug, resetDraftBoard,
   getFrameLogPath, BROADCAST_EXTENSION_ID,
 } from '../draft/sessionController';
 import {
@@ -91,13 +91,12 @@ export default function LiveSessionPanel() {
 
   if (!snap?.active) return null;
   const {
-    demo, status, log, activityStarted, activityError,
+    status, log, activityStarted, activityError,
     captureLive, pushToken, extensionEngine,
   } = snap;
   const engineStale = !!extensionEngine && extensionEngine.startsWith('stale');
 
-  const phaseColor = demo ? colors.accent
-    : status?.picksUntil === 0 ? colors.negative
+  const phaseColor = status?.picksUntil === 0 ? colors.negative
     : status?.picksUntil === 1 ? GOLD : colors.positive;
   const statusLine = status
     ? [
@@ -113,30 +112,19 @@ export default function LiveSessionPanel() {
     <View style={[styles.card, { borderColor: `${phaseColor}55` }]}>
       <Pressable style={styles.headerRow} onPress={() => setExpanded(v => !v)}>
         <Radio size={13} color={phaseColor} />
-        <Text style={[styles.title, { color: phaseColor }]}>{demo ? 'DEMO' : 'LIVE'}</Text>
-        {!demo && (
-          <View style={[styles.capChip, { borderColor: captureLive ? colors.positive : colors.textMuted }]}>
-            <Cast size={9} color={captureLive ? colors.positive : colors.textMuted} />
-            <Text style={{ fontSize: 9, fontWeight: '800', color: captureLive ? colors.positive : colors.textMuted }}>
-              {captureLive ? 'CAPTURING' : 'NO CAPTURE'}
-            </Text>
-          </View>
-        )}
+        <Text style={[styles.title, { color: phaseColor }]}>LIVE</Text>
+        <View style={[styles.capChip, { borderColor: captureLive ? colors.positive : colors.textMuted }]}>
+          <Cast size={9} color={captureLive ? colors.positive : colors.textMuted} />
+          <Text style={{ fontSize: 9, fontWeight: '800', color: captureLive ? colors.positive : colors.textMuted }}>
+            {captureLive ? 'CAPTURING' : 'NO CAPTURE'}
+          </Text>
+        </View>
         <Text style={[type.secondary, { fontSize: 11.5, flexShrink: 1 }]} numberOfLines={1}>{statusLine}</Text>
         <View style={{ flex: 1 }} />
         {expanded ? <ChevronUp size={14} color={colors.textMuted} /> : <ChevronDown size={14} color={colors.textMuted} />}
       </Pressable>
 
-      {demo && (
-        <View style={styles.roomRow}>
-          <Play size={12} color={colors.accent} />
-          <Text style={[styles.resumeTxt, { color: colors.textSecondary }]}>
-            Replaying a real draft room — start a live session when you draft for real
-          </Text>
-        </View>
-      )}
-
-      {!demo && !captureLive && (
+      {!captureLive && (
         <View style={styles.broadcastRow}>
           {broadcastPickerLaunchable() ? (
             <Pressable
@@ -218,12 +206,8 @@ export default function LiveSessionPanel() {
       )}
 
       <View style={styles.btnRow}>
-        {expanded && !demo && (
+        {expanded && (
           <>
-            <Pressable style={styles.actionBtn} onPress={() => demoSync()}>
-              <FlaskConical size={12} color={colors.textSecondary} />
-              <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Demo</Text>
-            </Pressable>
             <Pressable
               style={styles.actionBtn}
               onPress={() => {
@@ -259,7 +243,7 @@ export default function LiveSessionPanel() {
         )}
         <Pressable style={[styles.actionBtn, { borderColor: `${colors.negative}66` }]} onPress={() => endSession()}>
           <Square size={11} color={colors.negative} />
-          <Text style={[styles.actionTxt, { color: colors.negative }]}>{demo ? 'End demo' : 'End'}</Text>
+          <Text style={[styles.actionTxt, { color: colors.negative }]}>End</Text>
         </Pressable>
       </View>
 
@@ -271,19 +255,19 @@ export default function LiveSessionPanel() {
               {status.slotSource === 'anchored' ? ` · slot ${status.slot} pinned from your card` : ''}
             </Text>
           )}
-          {!demo && engineStale && (
+          {engineStale && (
             <WarnRow>
               The broadcast extension is running an OLD engine build — parsing fixes are not live.
               Install the latest EAS build to update it (Metro reload is not enough).
             </WarnRow>
           )}
-          {!demo && !activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
-          {!demo && activityStarted && activityError && (
+          {!activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
+          {activityStarted && activityError && (
             <WarnRow color={GOLD}>
               Live Activity issue: {activityError} — trying to restore it automatically.
             </WarnRow>
           )}
-          {!demo && activityStarted && !pushToken && (
+          {activityStarted && !pushToken && (
             <WarnRow color={GOLD}>
               No push token — the Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).
             </WarnRow>

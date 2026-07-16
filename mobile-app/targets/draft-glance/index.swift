@@ -145,7 +145,9 @@ private struct TargetCell: View {
         .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(.white)
         .lineLimit(1)
-        .minimumScaleFactor(0.75)
+        .fixedSize(horizontal: true, vertical: false)   // lay out at full width, don't truncate
+        .frame(maxWidth: .infinity, alignment: .leading) // flexible leftover box, left-aligned
+        .clipped()                                        // hard-clip overflow — no "…"
       Spacer(minLength: 0)
       playoffText(weeks)
         .frame(width: TargetColumns.playoff, alignment: .center)

@@ -11,7 +11,6 @@
 import { AppState } from 'react-native';
 import { publishDraftState, endDraftFeed } from './draftFeed';
 import { buildPool } from './playerMatcher';
-import { parseUnderdogScreen, textToItems } from './underdogParser';
 import { createDraftSession } from './sessionEngine';
 import {
   startActivity, updateActivity, endActivity, getActivityPushToken, hasLiveActivity,
@@ -68,8 +67,6 @@ const state = {
   appStateSub: null,
   heartbeatTimer: null,
   listeners: new Set(),
-  demo: false,             // demo session: fixture replay, no broadcast expected
-  demoTimer: null,
   baseConfig: null,        // config minus `state`, for warm-restart rewrites
   startInputs: null,       // raw startSession inputs, for resetDraftBoard()
   configEpoch: 0,          // bumped per session start and per board reset
@@ -126,7 +123,6 @@ export function getRememberedUsername() {
 export function getSnapshot() {
   return {
     active: state.active,
-    demo: state.demo,
     status: state.session ? state.session.getStatus() : null,
     log: state.log,
     pushToken: !!state.pushToken,
@@ -160,7 +156,7 @@ export function subscribeSession(fn) {
  */
 export async function startSession({
   poolRows, rankMap, exposureMap, rosterIndexMap,
-  slot = null, teams = 12, rounds = 18, username = null, demo = false,
+  slot = null, teams = 12, rounds = 18, username = null,
 }) {
   if (state.active) endSession();
   if (!poolRows?.length) {
@@ -170,18 +166,17 @@ export async function startSession({
   }
   // Username anchors the slot (TASK-328): configured > remembered from a
   // previous draft > auto-learned mid-session (lobby / "Your pick" card).
-  // TASK-339: required for live sessions — auto slot detection keys on it, and
-  // the setup screen gates Start on it. Demo sessions synthesize one.
+  // TASK-339: required to start — auto slot detection keys on it, and the setup
+  // screen gates Start on it.
   const knownUsername = username || readSharedValue(USERNAME_KEY) || null;
-  if (!knownUsername && !demo) {
+  if (!knownUsername) {
     state.lastError = 'Enter your Underdog username to start';
     notify();
     return false;
   }
   // Remember a configured username immediately (not just when auto-learned)
   // so the setup screen prefills it next time (TASK-339).
-  if (username && !demo) writeSharedValue(USERNAME_KEY, username);
-  state.demo = demo;
+  if (username) writeSharedValue(USERNAME_KEY, username);
   state.pool = buildPool(poolRows);
   state.teams = teams;
   state.session = createDraftSession({
@@ -198,14 +193,6 @@ export async function startSession({
   state.lastError = null;
   state.activityError = null;
   state.lastActivityRestartAt = 0;
-
-  // Demo sessions (TASK-339) are in-app only: no Live Activity, no broadcast
-  // handoff, no heartbeat — startDemoSession() drives the engine directly.
-  if (demo) {
-    pushLog('Demo draft — replaying a real Underdog room');
-    notify();
-    return true;
-  }
 
   const res = startActivity(stampedGlance(), { withPushToken: true });
   state.activityStarted = res.ok;
@@ -390,61 +377,6 @@ function absorbExtensionState() {
   } catch { /* partial write — next poll gets it */ }
 }
 
-function stopDemoTimer() {
-  if (state.demoTimer) { clearInterval(state.demoTimer); state.demoTimer = null; }
-}
-
-/**
- * Start a demo session (TASK-339): replays the bundled OCR fixture through the
- * real engine and the real assistant UI, one screen at a time, so a first-timer
- * sees exactly what a live draft looks like before ever recording. In-app only —
- * no broadcast, no Live Activity. Works without the native module.
- */
-export async function startDemoSession(inputs) {
-  const ok = await startSession({
-    ...inputs, slot: null, username: inputs?.username || 'DEMO', demo: true,
-  });
-  if (!ok) return false;
-  // eslint-disable-next-line global-require
-  const fx = require('./__fixtures__/underdogOcrFixture');
-  const screens = fx.ALL_SCREENS;
-  let i = 0;
-  const step = () => {
-    if (!state.active || !state.demo || !state.session) { stopDemoTimer(); return; }
-    if (i >= screens.length) {
-      stopDemoTimer();
-      pushLog('Demo complete — start a live session when you draft for real');
-      notify();
-      return;
-    }
-    const obs = parseUnderdogScreen(textToItems(screens[i]), { pool: state.pool, teams: state.teams });
-    state.session.ingest(obs);
-    i += 1;
-    if (i === 1) haptic('success');
-    publishAll({ freshSync: true });
-    notify();
-  };
-  step(); // first screen immediately — the UI comes alive on tap
-  state.demoTimer = setInterval(step, 2500);
-  return true;
-}
-
-/** Replay the bundled fixture capture end-to-end (no draft needed). */
-export function demoSync() {
-  if (!state.active) return false;
-  // eslint-disable-next-line global-require
-  const fx = require('./__fixtures__/underdogOcrFixture');
-  for (const screen of fx.ALL_SCREENS) {
-    const obs = parseUnderdogScreen(textToItems(screen), { pool: state.pool, teams: state.teams });
-    state.session.ingest(obs);
-  }
-  pushLog('Demo capture replayed (4 screens from a real UD draft)');
-  publishAll({ freshSync: true });
-  haptic('success');
-  notify();
-  return true;
-}
-
 /**
  * Debug bundle for the confidence hub's share button: app-side session status
  * plus the extension's recent-ingest ring buffer (what it actually OCR'd).
@@ -543,8 +475,6 @@ export function resetDraftBoard() {
 
 export function endSession() {
   if (!state.active) return;
-  stopDemoTimer();
-  state.demo = false;
   if (state.session && state.activityStarted) {
     const finalGlance = stampedGlance('done');
     finalGlance.headline = 'Session ended';

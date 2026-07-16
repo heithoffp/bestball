@@ -2,7 +2,7 @@
 // from a live Underdog slow draft on 2026-07-13 (docs/task-318 artifacts/).
 // Four screens: Players tab, Board (page 1), Board (scrolled), Queue tab.
 // The user was BIRDENTHUSIAST, slot 9, current pick 31, "UP IN 2 PICKS".
-// Used by scripts/test-draft-parser.mjs and the in-app "Demo sync" button.
+// Used by scripts/test-draft-parser.mjs (in-app demo replay retired in ADR-026).
 
 export const PLAYERS_TAB = `Debug
 10:40

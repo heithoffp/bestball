@@ -1,18 +1,19 @@
-// AssistantSetup — the Draft Assistant's front door (TASK-339). Owns the tab
-// whenever no live session is active. Show-don't-tell: a three-step visual
-// strip, one required field (Underdog username — it anchors automatic slot
-// detection, TASK-328), a Start CTA, and a demo draft that plays the real
-// assistant UI on a recorded room. No slot selector, no paragraphs.
+// AssistantSetup — the Draft Assistant's front door (TASK-339, TASK-342). Owns
+// the tab whenever no live session is active. Show-don't-tell: a three-step
+// visual strip, one required field (Underdog username — it anchors automatic
+// slot detection, TASK-328), a Start CTA, and the CaptureGuide diagrams
+// (ADR-026). No slot selector, no paragraphs, no demo.
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import {
-  Radio, AtSign, Smartphone, ChevronRight, Zap, Play, ShieldCheck, TriangleAlert,
+  Radio, AtSign, Smartphone, ChevronRight, Zap, TriangleAlert,
 } from 'lucide-react-native';
 import { trackEvent } from '../../../shared/utils/analytics';
 import {
-  subscribeSession, startSession, startDemoSession, getRememberedUsername,
+  subscribeSession, startSession, getRememberedUsername,
 } from '../../draft/sessionController';
 import useSessionInputs from './useSessionInputs';
+import CaptureGuide from './CaptureGuide';
 import { colors, spacing, radii, type } from '../../theme';
 
 const TEAMS = 12;
@@ -54,11 +55,6 @@ export default function AssistantSetup() {
     startSession({ ...inputs, slot: null, teams: TEAMS, rounds: ROUNDS, username: name });
   };
 
-  const handleDemo = () => {
-    trackEvent('draft_demo_started');
-    startDemoSession({ ...inputs, teams: TEAMS, rounds: ROUNDS, username: name || null });
-  };
-
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 40 }}>
       <View style={styles.hero}>
@@ -94,7 +90,7 @@ export default function AssistantSetup() {
         </Text>
 
         {!capabilities.nativeModule && (
-          <WarnRow>Live capture needs the EAS dev/preview build — the demo below works anywhere.</WarnRow>
+          <WarnRow>Live capture needs the EAS dev/preview build — install the latest build to record.</WarnRow>
         )}
         {capabilities.nativeModule && !capabilities.activitiesEnabled && (
           <WarnRow color={GOLD}>Live Activities look disabled — check Settings → Best Ball Exposures.</WarnRow>
@@ -109,19 +105,9 @@ export default function AssistantSetup() {
           <Zap size={14} color={colors.textInverse} />
           <Text style={styles.startTxt}>Start live session</Text>
         </Pressable>
-
-        <Pressable style={styles.demoBtn} onPress={handleDemo}>
-          <Play size={13} color={colors.accent} />
-          <Text style={styles.demoTxt}>Try a demo draft</Text>
-        </Pressable>
       </View>
 
-      <View style={styles.privacyRow}>
-        <ShieldCheck size={13} color={colors.positive} />
-        <Text style={styles.privacyTxt}>
-          On-device only — BBE reads the draft board, discards every frame, and never sends screenshots.
-        </Text>
-      </View>
+      <CaptureGuide />
     </ScrollView>
   );
 }
@@ -163,17 +149,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12, marginTop: spacing.lg,
   },
   startTxt: { color: colors.textInverse, fontSize: 14, fontWeight: '800' },
-  demoBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1, borderColor: colors.accentMuted, backgroundColor: 'transparent',
-    borderRadius: radii.md, paddingVertical: 11, marginTop: spacing.sm,
-  },
-  demoTxt: { color: colors.accent, fontSize: 13, fontWeight: '700' },
   warnRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, flexWrap: 'wrap' },
   warnTxt: { fontSize: 11, flexShrink: 1 },
-  privacyRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: spacing.sm, marginTop: spacing.md,
-  },
-  privacyTxt: { fontSize: 10.5, color: colors.textMuted, flex: 1, lineHeight: 14 },
 });
