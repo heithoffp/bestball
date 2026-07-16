@@ -1,7 +1,8 @@
 # ADR-024: Event-driven Live Activity push policy
 
 **Date:** 2026-07-15
-**Status:** Accepted
+**Status:** Superseded
+**Superseded By:** ADR-025
 
 ---
 

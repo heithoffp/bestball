@@ -14,6 +14,7 @@ import {
 } from '../src/draft/playerMatcher.js';
 import { parseUnderdogScreen, textToItems } from '../src/draft/underdogParser.js';
 import { createDraftSession } from '../src/draft/sessionEngine.js';
+import { ENGINE_VERSION } from '../src/draft/extensionEngine.entry.js';
 import {
   PLAYERS_TAB, BOARD_TAB_1, BOARD_TAB_2, QUEUE_TAB,
 } from '../src/draft/__fixtures__/underdogOcrFixture.js';
@@ -164,8 +165,10 @@ check('glance phase', glance.phase, 'tracking');
 check('glance headline', glance.headline, 'Up in 2 picks');
 check('glance pick context', [glance.currentPick, glance.round, glance.myNextPick], [31, 3, 33]);
 check('glance roster bar', glance.rosterBar, 'QB 0 · RB 2 · WR 0 · TE 0');
-check('glance targets count', glance.targets.length, 3);
-check('glance queue-risk flag', glance.targets.some(t => t.includes('Chris Olave') && t.includes('QUEUE RISK')), true);
+// TASK-336 compact grid format: "POS·LastName·EXP·FLAGS", six targets.
+check('glance targets count', glance.targets.length, 6);
+check('glance queue-risk flag', glance.targets.some(t => t.startsWith('WR·Olave·') && t.endsWith('·Q')), true);
+check('glance exposure shown (McConkey 30%)', glance.targets.some(t => t === 'WR·McConkey·30·'), true);
 
 // Fresh draft: a round-1 board must NOT be flagged as a resume.
 const freshSession = createDraftSession({ pool, teams: 12, rounds: 18 });
@@ -411,7 +414,7 @@ check('window pass spares visible + edge players',
   ['Chris Olave', 'Malik Nabers', 'Tetairoa McMillan']
     .every(n => ovSession.getDraftState().availablePlayers.some(p => p.name === n)), true);
 check('mid-window player excluded from glance target pool',
-  ovSession.getGlance().targets.some(t => t.includes('Javonte Williams')), false);
+  ovSession.getDraftState().availablePlayers.slice(0, 6).some(p => p.name === 'Javonte Williams'), false);
 
 // Self-heal: a later frame showing him visible clears the stale mark.
 ovSession.ingest(parseUnderdogScreen(textToItems(PLAYERS_JAVONTE_VISIBLE), ctx));
@@ -584,10 +587,10 @@ if (!existsSync(bundlePath)) {
     last = JSON.parse(raw);
   }
   check('bundle ingest ok', last.ok, true);
-  check('bundle reports engine version', last.engine, 'task329.4');
+  check('bundle reports engine version', last.engine, ENGINE_VERSION);
   // ADR-023 self-describing identity — the fields FrameProcessor's sanity-eval
   // reads off globalThis.BBEEngine to gate the App Group hot-load.
-  check('bundle exposes version identity', vm.runInContext('BBEEngine.version', context), 'task329.4');
+  check('bundle exposes version identity', vm.runInContext('BBEEngine.version', context), ENGINE_VERSION);
   check('bundle exposes integer build', vm.runInContext('typeof BBEEngine.build', context), 'number');
   check('bundle carries diag ring buffer', Array.isArray(last.diag) && last.diag.length > 0, true);
   check('bundle glance matches direct engine', {

@@ -203,7 +203,7 @@
 ### FEAT-029: Live Activity Draft Companion
 **Status:** Not Started
 **Description:** The glanceable layer per the epic goal: ActivityKit Live Activity with minimal/compact/expanded Dynamic Island presentations and lock-screen view (picks-until-turn, top available by user rankings, archetype/stack flags), a throttle-aware update policy, Supabase Edge Function → APNs push relay for background updates, and deep linking into the in-app assistant.
-**Tasks:** TASK-322
+**Tasks:** TASK-322, TASK-336
 
 ### FEAT-030: In-App Assistant & Manual Fallback
 **Status:** Not Started

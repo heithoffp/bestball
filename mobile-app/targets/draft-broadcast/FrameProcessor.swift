@@ -39,6 +39,10 @@ final class FrameProcessor {
   private var lastProcessedAt: CFAbsoluteTime = 0
   private var lastPushAt: CFAbsoluteTime = 0
   private var lastPushedPick = 0   // highest currentPick already pushed (ADR-024)
+  private var lastPushedTargets: [String] = []  // target list last pushed (TASK-336)
+  private var lastIngestAt: CFAbsoluteTime = 0  // last frame that reached the engine
+  private var lastTickAt: CFAbsoluteTime = 0    // last presence tick (TASK-336)
+  private var configEpoch: Double = 0           // app-stamped; changes on board reset
   private var lastThumb: [UInt8]?
 
   // Session frame recorder (TASK-331): every ingested frame's OCR items are
@@ -150,9 +154,30 @@ final class FrameProcessor {
     }
     jsContext = ctx
     sessionActive = true
+    configEpoch = defaults?.double(forKey: "bbe.configEpoch") ?? 0
     defaults?.set(true, forKey: "bbe.extensionCapturing")
     defaults?.set(Date().timeIntervalSince1970, forKey: "bbe.extensionHeartbeat")
-    os_log("live capture started", log: log, type: .info)
+    os_log("live capture started (config epoch %f)", log: log, type: .info, configEpoch)
+  }
+
+  /// Board reset (TASK-336): the app bumped bbe.configEpoch after rewriting
+  /// the session config with a clean state, telling us to re-init the engine
+  /// for the next draft room WITHOUT ending the broadcast. Push bookkeeping
+  /// resets too — a prior draft's pick 89 must not suppress the next draft's
+  /// pick 5, and its target list must not mask the first corrected push.
+  private func reinitForNewEpoch() {
+    os_log("config epoch changed — reinitializing engine for a new draft", log: log, type: .info)
+    try? frameLog?.close()
+    frameLog = nil
+    jsContext = nil
+    sessionActive = false
+    lastPushedPick = 0
+    lastPushedTargets = []
+    lastPushAt = 0
+    lastIngestAt = 0
+    lastTickAt = 0
+    lastThumb = nil
+    setUp()
   }
 
   // MARK: engine resolution (ADR-023)
@@ -255,13 +280,20 @@ final class FrameProcessor {
       onSessionEnded?()
       return
     }
+    if (defaults?.double(forKey: "bbe.configEpoch") ?? 0) != configEpoch {
+      reinitForNewEpoch()
+      return
+    }
     defaults?.set(Date().timeIntervalSince1970, forKey: "bbe.extensionHeartbeat")
 
     let tight = Int(os_proc_available_memory()) < 25 * 1024 * 1024
     let scale: CGFloat = tight ? 0.4 : 0.6
     let scaled = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
     guard let cgImage = ciContext.createCGImage(scaled, from: scaled.extent) else { return }
-    if isDuplicate(cgImage) { return }
+    if isDuplicate(cgImage) {
+      maybeTick()
+      return
+    }
 
     let items = recognize(cgImage: cgImage, orientation: orientation, fast: tight)
     guard items.count >= 4 else { return } // not a text-dense screen
@@ -339,28 +371,59 @@ final class FrameProcessor {
 
     // Hand the full result to the app (it hydrates its session on foreground).
     defaults?.set(raw, forKey: "bbe.extensionResult")
+    lastIngestAt = CFAbsoluteTimeGetCurrent()
+    maybePush(result)
+  }
 
-    let changed = result["changed"] as? Bool ?? false
+  /// Event-driven push policy (ADR-024, triggers extended by TASK-336):
+  /// priority-10 on a "significant" transition (crunch, my pick, room
+  /// presence — bypasses the floors), a newly-detected pick (3 s floor), or a
+  /// changed target list (15 s floor). The target trigger is what un-freezes
+  /// a mid-draft resume: availability inference reshapes the targets without
+  /// advancing currentPick, and before TASK-336 those corrections never
+  /// pushed (the card sat on stale top-of-pool names all draft). All floors
+  /// are measured against the last PUSH, so a players-tab scroll burst
+  /// coalesces into one corrected update. Nothing changed -> no push, so an
+  /// idle slow draft still costs zero ActivityKit budget. Priority 5 remains
+  /// unused — iOS defers it, which froze the card far from the pick.
+  private func maybePush(_ result: [String: Any]) {
+    guard let glance = result["glance"] as? [String: Any] else { return }
     let significant = result["significant"] as? Bool ?? false
-    guard changed, let glance = result["glance"] as? [String: Any] else { return }
-
-    // Event-driven push policy (ADR-024): push only on a real draft event — a
-    // newly-detected pick (currentPick ratchets solely from board/ticker/carousel
-    // evidence, never from OCR availability inference) or a "significant"
-    // crunch/my-pick transition. Everything goes priority 10 (delivered
-    // immediately); iOS delivers priority-5 pushes opportunistically (deferred),
-    // which froze the card whenever the user was more than 3 picks away.
-    // `significant` bypasses the 3 s floor so an on-clock moment is never delayed;
-    // a routine pick is floored so a rapid autopick burst coalesces into a single
-    // push carrying the newest full-snapshot state. Nothing advanced -> no push,
-    // so an idle slow draft costs zero ActivityKit budget.
     let pick = glance["currentPick"] as? Int ?? 0
+    let targets = glance["targets"] as? [String] ?? []
     let newPick = pick > lastPushedPick
+    let targetsDiffer = targets != lastPushedTargets
     let now = CFAbsoluteTimeGetCurrent()
-    guard significant || (newPick && now - lastPushAt >= 3.0) else { return }
+    guard significant
+      || (newPick && now - lastPushAt >= 3.0)
+      || (targetsDiffer && now - lastPushAt >= 15.0) else { return }
     lastPushAt = now
     lastPushedPick = max(lastPushedPick, pick)
+    lastPushedTargets = targets
     pushGlance(glance, priority: 10)
+  }
+
+  /// Presence clock nudge (TASK-336): static screens never reach the engine
+  /// (the duplicate gate above), but a NON-room screen left static must still
+  /// flip the Live Activity to "away". Once frames have been quiet for 10 s,
+  /// ask the engine to re-evaluate its presence timeout at most every 5 s;
+  /// an actual flip comes back `significant` and pushes like any transition.
+  private func maybeTick() {
+    let now = CFAbsoluteTimeGetCurrent()
+    guard lastIngestAt > 0, now - lastIngestAt >= 10.0, now - lastTickAt >= 5.0,
+          let ctx = jsContext else { return }
+    lastTickAt = now
+    guard
+      let raw = ctx.objectForKeyedSubscript("BBEEngine")?
+        .invokeMethod("tick", withArguments: [])?.toString(),
+      let data = raw.data(using: .utf8),
+      let result = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+      (result["ok"] as? Bool) == true
+    else { return } // engines older than task336.1 have no tick — fine
+    if result["significant"] as? Bool == true {
+      defaults?.set(raw, forKey: "bbe.extensionResult")
+      maybePush(result)
+    }
   }
 
   private func pushGlance(_ glance: [String: Any], priority: Int) {

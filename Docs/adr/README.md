@@ -25,4 +25,5 @@
 | [ADR-021](adr-021-parse-engine-as-incremental-pick-ledger-with-remot.md) | Parse engine as incremental pick ledger with remote templates | Accepted | 2026-07-11 |
 | [ADR-022](adr-022-mobile-app-shell-expo-react-native-with-eas-builds.md) | Mobile app shell Expo React Native with EAS builds | Accepted | 2026-07-11 |
 | [ADR-023](adr-023-broadcast-extension-hot-loads-the-parse-engine-fro.md) | Broadcast extension hot-loads the parse engine from the App Group | Accepted | 2026-07-15 |
-| [ADR-024](adr-024-event-driven-live-activity-push-policy.md) | Event-driven Live Activity push policy | Accepted | 2026-07-15 |
+| [ADR-024](adr-024-event-driven-live-activity-push-policy.md) | Event-driven Live Activity push policy | Superseded | 2026-07-15 |
+| [ADR-025](adr-025-push-on-target-list-changes-and-room-presence-tran.md) | Push on target-list changes and room-presence transitions | Accepted | 2026-07-16 |

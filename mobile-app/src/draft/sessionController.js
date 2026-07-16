@@ -28,6 +28,10 @@ const SESSION_CONFIG_KEY = 'bbe.sessionConfig';
 const RESULT_KEY = 'bbe.extensionResult';
 const HEARTBEAT_KEY = 'bbe.extensionHeartbeat';
 const USERNAME_KEY = 'bbe.udUsername';
+// TASK-336 reset flow: bumping this epoch tells a RUNNING broadcast extension
+// to re-init its engine from the (rewritten) session config — the board
+// resets for the next draft room without ending the broadcast.
+const EPOCH_KEY = 'bbe.configEpoch';
 // ADR-023 engine hot-load: the app hands its current parse engine to the
 // broadcast extension through the App Group, so parser fixes reach the
 // extension via a JS reload with no native rebuild.
@@ -58,6 +62,8 @@ const state = {
   heartbeatTimer: null,
   listeners: new Set(),
   baseConfig: null,        // config minus `state`, for warm-restart rewrites
+  startInputs: null,       // raw startSession inputs, for resetDraftBoard()
+  configEpoch: 0,          // bumped per session start and per board reset
   lastPersistedKey: '',
   lastDiag: null,          // extension's recent-ingest ring buffer (debugging)
   extensionEngine: null,   // version reported by the extension's engine bundle
@@ -183,6 +189,8 @@ export async function startSession({
 
   // Hand the session to the broadcast extension through the App Group.
   writeSharedValue(RESULT_KEY, null);
+  state.startInputs = { poolRows, rankMap, exposureMap, teams, rounds };
+  state.configEpoch += 1;
   state.baseConfig = {
     poolRows,
     teams,
@@ -194,6 +202,7 @@ export async function startSession({
     pushToken: state.pushToken,
     relayUrl: `${SUPABASE_FUNCTIONS_URL}/live-activity-relay`,
     anonKey: SUPABASE_ANON_KEY,
+    configEpoch: state.configEpoch,
     // TASK-331: the extension records every OCR frame (JSONL in the App
     // Group) so whole drafts replay offline via scripts/replay-frames.mjs.
     // Developer-build default; revisit before public TestFlight.
@@ -204,6 +213,7 @@ export async function startSession({
     ...state.baseConfig,
     state: state.session.serialize(),
   }));
+  writeSharedValue(EPOCH_KEY, String(state.configEpoch));
   state.heartbeatTimer = setInterval(pollExtension, HEARTBEAT_POLL_MS);
 
   state.appStateSub?.remove?.();
@@ -239,6 +249,9 @@ function absorbExtensionState() {
   state.lastAbsorbedRaw = raw;
   try {
     const result = JSON.parse(raw);
+    // A result stamped with an older config epoch predates the last board
+    // reset — absorbing it would resurrect the previous draft (TASK-336).
+    if (result?.epoch != null && result.epoch !== state.configEpoch) return;
     if (result?.diag) state.lastDiag = result.diag;
     // Version handshake: an extension without `engine` predates TASK-328 —
     // the phone is running a stale EAS build and needs a rebuild.
@@ -336,6 +349,48 @@ export function setSessionSlot(slot) {
   notify();
 }
 
+/**
+ * Reset the board for the next draft in a back-to-back slow-draft session
+ * (TASK-336): keeps the pool, rankings, exposures, and remembered username;
+ * drops the ledger, availability marks, slot anchor, and pick position. The
+ * configEpoch bump tells the running broadcast extension to re-init its
+ * engine from the rewritten config — the broadcast itself never stops.
+ */
+export function resetDraftBoard() {
+  if (!state.active || !state.startInputs || !state.session) return false;
+  const { rankMap, exposureMap, teams, rounds } = state.startInputs;
+  const knownUsername = readSharedValue(USERNAME_KEY) || state.baseConfig?.username || null;
+  state.session = createDraftSession({
+    pool: state.pool, teams, rounds, slot: null, username: knownUsername, rankMap, exposureMap,
+  });
+  state.configEpoch += 1;
+  state.lastSyncEpoch = 0;
+  state.lastAbsorbedRaw = null;
+  state.resumeLogged = false;
+  state.lastPersistedKey = '';
+  state.lastDiag = null;
+  writeSharedValue(RESULT_KEY, null);
+  state.baseConfig = {
+    ...state.baseConfig, slot: null, username: knownUsername, configEpoch: state.configEpoch,
+  };
+  // Config first, then the epoch marker — the extension re-reads the config
+  // the moment it sees the new epoch, so this order can't race a stale read.
+  writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
+    ...state.baseConfig,
+    state: state.session.serialize(),
+  }));
+  writeSharedValue(EPOCH_KEY, String(state.configEpoch));
+  endDraftFeed();
+  if (state.activityStarted) {
+    const res = updateActivity(stampedGlance('waiting'));
+    if (!res.ok) state.activityError = res.error;
+  }
+  pushLog('Board reset — ready for the next draft room');
+  haptic('success');
+  notify();
+  return true;
+}
+
 export function endSession() {
   if (!state.active) return;
   if (state.session && state.activityStarted) {
@@ -356,6 +411,7 @@ export function endSession() {
   state.session = null;
   state.pool = null;
   state.baseConfig = null;
+  state.startInputs = null;
   state.lastPersistedKey = '';
   state.extensionEngine = null;
   endDraftFeed();

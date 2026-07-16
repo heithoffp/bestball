@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "build:data": "node scripts/build-data.mjs",
     "build:engine": "node scripts/build-extension-engine.mjs",
-    "test:draft": "node scripts/build-extension-engine.mjs && node scripts/test-draft-parser.mjs",
+    "test:draft": "node scripts/build-extension-engine.mjs && node scripts/test-draft-parser.mjs && node scripts/test-draft-replay.mjs && node scripts/test-slow-draft-replay.mjs",
     "prebuild": "expo prebuild",
     "eas:dev": "eas build --profile development --platform ios",
     "eas:preview": "eas build --profile preview --platform ios"

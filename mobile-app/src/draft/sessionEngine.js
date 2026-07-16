@@ -8,6 +8,56 @@ import {
   roundForOverall, pickInRoundForOverall, slotForOverall, nextOverallForSlot, overallsForSlot,
 } from './snake.js';
 import { usernameMatches, matchAbbrevPlayer } from './playerMatcher.js';
+import { PLAYOFF_SCHEDULE } from './playoffSchedule.js';
+
+// ---- Draft-room presence (TASK-336) ----
+// Screen kinds that prove the capture is looking at the Underdog draft room.
+// 'unknown' is out-of-room evidence (UD home, other apps, the BBE app itself);
+// 'self' never reaches ingest state (our own Live Activity overlays anything).
+const IN_ROOM_KINDS = new Set(['board', 'players', 'queue', 'roster', 'detail', 'header', 'lobby']);
+// Out-of-room flip requires this much silence after the last in-room frame
+// (when the sustained-evidence path hasn't already flipped it).
+const OUT_OF_ROOM_MS = 10000;
+
+// ---- Candidate playoff-stack check (TASK-336) ----
+// Boolean form of shared/utils/playoffStacks.js analyzeCandidatePlayoffStack —
+// that module's extensionless './nflTeams' import doesn't resolve under Node
+// (fixture tests / replay harness run this engine directly), and the glance
+// only needs yes/no. Keep the pair rule in lockstep with the shared util:
+// W17 (championship week) is the only week that admits RB on either side.
+// Pool and pick teams are already abbreviations, matching the schedule keys.
+const PLAYOFF_WEEKS = ['15', '16', '17'];
+const PLAYOFF_PAIRS_DEFAULT = {
+  QB: ['QB', 'WR', 'TE'], WR: ['QB', 'WR', 'TE'], TE: ['QB', 'WR'],
+};
+const PLAYOFF_PAIRS_W17 = {
+  QB: ['QB', 'WR', 'TE', 'RB'], WR: ['QB', 'WR', 'TE', 'RB'],
+  TE: ['QB', 'WR', 'RB'], RB: ['QB', 'WR', 'TE', 'RB'],
+};
+
+function candidateHasPlayoffStack(p, picks) {
+  const team = (p.team || '').toUpperCase();
+  if (!team || team === 'N/A') return false;
+  for (const week of PLAYOFF_WEEKS) {
+    const allowed = (week === '17' ? PLAYOFF_PAIRS_W17 : PLAYOFF_PAIRS_DEFAULT)[p.position];
+    if (!allowed) continue;
+    const opp = PLAYOFF_SCHEDULE[team]?.[week];
+    if (!opp) continue;
+    for (const mine of picks) {
+      if ((mine.team || '').toUpperCase() !== opp) continue; // same-team = S flag
+      if (allowed.includes(mine.position)) return true;
+    }
+  }
+  return false;
+}
+
+/** "Marvin Harrison Jr." -> "Harrison"; suffixes stripped, final token kept. */
+function lastNameOf(name) {
+  const parts = String(name).trim()
+    .replace(/\s+(Jr|Sr|II|III|IV|V)\.?$/i, '')
+    .split(/\s+/);
+  return parts[parts.length - 1] || String(name);
+}
 
 /**
  * @param {object} cfg
@@ -49,7 +99,13 @@ export function createDraftSession(cfg) {
     lastConfirmKey: null,     // dedupes the lingering pick-confirmation card
     syncCount: 0,
     lastObs: null,
+    inRoom: null,             // null = no room seen yet; true/false after evidence
+    lastInRoomAt: 0,          // epoch ms of the last in-room frame
+    lastOutAt: 0,             // epoch ms of the last out-of-room frame
+    outStreak: 0,             // consecutive out-of-room frames
   };
+
+  const presence = () => (state.inRoom == null ? 'unseen' : state.inRoom ? 'in' : 'out');
 
   const slot = () => state.manualSlot || state.anchoredSlot || state.inferredSlot;
 
@@ -102,15 +158,19 @@ export function createDraftSession(cfg) {
     state.slotConflict = !!(state.manualSlot && evidence && evidence !== state.manualSlot);
   }
 
-  /** Merge one parsed observation. Returns a summary for the sync log. */
-  function ingest(obs) {
+  /** Merge one parsed observation. Returns a summary for the sync log.
+   *  nowMs drives the room-presence clock — the extension passes Date.now(),
+   *  replay/tests pass the recorded frame time. */
+  function ingest(obs, nowMs = Date.now()) {
     if (!obs) return null;
     // Our own Live Activity captured over the draft room — fully inert, no
     // state mutation at all (its target rows would resurrect drafted players).
+    // Presence-neutral too: the expanded card can overlay any screen.
     if (obs.kind === 'self') {
       return {
         kind: 'self', newBoardPicks: 0, rowsMatched: 0, picksUntil: null,
         slotInferred: null, slotAnchored: null, myPickEvent: false, confirmPick: null,
+        presence: presence(), presenceChanged: false,
       };
     }
     state.syncCount++;
@@ -124,7 +184,29 @@ export function createDraftSession(cfg) {
       slotAnchored: null,
       myPickEvent: false,
       confirmPick: null,
+      presence: null,
+      presenceChanged: false,
     };
+
+    // ---- Room presence (TASK-336). In-room kinds refresh the presence clock;
+    // 'unknown' frames are out evidence. Hysteresis: one glitchy frame never
+    // flips an in-room session out — two distinct out frames or 10 s of
+    // out-only evidence do. Entering (or re-entering) flips on a single frame.
+    const wasInRoom = state.inRoom;
+    if (IN_ROOM_KINDS.has(obs.kind) || obs.confirmCard) {
+      state.inRoom = true;
+      state.outStreak = 0;
+      state.lastInRoomAt = nowMs;
+    } else {
+      state.outStreak++;
+      state.lastOutAt = nowMs;
+      if (state.inRoom === true
+        && (state.outStreak >= 2 || nowMs - state.lastInRoomAt >= OUT_OF_ROOM_MS)) {
+        state.inRoom = false;
+      }
+    }
+    summary.presence = presence();
+    summary.presenceChanged = wasInRoom !== state.inRoom;
 
     // Board cells are the highest-fidelity source: idempotent ledger appends.
     for (const bp of obs.boardPicks) {
@@ -134,6 +216,21 @@ export function createDraftSession(cfg) {
         state.ledger.set(bp.overall, {
           player: bp.player, round: bp.round, pickInRound: bp.pickInRound,
           score: bp.score, raw: bp.raw,
+        });
+      }
+    }
+    // Roster-panel picks are board-grade too: absolute overalls paired with
+    // matched rows (TASK-336) — the one source that recovers picks no board
+    // window ever showed (a mid-draft resume needs only a roster glance).
+    for (const rp of obs.rosterPicks || []) {
+      const existing = state.ledger.get(rp.overall);
+      if (!existing || rp.score > existing.score) {
+        if (!existing) summary.newBoardPicks++;
+        state.ledger.set(rp.overall, {
+          player: rp.player,
+          round: roundForOverall(rp.overall, teams),
+          pickInRound: pickInRoundForOverall(rp.overall, teams),
+          score: rp.score, raw: rp.raw,
         });
       }
     }
@@ -391,19 +488,39 @@ export function createDraftSession(cfg) {
     };
   }
 
-  function targetFlag(p, picks, next) {
-    if (state.queue.has(p.canonical) && Number.isFinite(p.adp) && next != null && p.adp < next - 1) {
-      return 'QUEUE RISK';
-    }
+  /** Compact flag glyphs for one glance target (TASK-336): S = stack with a
+   *  current pick (QB involved), P = playoff-week game stack, Q = queued and
+   *  at ADP risk before my next pick, F = falling past ADP. */
+  function targetFlags(p, picks, next) {
+    let flags = '';
     for (const mine of picks) {
       if (mine.team === p.team && mine.team !== 'N/A' && (p.position === 'QB' || mine.position === 'QB')) {
-        return 'STACK';
+        flags += 'S';
+        break;
       }
     }
-    if (Number.isFinite(p.adp) && next != null && p.adp <= next - 4) return 'FALLING';
-    const exp = exposureMap.get(p.canonical);
-    if (Number.isFinite(exp) && exp >= 25) return `${Math.round(exp)}% OWNED`;
-    return '';
+    if (candidateHasPlayoffStack(p, picks)) flags += 'P';
+    if (state.queue.has(p.canonical) && Number.isFinite(p.adp) && next != null && p.adp < next - 1) {
+      flags += 'Q';
+    }
+    if (Number.isFinite(p.adp) && next != null && p.adp <= next - 4) flags += 'F';
+    return flags;
+  }
+
+  /** Six compact target lines "POS·LastName·EXP·FLAGS" for the two-column
+   *  Live Activity grid (TASK-336). Last names collide -> "F.Surname". */
+  function buildTargets(picks, next) {
+    const top = availablePlayers(12).slice(0, 6);
+    const lastNames = top.map(p => lastNameOf(p.name));
+    return top.map((p, i) => {
+      let short = lastNames[i];
+      if (lastNames.filter(n => n === short).length > 1) {
+        short = `${p.name.trim()[0]}.${short}`;
+      }
+      const exp = exposureMap.get(p.canonical);
+      const expStr = Number.isFinite(exp) ? String(Math.round(exp)) : '';
+      return `${p.position}·${short}·${expStr}·${targetFlags(p, picks, next)}`;
+    });
   }
 
   /** Glance payload for the Live Activity (small, flat, ≤ a few hundred bytes). */
@@ -419,6 +536,10 @@ export function createDraftSession(cfg) {
     if (phaseOverride) phase = phaseOverride;
     else if (state.syncCount === 0) phase = 'armed';
     else if (done) phase = 'done';
+    // Presence phases (TASK-336): capture is live but the screen isn't a
+    // draft room. 'waiting' = never seen one yet; 'away' = left one, state held.
+    else if (state.inRoom === false) phase = 'away';
+    else if (state.inRoom == null) phase = 'waiting';
     else if (picksUntil === 0) phase = 'onClock';
     else if (picksUntil === 1) phase = 'onDeck';
 
@@ -426,7 +547,12 @@ export function createDraftSession(cfg) {
     let headline;
     if (phase === 'armed') headline = 'Waiting for capture to start';
     else if (phase === 'done') headline = 'Draft complete';
-    else if (phase === 'onClock') headline = "You're on the clock!";
+    else if (phase === 'waiting') headline = 'Waiting to enter draft';
+    else if (phase === 'away') {
+      headline = state.ledger.size || state.inferredGone.size
+        ? `Left draft room — R${round} · P${state.currentPick} held`
+        : 'Left draft room';
+    } else if (phase === 'onClock') headline = "You're on the clock!";
     else if (phase === 'onDeck') headline = "You're up next";
     else if (picksUntil > 0) headline = `Up in ${picksUntil} picks`;
     else headline = `Tracking · R${round} · P${state.currentPick}`;
@@ -434,12 +560,9 @@ export function createDraftSession(cfg) {
     const counts = { QB: 0, RB: 0, WR: 0, TE: 0 };
     for (const p of picks) if (counts[p.position] != null) counts[p.position]++;
 
-    const targets = availablePlayers(12)
-      .slice(0, 3)
-      .map(p => {
-        const flag = targetFlag(p, picks, next);
-        return `${p.position} · ${p.name}${flag ? ` · ${flag}` : ''}`;
-      });
+    // No target grid outside the room — nothing actionable to show there.
+    const showTargets = phase === 'tracking' || phase === 'onClock' || phase === 'onDeck';
+    const targets = showTargets ? buildTargets(picks, next) : [];
 
     return {
       phase,
@@ -478,6 +601,9 @@ export function createDraftSession(cfg) {
       queue: [...state.queue],
       usernameSlots: Object.fromEntries(state.usernameSlots),
       tallies: Object.fromEntries(state.tallies),
+      inRoom: state.inRoom,
+      inAt: state.lastInRoomAt,
+      outAt: state.lastOutAt,
     };
   }
 
@@ -516,13 +642,38 @@ export function createDraftSession(cfg) {
     if (data.tallies) {
       for (const [u, t] of Object.entries(data.tallies)) state.tallies.set(u, t);
     }
+    // Presence rides the snapshot so the app's panel reflects what the
+    // extension sees. Freshest evidence wins (both sides stamp epoch ms).
+    const dataEvidence = Math.max(data.inAt || 0, data.outAt || 0);
+    if (data.inRoom !== undefined && data.inRoom !== null
+      && dataEvidence >= Math.max(state.lastInRoomAt, state.lastOutAt)) {
+      state.inRoom = data.inRoom;
+      state.lastInRoomAt = Math.max(state.lastInRoomAt, data.inAt || 0);
+      state.lastOutAt = Math.max(state.lastOutAt, data.outAt || 0);
+    }
     state.syncCount = Math.max(state.syncCount, data.syncCount || 0);
     return true;
+  }
+
+  /** Time-based presence advance for frame-quiet stretches (TASK-336). Static
+   *  screens produce no ingests — the extension's duplicate gate eats them —
+   *  so a screen left static outside the room needs this nudge to flip
+   *  presence to 'away'. Only fires when out evidence is newer than the last
+   *  in-room frame: a *room* screen left static keeps presence 'in'. */
+  function tick(nowMs = Date.now()) {
+    const wasInRoom = state.inRoom;
+    if (state.inRoom === true
+      && state.lastOutAt > state.lastInRoomAt
+      && nowMs - state.lastInRoomAt >= OUT_OF_ROOM_MS) {
+      state.inRoom = false;
+    }
+    return { presence: presence(), presenceChanged: wasInRoom !== state.inRoom };
   }
 
   return {
     teams, rounds,
     ingest,
+    tick,
     getDraftState,
     getGlance,
     serialize,
@@ -531,6 +682,8 @@ export function createDraftSession(cfg) {
     getStatus() {
       return {
         slot: slot(),
+        presence: presence(),
+        inRoom: state.inRoom,
         slotSource: state.manualSlot ? 'manual'
           : state.anchoredSlot ? 'anchored'
           : state.inferredSlot ? 'inferred' : null,

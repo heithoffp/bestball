@@ -161,17 +161,57 @@ every legible header (291/291 at check-in).
 ## Live Activity content (the "useful information")
 
 ContentState (flat, small, local-update only):
-- `phase`: armed | tracking | onDeck | onClock | done
+- `phase`: armed | waiting | tracking | onDeck | onClock | away | done
+  (TASK-336: `waiting` = capture live, no draft room seen yet; `away` = left
+  the room with board state held)
 - `picksUntil`, `currentPick`, `round`, `myNextPick`
-- `headline` ("Up in 2 picks", "You're on the clock!")
-- `targets[]`: top-3 available at your pick by **your UD custom rankings** (fallback
-  ADP), each with position and one flag (STACK / high global exposure % / QUEUE RISK)
+- `headline` ("Up in 2 picks", "You're on the clock!", "Waiting to enter
+  draft", "Left draft room — R8 · P89 held")
+- `targets[]` (TASK-336): top-6 available at your pick by **your UD custom
+  rankings** (fallback ADP), compact-encoded `POS·LastName·EXP·FLAGS`
+  (e.g. `WR·Olave·23·SP`) — exposure % plus flag glyphs S (stack with a
+  current pick, QB involved), P (W15/16/17 playoff game stack vs a current
+  pick), Q (queued + ADP risk before your next pick), F (falling past ADP).
+  Empty outside the tracking phases. Last-name collisions render `F.Surname`.
 - `rosterBar`: "QB 0 · RB 2 · WR 0 · TE 0"
 - `syncedAtEpoch` → rendered as a self-ticking relative time (no updates needed)
 
-Surfaces: lock screen card (headline + targets + roster bar + synced-ago);
-Dynamic Island compact leading `⏳N` / trailing `P31`; minimal `N`; expanded =
-lock-screen content. Tap → deep link `bbexposures:///draft?view=assistant`.
+Surfaces: lock screen card (headline + 3×2 two-column target grid, column-major
+so ranks 1–3 fill the left column + roster bar + synced-ago); Dynamic Island
+compact leading `⏳N` / trailing `P31`; minimal `N`; expanded = lock-screen
+content. Tap → deep link `bbexposures:///draft?view=assistant`.
+
+## Room presence + reset-for-next-draft (TASK-336)
+
+The engine classifies every frame as in-room evidence (board / players /
+queue / roster / detail / header / lobby kinds, or a confirm card), out
+evidence (`unknown` — UD home, other apps, the BBE app itself), or neutral
+(`self`, our own expanded Live Activity). Hysteresis: entering flips on one
+in-room frame; leaving needs two consecutive out frames OR one out frame plus
+10 s without in-room evidence (`BBEEngine.tick`, called by FrameProcessor when
+the duplicate gate has kept frames quiet ≥ 10 s, covers screens left static).
+Presence transitions ride `significant` → pushed immediately; that push IS the
+"left the draft room" notification.
+
+The roster panel is also a ledger source now: each row's absolute overall
+("57 / Pick" right rail) pairs geometrically with its player row, so a
+mid-draft join needs only a glance at your roster + one players-tab scroll —
+no full board scan. A mixed-slot harvest (misread number) is dropped whole.
+
+Back-to-back slow drafts: when the panel shows "Left the draft room — board
+state held", the **Reset** action (`sessionController.resetDraftBoard()`)
+rebuilds the session keeping pool/rankings/exposures/username, clears
+ledger/availability/slot/pick position, rewrites `bbe.sessionConfig`, and bumps
+`bbe.configEpoch`. FrameProcessor re-reads the epoch every frame and re-inits
+its engine (and its push bookkeeping) without ending the broadcast; results
+echo the epoch so the app drops any pre-reset snapshot.
+
+Push policy (ADR-024, triggers extended by TASK-336): priority-10 on
+`significant` (crunch / my pick / presence — no floor), a newly-detected pick
+(3 s floor), or a changed target list (15 s floor — availability inference
+reshapes targets without advancing the pick; before this trigger the card
+froze on stale top-of-pool names for entire mid-draft resumes,
+frames-1784198568).
 
 ## Native surface (all new, kept thin per DEVELOPMENT_NOTES)
 

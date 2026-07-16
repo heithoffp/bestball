@@ -8,7 +8,10 @@
 //   node scripts/replay-frames.mjs <frames.jsonl> --pool <adp.csv>
 //        [--username BIRDENTHUSIAST] [--slot N] [--teams 12] [--rounds 18]
 //        [--from <epochSec>] [--to <epochSec>] [--dump <frameIndex>] [--quiet]
-//        [--push-sim]
+//        [--push-sim] [--drop-kind board,players]
+// --drop-kind (TASK-336): parse but do NOT ingest frames of the given kinds —
+//   proves e.g. that a roster glance + players scroll suffices without any
+//   board frame ("no-board mid-draft resume").
 //
 // Prints a per-frame timeline (kind · picksUntil · currentPick · ledger ·
 // inferredGone, with deltas), then the final status, glance, and top targets.
@@ -105,11 +108,13 @@ if (dumpIdx != null) {
   process.exit(0);
 }
 
-// ---- push-sim (TASK-335 / ADR-024): simulate the extension's event-driven
-// push decision over the recording, using the REAL engine change-detection.
-// A push fires priority 10 on a significant transition (bypasses the floor) or
-// a newly-detected pick (currentPick advance, floored to 3 s). Priority 5 is
-// never used. The frame's epoch `t` is the simulated clock (1 s resolution). ----
+// ---- push-sim (TASK-335 / ADR-024, triggers extended by TASK-336): simulate
+// the extension's event-driven push decision over the recording, using the
+// REAL engine. A priority-10 push fires on a significant transition (crunch /
+// my pick / room presence — bypasses the floors), a newly-detected pick
+// (3 s floor), or a changed target list (15 s floor — mirrors FrameProcessor's
+// lastPushedTargets). Frame-quiet gaps ≥ 10 s also run the extension's
+// presence tick. The frame epoch `t` is the simulated clock. ----
 if (has('push-sim')) {
   const teams = parseInt(arg('teams', '12'), 10);
   const initRes = globalThis.BBEEngine.init(JSON.stringify({
@@ -123,38 +128,58 @@ if (has('push-sim')) {
 
   const quiet = has('quiet');
   let lastPushedPick = 0;
+  let lastPushedTargets = JSON.stringify([]);
   let lastPushAt = -Infinity;
-  let pushes = 0; let p5 = 0; let skipped = 0; let idleSkipped = 0;
-  frames.forEach((f, i) => {
-    const r = JSON.parse(globalThis.BBEEngine.ingest(JSON.stringify(f.items)));
+  let prevT = null;
+  let pushes = 0; let skipped = 0; let idleSkipped = 0; let ticks = 0;
+
+  const decide = (r, now, i, viaTick) => {
     const glance = r.glance || {};
     const pick = glance.currentPick ?? 0;
     const sig = !!r.significant;
     const newPick = pick > lastPushedPick;
-    const now = f.t;
-    const willPush = !!r.changed && (sig || (newPick && now - lastPushAt >= 3.0));
+    const targetsJson = JSON.stringify(glance.targets || []);
+    const targetsDiffer = targetsJson !== lastPushedTargets;
+    const willPush = sig
+      || (newPick && now - lastPushAt >= 3.0)
+      || (targetsDiffer && now - lastPushAt >= 15.0);
+    const tag = viaTick ? 'tick' : `#${String(i).padStart(4)}`;
     if (willPush) {
       lastPushAt = now;
       lastPushedPick = Math.max(lastPushedPick, pick);
+      lastPushedTargets = targetsJson;
       pushes++;
       console.log(
-        `#${String(i).padStart(4)} t=${f.t} PUSH p10 cp=${pick}`
-        + `${newPick ? ' [newpick]' : ''}${sig ? ' [sig]' : ''}`,
+        `${tag} t=${now} PUSH p10 cp=${pick} phase=${glance.phase}`
+        + `${newPick ? ' [newpick]' : ''}${sig ? ' [sig]' : ''}${targetsDiffer ? ' [targets]' : ''}`,
       );
-    } else {
+      for (const t of glance.targets || []) console.log(`        ${t}`);
+    } else if (!viaTick) {
       skipped++;
-      if (!newPick && !sig) idleSkipped++;
+      if (!newPick && !sig && !targetsDiffer) idleSkipped++;
       if (!quiet) {
         console.log(
-          `#${String(i).padStart(4)} t=${f.t} skip     cp=${pick}`
-          + ` (changed=${!!r.changed} newPick=${newPick} sig=${sig})`,
+          `${tag} t=${now} skip     cp=${pick}`
+          + ` (changed=${!!r.changed} newPick=${newPick} sig=${sig} targets=${targetsDiffer})`,
         );
       }
     }
+  };
+
+  frames.forEach((f, i) => {
+    // FrameProcessor ticks the presence clock when frames go quiet ≥ 10 s.
+    if (prevT != null && f.t - prevT >= 10) {
+      ticks++;
+      const tr = JSON.parse(globalThis.BBEEngine.tick(String((f.t - 1) * 1000)));
+      if (tr.ok && tr.significant) decide(tr, f.t - 1, i, true);
+    }
+    prevT = f.t;
+    const r = JSON.parse(globalThis.BBEEngine.ingest(JSON.stringify(f.items), String(f.t * 1000)));
+    decide(r, f.t, i, false);
   });
-  console.log('\n---- push-sim summary (ADR-024) ----');
-  console.log(`frames:  ${frames.length}`);
-  console.log(`pushes:  ${pushes}  (p10: ${pushes}, p5: ${p5})`);
+  console.log('\n---- push-sim summary (ADR-024 + TASK-336) ----');
+  console.log(`frames:  ${frames.length}  (presence ticks: ${ticks})`);
+  console.log(`pushes:  ${pushes}`);
   console.log(`skipped: ${skipped}  (${idleSkipped} with nothing advanced)`);
   process.exit(0);
 }
@@ -172,22 +197,28 @@ const session = createDraftSession({
 const from = arg('from') ? parseInt(arg('from'), 10) : -Infinity;
 const to = arg('to') ? parseInt(arg('to'), 10) : Infinity;
 const quiet = has('quiet');
-let prev = { cp: 1, led: 0, gone: 0 };
+const dropKinds = new Set((arg('drop-kind') || '').split(',').map(s => s.trim()).filter(Boolean));
+let prev = { cp: 1, led: 0, gone: 0, presence: 'unseen' };
 frames.forEach((f, i) => {
   if (f.t < from || f.t > to) return;
   const obs = parseUnderdogScreen(f.items, { pool, teams });
-  session.ingest(obs);
+  if (dropKinds.has(obs.kind)) {
+    if (!quiet) console.log(`#${String(i).padStart(4)} t=${f.t} ${String(obs.kind).padEnd(8)} DROPPED (--drop-kind)`);
+    return;
+  }
+  session.ingest(obs, f.t * 1000);
   const s = session.getStatus();
   const delta = [];
   if (s.currentPick !== prev.cp) delta.push(`cp ${prev.cp}->${s.currentPick}`);
   if (s.ledgerSize !== prev.led) delta.push(`led +${s.ledgerSize - prev.led}`);
   if (s.inferredGone !== prev.gone) delta.push(`gone ${s.inferredGone - prev.gone > 0 ? '+' : ''}${s.inferredGone - prev.gone}`);
-  prev = { cp: s.currentPick, led: s.ledgerSize, gone: s.inferredGone };
+  if (s.presence !== prev.presence) delta.push(`room ${prev.presence}->${s.presence}`);
+  prev = { cp: s.currentPick, led: s.ledgerSize, gone: s.inferredGone, presence: s.presence };
   if (!quiet || delta.length) {
     console.log(
       `#${String(i).padStart(4)} t=${f.t} ${String(obs.kind).padEnd(8)}`
       + ` pu=${obs.picksUntil ?? (obs.picksAwayDivider != null ? `div${obs.picksAwayDivider}` : '-')}`
-      + ` cp=${s.currentPick} led=${s.ledgerSize} gone=${s.inferredGone}`
+      + ` cp=${s.currentPick} led=${s.ledgerSize} gone=${s.inferredGone} room=${s.presence}`
       + (delta.length ? `   << ${delta.join(', ')}` : ''),
     );
   }
@@ -206,6 +237,7 @@ console.log(JSON.stringify({
   ledgerSize: status.ledgerSize,
   inferredGone: status.inferredGone,
   isResume: status.isResume,
+  presence: status.presence,
   myPicks: status.myPicks.map(p => `${p.round}:${p.name}`),
 }, null, 1));
 console.log('\n---- glance ----');

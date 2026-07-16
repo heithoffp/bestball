@@ -12,7 +12,7 @@
 // Pure JS — no React Native imports.
 
 import { matchPlayer, fuzzyPosition, looksLikeNameLine } from './playerMatcher.js';
-import { resolveRoundDotPick } from './snake.js';
+import { resolveRoundDotPick, slotForOverall } from './snake.js';
 
 const PATTERNS = {
   // "UP IN 2 PICKS" header ticker; on-the-clock variants. "YOUR PICK" must
@@ -49,7 +49,9 @@ const PATTERNS = {
   // top-anchored card, so these signals bound an excision region (TASK-329)
   // rather than poisoning the whole frame.
   selfSynced: /^synced\b/i,
-  selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED)$/,
+  // Legacy long-form flags plus the TASK-336 compact flag glyphs ("SP", "QF").
+  // "SF" is excluded — it's a real team abbreviation, not one of our flags.
+  selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED|(?!SF$)[SPQF]{2,4})$/,
   // Separator garbles observed on device: "·" reads as "•", ".", or "-";
   // zeros read as the letter "O" and may merge into the label ("QBO - RB O").
   // A missed roster bar shrinks the excision region and our own target rows
@@ -59,7 +61,7 @@ const PATTERNS = {
   // so the case-sensitive match cannot swallow a real "UP IN 4 PICKS".
   // Observed garbles keep the lowercase body but mangle the leading capital
   // and truncate ("fou're on the clo....", "fracking • R1 • P1").
-  selfHeadline: /^(Up in \d{1,2} picks?$|[A-Za-z]?ou'?re (on the clo|up next)|Waiting for capture to start$|Draft complete$|Session ended$|[A-Za-z]?racking\s*[·•.]\s*R\d+\s*[·•.]\s*P\d+$)/,
+  selfHeadline: /^(Up in \d{1,2} picks?$|[A-Za-z]?ou'?re (on the clo|up next)|Waiting for capture to start$|[A-Za-z]?aiting to enter draft|[A-Za-z]?eft draft room|Draft complete$|Session ended$|[A-Za-z]?racking\s*[·•.]\s*R\d+\s*[·•.]\s*P\d+$)/,
   selfBrand: /^BB ?EXPOSURES$/i,
   // Merged-form glance target row: "RB · Jaylen Warren · FALLING".
   selfTargetRow: /^(QB|RB|WR|TE)\s*[·•.]\s+\S/,
@@ -320,6 +322,7 @@ export function parseUnderdogScreen(items, ctx) {
     upcomingOveralls: [],
     picksAwayDivider: null,
     boardPicks: [],
+    rosterPicks: [],
     rows: [],
     availability: null,
     queueNames: [],
@@ -579,6 +582,45 @@ export function parseUnderdogScreen(items, ctx) {
     obs.kind = 'lobby';
   } else if (obs.picksUntil != null || obs.upcomingOveralls.length || obs.drafterCards.length >= 2) {
     obs.kind = 'header';
+  }
+
+  // ---- Roster-panel pick harvest (TASK-336) ----
+  // Each drafted row shows its absolute overall above a "Pick" label in the
+  // right rail ("9 / Pick"), on the same visual row as the player name. Those
+  // (overall, player) pairs are ledger-grade evidence — the only source that
+  // recovers picks no board window ever showed (the user's own latest pick on
+  // a mid-draft resume, frames-1784198568). Geometric only: boxless input
+  // can't safely tie names to the right-rail numbers. Availability stays
+  // untouched — these rows are drafted players by definition.
+  if (obs.kind === 'roster' && lines.length > 0 && lines.every(l => l.y != null && l.x != null)) {
+    const rowByRaw = new Map(obs.rows.map(r => [r.raw, r]));
+    const nameLines = lines.filter(l => rowByRaw.has(l.text));
+    const harvested = [];
+    for (const lbl of lines) {
+      if (!PATTERNS.rosterPickLabel.test(lbl.text)) continue;
+      // The overall sits directly above its "Pick" label, x-centers aligned.
+      // Bye and ADP columns carry their own labels, so alignment + the
+      // integer shape disambiguate.
+      const num = lines
+        .filter(l => /^\d{1,3}$/.test(l.text)
+          && lbl.y - l.y > 0.005 && lbl.y - l.y < 0.05
+          && Math.abs(centerX(l) - centerX(lbl)) < 0.06)
+        .sort((a, b) => (lbl.y - a.y) - (lbl.y - b.y))[0];
+      if (!num) continue;
+      const overall = parseInt(num.text, 10);
+      if (!(overall >= 1 && overall <= teams * 30)) continue;
+      // The matched player name shares the number's visual row, to its left.
+      const nameLine = nameLines
+        .filter(l => l.x < num.x && Math.abs(l.y - num.y) < 0.02)
+        .sort((a, b) => Math.abs(a.y - num.y) - Math.abs(b.y - num.y))[0];
+      if (!nameLine) continue;
+      const row = rowByRaw.get(nameLine.text);
+      harvested.push({ overall, player: row.player, score: row.score, raw: nameLine.text });
+    }
+    // A roster panel belongs to ONE drafter, so every overall must map to the
+    // same slot — a mixed-slot harvest means a misread number; drop it all.
+    const slots = new Set(harvested.map(h => slotForOverall(h.overall, teams)));
+    if (harvested.length && slots.size === 1) obs.rosterPicks = harvested;
   }
 
   // Availability inference is only safe on a confident, ADP-sorted Players list:
