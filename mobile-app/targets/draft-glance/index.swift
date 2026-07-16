@@ -45,33 +45,81 @@ private func headlineColor(_ phase: String) -> Color {
   switch phase {
   case "onClock": return bbeAlert
   case "onDeck": return bbeAccent
+  case "waiting", "away": return bbeMuted
   default: return .white
   }
 }
 
 // MARK: - Shared views
 
-/// One target line, pre-formatted by JS as "WR · Chris Olave · FLAG".
-private struct TargetRow: View {
+/// Per-character flag glyphs: S stack · P playoff stack · Q queue risk ·
+/// F falling. Q renders alert-red, the rest accent gold.
+/// (`foregroundColor`, not `foregroundStyle` — only the former returns Text
+/// for `+` concatenation on the 16.2 deployment target.)
+private func flagText(_ flags: String, size: CGFloat) -> Text {
+  flags.reduce(Text("")) { acc, ch in
+    acc + Text(String(ch))
+      .font(.system(size: size, weight: .heavy))
+      .foregroundColor(ch == "Q" ? bbeAlert : bbeAccent)
+  }
+}
+
+/// One grid cell, pre-formatted by JS as "WR·Olave·23·SP"
+/// (position · last name · exposure % · flag glyphs; TASK-336).
+private struct TargetCell: View {
   let line: String
 
   var body: some View {
-    let parts = line.components(separatedBy: " · ")
-    HStack(spacing: 6) {
-      Text(parts.first ?? "")
-        .font(.system(size: 11, weight: .heavy))
-        .foregroundStyle(positionColor(parts.first ?? ""))
-        .frame(width: 24, alignment: .leading)
-      Text(parts.count > 1 ? parts[1] : line)
-        .font(.system(size: 13, weight: .semibold))
+    let parts = line.components(separatedBy: "·").map { $0.trimmingCharacters(in: .whitespaces) }
+    let pos = parts.first ?? ""
+    let name = parts.count > 1 ? parts[1] : line
+    let exp = parts.count > 2 ? parts[2] : ""
+    let flags = parts.count > 3 ? parts[3] : ""
+    HStack(spacing: 4) {
+      Text(pos)
+        .font(.system(size: 9, weight: .heavy))
+        .foregroundStyle(positionColor(pos))
+        .frame(width: 20, alignment: .leading)
+      Text(name)
+        .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(.white)
         .lineLimit(1)
-      Spacer(minLength: 0)
-      if parts.count > 2 {
-        Text(parts[2])
-          .font(.system(size: 10, weight: .heavy))
-          .foregroundStyle(parts[2].contains("RISK") ? bbeAlert : bbeAccent)
-          .lineLimit(1)
+        .minimumScaleFactor(0.75)
+      Spacer(minLength: 2)
+      if !exp.isEmpty {
+        Text(exp + "%")
+          .font(.system(size: 9, weight: .semibold).monospacedDigit())
+          .foregroundStyle(bbeMuted)
+      }
+      if !flags.isEmpty {
+        flagText(flags, size: 9)
+      }
+    }
+  }
+}
+
+/// Six targets in two columns, column-major so the top three (by the user's
+/// own rankings) stay in the left column where the eye lands first.
+private struct TargetGrid: View {
+  let targets: [String]
+
+  var body: some View {
+    let items = Array(targets.prefix(6))
+    let rows = (items.count + 1) / 2
+    HStack(alignment: .top, spacing: 12) {
+      VStack(alignment: .leading, spacing: 3) {
+        ForEach(0..<min(rows, items.count), id: \.self) { i in
+          TargetCell(line: items[i])
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      if items.count > rows {
+        VStack(alignment: .leading, spacing: 3) {
+          ForEach(rows..<items.count, id: \.self) { i in
+            TargetCell(line: items[i])
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
   }
@@ -119,18 +167,14 @@ private struct LockScreenView: View {
           .lineLimit(1)
           .minimumScaleFactor(0.7)
         Spacer()
-        if state.currentPick > 0 && state.phase != "armed" {
+        if state.currentPick > 0 && state.phase != "armed" && state.phase != "waiting" {
           Text("R\(state.round) · P\(state.currentPick)")
             .font(.system(size: 12, weight: .bold).monospacedDigit())
             .foregroundStyle(bbeMuted)
         }
       }
       if !state.targets.isEmpty {
-        VStack(alignment: .leading, spacing: 3) {
-          ForEach(state.targets.prefix(3), id: \.self) { line in
-            TargetRow(line: line)
-          }
-        }
+        TargetGrid(targets: state.targets)
       }
       Text(state.rosterBar)
         .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
@@ -182,8 +226,8 @@ struct DraftGlanceLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.bottom) {
           VStack(alignment: .leading, spacing: 3) {
-            ForEach(context.state.targets.prefix(3), id: \.self) { line in
-              TargetRow(line: line)
+            if !context.state.targets.isEmpty {
+              TargetGrid(targets: context.state.targets)
             }
             Text(context.state.rosterBar)
               .font(.system(size: 10, weight: .semibold).monospacedDigit())

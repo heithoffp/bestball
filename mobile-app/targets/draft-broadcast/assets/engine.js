@@ -266,9 +266,12 @@
 
   // src/draft/underdogParser.js
   var PATTERNS = {
-    // "UP IN 2 PICKS" header ticker; on-the-clock variants.
+    // "UP IN 2 PICKS" header ticker; on-the-clock variants. "YOUR PICK" must
+    // reject the plural: the UD home screen's tagline "Your players. Your
+    // picks." sits in the header zone and flashed a false "on the clock" at P1
+    // for as long as the user browsed the lobby (frames-1784120786 #2-#11).
     upInPicks: /UP\s+IN\s+(\d{1,2})\s+PICKS?/i,
-    onTheClock: /(YOUR\s+PICK|ON\s+THE\s+CLOCK|YOU'?RE\s+UP)/i,
+    onTheClock: /(YOUR\s+PICK(?!S)|ON\s+THE\s+CLOCK|YOU'?RE\s+UP)/i,
     upNext: /\bUP\s+NEXT\b/i,
     // "Your pick: 0:19" carries the pick clock inline in the header.
     yourPickClock: /YOUR\s+PICK\W*?(\d{1,2}):(\d{2})/i,
@@ -292,10 +295,27 @@
     // Our own Live Activity, when expanded over the draft room, is captured
     // like any other screen content ("synced 8 sec ago", target rows, the
     // roster bar). Ingesting it feeds our output back into the parser — target
-    // names read as visible available rows and resurrect drafted players.
+    // names read as visible available rows and resurrect drafted players, and
+    // the glance headline reads as the header ticker. The overlay is a
+    // top-anchored card, so these signals bound an excision region (TASK-329)
+    // rather than poisoning the whole frame.
     selfSynced: /^synced\b/i,
-    selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED)$/,
-    selfRosterBar: /^QB \d+\s*[·•.]\s*RB \d+\s*[·•.]\s*WR \d+\s*[·•.]\s*TE \d+$/,
+    // Legacy long-form flags plus the TASK-336 compact flag glyphs ("SP", "QF").
+    // "SF" is excluded — it's a real team abbreviation, not one of our flags.
+    selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED|(?!SF$)[SPQF]{2,4})$/,
+    // Separator garbles observed on device: "·" reads as "•", ".", or "-";
+    // zeros read as the letter "O" and may merge into the label ("QBO - RB O").
+    // A missed roster bar shrinks the excision region and our own target rows
+    // survive as "visible" player rows (frames-1784120786 #1/#5).
+    selfRosterBar: /^QB\s*[0-9O]+\s*[·•.-]\s*RB\s*[0-9O]+\s*[·•.-]\s*WR\s*[0-9O]+\s*[·•.-]\s*TE\s*[0-9O]+$/,
+    // Glance headlines are sentence case; Underdog renders its header ALL-CAPS,
+    // so the case-sensitive match cannot swallow a real "UP IN 4 PICKS".
+    // Observed garbles keep the lowercase body but mangle the leading capital
+    // and truncate ("fou're on the clo....", "fracking • R1 • P1").
+    selfHeadline: /^(Up in \d{1,2} picks?$|[A-Za-z]?ou'?re (on the clo|up next)|Waiting for capture to start$|[A-Za-z]?aiting to enter draft|[A-Za-z]?eft draft room|Draft complete$|Session ended$|[A-Za-z]?racking\s*[·•.]\s*R\d+\s*[·•.]\s*P\d+$)/,
+    selfBrand: /^BB ?EXPOSURES$/i,
+    // Merged-form glance target row: "RB · Jaylen Warren · FALLING".
+    selfTargetRow: /^(QB|RB|WR|TE)\s*[·•.]\s+\S/,
     // Drafter card "3.8 | 32" (round.pickInRound | overall); OCR may drop the dot
     // ("310 | 34") or garble the pipe.
     upcomingCard: /(\d[\d.,·]{0,4})\s*[|Il¦]\s*(\d{1,3})\s*$/,
@@ -311,7 +331,10 @@
     teamBye: /([A-Z]{2,3})\s*[,.]?\s*Bye\s*(\d{1,2})/i,
     // Queue tab repeats unit labels under each value ("29.5 / ADP / 189.8 / Proj");
     // the Players tab shows "ADP =" / "Proj =" column headers instead.
-    unitLabel: /^(ADP|Proj)$/i
+    unitLabel: /^(ADP|Proj)$/i,
+    // Drafter-card roster panel repeats "Pick" under each pick number ("57 /
+    // Pick / 9 / Pick"); the real Players list never shows a standalone "Pick".
+    rosterPickLabel: /^Pick$/
   };
   var NOT_USERNAMES = /* @__PURE__ */ new Set([
     "PICKS",
@@ -493,6 +516,7 @@
         x: typeof it === "object" && Number.isFinite(it?.x) ? it.x : null,
         y: typeof it === "object" && Number.isFinite(it?.y) ? it.y : null,
         w: typeof it === "object" && Number.isFinite(it?.w) ? it.w : null,
+        h: typeof it === "object" && Number.isFinite(it?.h) ? it.h : null,
         confidence: typeof it === "object" && Number.isFinite(it?.confidence) ? it.confidence : null
       });
     }
@@ -503,8 +527,7 @@
   }
   function parseUnderdogScreen(items, ctx) {
     const { pool: pool2, teams = 12 } = ctx || {};
-    const lines = normalizeItems(items);
-    const texts = lines.map((l) => l.text);
+    let lines = normalizeItems(items);
     const obs = {
       kind: "unknown",
       picksUntil: null,
@@ -513,6 +536,7 @@
       upcomingOveralls: [],
       picksAwayDivider: null,
       boardPicks: [],
+      rosterPicks: [],
       rows: [],
       availability: null,
       queueNames: [],
@@ -521,16 +545,31 @@
       lobby: false,
       filledCount: 0,
       detailPanel: false,
+      rosterPanel: false,
       stats: { lines: lines.length, matchedRows: 0, boardMatches: 0, unmatchedNames: [] }
     };
     {
-      const strong = texts.some((t) => PATTERNS.selfSynced.test(t));
-      const weak = (texts.some((t) => PATTERNS.selfFlag.test(t)) ? 1 : 0) + (texts.some((t) => PATTERNS.selfRosterBar.test(t)) ? 1 : 0);
-      if (strong || weak >= 2) {
-        obs.kind = "self";
-        return obs;
+      const isSignal = (l) => PATTERNS.selfSynced.test(l.text) || PATTERNS.selfFlag.test(l.text) || PATTERNS.selfRosterBar.test(l.text) || PATTERNS.selfHeadline.test(l.text) || PATTERNS.selfBrand.test(l.text) || PATTERNS.selfTargetRow.test(l.text);
+      const strong = lines.some((l) => PATTERNS.selfSynced.test(l.text));
+      const weakKinds = ["selfFlag", "selfRosterBar", "selfHeadline", "selfBrand", "selfTargetRow"].filter((k) => lines.some((l) => PATTERNS[k].test(l.text))).length;
+      if (strong || weakKinds >= 2) {
+        const withBoxes = lines.every((l) => l.y != null);
+        if (withBoxes) {
+          const overlayBottom = Math.max(
+            ...lines.filter(isSignal).map((l) => l.y + (l.h ?? 0))
+          ) + 0.02;
+          lines = lines.filter((l) => l.y >= overlayBottom && !isSignal(l));
+        } else {
+          const lastIdx = lines.reduce((acc, l, i) => isSignal(l) ? i : acc, -1);
+          lines = lines.slice(lastIdx + 1).filter((l) => !isSignal(l));
+        }
+        if (lines.length < 4) {
+          obs.kind = "self";
+          return obs;
+        }
       }
     }
+    const texts = lines.map((l) => l.text);
     for (const ln of lines) {
       const t = ln.text;
       const up = t.match(PATTERNS.upInPicks);
@@ -587,6 +626,7 @@
       const hasDraftAction = texts.some((t) => PATTERNS.draftAction.test(t));
       obs.detailPanel = hasStats && hasDraftAction;
     }
+    obs.rosterPanel = texts.filter((t) => PATTERNS.rosterPickLabel.test(t)).length >= 2;
     const boardBoxes = lines.length > 0 && lines.every((l) => l.y != null && l.x != null);
     const isNameFrag = (t) => looksLikeNameLine(t) || /^[A-Z][A-Za-z'.-]{2,}$/.test(t);
     const consumedIdx = /* @__PURE__ */ new Set();
@@ -638,11 +678,12 @@
         obs.stats.unmatchedNames.push(raw);
       }
     }
+    const isAbbrevNameForm = (t) => /^[A-Za-z]\.\s*[A-Z][a-z]/.test(t);
     if (obs.boardPicks.length < 2) {
       for (let i = 0; i < texts.length; i++) {
         if (consumedIdx.has(i) || consumedLines.has(lines[i])) continue;
         const t = texts[i];
-        if (!looksLikeNameLine(t)) continue;
+        if (!looksLikeNameLine(t) || isAbbrevNameForm(t)) continue;
         const nameMatch = matchPlayer(pool2, t);
         if (!nameMatch) {
           if (t.split(" ").length >= 2) obs.stats.unmatchedNames.push(t);
@@ -684,12 +725,32 @@
       obs.queueNames = obs.rows.map((r) => r.player.canonical);
     } else if (obs.detailPanel && obs.rows.length <= 3) {
       obs.kind = "detail";
+    } else if (obs.rosterPanel && obs.rows.length >= 1) {
+      obs.kind = "roster";
     } else if (obs.rows.length >= 1) {
       obs.kind = "players";
     } else if (obs.lobby) {
       obs.kind = "lobby";
     } else if (obs.picksUntil != null || obs.upcomingOveralls.length || obs.drafterCards.length >= 2) {
       obs.kind = "header";
+    }
+    if (obs.kind === "roster" && lines.length > 0 && lines.every((l) => l.y != null && l.x != null)) {
+      const rowByRaw = new Map(obs.rows.map((r) => [r.raw, r]));
+      const nameLines = lines.filter((l) => rowByRaw.has(l.text));
+      const harvested = [];
+      for (const lbl of lines) {
+        if (!PATTERNS.rosterPickLabel.test(lbl.text)) continue;
+        const num = lines.filter((l) => /^\d{1,3}$/.test(l.text) && lbl.y - l.y > 5e-3 && lbl.y - l.y < 0.05 && Math.abs(centerX(l) - centerX(lbl)) < 0.06).sort((a, b) => lbl.y - a.y - (lbl.y - b.y))[0];
+        if (!num) continue;
+        const overall = parseInt(num.text, 10);
+        if (!(overall >= 1 && overall <= teams * 30)) continue;
+        const nameLine = nameLines.filter((l) => l.x < num.x && Math.abs(l.y - num.y) < 0.02).sort((a, b) => Math.abs(a.y - num.y) - Math.abs(b.y - num.y))[0];
+        if (!nameLine) continue;
+        const row = rowByRaw.get(nameLine.text);
+        harvested.push({ overall, player: row.player, score: row.score, raw: nameLine.text });
+      }
+      const slots = new Set(harvested.map((h) => slotForOverall(h.overall, teams)));
+      if (harvested.length && slots.size === 1) obs.rosterPicks = harvested;
     }
     if (obs.kind === "players" && !obs.detailPanel && obs.rows.length >= 6) {
       const withAdp = obs.rows.filter((r) => Number.isFinite(r.player.adp));
@@ -702,8 +763,12 @@
           const positionsSeen = [...new Set(obs.rows.map((r) => r.pos || r.player.position).filter(Boolean))];
           obs.availability = {
             topVisibleAdp: withAdp[0].player.adp,
+            bottomVisibleAdp: withAdp[withAdp.length - 1].player.adp,
             positionsSeen,
-            visibleCanonicals: obs.rows.map((r) => r.player.canonical)
+            visibleCanonicals: obs.rows.map((r) => r.player.canonical),
+            // Rows whose name OCR'd too garbled to match — a high count means
+            // gaps in the window are misreads, not drafted players.
+            unmatchedCount: obs.stats.unmatchedNames.length
           };
         }
       }
@@ -711,7 +776,76 @@
     return obs;
   }
 
+  // src/draft/playoffSchedule.js
+  var PLAYOFF_SCHEDULE = {
+    "ARI": { "15": "NYJ", "16": "NO", "17": "LV" },
+    "ATL": { "15": "WAS", "16": "TB", "17": "NO" },
+    "BAL": { "15": "PIT", "16": "CLE", "17": "CIN" },
+    "BUF": { "15": "CHI", "16": "DEN", "17": "MIA" },
+    "CAR": { "15": "CIN", "16": "PIT", "17": "SEA" },
+    "CHI": { "15": "BUF", "16": "GB", "17": "DET" },
+    "CIN": { "15": "CAR", "16": "IND", "17": "BAL" },
+    "CLE": { "15": "NYG", "16": "BAL", "17": "IND" },
+    "DAL": { "15": "LAR", "16": "JAX", "17": "NYG" },
+    "DEN": { "15": "LV", "16": "BUF", "17": "NE" },
+    "DET": { "15": "MIN", "16": "NYG", "17": "CHI" },
+    "GB": { "15": "MIA", "16": "CHI", "17": "HOU" },
+    "HOU": { "15": "JAX", "16": "PHI", "17": "GB" },
+    "IND": { "15": "TEN", "16": "CIN", "17": "CLE" },
+    "JAX": { "15": "HOU", "16": "DAL", "17": "WAS" },
+    "KC": { "15": "NE", "16": "SF", "17": "LAC" },
+    "LV": { "15": "DEN", "16": "TEN", "17": "ARI" },
+    "LAC": { "15": "SF", "16": "MIA", "17": "KC" },
+    "LAR": { "15": "DAL", "16": "SEA", "17": "TB" },
+    "MIA": { "15": "GB", "16": "LAC", "17": "BUF" },
+    "MIN": { "15": "DET", "16": "WAS", "17": "NYJ" },
+    "NE": { "15": "KC", "16": "NYJ", "17": "DEN" },
+    "NO": { "15": "TB", "16": "ARI", "17": "ATL" },
+    "NYG": { "15": "CLE", "16": "DET", "17": "DAL" },
+    "NYJ": { "15": "ARI", "16": "NE", "17": "MIN" },
+    "PHI": { "15": "SEA", "16": "HOU", "17": "SF" },
+    "PIT": { "15": "BAL", "16": "CAR", "17": "TEN" },
+    "SF": { "15": "LAC", "16": "KC", "17": "PHI" },
+    "SEA": { "15": "PHI", "16": "LAR", "17": "CAR" },
+    "TB": { "15": "NO", "16": "ATL", "17": "LAR" },
+    "TEN": { "15": "IND", "16": "LV", "17": "PIT" },
+    "WAS": { "15": "ATL", "16": "MIN", "17": "JAX" }
+  };
+
   // src/draft/sessionEngine.js
+  var IN_ROOM_KINDS = /* @__PURE__ */ new Set(["board", "players", "queue", "roster", "detail", "header", "lobby"]);
+  var OUT_OF_ROOM_MS = 1e4;
+  var PLAYOFF_WEEKS = ["15", "16", "17"];
+  var PLAYOFF_PAIRS_DEFAULT = {
+    QB: ["QB", "WR", "TE"],
+    WR: ["QB", "WR", "TE"],
+    TE: ["QB", "WR"]
+  };
+  var PLAYOFF_PAIRS_W17 = {
+    QB: ["QB", "WR", "TE", "RB"],
+    WR: ["QB", "WR", "TE", "RB"],
+    TE: ["QB", "WR", "RB"],
+    RB: ["QB", "WR", "TE", "RB"]
+  };
+  function candidateHasPlayoffStack(p, picks) {
+    const team = (p.team || "").toUpperCase();
+    if (!team || team === "N/A") return false;
+    for (const week of PLAYOFF_WEEKS) {
+      const allowed = (week === "17" ? PLAYOFF_PAIRS_W17 : PLAYOFF_PAIRS_DEFAULT)[p.position];
+      if (!allowed) continue;
+      const opp = PLAYOFF_SCHEDULE[team]?.[week];
+      if (!opp) continue;
+      for (const mine of picks) {
+        if ((mine.team || "").toUpperCase() !== opp) continue;
+        if (allowed.includes(mine.position)) return true;
+      }
+    }
+    return false;
+  }
+  function lastNameOf(name) {
+    const parts = String(name).trim().replace(/\s+(Jr|Sr|II|III|IV|V)\.?$/i, "").split(/\s+/);
+    return parts[parts.length - 1] || String(name);
+  }
   function createDraftSession(cfg) {
     const teams = cfg.teams || 12;
     const rounds = cfg.rounds || 18;
@@ -751,8 +885,17 @@
       lastConfirmKey: null,
       // dedupes the lingering pick-confirmation card
       syncCount: 0,
-      lastObs: null
+      lastObs: null,
+      inRoom: null,
+      // null = no room seen yet; true/false after evidence
+      lastInRoomAt: 0,
+      // epoch ms of the last in-room frame
+      lastOutAt: 0,
+      // epoch ms of the last out-of-room frame
+      outStreak: 0
+      // consecutive out-of-room frames
     };
+    const presence = () => state.inRoom == null ? "unseen" : state.inRoom ? "in" : "out";
     const slot = () => state.manualSlot || state.anchoredSlot || state.inferredSlot;
     function ratchetCurrentPick(candidate) {
       if (Number.isFinite(candidate) && candidate > state.currentPick) {
@@ -792,7 +935,7 @@
       const evidence = state.anchoredSlot || state.inferredSlot;
       state.slotConflict = !!(state.manualSlot && evidence && evidence !== state.manualSlot);
     }
-    function ingest(obs) {
+    function ingest(obs, nowMs = Date.now()) {
       if (!obs) return null;
       if (obs.kind === "self") {
         return {
@@ -803,7 +946,9 @@
           slotInferred: null,
           slotAnchored: null,
           myPickEvent: false,
-          confirmPick: null
+          confirmPick: null,
+          presence: presence(),
+          presenceChanged: false
         };
       }
       state.syncCount++;
@@ -816,8 +961,24 @@
         slotInferred: null,
         slotAnchored: null,
         myPickEvent: false,
-        confirmPick: null
+        confirmPick: null,
+        presence: null,
+        presenceChanged: false
       };
+      const wasInRoom = state.inRoom;
+      if (IN_ROOM_KINDS.has(obs.kind) || obs.confirmCard) {
+        state.inRoom = true;
+        state.outStreak = 0;
+        state.lastInRoomAt = nowMs;
+      } else {
+        state.outStreak++;
+        state.lastOutAt = nowMs;
+        if (state.inRoom === true && (state.outStreak >= 2 || nowMs - state.lastInRoomAt >= OUT_OF_ROOM_MS)) {
+          state.inRoom = false;
+        }
+      }
+      summary.presence = presence();
+      summary.presenceChanged = wasInRoom !== state.inRoom;
       for (const bp of obs.boardPicks) {
         const existing = state.ledger.get(bp.overall);
         if (!existing || bp.score > existing.score) {
@@ -828,6 +989,19 @@
             pickInRound: bp.pickInRound,
             score: bp.score,
             raw: bp.raw
+          });
+        }
+      }
+      for (const rp of obs.rosterPicks || []) {
+        const existing = state.ledger.get(rp.overall);
+        if (!existing || rp.score > existing.score) {
+          if (!existing) summary.newBoardPicks++;
+          state.ledger.set(rp.overall, {
+            player: rp.player,
+            round: roundForOverall(rp.overall, teams),
+            pickInRound: pickInRoundForOverall(rp.overall, teams),
+            score: rp.score,
+            raw: rp.raw
           });
         }
       }
@@ -908,21 +1082,41 @@
         if (state.wasOnClock && !obs.onClock) summary.myPickEvent = true;
         state.wasOnClock = !!obs.onClock;
       }
-      if (obs.availability && obs.availability.topVisibleAdp <= state.currentPick + 12) {
-        const { topVisibleAdp, positionsSeen, visibleCanonicals } = obs.availability;
+      if (obs.availability) {
+        const {
+          topVisibleAdp,
+          bottomVisibleAdp,
+          positionsSeen,
+          visibleCanonicals,
+          unmatchedCount
+        } = obs.availability;
         const visible = new Set(visibleCanonicals);
         const posSet = new Set(positionsSeen);
-        for (const p of pool2.players) {
-          if (!Number.isFinite(p.adp) || p.adp >= topVisibleAdp - 0.05) continue;
-          if (!posSet.has(p.position)) continue;
-          if (visible.has(p.canonical)) continue;
-          state.inferredGone.add(p.canonical);
+        const unfiltered = posSet.size >= 3;
+        if (Number.isFinite(bottomVisibleAdp) && (unmatchedCount ?? 0) < 2) {
+          for (const p of pool2.players) {
+            if (!Number.isFinite(p.adp)) continue;
+            if (p.adp <= topVisibleAdp + 0.05 || p.adp >= bottomVisibleAdp - 0.05) continue;
+            if (!unfiltered && !posSet.has(p.position)) continue;
+            if (visible.has(p.canonical)) continue;
+            state.inferredGone.add(p.canonical);
+          }
+        }
+        if (topVisibleAdp <= state.currentPick + 12) {
+          for (const p of pool2.players) {
+            if (!Number.isFinite(p.adp) || p.adp >= topVisibleAdp - 0.05) continue;
+            if (!unfiltered && !posSet.has(p.position)) continue;
+            if (visible.has(p.canonical)) continue;
+            state.inferredGone.add(p.canonical);
+          }
         }
       }
       if (obs.kind === "queue") {
         state.queue = new Set(obs.queueNames);
       }
-      for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+      if (obs.kind !== "roster") {
+        for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+      }
       if (state.observedStartPick == null && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability || picksUntil != null)) {
         state.observedStartPick = state.currentPick;
       }
@@ -976,19 +1170,33 @@
         myPicks: myPicks()
       };
     }
-    function targetFlag(p, picks, next) {
-      if (state.queue.has(p.canonical) && Number.isFinite(p.adp) && next != null && p.adp < next - 1) {
-        return "QUEUE RISK";
-      }
+    function targetFlags(p, picks, next) {
+      let flags = "";
       for (const mine of picks) {
         if (mine.team === p.team && mine.team !== "N/A" && (p.position === "QB" || mine.position === "QB")) {
-          return "STACK";
+          flags += "S";
+          break;
         }
       }
-      if (Number.isFinite(p.adp) && next != null && p.adp <= next - 4) return "FALLING";
-      const exp = exposureMap.get(p.canonical);
-      if (Number.isFinite(exp) && exp >= 25) return `${Math.round(exp)}% OWNED`;
-      return "";
+      if (candidateHasPlayoffStack(p, picks)) flags += "P";
+      if (state.queue.has(p.canonical) && Number.isFinite(p.adp) && next != null && p.adp < next - 1) {
+        flags += "Q";
+      }
+      if (Number.isFinite(p.adp) && next != null && p.adp <= next - 4) flags += "F";
+      return flags;
+    }
+    function buildTargets(picks, next) {
+      const top = availablePlayers(12).slice(0, 6);
+      const lastNames = top.map((p) => lastNameOf(p.name));
+      return top.map((p, i) => {
+        let short = lastNames[i];
+        if (lastNames.filter((n) => n === short).length > 1) {
+          short = `${p.name.trim()[0]}.${short}`;
+        }
+        const exp = exposureMap.get(p.canonical);
+        const expStr = Number.isFinite(exp) ? String(Math.round(exp)) : "";
+        return `${p.position}\xB7${short}\xB7${expStr}\xB7${targetFlags(p, picks, next)}`;
+      });
     }
     function getGlance({ phaseOverride } = {}) {
       const picks = myPicks();
@@ -999,22 +1207,25 @@
       if (phaseOverride) phase = phaseOverride;
       else if (state.syncCount === 0) phase = "armed";
       else if (done) phase = "done";
+      else if (state.inRoom === false) phase = "away";
+      else if (state.inRoom == null) phase = "waiting";
       else if (picksUntil === 0) phase = "onClock";
       else if (picksUntil === 1) phase = "onDeck";
       const round = roundForOverall(Math.min(state.currentPick, teams * rounds), teams);
       let headline;
       if (phase === "armed") headline = "Waiting for capture to start";
       else if (phase === "done") headline = "Draft complete";
-      else if (phase === "onClock") headline = "You're on the clock!";
+      else if (phase === "waiting") headline = "Waiting to enter draft";
+      else if (phase === "away") {
+        headline = state.ledger.size || state.inferredGone.size ? `Left draft room \u2014 R${round} \xB7 P${state.currentPick} held` : "Left draft room";
+      } else if (phase === "onClock") headline = "You're on the clock!";
       else if (phase === "onDeck") headline = "You're up next";
       else if (picksUntil > 0) headline = `Up in ${picksUntil} picks`;
       else headline = `Tracking \xB7 R${round} \xB7 P${state.currentPick}`;
       const counts = { QB: 0, RB: 0, WR: 0, TE: 0 };
       for (const p of picks) if (counts[p.position] != null) counts[p.position]++;
-      const targets = availablePlayers(12).slice(0, 3).map((p) => {
-        const flag = targetFlag(p, picks, next);
-        return `${p.position} \xB7 ${p.name}${flag ? ` \xB7 ${flag}` : ""}`;
-      });
+      const showTargets = phase === "tracking" || phase === "onClock" || phase === "onDeck";
+      const targets = showTargets ? buildTargets(picks, next) : [];
       return {
         phase,
         headline,
@@ -1050,7 +1261,10 @@
         inferredGone: [...state.inferredGone],
         queue: [...state.queue],
         usernameSlots: Object.fromEntries(state.usernameSlots),
-        tallies: Object.fromEntries(state.tallies)
+        tallies: Object.fromEntries(state.tallies),
+        inRoom: state.inRoom,
+        inAt: state.lastInRoomAt,
+        outAt: state.lastOutAt
       };
     }
     function hydrate(data) {
@@ -1087,13 +1301,27 @@
       if (data.tallies) {
         for (const [u, t] of Object.entries(data.tallies)) state.tallies.set(u, t);
       }
+      const dataEvidence = Math.max(data.inAt || 0, data.outAt || 0);
+      if (data.inRoom !== void 0 && data.inRoom !== null && dataEvidence >= Math.max(state.lastInRoomAt, state.lastOutAt)) {
+        state.inRoom = data.inRoom;
+        state.lastInRoomAt = Math.max(state.lastInRoomAt, data.inAt || 0);
+        state.lastOutAt = Math.max(state.lastOutAt, data.outAt || 0);
+      }
       state.syncCount = Math.max(state.syncCount, data.syncCount || 0);
       return true;
+    }
+    function tick(nowMs = Date.now()) {
+      const wasInRoom = state.inRoom;
+      if (state.inRoom === true && state.lastOutAt > state.lastInRoomAt && nowMs - state.lastInRoomAt >= OUT_OF_ROOM_MS) {
+        state.inRoom = false;
+      }
+      return { presence: presence(), presenceChanged: wasInRoom !== state.inRoom };
     }
     return {
       teams,
       rounds,
       ingest,
+      tick,
       getDraftState,
       getGlance,
       serialize,
@@ -1105,6 +1333,8 @@
       getStatus() {
         return {
           slot: slot(),
+          presence: presence(),
+          inRoom: state.inRoom,
           slotSource: state.manualSlot ? "manual" : state.anchoredSlot ? "anchored" : state.inferredSlot ? "inferred" : null,
           manualSlot: state.manualSlot,
           anchoredSlot: state.anchoredSlot,
@@ -1130,7 +1360,8 @@
   }
 
   // src/draft/extensionEngine.entry.js
-  var ENGINE_VERSION = "task328.3";
+  var ENGINE_VERSION = "task336.1";
+  var ENGINE_BUILD = 2;
   var session = null;
   var config = null;
   var pool = null;
@@ -1159,13 +1390,17 @@
     const changed = core !== lastCore;
     const enteredCrunch = changed && (glance.phase === "onClock" || glance.phase === "onDeck" || glance.picksUntil >= 0 && glance.picksUntil <= 3);
     const myPickLanded = changed && /QB \d+ · RB \d+/.test(glance.rosterBar) && lastCore && JSON.parse(lastCore)[4] !== glance.rosterBar;
+    const presenceFlip = !!(summary && summary.presenceChanged);
     if (changed) lastCore = core;
     return JSON.stringify({
       ok: true,
       engine: ENGINE_VERSION,
+      // Config epoch (TASK-336 reset flow): the app stamps its session config;
+      // results echo it so a pre-reset snapshot can't pollute a fresh session.
+      epoch: config && config.configEpoch || 0,
       kind: obsKind ?? null,
       changed,
-      significant: enteredCrunch || myPickLanded || myPickEvent,
+      significant: enteredCrunch || myPickLanded || myPickEvent || presenceFlip,
       glance,
       state: session.serialize(),
       status: {
@@ -1181,6 +1416,11 @@
     });
   }
   globalThis.BBEEngine = {
+    // Self-describing identity so an evaluated copy (e.g. the App Group hot-load
+    // sanity-eval in FrameProcessor, ADR-023) can read version/build without
+    // parsing the source text.
+    version: ENGINE_VERSION,
+    build: ENGINE_BUILD,
     init(configJson) {
       try {
         config = JSON.parse(configJson);
@@ -1203,13 +1443,15 @@
         return `error: ${e && e.message ? e.message : String(e)}`;
       }
     },
-    /** itemsJson: [{ text, x, y, w, h, confidence }] from Vision (or plain strings). */
-    ingest(itemsJson) {
+    /** itemsJson: [{ text, x, y, w, h, confidence }] from Vision (or plain
+     *  strings). nowMs is optional — Swift omits it (Date.now()); the offline
+     *  push simulator passes recorded frame times so presence replays honestly. */
+    ingest(itemsJson, nowMs) {
       try {
         if (!session) return JSON.stringify({ ok: false, error: "not initialized" });
         const items = JSON.parse(itemsJson);
         const obs = parseUnderdogScreen(items, { pool, teams: config.teams || 12 });
-        const summary = session.ingest(obs);
+        const summary = session.ingest(obs, Number(nowMs) || Date.now());
         const st = session.getStatus();
         diagLog.push({
           t: Math.floor(Date.now() / 1e3),
@@ -1233,6 +1475,19 @@
       try {
         if (!session) return JSON.stringify({ ok: false, error: "not initialized" });
         return buildResult(null, null);
+      } catch (e) {
+        return JSON.stringify({ ok: false, error: e && e.message ? e.message : String(e) });
+      }
+    },
+    /** Presence clock nudge for frame-quiet stretches (TASK-336): static
+     *  screens never reach ingest (Swift's duplicate gate), so Swift calls this
+     *  periodically instead. Returns a normal result; an away flip rides
+     *  `significant` and pushes like any other transition. */
+    tick(nowMs) {
+      try {
+        if (!session) return JSON.stringify({ ok: false, error: "not initialized" });
+        const t = session.tick(Number(nowMs) || Date.now());
+        return buildResult(null, { presenceChanged: t.presenceChanged });
       } catch (e) {
         return JSON.stringify({ ok: false, error: e && e.message ? e.message : String(e) });
       }

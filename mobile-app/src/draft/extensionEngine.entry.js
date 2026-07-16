@@ -19,7 +19,13 @@ import { createDraftSession } from './sessionEngine.js';
 // bundle ships inside the native broadcast extension, so a stale EAS build
 // silently runs old parsing. The version rides in every result so the panel
 // can prove which engine is actually running.
-export const ENGINE_VERSION = 'task328.3';
+export const ENGINE_VERSION = 'task336.1';
+
+// Monotonic build counter (ADR-023). ENGINE_VERSION is a task-string with no
+// ordering, so the App Group hot-load path uses this integer to decide whether
+// the app-written engine is newer than the one baked into the extension
+// bundle. BUMP THIS (by 1) with every engine change, alongside ENGINE_VERSION.
+export const ENGINE_BUILD = 2;
 
 let session = null;
 let config = null;
@@ -44,8 +50,13 @@ function buildResult(obsKind, summary) {
   glance.syncedAtEpoch = Math.floor(Date.now() / 1000);
   const status = session.getStatus();
 
-  // Change detection drives push pacing in Swift. "Significant" events get
-  // priority-10 pushes; keep them rare (DEVELOPMENT_NOTES p10 budget).
+  // Change detection + currentPick drive the event-driven push policy in Swift
+  // (ADR-024): Swift pushes priority 10 on each currentPick advance OR on a
+  // "significant" transition, floored to 3 s; nothing is pushed while idle.
+  // `significant` is retained as the crunch/my-pick guarantee — it bypasses the
+  // floor so on-clock is never delayed — but it is no longer the *only* p10
+  // trigger (priority 5 is gone; iOS deferred it and the card froze far from
+  // the pick).
   const core = JSON.stringify([
     glance.phase, glance.picksUntil, glance.currentPick, glance.myNextPick,
     glance.rosterBar, glance.targets,
@@ -56,14 +67,20 @@ function buildResult(obsKind, summary) {
       || (glance.picksUntil >= 0 && glance.picksUntil <= 3));
   const myPickLanded = changed && /QB \d+ · RB \d+/.test(glance.rosterBar)
     && lastCore && JSON.parse(lastCore)[4] !== glance.rosterBar;
+  // Room-presence flips (entered / left the draft room, TASK-336) push
+  // immediately — they ARE the "left draft room" notification.
+  const presenceFlip = !!(summary && summary.presenceChanged);
   if (changed) lastCore = core;
 
   return JSON.stringify({
     ok: true,
     engine: ENGINE_VERSION,
+    // Config epoch (TASK-336 reset flow): the app stamps its session config;
+    // results echo it so a pre-reset snapshot can't pollute a fresh session.
+    epoch: (config && config.configEpoch) || 0,
     kind: obsKind ?? null,
     changed,
-    significant: enteredCrunch || myPickLanded || myPickEvent,
+    significant: enteredCrunch || myPickLanded || myPickEvent || presenceFlip,
     glance,
     state: session.serialize(),
     status: {
@@ -80,6 +97,12 @@ function buildResult(obsKind, summary) {
 }
 
 globalThis.BBEEngine = {
+  // Self-describing identity so an evaluated copy (e.g. the App Group hot-load
+  // sanity-eval in FrameProcessor, ADR-023) can read version/build without
+  // parsing the source text.
+  version: ENGINE_VERSION,
+  build: ENGINE_BUILD,
+
   init(configJson) {
     try {
       config = JSON.parse(configJson);
@@ -103,13 +126,15 @@ globalThis.BBEEngine = {
     }
   },
 
-  /** itemsJson: [{ text, x, y, w, h, confidence }] from Vision (or plain strings). */
-  ingest(itemsJson) {
+  /** itemsJson: [{ text, x, y, w, h, confidence }] from Vision (or plain
+   *  strings). nowMs is optional — Swift omits it (Date.now()); the offline
+   *  push simulator passes recorded frame times so presence replays honestly. */
+  ingest(itemsJson, nowMs) {
     try {
       if (!session) return JSON.stringify({ ok: false, error: 'not initialized' });
       const items = JSON.parse(itemsJson);
       const obs = parseUnderdogScreen(items, { pool, teams: config.teams || 12 });
-      const summary = session.ingest(obs);
+      const summary = session.ingest(obs, Number(nowMs) || Date.now());
       const st = session.getStatus();
       diagLog.push({
         t: Math.floor(Date.now() / 1000),
@@ -134,6 +159,20 @@ globalThis.BBEEngine = {
     try {
       if (!session) return JSON.stringify({ ok: false, error: 'not initialized' });
       return buildResult(null, null);
+    } catch (e) {
+      return JSON.stringify({ ok: false, error: e && e.message ? e.message : String(e) });
+    }
+  },
+
+  /** Presence clock nudge for frame-quiet stretches (TASK-336): static
+   *  screens never reach ingest (Swift's duplicate gate), so Swift calls this
+   *  periodically instead. Returns a normal result; an away flip rides
+   *  `significant` and pushes like any other transition. */
+  tick(nowMs) {
+    try {
+      if (!session) return JSON.stringify({ ok: false, error: 'not initialized' });
+      const t = session.tick(Number(nowMs) || Date.now());
+      return buildResult(null, { presenceChanged: t.presenceChanged });
     } catch (e) {
       return JSON.stringify({ ok: false, error: e && e.message ? e.message : String(e) });
     }

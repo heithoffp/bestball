@@ -91,6 +91,21 @@ The engine outputs the shape already defined in
 draftSlot, availablePlayers, myPicks). Mobile is effectively a third platform adapter;
 the analytics layer consumes it unchanged.
 
+### Engine hot-load from the App Group (ADR-023)
+
+The parse engine ships two ways from one esbuild step (`npm run build:engine`):
+`targets/draft-broadcast/assets/engine.js` (baked into the native broadcast extension)
+and `src/draft/generated/engineSource.js` (the same IIFE as an importable string in the
+app's JS bundle). At session start the app writes `ENGINE_SOURCE` to `engine-hotload.js`
+in the App Group plus `bbe.engineBuild`/`bbe.engineVersion`. `FrameProcessor.setUp`
+prefers the App Group copy over its bundled asset only when the monotonic `ENGINE_BUILD`
+is strictly higher **and** it passes an integrity sanity-eval (a well-formed
+`globalThis.BBEEngine` with a matching integer `build`, a `version` string, and a callable
+`init`); on any failure it falls back to the bundled engine — the always-safe floor. Net
+effect: parser fixes reach the extension over the JS-update path (Metro reload today, OTA
+if `expo-updates` is adopted) with no EAS rebuild. **Bump `ENGINE_BUILD` (and
+`ENGINE_VERSION`) in `extensionEngine.entry.js` on every engine change.**
+
 ## iOS data flow
 
 **Foreground (BBE app open, e.g., user tapped through):** capture → parse → ledger →

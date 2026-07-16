@@ -4,15 +4,16 @@
 // 'shots' (screenshot sweep fallback). Active state doubles as the
 // confidence hub: capture heartbeat, parse log, slot conflicts, warnings.
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Modal, TextInput, Share } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Modal, TextInput, Share, Alert } from 'react-native';
 import {
-  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History, Bug,
+  Radio, Square, Zap, TriangleAlert, ChevronDown, ChevronUp, FlaskConical, Cast, ShieldCheck, History, Bug, Film,
+  DoorOpen, RotateCcw,
 } from 'lucide-react-native';
 import { canonicalName } from '../../shared/utils/helpers';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import {
   subscribeSession, startSession, endSession, demoSync, setSessionSlot, exportDebug,
-  BROADCAST_EXTENSION_ID,
+  resetDraftBoard, getFrameLogPath, BROADCAST_EXTENSION_ID,
 } from '../draft/sessionController';
 import {
   getBroadcastPickerComponent, broadcastPickerLaunchable, launchBroadcastPicker,
@@ -314,6 +315,42 @@ export default function LiveSessionPanel() {
         </View>
       )}
 
+      {/* Room presence + reset (TASK-336): back-to-back slow drafts are
+          enter room -> pick -> leave -> reset -> enter the next room. */}
+      {captureLive && status?.presence === 'unseen' && (
+        <View style={styles.roomRow}>
+          <DoorOpen size={12} color={colors.textMuted} />
+          <Text style={[styles.resumeTxt, { color: colors.textSecondary }]}>
+            Waiting to enter a draft room — open your draft in Underdog
+          </Text>
+        </View>
+      )}
+      {captureLive && status?.presence === 'out' && (
+        <View style={styles.roomRow}>
+          <DoorOpen size={12} color={GOLD} />
+          <Text style={[styles.resumeTxt, { color: GOLD }]}>
+            Left the draft room
+            {(status.ledgerSize > 0 || status.inferredGone > 0) ? ' — board state held' : ''}
+          </Text>
+          {(status.ledgerSize > 0 || status.inferredGone > 0) && (
+            <Pressable
+              style={styles.resetBtn}
+              onPress={() => Alert.alert(
+                'Reset for next draft?',
+                'Clears the picks and availability from this draft so the next room starts clean. Your username, rankings, and exposures are kept.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Reset board', style: 'destructive', onPress: () => resetDraftBoard() },
+                ],
+              )}
+            >
+              <RotateCcw size={11} color={colors.textInverse} />
+              <Text style={styles.resetTxt}>Reset</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
       <View style={styles.btnRow}>
         <Pressable style={styles.actionBtn} onPress={() => demoSync()}>
           <FlaskConical size={12} color={colors.textSecondary} />
@@ -327,6 +364,28 @@ export default function LiveSessionPanel() {
         >
           <Bug size={12} color={colors.textSecondary} />
           <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Debug</Text>
+        </Pressable>
+        <Pressable
+          style={styles.actionBtn}
+          onPress={async () => {
+            // TASK-331: share the extension's full-session OCR recording so
+            // the whole draft can be replayed offline (replay-frames.mjs).
+            try {
+              const path = getFrameLogPath();
+              if (!path) {
+                setDebugText('No frame recording found — the extension writes it during a live broadcast (needs the task329.3+ build).');
+                return;
+              }
+              // eslint-disable-next-line global-require
+              const Sharing = require('expo-sharing');
+              await Sharing.shareAsync(`file://${path}`, { mimeType: 'application/json', dialogTitle: 'Session frames' });
+            } catch (e) {
+              setDebugText(`frames export failed: ${e?.message}`);
+            }
+          }}
+        >
+          <Film size={12} color={colors.textSecondary} />
+          <Text style={[styles.actionTxt, { color: colors.textSecondary }]}>Frames</Text>
         </Pressable>
         <Pressable style={[styles.actionBtn, { borderColor: `${colors.negative}66` }]} onPress={() => endSession()}>
           <Square size={11} color={colors.negative} />
@@ -487,6 +546,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentMuted,
   },
   resumeTxt: { fontSize: 11, fontWeight: '700', color: colors.accent, flexShrink: 1 },
+  roomRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: spacing.sm, paddingVertical: 6, paddingHorizontal: spacing.sm,
+    borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderDefault,
+    backgroundColor: colors.surface2 ?? colors.surface1,
+  },
+  resetBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto',
+    backgroundColor: colors.accent, borderRadius: radii.sm,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  resetTxt: { fontSize: 10.5, fontWeight: '800', color: colors.textInverse },
   preflightScrim: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center', justifyContent: 'center', padding: spacing.lg,

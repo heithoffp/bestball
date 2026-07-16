@@ -16,8 +16,10 @@ import { createDraftSession } from './sessionEngine';
 import {
   startActivity, updateActivity, endActivity, getActivityPushToken,
   nativeModuleAvailable, liveActivitySupported, activitiesEnabled, frequentPushesEnabled,
-  writeSharedValue, readSharedValue, readSharedDouble,
+  writeSharedValue, readSharedValue, readSharedDouble, latestFrameLogPath,
+  writeSharedFile,
 } from './liveActivity';
+import { ENGINE_SOURCE, ENGINE_BUILD, ENGINE_VERSION } from './generated/engineSource';
 import { SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '../../shared/config';
 
 export const BROADCAST_EXTENSION_ID = 'com.bestballexposures.app.draftbroadcast';
@@ -26,6 +28,16 @@ const SESSION_CONFIG_KEY = 'bbe.sessionConfig';
 const RESULT_KEY = 'bbe.extensionResult';
 const HEARTBEAT_KEY = 'bbe.extensionHeartbeat';
 const USERNAME_KEY = 'bbe.udUsername';
+// TASK-336 reset flow: bumping this epoch tells a RUNNING broadcast extension
+// to re-init its engine from the (rewritten) session config — the board
+// resets for the next draft room without ending the broadcast.
+const EPOCH_KEY = 'bbe.configEpoch';
+// ADR-023 engine hot-load: the app hands its current parse engine to the
+// broadcast extension through the App Group, so parser fixes reach the
+// extension via a JS reload with no native rebuild.
+const ENGINE_FILE = 'engine-hotload.js';
+const ENGINE_BUILD_KEY = 'bbe.engineBuild';
+const ENGINE_VERSION_KEY = 'bbe.engineVersion';
 
 const HEARTBEAT_POLL_MS = 4000;
 const HEARTBEAT_FRESH_S = 8;
@@ -50,6 +62,8 @@ const state = {
   heartbeatTimer: null,
   listeners: new Set(),
   baseConfig: null,        // config minus `state`, for warm-restart rewrites
+  startInputs: null,       // raw startSession inputs, for resetDraftBoard()
+  configEpoch: 0,          // bumped per session start and per board reset
   lastPersistedKey: '',
   lastDiag: null,          // extension's recent-ingest ring buffer (debugging)
   extensionEngine: null,   // version reported by the extension's engine bundle
@@ -163,8 +177,20 @@ export async function startSession({
       pushLog('No push token — glance updates only while BBE is open');
     }
   }
+  // Hand the current parse engine to the broadcast extension (ADR-023) BEFORE
+  // the session config that triggers capture, so the extension's setUp reads a
+  // fresh engine. The extension only adopts it when its build is newer than
+  // the one baked into the native bundle and it passes a sanity-eval; else it
+  // falls back to its bundled asset. The engine text rides this JS bundle, so
+  // a Metro reload updates it with no native rebuild.
+  writeSharedFile(ENGINE_FILE, ENGINE_SOURCE);
+  writeSharedValue(ENGINE_BUILD_KEY, String(ENGINE_BUILD));
+  writeSharedValue(ENGINE_VERSION_KEY, ENGINE_VERSION);
+
   // Hand the session to the broadcast extension through the App Group.
   writeSharedValue(RESULT_KEY, null);
+  state.startInputs = { poolRows, rankMap, exposureMap, teams, rounds };
+  state.configEpoch += 1;
   state.baseConfig = {
     poolRows,
     teams,
@@ -176,12 +202,18 @@ export async function startSession({
     pushToken: state.pushToken,
     relayUrl: `${SUPABASE_FUNCTIONS_URL}/live-activity-relay`,
     anonKey: SUPABASE_ANON_KEY,
+    configEpoch: state.configEpoch,
+    // TASK-331: the extension records every OCR frame (JSONL in the App
+    // Group) so whole drafts replay offline via scripts/replay-frames.mjs.
+    // Developer-build default; revisit before public TestFlight.
+    recordFrames: true,
   };
   state.lastPersistedKey = '';
   writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
     ...state.baseConfig,
     state: state.session.serialize(),
   }));
+  writeSharedValue(EPOCH_KEY, String(state.configEpoch));
   state.heartbeatTimer = setInterval(pollExtension, HEARTBEAT_POLL_MS);
 
   state.appStateSub?.remove?.();
@@ -217,6 +249,9 @@ function absorbExtensionState() {
   state.lastAbsorbedRaw = raw;
   try {
     const result = JSON.parse(raw);
+    // A result stamped with an older config epoch predates the last board
+    // reset — absorbing it would resurrect the previous draft (TASK-336).
+    if (result?.epoch != null && result.epoch !== state.configEpoch) return;
     if (result?.diag) state.lastDiag = result.diag;
     // Version handshake: an extension without `engine` predates TASK-328 —
     // the phone is running a stale EAS build and needs a rebuild.
@@ -302,11 +337,58 @@ export function exportDebug() {
   }, null, 1);
 }
 
+/** Newest session frame recording written by the extension (or null). */
+export function getFrameLogPath() {
+  return latestFrameLogPath();
+}
+
 export function setSessionSlot(slot) {
   if (!state.session) return;
   state.session.setManualSlot(slot);
   publishAll();
   notify();
+}
+
+/**
+ * Reset the board for the next draft in a back-to-back slow-draft session
+ * (TASK-336): keeps the pool, rankings, exposures, and remembered username;
+ * drops the ledger, availability marks, slot anchor, and pick position. The
+ * configEpoch bump tells the running broadcast extension to re-init its
+ * engine from the rewritten config — the broadcast itself never stops.
+ */
+export function resetDraftBoard() {
+  if (!state.active || !state.startInputs || !state.session) return false;
+  const { rankMap, exposureMap, teams, rounds } = state.startInputs;
+  const knownUsername = readSharedValue(USERNAME_KEY) || state.baseConfig?.username || null;
+  state.session = createDraftSession({
+    pool: state.pool, teams, rounds, slot: null, username: knownUsername, rankMap, exposureMap,
+  });
+  state.configEpoch += 1;
+  state.lastSyncEpoch = 0;
+  state.lastAbsorbedRaw = null;
+  state.resumeLogged = false;
+  state.lastPersistedKey = '';
+  state.lastDiag = null;
+  writeSharedValue(RESULT_KEY, null);
+  state.baseConfig = {
+    ...state.baseConfig, slot: null, username: knownUsername, configEpoch: state.configEpoch,
+  };
+  // Config first, then the epoch marker — the extension re-reads the config
+  // the moment it sees the new epoch, so this order can't race a stale read.
+  writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
+    ...state.baseConfig,
+    state: state.session.serialize(),
+  }));
+  writeSharedValue(EPOCH_KEY, String(state.configEpoch));
+  endDraftFeed();
+  if (state.activityStarted) {
+    const res = updateActivity(stampedGlance('waiting'));
+    if (!res.ok) state.activityError = res.error;
+  }
+  pushLog('Board reset — ready for the next draft room');
+  haptic('success');
+  notify();
+  return true;
 }
 
 export function endSession() {
@@ -329,6 +411,7 @@ export function endSession() {
   state.session = null;
   state.pool = null;
   state.baseConfig = null;
+  state.startInputs = null;
   state.lastPersistedKey = '';
   state.extensionEngine = null;
   endDraftFeed();

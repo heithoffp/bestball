@@ -107,6 +107,10 @@ function rateLimited(key: string): boolean {
 // ---- APNs delivery ----
 
 async function sendPush(host: string, token: string, payload: unknown, priority: number) {
+  // apns-expiration is a UNIX timestamp. A ~60s window (not 0 = "deliver now or
+  // discard") lets a briefly-deferred push still land with fresh-enough state
+  // instead of being dropped, while genuinely stale updates still expire (ADR-024).
+  const expiration = Math.floor(Date.now() / 1000) + 60;
   return await fetch(`${host}/3/device/${token}`, {
     method: "POST",
     headers: {
@@ -114,7 +118,7 @@ async function sendPush(host: string, token: string, payload: unknown, priority:
       "apns-topic": `${APNS_BUNDLE_ID}.push-type.liveactivity`,
       "apns-push-type": "liveactivity",
       "apns-priority": String(priority),
-      "apns-expiration": "0",
+      "apns-expiration": String(expiration),
       "content-type": "application/json",
     },
     body: JSON.stringify(payload),

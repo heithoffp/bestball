@@ -93,6 +93,10 @@ background-capture semantics on the iOS 27 beta before any production code is wr
 - Live Activity push throttling remains a hard budget even with
   `NSSupportsLiveActivitiesFrequentUpdates`; the update policy must prioritize
   "you're on the clock" moments over routine board movement regardless of transport.
+  **[Revised by ADR-024]** — in practice this note, taken literally, froze the
+  card far from the pick (routine board movement was sent at priority 5 and
+  deferred). ADR-024 supersedes this policy with an event-driven, priority-10
+  push on each detected pick; see ADR-024 for the current push policy.
 
 ## Revisit Conditions
 

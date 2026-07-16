@@ -67,6 +67,21 @@ export function readSharedDouble(key) {
   try { return native()?.readSharedDouble(key) ?? 0; } catch { return 0; }
 }
 
+/** Write (or, with null, delete) a file in the App Group container. Used to
+ *  hand the parse engine to the broadcast extension (ADR-023). */
+export function writeSharedFile(name, contents) {
+  try { return native()?.writeSharedFile(name, contents ?? null) ?? false; } catch { return false; }
+}
+
+export function readSharedFile(name) {
+  try { return native()?.readSharedFile?.(name) ?? null; } catch { return null; }
+}
+
+/** Path of the newest session frame recording (frames-*.jsonl), or null. */
+export function latestFrameLogPath() {
+  try { return native()?.latestFrameLogPath?.() ?? null; } catch { return null; }
+}
+
 /** True when the build can present the broadcast sheet programmatically. */
 export function broadcastPickerLaunchable() {
   return typeof native()?.launchBroadcastPicker === 'function';

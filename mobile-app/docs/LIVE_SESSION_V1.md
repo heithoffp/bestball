@@ -72,10 +72,18 @@ in `docs/task-318 artifacts/`.
 Header (visible on every tab):
 - `UP IN N PICKS` → picks-until-turn. `YOUR PICK` / `Your pick: 0:19` /
   on-the-clock variants → 0 (header zone only — the Board also renders
-  "On the clock" inside the current pick's cell for *whoever* is picking).
-  `UP NEXT` → 1. `Drafting starts soon` / `Draft starts in M:SS` → lobby.
+  "On the clock" inside the current pick's cell for *whoever* is picking;
+  the plural is rejected because the UD home screen's tagline "Your players.
+  Your picks." sits in the header zone and read as a false on-the-clock,
+  frames-1784120786). `UP NEXT` → 1. `Drafting starts soon` /
+  `Draft starts in M:SS` → lobby.
 - Drafter cards: `3.8 | 32` = round.pickInRound | overall pick, for upcoming
   drafters; the on-clock drafter shows a timer (`1hr`, `59:50`, `0:14`) instead.
+  In slow drafts, cards whose pick already happened keep their label and show
+  the drafted player as an abbreviated `F. Surname` line beneath it — those
+  abbreviated forms are never row candidates (they resurrected just-drafted
+  players into the targets, frames-1784120786) but are a future ledger source
+  (TASK-330/332).
   OCR noise like `310 | 34` (dropped dot), `1.717` (pipe merged into digits),
   and `2.7` + `19` (split fragments) is solved using the overall as ground
   truth ((r−1)·teams + p == overall). Card fragments are paired geometrically
@@ -153,17 +161,57 @@ every legible header (291/291 at check-in).
 ## Live Activity content (the "useful information")
 
 ContentState (flat, small, local-update only):
-- `phase`: armed | tracking | onDeck | onClock | done
+- `phase`: armed | waiting | tracking | onDeck | onClock | away | done
+  (TASK-336: `waiting` = capture live, no draft room seen yet; `away` = left
+  the room with board state held)
 - `picksUntil`, `currentPick`, `round`, `myNextPick`
-- `headline` ("Up in 2 picks", "You're on the clock!")
-- `targets[]`: top-3 available at your pick by **your UD custom rankings** (fallback
-  ADP), each with position and one flag (STACK / high global exposure % / QUEUE RISK)
+- `headline` ("Up in 2 picks", "You're on the clock!", "Waiting to enter
+  draft", "Left draft room — R8 · P89 held")
+- `targets[]` (TASK-336): top-6 available at your pick by **your UD custom
+  rankings** (fallback ADP), compact-encoded `POS·LastName·EXP·FLAGS`
+  (e.g. `WR·Olave·23·SP`) — exposure % plus flag glyphs S (stack with a
+  current pick, QB involved), P (W15/16/17 playoff game stack vs a current
+  pick), Q (queued + ADP risk before your next pick), F (falling past ADP).
+  Empty outside the tracking phases. Last-name collisions render `F.Surname`.
 - `rosterBar`: "QB 0 · RB 2 · WR 0 · TE 0"
 - `syncedAtEpoch` → rendered as a self-ticking relative time (no updates needed)
 
-Surfaces: lock screen card (headline + targets + roster bar + synced-ago);
-Dynamic Island compact leading `⏳N` / trailing `P31`; minimal `N`; expanded =
-lock-screen content. Tap → deep link `bbexposures:///draft?view=assistant`.
+Surfaces: lock screen card (headline + 3×2 two-column target grid, column-major
+so ranks 1–3 fill the left column + roster bar + synced-ago); Dynamic Island
+compact leading `⏳N` / trailing `P31`; minimal `N`; expanded = lock-screen
+content. Tap → deep link `bbexposures:///draft?view=assistant`.
+
+## Room presence + reset-for-next-draft (TASK-336)
+
+The engine classifies every frame as in-room evidence (board / players /
+queue / roster / detail / header / lobby kinds, or a confirm card), out
+evidence (`unknown` — UD home, other apps, the BBE app itself), or neutral
+(`self`, our own expanded Live Activity). Hysteresis: entering flips on one
+in-room frame; leaving needs two consecutive out frames OR one out frame plus
+10 s without in-room evidence (`BBEEngine.tick`, called by FrameProcessor when
+the duplicate gate has kept frames quiet ≥ 10 s, covers screens left static).
+Presence transitions ride `significant` → pushed immediately; that push IS the
+"left the draft room" notification.
+
+The roster panel is also a ledger source now: each row's absolute overall
+("57 / Pick" right rail) pairs geometrically with its player row, so a
+mid-draft join needs only a glance at your roster + one players-tab scroll —
+no full board scan. A mixed-slot harvest (misread number) is dropped whole.
+
+Back-to-back slow drafts: when the panel shows "Left the draft room — board
+state held", the **Reset** action (`sessionController.resetDraftBoard()`)
+rebuilds the session keeping pool/rankings/exposures/username, clears
+ledger/availability/slot/pick position, rewrites `bbe.sessionConfig`, and bumps
+`bbe.configEpoch`. FrameProcessor re-reads the epoch every frame and re-inits
+its engine (and its push bookkeeping) without ending the broadcast; results
+echo the epoch so the app drops any pre-reset snapshot.
+
+Push policy (ADR-024, triggers extended by TASK-336): priority-10 on
+`significant` (crunch / my pick / presence — no floor), a newly-detected pick
+(3 s floor), or a changed target list (15 s floor — availability inference
+reshapes targets without advancing the pick; before this trigger the card
+froze on stale top-of-pool names for entire mid-draft resumes,
+frames-1784198568).
 
 ## Native surface (all new, kept thin per DEVELOPMENT_NOTES)
 
@@ -249,9 +297,12 @@ Underdog on screen
           os_proc_available_memory guard for the ~50 MB jetsam limit)
         → Vision OCR
         → THE SAME JS ENGINE, bundled by esbuild into assets/engine.js and run
-          in JavaScriptCore — no Swift port, guaranteed parity with the app
+          in JavaScriptCore — no Swift port, guaranteed parity with the app.
+          Prefers the app's hot-loaded engine from the App Group when newer
+          (ADR-023), else this bundled asset
         → ledger/glance; App Group handoff (bbe.extensionResult/Heartbeat)
-        → on change: POST glance → live-activity-relay Edge Function → APNs
+        → on detected pick / significant event: POST glance →
+          live-activity-relay Edge Function → APNs
           (apns-push-type: liveactivity) → lock screen / Dynamic Island
   BBE app (suspended while drafting):
       on foreground: hydrate serialized engine state from the App Group →
@@ -262,15 +313,37 @@ Underdog on screen
 - ActivityKit is unreachable from extensions — the push relay is the only
   update path while backgrounded (ADR-020). Locally-computed updates still
   happen whenever the app is foregrounded.
-- Push pacing (DEVELOPMENT_NOTES budget): priority 10 only for "significant"
-  transitions (entering ≤3-away / on deck / on clock, your pick landing),
-  priority 5 for routine movement, max one push per 3 s, and only when the
-  glance actually changed. Frames of non-Underdog apps parse to kind
-  "unknown" and produce no change — nothing is pushed while you check Messages.
+- Push policy — event-driven (ADR-024): a **priority-10** push on each detected
+  pick (`currentPick` advances, which happens only from board/ticker/carousel
+  evidence — never OCR availability) or on a "significant" transition (entering
+  ≤3-away / on deck / on clock, your pick landing). A 3 s floor coalesces
+  autopick bursts into one newest-state push; a "significant" event bypasses the
+  floor so on-clock is never delayed. Nothing advanced → no push, so an idle
+  slow draft costs zero ActivityKit budget and the card's "synced Ns ago" line
+  self-ticks in SwiftUI. **Priority 5 is not used** — iOS delivers it
+  "opportunistically" (deferred), which froze the card whenever you were more
+  than a few picks from your turn (the bug ADR-024 fixes). This p10-only policy
+  relies on `NSSupportsLiveActivitiesFrequentUpdates` (`app.json`) for the higher
+  p10 budget a full fast draft (~216 pushes) needs. Frames of non-Underdog apps
+  parse to kind "unknown" and produce no change — nothing is pushed while you
+  check Messages. Offline-checkable via `node scripts/replay-frames.mjs <frames>
+  --pool <adp.csv> --push-sim`.
 - Session handoff: app writes `bbe.sessionConfig` (pool, slot, rankings,
   exposure, push token, relay URL, serialized engine state) to the App Group
   (`group.com.bestballexposures.app`); ending the session clears it, which the
   extension notices and self-terminates the broadcast.
+- Engine hot-load (ADR-023): at session start the app also writes its current
+  parse engine — `engine-hotload.js` (the `ENGINE_SOURCE` string from
+  `src/draft/generated/engineSource.js`, generated by `npm run build:engine`)
+  plus `bbe.engineBuild`/`bbe.engineVersion`. `FrameProcessor.setUp` adopts it
+  over the bundled asset only when `ENGINE_BUILD` is strictly higher AND it
+  passes a sanity-eval (a well-formed `globalThis.BBEEngine` with a matching
+  integer `build`, a `version` string, and a callable `init`); any failure
+  falls back to the bundled engine, the always-safe floor. Because the engine
+  text rides the app's JS bundle, parser fixes reach the extension via a JS
+  reload with no EAS rebuild — **bump `ENGINE_BUILD` (and `ENGINE_VERSION`)**
+  in `extensionEngine.entry.js` on every engine change so the extension knows
+  the App Group copy is newer.
 - Privacy invariants hold (ADR-019): frames never leave the extension process;
   only the derived glance ContentState (player names, pick numbers) transits
   the relay, addressed by the user's own activity push token.
@@ -323,6 +396,34 @@ ADR-020 still stands: SCK is the eventual primary. What changes and when:
    broadcast from the red status icon, then End in BBE.
 6. Console.app filter `draftbroadcast` (device over USB) shows the extension's
    os_log lines: engine init, JS exceptions, relay HTTP status.
+
+## Session frame recorder + offline replay (TASK-331)
+
+Fixing parser defects from the 6-frame diag ring buffer required a live draft
+plus an EAS build per iteration. The recorder removes that loop: the broadcast
+extension appends **every** OCR'd frame to `frames-<epoch>.jsonl` in the App
+Group container (`{"t": epochSec, "items": [{text,x,y,w,h,confidence}]}` per
+line), and the whole draft replays offline through the identical engine.
+
+- **Recording:** on when the session config has `recordFrames: true`
+  (sessionController currently always sets it — developer build; before any
+  public TestFlight either default it off behind a Debug toggle or add
+  retention limits). One recording is retained at a time; stale files are
+  deleted at session start; hard cap 20 MB (a long slow draft is ~3–10 MB).
+  Append-only `FileHandle` on the processing queue — no memory accumulation,
+  no jetsam pressure.
+- **Privacy:** consistent with ADR-019/020 — raw pixels never leave the
+  process; the recording is derived OCR text, stays on device in the App
+  Group, and leaves only via the user-initiated share sheet.
+- **Export:** confidence hub → **Frames** button → iOS share sheet
+  (`BBEDraftNative.latestFrameLogPath()` + `expo-sharing`).
+- **Replay:**
+  `node scripts/replay-frames.mjs frames.jsonl --pool underdog_adp.csv \
+     [--username X] [--slot N] [--from t] [--to t] [--dump N] [--quiet]`
+  prints a per-frame timeline (kind · picksUntil · currentPick · ledger ·
+  inferredGone with deltas), final status/glance, and the top-12 available.
+  `--dump N` prints one frame's raw OCR lines. `npm run test:draft` includes a
+  parity check: replaying a synthetic recording must equal direct ingestion.
 
 ## Explicitly deferred (v2+)
 
