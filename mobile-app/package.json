@@ -20,6 +20,7 @@
     "@supabase/supabase-js": "^2.110.2",
     "expo": "~57.0.4",
     "expo-apple-authentication": "~57.0.1",
+    "expo-build-properties": "~57.0.6",
     "expo-constants": "~57.0.3",
     "expo-dev-client": "~57.0.5",
     "expo-haptics": "~57.0.0",
