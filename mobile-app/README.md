@@ -3,10 +3,12 @@
 The full Best Ball Exposures app as a native iOS port (Expo / React Native), plus the
 Live Draft Assistant work (EPIC-08). Every web tab is here: Dashboard, Exposures,
 Rosters, ADP Tracker, Combos (Stacks / QB Pairs / Similarity / Playoffs / Explorer),
-Rankings, Draft Assistant (with Eliminator mode), and the Best Ball Arena. Pro checkout
-and billing run in-app via Stripe (external checkout link + `bbexposures://` deep-link
-return, ADR-027). Desktop-only steps (Chrome-extension roster sync, rankings CSV upload)
-hand off to the website.
+Rankings, Draft Assistant (with Eliminator mode), and the Best Ball Arena. Pro is sold
+in-app through native Apple In-App Purchase (StoreKit 2 via `react-native-iap`, ADR-028);
+the purchase's transaction is synced to the shared Supabase `subscriptions` table (via the
+`sync-apple-purchase` edge function, with App Store Server Notifications as the durable
+backstop) so it unlocks Pro on both the app and the website. Desktop-only steps
+(Chrome-extension roster sync, rankings CSV upload) hand off to the website.
 
 **Status:** implemented and running on-device via EAS dev builds. **Live Draft
 Session** (docs/LIVE_SESSION_V1.md) is in, with a single hands-free capture path:

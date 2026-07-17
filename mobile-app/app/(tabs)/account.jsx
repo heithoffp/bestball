@@ -4,9 +4,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
 import {
-  CircleUserRound, LogOut, ExternalLink, Puzzle, BookOpen, Sparkles, RefreshCw, Trash2,
+  CircleUserRound, LogOut, ExternalLink, Puzzle, BookOpen, Sparkles, RefreshCw, Trash2, RotateCcw,
 } from 'lucide-react-native';
 import ScreenScaffold, { HelpSection } from '../../src/components/ScreenScaffold';
 import { Card, SectionTitle, Button } from '../../src/components/ui';
@@ -20,7 +21,7 @@ import { WEB_APP_URL, INSTALL_URL, BLOG_URL, X_URL } from '../../shared/config';
 const HELP = (
   <>
     <HelpSection heading="One account everywhere">Your BestBallExposures.com account works here — rosters synced by the Chrome extension and saved rankings load automatically.</HelpSection>
-    <HelpSection heading="Subscribe in the app">Upgrade to Pro right here — checkout is handled securely by Stripe, and the same subscription works on the website.</HelpSection>
+    <HelpSection heading="Subscribe in the app">Upgrade to Pro right here — billed through your Apple ID, and the same subscription unlocks the website too. Manage or cancel anytime in iOS Settings.</HelpSection>
     <HelpSection heading="Desktop steps">Roster sync (Chrome extension) and rankings CSV upload happen on your computer. Everything else lives in the app.</HelpSection>
   </>
 );
@@ -38,10 +39,11 @@ function Row({ icon: Icon, label, onPress, danger }) {
 export default function AccountTab() {
   const {
     user, authError, clearError, signInWithEmail, signUpWithEmail, resetPassword, signOut, deleteAccount,
+    signInWithApple, signInWithGoogle, appleAvailable, googleAvailable,
   } = useAuth();
   const {
     isProUser, isBetaActive, betaDaysRemaining, isCompActive, status,
-    openBillingPortal, checkoutFinalizing,
+    openBillingPortal, checkoutFinalizing, restorePurchases,
   } = useSubscription();
   const { rosterData, isUsingDemoData, loadDemoData, exitDemo, reload } = usePortfolio();
 
@@ -52,6 +54,20 @@ export default function AccountTab() {
   const [notice, setNotice] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    const result = await restorePurchases();
+    setRestoring(false);
+    if (result?.error) {
+      Alert.alert('Restore failed', result.error);
+    } else if (result?.status === 'restored') {
+      Alert.alert('Purchases restored', 'Your Pro subscription is active again.');
+    } else {
+      Alert.alert('Nothing to restore', 'No active subscription was found for your Apple ID.');
+    }
+  };
 
   const confirmDeleteAccount = () => {
     Alert.alert(
@@ -64,9 +80,16 @@ export default function AccountTab() {
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
-            const { error } = await deleteAccount();
+            const { error, hadActiveAppleSub } = await deleteAccount();
             setDeleting(false);
-            if (error) Alert.alert('Could not delete account', error.message);
+            if (error) {
+              Alert.alert('Could not delete account', error.message);
+            } else if (hadActiveAppleSub) {
+              Alert.alert(
+                'Account deleted',
+                'Your account is deleted. Your Apple subscription must be canceled separately in Settings › Apple ID › Subscriptions, or it will keep renewing.',
+              );
+            }
           },
         },
       ],
@@ -91,6 +114,16 @@ export default function AccountTab() {
     setBusy(true);
     const { error } = await resetPassword(email.trim());
     setNotice(error ? null : 'Password reset email sent — the link opens the website.');
+    setBusy(false);
+  };
+
+  // Provider sign-in: onAuthStateChange swaps this card to the signed-in view
+  // on success, so the handlers only manage the busy flag and clear notices.
+  const providerSignIn = async (fn) => {
+    setBusy(true);
+    setNotice(null);
+    clearError();
+    await fn();
     setBusy(false);
   };
 
@@ -136,6 +169,32 @@ export default function AccountTab() {
               onPress={submit}
               disabled={busy}
             />
+
+            {(appleAvailable || googleAvailable) && (
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={[type.muted, { marginHorizontal: spacing.sm }]}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            )}
+            {appleAvailable && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                cornerRadius={radii.md}
+                style={{ width: '100%', height: 46, marginBottom: spacing.sm }}
+                onPress={() => providerSignIn(signInWithApple)}
+              />
+            )}
+            {googleAvailable && (
+              <Button
+                title="Continue with Google"
+                variant="ghost"
+                onPress={() => providerSignIn(signInWithGoogle)}
+                disabled={busy}
+              />
+            )}
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
               <Pressable onPress={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); clearError(); setNotice(null); }}>
                 <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '600' }}>
@@ -171,6 +230,12 @@ export default function AccountTab() {
               ) : (
                 <Button title="Manage subscription" variant="ghost" onPress={openBillingPortal} />
               )}
+              <Pressable style={styles.linkRow} onPress={handleRestore} disabled={restoring}>
+                <RotateCcw size={16} color={colors.textSecondary} />
+                <Text style={[type.body, { flex: 1 }]}>
+                  {restoring ? 'Restoring…' : 'Restore purchases'}
+                </Text>
+              </Pressable>
             </View>
           </Card>
         )}
@@ -266,5 +331,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: 9,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.borderDefault,
   },
 });

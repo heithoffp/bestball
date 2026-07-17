@@ -127,10 +127,11 @@ const MY_PICKS = [
   const glance = session.getGlance();
   console.log('glance format:');
   check('tracking glance carries six targets', glance.targets.length, 6);
-  check('every target is POS·LastName·EXP·FLAGS',
-    glance.targets.every(t => /^(QB|RB|WR|TE)·[A-Za-z'.-]+(\s[A-Za-z'.-]+)?·\d*·[SPQF]*$/.test(t)), true);
-  check('exposure renders in the cell',
-    glance.targets.some(t => t.startsWith('RB·Dowdle·42·') || t.startsWith('RB·Dowdle·41·')), true);
+  // TASK-337 format: POS·Name·P(weeks)·S·C·E — trailing fields blank when empty.
+  check('every target is POS·Name·P·S·C·E',
+    glance.targets.every(t => /^(QB|RB|WR|TE)·[A-Za-z'.-]+(\s[A-Za-z'.-]+)?·(1[567](\/1[567])*)?·S?·\d*·\d*$/.test(t)), true);
+  check('exposure renders in the E cell',
+    glance.targets.some(t => /^RB·Dowdle·.*·4[12]$/.test(t)), true);
 }
 
 // ---- 3. Presence tick: a static out-of-room screen flips to away ----
@@ -185,6 +186,74 @@ const MY_PICKS = [
     pushes.filter(p => p.t >= 1784198590).every(p => !p.targets.some(t => t.includes('Gibbs'))), true);
   check('the session ends on a pushed away card', pushes[pushes.length - 1].phase, 'away');
   check('push volume stays sane (≤ 8 for the whole session)', pushes.length <= 8, true);
+}
+
+// ---- 5. Auto new-draft reset: the user's own roster panel in the NEXT
+// draft room contradicts the held board (slot moved / different player at a
+// held overall) and resets the board in place after two confirming reads. ----
+{
+  const session = createDraftSession({ pool, teams: TEAMS, rounds: 18, username: 'BIRDENTHUSIAST' });
+  const t0 = 1_784_300_000_000;
+  const base = {
+    kind: 'players', rows: [], boardPicks: [], rosterPicks: [], cardPicks: [], rosterOwner: null,
+    upcomingOveralls: [], availability: null, queueNames: [], drafterCards: [], confirmCard: null,
+    lobby: false, filledCount: 0, picksUntil: null, picksAwayDivider: null,
+  };
+  const rp = (overall, canonical) => ({
+    overall, player: pool.byCanonical.get(canonical), score: 0.9, raw: canonical,
+  });
+  check('test players exist in pool',
+    ['ceedee lamb', 'omarion hampton', 'jaxon smith-njigba'].every(c => pool.byCanonical.has(c)), true);
+
+  // Draft 1: own card anchors slot 9; own roster panel holds picks 9 and 16.
+  session.ingest({
+    ...base, kind: 'header', picksUntil: 5, upcomingOveralls: [33],
+    drafterCards: [{ username: 'BIRDENTHUSIAST', nextOverall: 33, onClock: false, tally: null }],
+  }, t0);
+  session.ingest({
+    ...base, kind: 'roster', rosterOwner: 'BIRDENTHUSIAST',
+    rosterPicks: [rp(9, 'ceedee lamb'), rp(16, 'omarion hampton')],
+  }, t0 + 1000);
+  console.log('auto new-draft reset:');
+  check('draft 1 anchored at slot 9', session.getStatus().slot, 9);
+  check('draft 1 roster held', session.getStatus().myPicks.map(p => p.name), ['CeeDee Lamb', 'Omarion Hampton']);
+  const snapDraft1 = session.serialize();
+
+  // Draft 2 (hours later): own roster panel maps to slot 6 — read 1 arms,
+  // read 2 resets and seeds the fresh board from the same panel.
+  const newPanel = {
+    ...base, kind: 'roster', rosterOwner: 'BIRDENTHUSIAST',
+    rosterPicks: [rp(6, 'jaxon smith-njigba')],
+  };
+  const s1 = session.ingest(newPanel, t0 + 3_600_000);
+  check('one contradicting read never resets', s1.newDraft, false);
+  check('contradicting picks stay out of the old ledger', session.getStatus().ledgerSize, 2);
+  const s2 = session.ingest(newPanel, t0 + 3_601_000);
+  check('second read resets the board', s2.newDraft, true);
+  check('fresh ledger seeded from the panel', session.getStatus().ledgerSize, 1);
+  check('draft generation bumped', session.getStatus().draftGen, 1);
+  session.ingest({
+    ...base, kind: 'header', picksUntil: 3, upcomingOveralls: [19],
+    drafterCards: [{ username: 'BIRDENTHUSIAST', nextOverall: 19, onClock: false, tally: null }],
+  }, t0 + 3_602_000);
+  check('re-anchored at the new slot', session.getStatus().slot, 6);
+  check('new roster is just the new pick', session.getStatus().myPicks.map(p => p.name), ['Jaxon Smith-Njigba']);
+
+  // A same-draft own-panel read that AGREES must never arm the reset.
+  const s3 = session.ingest(newPanel, t0 + 3_603_000);
+  check('agreeing panel read never resets', s3.newDraft, false);
+  check('ledger intact after agreeing read', session.getStatus().ledgerSize, 1);
+
+  // Generation handoff (extension -> app): a stale pre-reset snapshot is
+  // rejected; the post-reset snapshot wipes-then-merges.
+  const appSession = createDraftSession({ pool, teams: TEAMS, rounds: 18, username: 'BIRDENTHUSIAST' });
+  check('app absorbs draft-1 snapshot', appSession.hydrate(snapDraft1), true);
+  check('app holds draft-1 roster', appSession.getStatus().ledgerSize, 2);
+  check('app absorbs post-reset snapshot', appSession.hydrate(session.serialize()), true);
+  check('post-reset snapshot wiped the old draft', appSession.getStatus().ledgerSize, 1);
+  check('app slot follows the new draft', appSession.getStatus().slot, 6);
+  check('stale pre-reset snapshot is rejected', appSession.hydrate(snapDraft1), false);
+  check('rejection leaves state intact', appSession.getStatus().ledgerSize, 1);
 }
 
 console.log(failures === 0 ? '\nSlow-draft replay: all checks passed.' : `\nSlow-draft replay: ${failures} check(s) FAILED.`);

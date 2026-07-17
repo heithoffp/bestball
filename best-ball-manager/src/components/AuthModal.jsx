@@ -14,8 +14,16 @@ function GoogleIcon() {
   );
 }
 
+function AppleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }} aria-hidden="true">
+      <path d="M16.365 1.43c0 1.14-.417 2.2-1.114 2.98-.75.84-1.99 1.49-3.02 1.41-.13-1.09.41-2.24 1.06-2.96.73-.82 2.02-1.44 3.01-1.49.06.02.06.04.06.06zM20.5 17.02c-.55 1.27-.81 1.83-1.52 2.95-.99 1.56-2.39 3.5-4.12 3.51-1.54.02-1.94-1-4.03-.99-2.09.01-2.53 1.01-4.07.99-1.73-.02-3.05-1.77-4.04-3.33C.9 16.5.6 11.05 2.79 8.42c1.06-1.31 2.73-2.14 4.31-2.14 1.61 0 2.62 1 3.95 1 1.29 0 2.08-1 3.94-1 1.41 0 2.9.77 3.96 2.1-3.48 1.91-2.92 6.88.55 8.64z"/>
+    </svg>
+  );
+}
+
 export default function AuthModal({ isOpen, onClose, message }) {
-  const { signInWithGoogle, signUpWithEmail, signInWithEmail, resetPassword, updatePassword, recoveryMode, authError, clearError } = useAuth();
+  const { signInWithGoogle, signInWithApple, signUpWithEmail, signInWithEmail, resetPassword, updatePassword, recoveryMode, authError, clearError } = useAuth();
 
   const [tab, setTab] = useState('signin');
   const [forgotPassword, setForgotPassword] = useState(false);
@@ -204,6 +212,10 @@ export default function AuthModal({ isOpen, onClose, message }) {
               <GoogleIcon />
               Sign in with Google
             </button>
+            <button type="button" className="modal-apple-btn" onClick={signInWithApple}>
+              <AppleIcon />
+              Sign in with Apple
+            </button>
           </form>
         )}
 
@@ -286,6 +298,10 @@ export default function AuthModal({ isOpen, onClose, message }) {
             <button type="button" className="modal-google-btn" onClick={signInWithGoogle}>
               <GoogleIcon />
               Sign in with Google
+            </button>
+            <button type="button" className="modal-apple-btn" onClick={signInWithApple}>
+              <AppleIcon />
+              Sign in with Apple
             </button>
           </form>
         )}

@@ -12,9 +12,12 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.bestballexposures.app",
       "appleTeamId": "WNGNQ89YJ2",
+      "usesAppleSignIn": true,
       "entitlements": {
         "aps-environment": "development",
-        "com.apple.security.application-groups": ["group.com.bestballexposures.app"]
+        "com.apple.security.application-groups": [
+          "group.com.bestballexposures.app"
+        ]
       },
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
@@ -43,7 +46,14 @@
           "backgroundColor": "#060E1F"
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_REVERSED_IOS_CLIENT_ID"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
@@ -64,7 +74,9 @@
                   "targetName": "DraftBroadcast",
                   "bundleIdentifier": "com.bestballexposures.app.draftbroadcast",
                   "entitlements": {
-                    "com.apple.security.application-groups": ["group.com.bestballexposures.app"]
+                    "com.apple.security.application-groups": [
+                      "group.com.bestballexposures.app"
+                    ]
                   }
                 }
               ]

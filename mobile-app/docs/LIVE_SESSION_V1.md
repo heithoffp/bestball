@@ -222,6 +222,41 @@ ledger/availability/slot/pick position, rewrites `bbe.sessionConfig`, and bumps
 its engine (and its push bookkeeping) without ending the broadcast; results
 echo the epoch so the app drops any pre-reset snapshot.
 
+### Auto new-draft detection
+
+The manual Reset is now a fallback: the engine detects the next draft room on
+its own. The user's OWN roster panel (owner username = learned username,
+captured by the parser as `rosterOwner`) is ground truth for their picks —
+when it contradicts the held board (a different player at a held overall, or
+the panel's picks mapping to a different slot while a roster is held), two
+consecutive contradicting reads trigger an in-place engine reset
+(`sessionEngine` internal `resetForNewDraft`): ledger, availability marks,
+slot evidence, and pick position drop; the learned username and room presence
+survive; the triggering panel seeds the fresh board in the same frame. So the
+slow-draft flow is simply: open the next room, tap your profile card in the
+banner. One contradicting read never resets (OCR-glitch guard) and its picks
+are held out of the ledger until confirmed.
+
+The reset bumps a **draft generation** counter that rides every serialized
+snapshot (`gen`): `hydrate()` wipes-then-merges when a newer generation
+arrives and rejects stale pre-reset snapshots, so the app absorbs the reset on
+its next poll (logging "New draft detected — board reset automatically") and
+a broadcast restart can't resurrect the previous draft. The reset also rides
+`significant`, so the Live Activity card refreshes immediately. Same-draft
+resumes are unaffected: an agreeing panel read clears the contradiction
+streak. Covered by `scripts/test-slow-draft-replay.mjs` section 5 and verified
+against a concatenation of two real recordings (frames-1784145340 →
+frames-1784250985).
+
+The drafter cards themselves are a ledger source too: a card whose label has
+an abbreviated player line beneath it ("1.6 | 6" over "J. Smith-Njigba /
+WR - SEA") is a **completed** pick at that overall (`obs.cardPicks`, score
+capped at 0.75 so board cells win). This is what keeps the roster bar honest
+in slow drafts where the user's pick never appears on a captured board or
+roster frame (frames-1784250985: the R1 pick lived only on the carousel
+card). A one-pick roster panel (single "Pick" label) also classifies as
+`roster` now via the standalone Bye+ADP+Pick column-label trio.
+
 Push policy (ADR-024, triggers extended by TASK-336): priority-10 on
 `significant` (crunch / my pick / presence — no floor), a newly-detected pick
 (3 s floor), or a changed target list (15 s floor — availability inference

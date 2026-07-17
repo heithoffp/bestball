@@ -28,4 +28,6 @@
 | [ADR-024](adr-024-event-driven-live-activity-push-policy.md) | Event-driven Live Activity push policy | Superseded | 2026-07-15 |
 | [ADR-025](adr-025-push-on-target-list-changes-and-room-presence-tran.md) | Push on target-list changes and room-presence transitions | Accepted | 2026-07-16 |
 | [ADR-026](adr-026-reposition-the-mobile-draft-assistant-to-capture-a.md) | Reposition the Mobile Draft Assistant to Capture-and-Guide Only | Accepted | 2026-07-16 |
-| [ADR-027](adr-027-sell-mobile-pro-via-external-stripe-checkout-link.md) | Sell mobile Pro via external Stripe Checkout link (US storefront), not Apple In-App Purchase | Accepted | 2026-07-16 |
+| [ADR-027](adr-027-sell-mobile-pro-via-external-stripe-checkout-link.md) | Sell mobile Pro via external Stripe Checkout link (US storefront), not Apple In-App Purchase | Superseded | 2026-07-16 |
+| [ADR-028](adr-028-sell-mobile-pro-via-apple-in-app-purchase-storekit.md) | Sell mobile Pro via Apple In-App Purchase (StoreKit 2), enabling international distribution | Accepted | 2026-07-17 |
+| [ADR-029](adr-029-add-native-google-and-apple-sign-in-on-mobile-and.md) | Add native Google and Apple sign-in on mobile, and Apple sign-in on web | Accepted | 2026-07-17 |

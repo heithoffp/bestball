@@ -17,16 +17,26 @@ export const INSTALL_URL = `${WEB_APP_URL}/install`;
 export const BLOG_URL = `${WEB_APP_URL}/blog`;
 export const X_URL = 'https://x.com/BBExposures';
 
-// Stripe price IDs — publishable identifiers (like the anon key), same values
-// as the web build's VITE_STRIPE_PRO_*_PRICE_ID env vars. Live IDs are injected
-// at EAS build time via EXPO_PUBLIC_* env; the empty default disables the
-// Subscribe button rather than pointing at the wrong Stripe mode.
-export const STRIPE_PRO_MONTHLY_PRICE_ID =
-  process.env.EXPO_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '';
-export const STRIPE_PRO_YEARLY_PRICE_ID =
-  process.env.EXPO_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '';
+// Apple StoreKit 2 product IDs for the auto-renewable Pro subscription (ADR-028).
+// These must exactly match the product IDs created in the App Store Connect
+// subscription group. Injected at EAS build time via EXPO_PUBLIC_* env; the empty
+// default disables the Subscribe button rather than requesting an unknown product.
+export const APPLE_PRO_MONTHLY_PRODUCT_ID =
+  process.env.EXPO_PUBLIC_APPLE_PRO_MONTHLY_PRODUCT_ID || '';
+export const APPLE_PRO_YEARLY_PRODUCT_ID =
+  process.env.EXPO_PUBLIC_APPLE_PRO_YEARLY_PRODUCT_ID || '';
 
-// Hosted https return page for Stripe Checkout / billing portal (Stripe
-// requires https URLs); it deep-links back to bbexposures://checkout-return.
-export const CHECKOUT_RETURN_URL = `${WEB_APP_URL}/mobile/checkout-return`;
-export const CHECKOUT_DEEP_LINK = 'bbexposures://checkout-return';
+// Google Sign-In OAuth client IDs (ADR-029). The iOS client ID identifies the
+// native app; the web (server) client ID is the audience Supabase validates the
+// returned ID token against — it must match the Google provider config in the
+// Supabase dashboard. Injected at EAS build time via EXPO_PUBLIC_*; the empty
+// default hides the Google button rather than starting an unconfigured flow.
+export const GOOGLE_IOS_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+export const GOOGLE_WEB_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
+
+// Apple's account-level subscription management screen. "Manage subscription"
+// for an IAP-purchased account deep-links here (Stripe-purchased accounts still
+// use the Stripe billing portal — see SubscriptionContext.openBillingPortal).
+export const APPLE_MANAGE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';

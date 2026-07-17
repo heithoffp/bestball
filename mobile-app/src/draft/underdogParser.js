@@ -11,7 +11,9 @@
 // remote parse templates; lift to Supabase when templates land.
 // Pure JS — no React Native imports.
 
-import { matchPlayer, fuzzyPosition, looksLikeNameLine } from './playerMatcher.js';
+import {
+  matchPlayer, matchAbbrevPlayer, fuzzyPosition, looksLikeNameLine,
+} from './playerMatcher.js';
 import { resolveRoundDotPick, slotForOverall } from './snake.js';
 
 const PATTERNS = {
@@ -96,6 +98,15 @@ const PATTERNS = {
   // Drafter-card roster panel repeats "Pick" under each pick number ("57 /
   // Pick / 9 / Pick"); the real Players list never shows a standalone "Pick".
   rosterPickLabel: /^Pick$/,
+  // Roster-panel right-rail column labels ("11 / Bye", "5.3 / ADP"). The
+  // Players tab renders bye inline ("PHI, Bye 10") and ADP as a header
+  // ("ADP ="), so standalone forms only appear on the roster panel (and the
+  // Queue tab for "ADP" — which never shows "Pick").
+  rosterByeLabel: /^Bye$/,
+  rosterAdpLabel: /^ADP$/,
+  // Drafter-card completed-pick meta line under the abbreviated name:
+  // "WR - SEA" (OCR may glue a junk prefix: "IWR-SEA").
+  cardPosTeam: /([A-Za-z]{1,4})\s*[-–]\s*([A-Z]{2,3})\s*$/,
 };
 
 // ALL-CAPS UI strings that would otherwise pass the username shape test.
@@ -178,6 +189,16 @@ function parseTally(text) {
   return { QB: qb, RB: rb, WR: wr, TE: te };
 }
 
+/** "IWR-SEA" / "RB - SF" -> { pos, team } (either may be null on garble). */
+function parseCardPosTeam(text) {
+  const m = String(text).match(PATTERNS.cardPosTeam);
+  if (!m) return null;
+  // OCR glues junk onto the position ("IWR") — the real token is the tail.
+  const pos = fuzzyPosition(m[1].slice(-2));
+  const team = /^[A-Z]{2,3}$/.test(m[2]) ? m[2] : null;
+  return pos || team ? { pos, team } : null;
+}
+
 function centerX(l) {
   return (l.x ?? 0) + (Number.isFinite(l.w) ? l.w / 2 : 0);
 }
@@ -231,6 +252,27 @@ function extractDrafterCards(lines, teams) {
       const tallyLine = lines.find(l => l.y > u.y && l.y - u.y < 0.09
         && Math.abs(centerX(l) - ucx) < 0.11 && PATTERNS.tallyRow.test(l.text));
       if (tallyLine) card.tally = parseTally(tallyLine.text);
+      // Completed-pick card: an abbreviated player name under the label
+      // ("J. Smith-Njigba" / "WR - SEA") means the label IS that player's
+      // pick — ledger-grade evidence a mid-draft join never sees on the
+      // board (frames-1784250985: the user's own R1 pick lived only here).
+      if (card.nextOverall != null) {
+        // Tight x tolerance + nearest-first: a shrunken carousel (app
+        // switcher thumbnail, frames-1784250985 #28) put a neighbor's name
+        // 0.126 from this card's center — 0.09 keeps only same-card pairs.
+        const nameLine = lines
+          .filter(l => l.y > u.y && l.y - u.y < 0.09
+            && Math.abs(centerX(l) - ucx) < 0.09 && PATTERNS.abbrevName.test(l.text))
+          .sort((a, b) => Math.abs(centerX(a) - ucx) - Math.abs(centerX(b) - ucx))[0];
+        if (nameLine) {
+          card.lastPickName = nameLine.text;
+          const metaLine = lines.find(l => l.y > nameLine.y && l.y - nameLine.y < 0.04
+            && Math.abs(centerX(l) - ucx) < 0.09 && parseCardPosTeam(l.text));
+          const meta = metaLine ? parseCardPosTeam(metaLine.text) : null;
+          card.lastPickTeam = meta?.team ?? null;
+          card.lastPickPos = meta?.pos ?? null;
+        }
+      }
       cards.push(card);
     }
     return cards;
@@ -263,6 +305,18 @@ function extractDrafterCards(lines, teams) {
     for (let j = i + 1; j <= Math.min(texts.length - 1, i + 4); j++) {
       const tally = parseTally(texts[j]);
       if (tally) { card.tally = tally; break; }
+    }
+    // Boxless completed-pick lookahead: abbreviated name (then pos-team) in
+    // the lines immediately after the label.
+    if (card.nextOverall != null) {
+      for (let j = i + 1; j <= Math.min(texts.length - 1, i + 4); j++) {
+        if (!PATTERNS.abbrevName.test(texts[j])) continue;
+        card.lastPickName = texts[j];
+        const meta = j + 1 < texts.length ? parseCardPosTeam(texts[j + 1]) : null;
+        card.lastPickTeam = meta?.team ?? null;
+        card.lastPickPos = meta?.pos ?? null;
+        break;
+      }
     }
     cards.push(card);
   }
@@ -335,6 +389,8 @@ export function parseUnderdogScreen(items, ctx) {
     picksAwayDivider: null,
     boardPicks: [],
     rosterPicks: [],
+    cardPicks: [],
+    rosterOwner: null,
     rows: [],
     availability: null,
     queueNames: [],
@@ -447,6 +503,19 @@ export function parseUnderdogScreen(items, ctx) {
     if (c.nextOverall != null && !obs.upcomingOveralls.includes(c.nextOverall)) {
       obs.upcomingOveralls.push(c.nextOverall);
     }
+    // Completed-pick cards: the abbreviated name under the label is that
+    // overall's pick. Score is capped below board cells so a board window
+    // showing the same overall always wins the ledger slot.
+    if (c.nextOverall != null && c.lastPickName) {
+      const m = matchAbbrevPlayer(pool, c.lastPickName, c.lastPickTeam);
+      if (m && (!c.lastPickPos || !m.player.position || m.player.position === c.lastPickPos
+        || m.player.position === 'N/A')) {
+        obs.cardPicks.push({
+          overall: c.nextOverall, player: m.player,
+          score: Math.min(m.score, 0.75), raw: `${c.username} · ${c.lastPickName}`,
+        });
+      }
+    }
   }
 
   // Early lobby: seats show "Filled" placeholders and the user's card has no
@@ -471,7 +540,17 @@ export function parseUnderdogScreen(items, ctx) {
   // Its rows are DRAFTED players grouped by position, so it must never feed
   // availability or clear inferred-gone marks (an opponent's roster view
   // would resurrect their picks into the targets).
-  obs.rosterPanel = texts.filter(t => PATTERNS.rosterPickLabel.test(t)).length >= 2;
+  // A one-pick roster shows a single "Pick" label, so the ≥2 test alone
+  // misclassified an early-draft panel as a players list (frames-1784250985
+  // — the user's R1 pick never reached the roster bar); the standalone
+  // Bye+ADP+Pick column-label trio is unique to this panel and covers it.
+  {
+    const pickLabels = texts.filter(t => PATTERNS.rosterPickLabel.test(t)).length;
+    obs.rosterPanel = pickLabels >= 2
+      || (pickLabels >= 1
+        && texts.some(t => PATTERNS.rosterByeLabel.test(t))
+        && texts.some(t => PATTERNS.rosterAdpLabel.test(t)));
+  }
 
   // ---- Board cells: "<Name lines> / RB - DET (1.1)" -> exact ledger picks ----
   // With boxes, name fragments are associated GEOMETRICALLY (same column,
@@ -613,6 +692,17 @@ export function parseUnderdogScreen(items, ctx) {
   if (obs.kind === 'roster' && lines.length > 0 && lines.every(l => l.y != null && l.x != null)) {
     const rowByRaw = new Map(obs.rows.map(r => [r.raw, r]));
     const nameLines = lines.filter(l => rowByRaw.has(l.text));
+    // Panel owner: the username line nearest ABOVE the first player row is
+    // the panel's header (a carousel card higher up loses the tie). Feeds
+    // the engine's new-draft detection — only the user's OWN panel may
+    // trigger a board reset.
+    if (nameLines.length) {
+      const firstRowY = Math.min(...nameLines.map(l => l.y));
+      const owner = lines
+        .filter(l => l.y < firstRowY && isUsernameLine(l.text))
+        .sort((a, b) => b.y - a.y)[0];
+      obs.rosterOwner = owner ? owner.text : null;
+    }
     const harvested = [];
     for (const lbl of lines) {
       if (!PATTERNS.rosterPickLabel.test(lbl.text)) continue;

@@ -24,7 +24,8 @@
 - TASK-338: Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session)
 - TASK-339: Mobile Draft Assistant overhaul: live-session-first UX, retire manual pick entry
 - TASK-342: Mobile Draft Assistant: strip to capture-and-guide only (ADR-026)
-- TASK-343: Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish
+- TASK-344: Mobile Pro via Apple In-App Purchase (StoreKit 2) — ADR-028, replaces mobile Stripe checkout
+- TASK-345: Add Google + Apple sign-in (mobile native + Apple on web) per ADR-029
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -85,7 +86,8 @@
 | TASK-338 | Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session) | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-338.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-339 | Mobile Draft Assistant overhaul: live-session-first UX, retire manual pick entry | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-339.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-342 | Mobile Draft Assistant: strip to capture-and-guide only (ADR-026) | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-342.md) | No | 2026-07-16 | 2026-07-16 |
-| TASK-343 | Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-343.md) | No | 2026-07-16 | 2026-07-16 |
+| TASK-344 | Mobile Pro via Apple In-App Purchase (StoreKit 2) — ADR-028, replaces mobile Stripe checkout | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-344.md) | No | 2026-07-17 | 2026-07-17 |
+| TASK-345 | Add Google + Apple sign-in (mobile native + Apple on web) per ADR-029 | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-345.md) | No | 2026-07-17 | 2026-07-17 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -135,6 +137,7 @@
 | TASK-309 | Clear pre-existing ESLint errors: HelpOverlay setState-in-effect, AuthContext chrome global, capture-screenshots process global | Todo | P4 | - | - | [Plan](docs/plans/TASK-309.md) -- Draft | No | 2026-07-02 | 2026-07-02 |
 | TASK-312 | Arena vote reveal polish: advance-bar duration on late responses + guest empty-state signup CTA | Todo | P4 | - | - | [Plan](docs/plans/TASK-312.md) -- Draft | No | 2026-07-02 | 2026-07-02 |
 | TASK-340 | Roadmap wording: FEAT-030/EPIC-08 no longer describe manual pick entry as the fallback path | Todo | P4 | S | Sonnet | [Plan](docs/plans/TASK-340.md) -- Draft | No | 2026-07-16 | 2026-07-16 |
+| TASK-346 | Retire dead web MobileCheckoutReturn route (post-ADR-028) | Todo | P4 | S | Sonnet | [Plan](docs/plans/TASK-346.md) -- Draft | No | 2026-07-17 | 2026-07-17 |
 
 ## Completed Tasks
 
@@ -142,6 +145,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-343 | Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish (Won't Do: Superseded by TASK-344 — ADR-028 reverses ADR-027 (mobile Stripe external checkout) to Apple StoreKit 2 IAP) | Won't Do | P2 | [Plan](docs/archive/plans/TASK-343.md) | No | 2026-07-17 |
 | TASK-337 | Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup | Done | P2 | [Plan](docs/archive/plans/TASK-337.md) | Yes | 2026-07-16 |
 | TASK-334 | Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows | Done | P2 | [Plan](docs/archive/plans/TASK-334.md) | Yes | 2026-07-15 |
 | TASK-328 | Draft parser: pin slot from the user's username on the board; harden screen classification + picks-until countdown | Done | P2 | [Plan](docs/archive/plans/TASK-328.md) | Yes | 2026-07-14 |

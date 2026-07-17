@@ -655,6 +655,29 @@ td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--border-subtle); }
   border-color: #c6c8ca;
 }
 
+.modal-apple-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 0.5rem;
+  background: #000;
+  border: 1px solid #000;
+  color: #fff;
+  padding: 0.7rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+  font-family: inherit;
+}
+.modal-apple-btn:hover {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
 .modal-back-btn {
   background: none;
   border: none;

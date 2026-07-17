@@ -73,6 +73,7 @@ const state = {
   lastPersistedKey: '',
   lastDiag: null,          // extension's recent-ingest ring buffer (debugging)
   extensionEngine: null,   // version reported by the extension's engine bundle
+  lastDraftGen: 0,         // engine draft generation (auto new-draft reset)
 };
 
 function notify() {
@@ -193,6 +194,7 @@ export async function startSession({
   state.lastError = null;
   state.activityError = null;
   state.lastActivityRestartAt = 0;
+  state.lastDraftGen = 0;
 
   const res = startActivity(stampedGlance(), { withPushToken: true });
   state.activityStarted = res.ok;
@@ -349,12 +351,20 @@ function absorbExtensionState() {
     if (result?.ok && result.state && state.session.hydrate(result.state)) {
       publishAll({ freshSync: true });
       const s = state.session.getStatus();
+      // Auto new-draft reset (the extension spotted the user's roster panel
+      // contradicting the held board): the hydrate above already wiped and
+      // reseeded the app-side session — just tell the user.
+      if (s.draftGen !== state.lastDraftGen) {
+        state.lastDraftGen = s.draftGen;
+        pushLog('New draft detected — board reset automatically');
+        haptic('success');
+      }
       // Persist the merged state back so a broadcast RESTART resumes warm —
       // the extension inits from this config, and the snapshot written at
       // session start is empty (an attempt-2 extension pushed empty-roster
       // glances for the rest of the draft). Rewrite when anything durable
       // (ledger, anchor, username) changed.
-      const persistKey = `${s.ledgerSize}:${s.anchoredSlot ?? ''}:${s.learnedUsername ?? ''}`;
+      const persistKey = `${s.draftGen}:${s.ledgerSize}:${s.anchoredSlot ?? ''}:${s.learnedUsername ?? ''}`;
       if (state.baseConfig && persistKey !== state.lastPersistedKey) {
         state.lastPersistedKey = persistKey;
         writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({
@@ -395,6 +405,7 @@ export function exportDebug() {
       ledgerSize: s.ledgerSize,
       inferredGone: s.inferredGone,
       syncCount: s.syncCount,
+      draftGen: s.draftGen,
       slotConflict: s.slotConflict,
       myPicks: s.myPicks,
       opponentTallies: s.opponentTallies,
@@ -431,8 +442,10 @@ export function setSessionSlot(slot) {
 }
 
 /**
- * Reset the board for the next draft in a back-to-back slow-draft session
- * (TASK-336): keeps the pool, rankings, exposures, and remembered username;
+ * Manually reset the board for the next draft in a back-to-back slow-draft
+ * session (TASK-336). Now a fallback: the engine auto-detects the next room
+ * when the user taps their profile card there (sessionEngine new-draft
+ * detection) — this path keeps the pool, rankings, exposures, and remembered username;
  * drops the ledger, availability marks, slot anchor, and pick position. The
  * configEpoch bump tells the running broadcast extension to re-init its
  * engine from the rewritten config — the broadcast itself never stops.
@@ -451,6 +464,7 @@ export function resetDraftBoard() {
   state.resumeLogged = false;
   state.lastPersistedKey = '';
   state.lastDiag = null;
+  state.lastDraftGen = 0;
   writeSharedValue(RESULT_KEY, null);
   state.baseConfig = {
     ...state.baseConfig, slot: null, username: knownUsername, configEpoch: state.configEpoch,

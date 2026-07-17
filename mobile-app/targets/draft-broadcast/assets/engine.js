@@ -346,7 +346,16 @@
     unitLabel: /^(ADP|Proj)$/i,
     // Drafter-card roster panel repeats "Pick" under each pick number ("57 /
     // Pick / 9 / Pick"); the real Players list never shows a standalone "Pick".
-    rosterPickLabel: /^Pick$/
+    rosterPickLabel: /^Pick$/,
+    // Roster-panel right-rail column labels ("11 / Bye", "5.3 / ADP"). The
+    // Players tab renders bye inline ("PHI, Bye 10") and ADP as a header
+    // ("ADP ="), so standalone forms only appear on the roster panel (and the
+    // Queue tab for "ADP" — which never shows "Pick").
+    rosterByeLabel: /^Bye$/,
+    rosterAdpLabel: /^ADP$/,
+    // Drafter-card completed-pick meta line under the abbreviated name:
+    // "WR - SEA" (OCR may glue a junk prefix: "IWR-SEA").
+    cardPosTeam: /([A-Za-z]{1,4})\s*[-–]\s*([A-Z]{2,3})\s*$/
   };
   var NOT_USERNAMES = /* @__PURE__ */ new Set([
     "PICKS",
@@ -423,6 +432,13 @@
     const [qb, rb, wr, te] = text.split(/\s+/).map((v) => v === "O" ? 0 : parseInt(v, 10));
     return { QB: qb, RB: rb, WR: wr, TE: te };
   }
+  function parseCardPosTeam(text) {
+    const m = String(text).match(PATTERNS.cardPosTeam);
+    if (!m) return null;
+    const pos = fuzzyPosition(m[1].slice(-2));
+    const team = /^[A-Z]{2,3}$/.test(m[2]) ? m[2] : null;
+    return pos || team ? { pos, team } : null;
+  }
   function centerX(l) {
     return (l.x ?? 0) + (Number.isFinite(l.w) ? l.w / 2 : 0);
   }
@@ -457,6 +473,16 @@
         if (!card) continue;
         const tallyLine = lines.find((l) => l.y > u.y && l.y - u.y < 0.09 && Math.abs(centerX(l) - ucx) < 0.11 && PATTERNS.tallyRow.test(l.text));
         if (tallyLine) card.tally = parseTally(tallyLine.text);
+        if (card.nextOverall != null) {
+          const nameLine = lines.filter((l) => l.y > u.y && l.y - u.y < 0.09 && Math.abs(centerX(l) - ucx) < 0.09 && PATTERNS.abbrevName.test(l.text)).sort((a, b) => Math.abs(centerX(a) - ucx) - Math.abs(centerX(b) - ucx))[0];
+          if (nameLine) {
+            card.lastPickName = nameLine.text;
+            const metaLine = lines.find((l) => l.y > nameLine.y && l.y - nameLine.y < 0.04 && Math.abs(centerX(l) - ucx) < 0.09 && parseCardPosTeam(l.text));
+            const meta = metaLine ? parseCardPosTeam(metaLine.text) : null;
+            card.lastPickTeam = meta?.team ?? null;
+            card.lastPickPos = meta?.pos ?? null;
+          }
+        }
         cards.push(card);
       }
       return cards;
@@ -489,6 +515,16 @@
         const tally = parseTally(texts[j]);
         if (tally) {
           card.tally = tally;
+          break;
+        }
+      }
+      if (card.nextOverall != null) {
+        for (let j = i + 1; j <= Math.min(texts.length - 1, i + 4); j++) {
+          if (!PATTERNS.abbrevName.test(texts[j])) continue;
+          card.lastPickName = texts[j];
+          const meta = j + 1 < texts.length ? parseCardPosTeam(texts[j + 1]) : null;
+          card.lastPickTeam = meta?.team ?? null;
+          card.lastPickPos = meta?.pos ?? null;
           break;
         }
       }
@@ -549,6 +585,8 @@
       picksAwayDivider: null,
       boardPicks: [],
       rosterPicks: [],
+      cardPicks: [],
+      rosterOwner: null,
       rows: [],
       availability: null,
       queueNames: [],
@@ -633,6 +671,17 @@
       if (c.nextOverall != null && !obs.upcomingOveralls.includes(c.nextOverall)) {
         obs.upcomingOveralls.push(c.nextOverall);
       }
+      if (c.nextOverall != null && c.lastPickName) {
+        const m = matchAbbrevPlayer(pool2, c.lastPickName, c.lastPickTeam);
+        if (m && (!c.lastPickPos || !m.player.position || m.player.position === c.lastPickPos || m.player.position === "N/A")) {
+          obs.cardPicks.push({
+            overall: c.nextOverall,
+            player: m.player,
+            score: Math.min(m.score, 0.75),
+            raw: `${c.username} \xB7 ${c.lastPickName}`
+          });
+        }
+      }
     }
     if (obs.lobby) {
       obs.lobbyUsernames = texts.filter(isUsernameLine);
@@ -645,7 +694,10 @@
       const hasDraftAction = texts.some((t) => PATTERNS.draftAction.test(t));
       obs.detailPanel = hasStats && hasDraftAction;
     }
-    obs.rosterPanel = texts.filter((t) => PATTERNS.rosterPickLabel.test(t)).length >= 2;
+    {
+      const pickLabels = texts.filter((t) => PATTERNS.rosterPickLabel.test(t)).length;
+      obs.rosterPanel = pickLabels >= 2 || pickLabels >= 1 && texts.some((t) => PATTERNS.rosterByeLabel.test(t)) && texts.some((t) => PATTERNS.rosterAdpLabel.test(t));
+    }
     const boardBoxes = lines.length > 0 && lines.every((l) => l.y != null && l.x != null);
     const isNameFrag = (t) => looksLikeNameLine(t) || /^[A-Z][A-Za-z'.-]{2,}$/.test(t);
     const consumedIdx = /* @__PURE__ */ new Set();
@@ -756,6 +808,11 @@
     if (obs.kind === "roster" && lines.length > 0 && lines.every((l) => l.y != null && l.x != null)) {
       const rowByRaw = new Map(obs.rows.map((r) => [r.raw, r]));
       const nameLines = lines.filter((l) => rowByRaw.has(l.text));
+      if (nameLines.length) {
+        const firstRowY = Math.min(...nameLines.map((l) => l.y));
+        const owner = lines.filter((l) => l.y < firstRowY && isUsernameLine(l.text)).sort((a, b) => b.y - a.y)[0];
+        obs.rosterOwner = owner ? owner.text : null;
+      }
       const harvested = [];
       for (const lbl of lines) {
         if (!PATTERNS.rosterPickLabel.test(lbl.text)) continue;
@@ -916,8 +973,12 @@
       // epoch ms of the last in-room frame
       lastOutAt: 0,
       // epoch ms of the last out-of-room frame
-      outStreak: 0
+      outStreak: 0,
       // consecutive out-of-room frames
+      draftGen: 0,
+      // bumped per auto board reset (new-draft detection)
+      newDraftStreak: 0
+      // consecutive own-roster reads contradicting the ledger
     };
     const presence = () => state.inRoom == null ? "unseen" : state.inRoom ? "in" : "out";
     const slot = () => state.manualSlot || state.anchoredSlot || state.inferredSlot;
@@ -959,6 +1020,26 @@
       const evidence = state.anchoredSlot || state.inferredSlot;
       state.slotConflict = !!(state.manualSlot && evidence && evidence !== state.manualSlot);
     }
+    function resetForNewDraft() {
+      state.manualSlot = null;
+      state.anchoredSlot = null;
+      state.anchorCandidate = null;
+      state.inferredSlot = null;
+      state.usernameCandidate = null;
+      state.usernameSlots = /* @__PURE__ */ new Map();
+      state.tallies = /* @__PURE__ */ new Map();
+      state.slotConflict = false;
+      state.currentPick = 1;
+      state.observedStartPick = null;
+      state.explicitPicksUntil = null;
+      state.ledger = /* @__PURE__ */ new Map();
+      state.inferredGone = /* @__PURE__ */ new Set();
+      state.queue = /* @__PURE__ */ new Set();
+      state.wasOnClock = false;
+      state.lastConfirmKey = null;
+      state.newDraftStreak = 0;
+      state.draftGen += 1;
+    }
     function ingest(obs, nowMs = Date.now()) {
       if (!obs) return null;
       if (obs.kind === "self") {
@@ -987,7 +1068,8 @@
         myPickEvent: false,
         confirmPick: null,
         presence: null,
-        presenceChanged: false
+        presenceChanged: false,
+        newDraft: false
       };
       const wasInRoom = state.inRoom;
       if (IN_ROOM_KINDS.has(obs.kind) || obs.confirmCard) {
@@ -1003,6 +1085,26 @@
       }
       summary.presence = presence();
       summary.presenceChanged = wasInRoom !== state.inRoom;
+      let deferRosterMerge = false;
+      if ((obs.rosterPicks || []).length && state.learnedUsername && obs.rosterOwner && usernameMatches(state.learnedUsername, obs.rosterOwner)) {
+        const conflicts = obs.rosterPicks.filter((rp) => {
+          const e = state.ledger.get(rp.overall);
+          return e && e.src !== "event" && e.player.canonical !== rp.player.canonical;
+        }).length;
+        const panelSlot = slotForOverall(obs.rosterPicks[0].overall, teams);
+        const slotMoved = state.anchoredSlot != null && panelSlot !== state.anchoredSlot && myPicks().length > 0;
+        if (conflicts >= 1 || slotMoved) {
+          state.newDraftStreak++;
+          if (state.newDraftStreak >= 2) {
+            resetForNewDraft();
+            summary.newDraft = true;
+          } else {
+            deferRosterMerge = true;
+          }
+        } else {
+          state.newDraftStreak = 0;
+        }
+      }
       for (const bp of obs.boardPicks) {
         const existing = state.ledger.get(bp.overall);
         if (!existing || bp.score > existing.score) {
@@ -1016,7 +1118,10 @@
           });
         }
       }
-      for (const rp of obs.rosterPicks || []) {
+      for (const rp of [
+        ...deferRosterMerge ? [] : obs.rosterPicks || [],
+        ...obs.cardPicks || []
+      ]) {
         const existing = state.ledger.get(rp.overall);
         if (!existing || rp.score > existing.score) {
           if (!existing) summary.newBoardPicks++;
@@ -1279,6 +1384,7 @@
     function serialize() {
       return {
         v: 2,
+        gen: state.draftGen,
         manualSlot: state.manualSlot,
         anchoredSlot: state.anchoredSlot,
         inferredSlot: state.inferredSlot,
@@ -1306,6 +1412,13 @@
     }
     function hydrate(data) {
       if (!data || data.v !== 1 && data.v !== 2) return false;
+      const gen = data.gen || 0;
+      if (gen > state.draftGen) {
+        resetForNewDraft();
+        state.draftGen = gen;
+      } else if (gen < state.draftGen) {
+        return false;
+      }
       for (const e of data.ledger || []) {
         const player = pool2.byCanonical.get(e.c);
         if (!player || !Number.isFinite(e.o)) continue;
@@ -1390,6 +1503,7 @@
           inferredGone: state.inferredGone.size,
           queueSize: state.queue.size,
           syncCount: state.syncCount,
+          draftGen: state.draftGen,
           myPicks: myPicks()
         };
       }
@@ -1397,8 +1511,8 @@
   }
 
   // src/draft/extensionEngine.entry.js
-  var ENGINE_VERSION = "task336.1";
-  var ENGINE_BUILD = 2;
+  var ENGINE_VERSION = "autoreset.1";
+  var ENGINE_BUILD = 3;
   var session = null;
   var config = null;
   var pool = null;
@@ -1428,6 +1542,7 @@
     const enteredCrunch = changed && (glance.phase === "onClock" || glance.phase === "onDeck" || glance.picksUntil >= 0 && glance.picksUntil <= 3);
     const myPickLanded = changed && /QB \d+ · RB \d+/.test(glance.rosterBar) && lastCore && JSON.parse(lastCore)[4] !== glance.rosterBar;
     const presenceFlip = !!(summary && summary.presenceChanged);
+    const newDraft = !!(summary && summary.newDraft);
     if (changed) lastCore = core;
     return JSON.stringify({
       ok: true,
@@ -1437,7 +1552,7 @@
       epoch: config && config.configEpoch || 0,
       kind: obsKind ?? null,
       changed,
-      significant: enteredCrunch || myPickLanded || myPickEvent || presenceFlip,
+      significant: enteredCrunch || myPickLanded || myPickEvent || presenceFlip || newDraft,
       glance,
       state: session.serialize(),
       status: {

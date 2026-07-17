@@ -169,8 +169,10 @@ export default function LiveSessionPanel() {
         </View>
       )}
 
-      {/* Room presence + reset (TASK-336): back-to-back slow drafts are
-          enter room -> pick -> leave -> reset -> enter the next room. */}
+      {/* Room presence + reset (TASK-336). Back-to-back slow drafts no
+          longer need this button: entering the next room and tapping your
+          profile card auto-detects the new draft and resets the board
+          (sessionEngine new-draft detection). Kept as a manual fallback. */}
       {captureLive && status?.presence === 'unseen' && (
         <View style={styles.roomRow}>
           <DoorOpen size={12} color={colors.textMuted} />
@@ -191,7 +193,7 @@ export default function LiveSessionPanel() {
               style={styles.resetBtn}
               onPress={() => Alert.alert(
                 'Reset for next draft?',
-                'Clears the picks and availability from this draft so the next room starts clean. Your username, rankings, and exposures are kept.',
+                'Usually not needed — opening your next draft and tapping your username card resets the board automatically. This clears it manually: picks and availability drop; your username, rankings, and exposures are kept.',
                 [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Reset board', style: 'destructive', onPress: () => resetDraftBoard() },

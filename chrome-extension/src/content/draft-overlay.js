@@ -11,7 +11,7 @@
  */
 
 import { createReconnectingObserver } from '../utils/observer.js';
-import { readEntries, readRankings, getAuthSession, signIn, signInWithGoogle, signOut, fetchTier } from '../utils/bridge.js';
+import { readEntries, readRankings, getAuthSession, signIn, signInWithGoogle, signInWithApple, signOut, fetchTier } from '../utils/bridge.js';
 import { canonicalName } from '../utils/canonicalName.js';
 import playoffSchedule from '../data/playoff-schedule-2026.json';
 import {
@@ -526,6 +526,10 @@ async function renderAuthSection() {
           <svg width="16" height="16" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15 15.6 19.1 12 24 12c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.3 6.3 14.7z"/><path fill="#FBBC05" d="M24 46c5.4 0 10.3-1.8 14.1-5l-6.9-5.7C29.1 37 26.7 38 24 38c-6 0-10.6-3.9-12.3-9.2l-7 5.4C8.1 41 15.4 46 24 46z"/><path fill="#EA4335" d="M46 24c0-1.3-.2-2.7-.5-4H24v8.5h11.8c-1 3-3 5.4-5.8 7l6.9 5.7C41 37.5 46 31.5 46 24z"/></svg>
           Sign in with Google
         </button>
+        <button id="bbm-apple-btn" class="bbm-btn bbm-btn-apple">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M16.365 1.43c0 1.14-.417 2.2-1.114 2.98-.75.84-1.99 1.49-3.02 1.41-.13-1.09.41-2.24 1.06-2.96.73-.82 2.02-1.44 3.01-1.49.06.02.06.04.06.06zM20.5 17.02c-.55 1.27-.81 1.83-1.52 2.95-.99 1.56-2.39 3.5-4.12 3.51-1.54.02-1.94-1-4.03-.99-2.09.01-2.53 1.01-4.07.99-1.73-.02-3.05-1.77-4.04-3.33C.9 16.5.6 11.05 2.79 8.42c1.06-1.31 2.73-2.14 4.31-2.14 1.61 0 2.62 1 3.95 1 1.29 0 2.08-1 3.94-1 1.41 0 2.9.77 3.96 2.1-3.48 1.91-2.92 6.88.55 8.64z"/></svg>
+          Sign in with Apple
+        </button>
         <div class="bbm-auth-divider"><span>or</span></div>
         <input type="email" id="bbm-auth-email" class="bbm-auth-input" placeholder="Email" autocomplete="email" />
         <input type="password" id="bbm-auth-password" class="bbm-auth-input" placeholder="Password" autocomplete="current-password" />
@@ -535,6 +539,7 @@ async function renderAuthSection() {
     `;
     container.querySelector('#bbm-account-toggle').addEventListener('click', toggleAccountSection);
     container.querySelector('#bbm-google-btn').addEventListener('click', handleGoogleSignIn);
+    container.querySelector('#bbm-apple-btn').addEventListener('click', handleAppleSignIn);
     container.querySelector('#bbm-sign-in-btn').addEventListener('click', handleSignIn);
     // Stop keyboard events from bubbling to the host page (e.g. DK interprets "e" as "Entrants" shortcut)
     for (const input of container.querySelectorAll('.bbm-auth-input')) {
@@ -598,6 +603,28 @@ async function handleGoogleSignIn() {
   } catch (err) {
     if (errorEl) {
       errorEl.textContent = err.message ?? 'Google sign-in failed';
+      errorEl.style.display = 'block';
+    }
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handleAppleSignIn() {
+  const btn = document.getElementById('bbm-apple-btn');
+  const errorEl = document.getElementById('bbm-auth-error');
+  if (!btn) return;
+
+  btn.disabled = true;
+  if (errorEl) errorEl.style.display = 'none';
+
+  try {
+    await signInWithApple();
+    await refreshTier();
+    await renderAuthSection();
+    loadPortfolioData();
+  } catch (err) {
+    if (errorEl) {
+      errorEl.textContent = err.message ?? 'Apple sign-in failed';
       errorEl.style.display = 'block';
     }
     if (btn) btn.disabled = false;
@@ -1902,6 +1929,17 @@ function injectStyles() {
       font-weight: 600;
     }
     .bbm-btn-google:hover { background: #f1f3f4; }
+
+    .bbm-btn-apple {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #000;
+      color: #fff;
+      font-weight: 600;
+    }
+    .bbm-btn-apple:hover { background: #1a1a1a; }
 
     .bbm-auth-divider {
       display: flex;

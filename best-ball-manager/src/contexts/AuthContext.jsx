@@ -70,6 +70,14 @@ export function AuthProvider({ children }) {
     });
   }
 
+  async function signInWithApple() {
+    if (!supabase) return;
+    await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: window.location.origin },
+    });
+  }
+
   async function signUpWithEmail(email, password) {
     if (!supabase) return { error: { message: 'Auth is not available.' } };
     setAuthError(null);
@@ -115,7 +123,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, loading, emailVerified, isAuthor, authError, clearError,
-      signInWithGoogle, signOut,
+      signInWithGoogle, signInWithApple, signOut,
       signUpWithEmail, signInWithEmail, resetPassword, updatePassword,
       recoveryMode,
     }}>

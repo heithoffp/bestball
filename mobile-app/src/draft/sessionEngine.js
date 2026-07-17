@@ -108,6 +108,8 @@ export function createDraftSession(cfg) {
     lastInRoomAt: 0,          // epoch ms of the last in-room frame
     lastOutAt: 0,             // epoch ms of the last out-of-room frame
     outStreak: 0,             // consecutive out-of-room frames
+    draftGen: 0,              // bumped per auto board reset (new-draft detection)
+    newDraftStreak: 0,        // consecutive own-roster reads contradicting the ledger
   };
 
   const presence = () => (state.inRoom == null ? 'unseen' : state.inRoom ? 'in' : 'out');
@@ -163,6 +165,34 @@ export function createDraftSession(cfg) {
     state.slotConflict = !!(state.manualSlot && evidence && evidence !== state.manualSlot);
   }
 
+  /**
+   * Auto new-draft reset: drop every per-draft fact — ledger, availability
+   * marks, slot evidence, pick position — while keeping the learned username
+   * and room presence. The observation that triggered the reset is ingested
+   * into the fresh state by the caller, so the new room's roster panel seeds
+   * the new board in the same frame.
+   */
+  function resetForNewDraft() {
+    state.manualSlot = null;
+    state.anchoredSlot = null;
+    state.anchorCandidate = null;
+    state.inferredSlot = null;
+    state.usernameCandidate = null;
+    state.usernameSlots = new Map();
+    state.tallies = new Map();
+    state.slotConflict = false;
+    state.currentPick = 1;
+    state.observedStartPick = null;
+    state.explicitPicksUntil = null;
+    state.ledger = new Map();
+    state.inferredGone = new Set();
+    state.queue = new Set();
+    state.wasOnClock = false;
+    state.lastConfirmKey = null;
+    state.newDraftStreak = 0;
+    state.draftGen += 1;
+  }
+
   /** Merge one parsed observation. Returns a summary for the sync log.
    *  nowMs drives the room-presence clock — the extension passes Date.now(),
    *  replay/tests pass the recorded frame time. */
@@ -191,6 +221,7 @@ export function createDraftSession(cfg) {
       confirmPick: null,
       presence: null,
       presenceChanged: false,
+      newDraft: false,
     };
 
     // ---- Room presence (TASK-336). In-room kinds refresh the presence clock;
@@ -213,6 +244,43 @@ export function createDraftSession(cfg) {
     summary.presence = presence();
     summary.presenceChanged = wasInRoom !== state.inRoom;
 
+    // ---- Auto new-draft detection (back-to-back slow drafts). The user's
+    // OWN roster panel is ground truth for their picks: in the next draft
+    // room, tapping their profile card opens a panel that contradicts the
+    // held board — a different player at an overall we already hold, or
+    // their picks mapping to a different slot while we hold a roster. Two
+    // consecutive contradicting reads reset the board in place (one read is
+    // OCR-glitch territory; the panel lingers across frames, so a real new
+    // draft confirms within a second). Checked BEFORE the merges below so
+    // conflicts compare against the previous draft's ledger, and the same
+    // observation then seeds the fresh board. The manual reset in the app
+    // remains as a fallback.
+    let deferRosterMerge = false;
+    if ((obs.rosterPicks || []).length && state.learnedUsername
+      && obs.rosterOwner && usernameMatches(state.learnedUsername, obs.rosterOwner)) {
+      const conflicts = obs.rosterPicks.filter((rp) => {
+        const e = state.ledger.get(rp.overall);
+        return e && e.src !== 'event' && e.player.canonical !== rp.player.canonical;
+      }).length;
+      const panelSlot = slotForOverall(obs.rosterPicks[0].overall, teams);
+      const slotMoved = state.anchoredSlot != null && panelSlot !== state.anchoredSlot
+        && myPicks().length > 0;
+      if (conflicts >= 1 || slotMoved) {
+        state.newDraftStreak++;
+        if (state.newDraftStreak >= 2) {
+          resetForNewDraft();
+          summary.newDraft = true;
+        } else {
+          // Hold the contradicting picks out of the ledger until the second
+          // read confirms — merging now could overwrite the very entry the
+          // conflict is measured against.
+          deferRosterMerge = true;
+        }
+      } else {
+        state.newDraftStreak = 0;
+      }
+    }
+
     // Board cells are the highest-fidelity source: idempotent ledger appends.
     for (const bp of obs.boardPicks) {
       const existing = state.ledger.get(bp.overall);
@@ -227,7 +295,13 @@ export function createDraftSession(cfg) {
     // Roster-panel picks are board-grade too: absolute overalls paired with
     // matched rows (TASK-336) — the one source that recovers picks no board
     // window ever showed (a mid-draft resume needs only a roster glance).
-    for (const rp of obs.rosterPicks || []) {
+    // Card picks (a drafter card's completed-pick line, "1.6|6" over
+    // "J. Smith-Njigba") merge the same way at a capped score, so a slow
+    // draft's carousel keeps the roster bar honest without a board visit.
+    for (const rp of [
+      ...(deferRosterMerge ? [] : obs.rosterPicks || []),
+      ...(obs.cardPicks || []),
+    ]) {
       const existing = state.ledger.get(rp.overall);
       if (!existing || rp.score > existing.score) {
         if (!existing) summary.newBoardPicks++;
@@ -609,6 +683,7 @@ export function createDraftSession(cfg) {
   function serialize() {
     return {
       v: 2,
+      gen: state.draftGen,
       manualSlot: state.manualSlot,
       anchoredSlot: state.anchoredSlot,
       inferredSlot: state.inferredSlot,
@@ -638,6 +713,17 @@ export function createDraftSession(cfg) {
    */
   function hydrate(data) {
     if (!data || (data.v !== 1 && data.v !== 2)) return false;
+    // Draft generation (auto new-draft reset): a snapshot from a NEWER
+    // generation wipes this session's per-draft state before merging — the
+    // union merge below would otherwise resurrect the previous draft. A
+    // snapshot from an OLDER generation predates a reset and is stale.
+    const gen = data.gen || 0;
+    if (gen > state.draftGen) {
+      resetForNewDraft();
+      state.draftGen = gen;
+    } else if (gen < state.draftGen) {
+      return false;
+    }
     for (const e of data.ledger || []) {
       const player = pool.byCanonical.get(e.c);
       if (!player || !Number.isFinite(e.o)) continue;
@@ -728,6 +814,7 @@ export function createDraftSession(cfg) {
         inferredGone: state.inferredGone.size,
         queueSize: state.queue.size,
         syncCount: state.syncCount,
+        draftGen: state.draftGen,
         myPicks: myPicks(),
       };
     },

@@ -1,9 +1,12 @@
 // SubscriptionContext — mobile port of the web SubscriptionContext.
-// Tier derivation (subscription/beta/comp → guest|free|pro) is identical.
-// Checkout and the billing portal run in-app (ADR-027): Stripe Checkout opens
-// in an auth browser session via the existing create-checkout-session edge
-// function and returns through the bbexposures:// deep link; the tier flips
-// via the realtime subscriptions channel plus a short finalizing poll.
+// Tier derivation (subscription/beta/comp → guest|free|pro) is identical and
+// still reads from the shared `subscriptions` table.
+// Purchasing runs through native Apple StoreKit 2 IAP (ADR-028): purchasePro
+// drives the native purchase sheet, then posts the verified transaction JWS to
+// the sync-apple-purchase edge function (with App Store Server Notifications as
+// the durable backstop) so the tier flips on both the app and the website. The
+// billing portal branches by provider — Apple purchases open Apple's
+// subscription management, Stripe purchases open the Stripe billing portal.
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../../shared/utils/supabaseClient';
@@ -11,8 +14,11 @@ import { useAuth } from './AuthContext';
 import { trackEvent } from '../../shared/utils/analytics';
 import {
   SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY,
-  CHECKOUT_RETURN_URL, CHECKOUT_DEEP_LINK,
+  APPLE_MANAGE_SUBSCRIPTIONS_URL, WEB_APP_URL,
 } from '../../shared/config';
+import {
+  initIap, endIap, purchaseSubscription, getActivePurchases, finishPurchase, jwsOf,
+} from '../iap';
 
 const SubscriptionContext = createContext(null);
 
@@ -101,6 +107,13 @@ export function SubscriptionProvider({ children }) {
     };
   }, [user]);
 
+  // Open the StoreKit connection once so products load quickly and the purchase
+  // listeners are live before the user taps Subscribe (ADR-028). No-op off iOS.
+  useEffect(() => {
+    initIap().catch(() => {});
+    return () => { endIap().catch(() => {}); };
+  }, []);
+
   // Re-query the subscription + profile rows on demand (after checkout or a
   // billing-portal round-trip). Returns the fresh subscription row, if any.
   const refetchSubscription = useCallback(async () => {
@@ -148,51 +161,91 @@ export function SubscriptionProvider({ children }) {
     }
   }, [refetchSubscription]);
 
-  // In-app checkout (ADR-027): Stripe Checkout in an auth browser session.
-  // The hosted return page redirects to the bbexposures:// deep link, which
-  // dismisses the sheet. Returns { status } or { error }.
-  const startCheckout = useCallback(async (priceId, { promoCode } = {}) => {
-    if (!supabase || !priceId) return { error: 'Checkout is not available.' };
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return { error: 'Sign in to subscribe.' };
-    trackEvent('subscription_checkout_started');
-
-    let data;
+  // POST a verified StoreKit 2 transaction JWS to the sync-apple-purchase edge
+  // function, which validates Apple's signature and upserts the subscriptions
+  // row (ADR-028). This is the immediate cross-platform write; App Store Server
+  // Notifications reconcile the same row later. Returns { status } or { error }.
+  const syncApplePurchase = useCallback(async (accessToken, transactionJws) => {
     try {
-      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-checkout-session`, {
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/sync-apple-purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
           'apikey': SUPABASE_ANON_KEY,
         },
-        body: JSON.stringify({
-          priceId,
-          promoCode: promoCode || undefined,
-          successUrl: `${CHECKOUT_RETURN_URL}?status=success`,
-          cancelUrl: `${CHECKOUT_RETURN_URL}?status=canceled`,
-        }),
+        body: JSON.stringify({ transactionJws }),
       });
-      data = await response.json();
+      return await response.json();
     } catch {
-      return { error: 'Could not reach checkout. Check your connection.' };
+      return { error: 'Could not reach the server. Check your connection.' };
     }
-    if (!data?.url) return { error: data?.error || 'Could not start checkout.' };
+  }, []);
 
-    const result = await WebBrowser.openAuthSessionAsync(data.url, CHECKOUT_DEEP_LINK);
-    const succeeded = result.type === 'success' && result.url?.includes('status=success');
-    if (succeeded) {
-      await finalizeCheckout();
-      return { status: 'success' };
+  // Buy Pro via the native Apple purchase sheet (ADR-028). `productId` is an
+  // App Store product ID. The Supabase user id is passed as the StoreKit
+  // appAccountToken so the server can map the transaction back to this account.
+  // Returns { status: 'success' | 'canceled' } or { error }.
+  const purchasePro = useCallback(async (productId) => {
+    if (!supabase || !productId) return { error: 'Purchases are not available.' };
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = userIdRef.current;
+    if (!session || !userId) return { error: 'Sign in to subscribe.' };
+    trackEvent('subscription_checkout_started');
+
+    let purchase;
+    try {
+      purchase = await purchaseSubscription(productId, userId);
+    } catch {
+      return { error: 'The purchase could not be completed.' };
     }
-    // Covers explicit cancel and a manual sheet dismiss after paying — the
-    // realtime channel still flips the tier in the latter case.
-    return { status: 'canceled' };
-  }, [finalizeCheckout]);
+    if (purchase?.cancelled) return { status: 'canceled' };
 
-  // Stripe billing portal, scoped to the user's customer via the existing
-  // create-portal-session edge function.
+    const jws = jwsOf(purchase);
+    let syncResult = null;
+    if (jws) syncResult = await syncApplePurchase(session.access_token, jws);
+    // Clear the transaction from the StoreKit queue now that the server has it.
+    await finishPurchase(purchase);
+
+    if (syncResult?.error) return { error: syncResult.error };
+    await finalizeCheckout();
+    return { status: 'success' };
+  }, [finalizeCheckout, syncApplePurchase]);
+
+  // Restore Purchases (required by Apple): re-sync every active StoreKit
+  // entitlement for the signed-in Apple ID, then refetch the tier.
+  const restorePurchases = useCallback(async () => {
+    if (!supabase) return { error: 'Restore is not available.' };
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { error: 'Sign in to restore your purchase.' };
+
+    let purchases;
+    try {
+      purchases = await getActivePurchases();
+    } catch {
+      return { error: 'Could not restore purchases.' };
+    }
+    let synced = 0;
+    for (const purchase of purchases) {
+      const jws = jwsOf(purchase);
+      if (!jws) continue;
+      const result = await syncApplePurchase(session.access_token, jws);
+      if (!result?.error) synced += 1;
+    }
+    const sub = await refetchSubscription();
+    const active = sub?.status === 'active' || sub?.status === 'trialing';
+    if (active) return { status: 'restored' };
+    return synced === 0 ? { status: 'none' } : { status: 'inactive' };
+  }, [refetchSubscription, syncApplePurchase]);
+
+  // Manage subscription. Apple-purchased subscriptions can only be managed in
+  // Apple's account settings (ADR-028); Stripe-purchased ones use the Stripe
+  // billing portal via the existing create-portal-session edge function.
   const openBillingPortal = useCallback(async () => {
+    if (subscription?.provider === 'apple') {
+      await WebBrowser.openBrowserAsync(APPLE_MANAGE_SUBSCRIPTIONS_URL);
+      return { status: 'done' };
+    }
     if (!supabase) return { error: 'Billing is not available.' };
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { error: 'Sign in to manage billing.' };
@@ -206,7 +259,7 @@ export function SubscriptionProvider({ children }) {
           'Authorization': `Bearer ${session.access_token}`,
           'apikey': SUPABASE_ANON_KEY,
         },
-        body: JSON.stringify({ returnUrl: `${CHECKOUT_RETURN_URL}?status=portal` }),
+        body: JSON.stringify({ returnUrl: WEB_APP_URL }),
       });
       data = await response.json();
     } catch {
@@ -214,10 +267,10 @@ export function SubscriptionProvider({ children }) {
     }
     if (!data?.url) return { error: data?.error || 'Could not open billing.' };
 
-    await WebBrowser.openAuthSessionAsync(data.url, CHECKOUT_DEEP_LINK);
+    await WebBrowser.openBrowserAsync(data.url);
     await refetchSubscription();
     return { status: 'done' };
-  }, [refetchSubscription]);
+  }, [subscription, refetchSubscription]);
 
   return (
     <SubscriptionContext.Provider value={{
@@ -233,7 +286,8 @@ export function SubscriptionProvider({ children }) {
       isCompActive,
       compExpiresAt,
       checkoutFinalizing,
-      startCheckout,
+      purchasePro,
+      restorePurchases,
       openBillingPortal,
       refetchSubscription,
     }}>

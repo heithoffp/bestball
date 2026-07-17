@@ -41,7 +41,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'GOOGLE_OAUTH') {
-    handleGoogleOAuth().then(sendResponse);
+    handleProviderOAuth('google').then(sendResponse);
+    return true; // keep channel open for async response
+  }
+
+  if (message.type === 'APPLE_OAUTH') {
+    handleProviderOAuth('apple').then(sendResponse);
     return true; // keep channel open for async response
   }
 
@@ -70,12 +75,16 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
   return false;
 });
 
-async function handleGoogleOAuth() {
+// Runs a Supabase OAuth provider flow (google | apple) via chrome.identity and
+// returns the tokens from the redirect hash. Both providers share the flow —
+// only the provider param and error label differ.
+async function handleProviderOAuth(provider) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (!supabaseUrl) return { error: 'Supabase not configured' };
 
+  const label = provider === 'apple' ? 'Apple' : 'Google';
   const redirectUrl = chrome.identity.getRedirectURL();
-  const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+  const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
   try {
     const responseUrl = await chrome.identity.launchWebAuthFlow({
@@ -90,14 +99,14 @@ async function handleGoogleOAuth() {
     const refresh_token = params.get('refresh_token');
 
     if (!access_token || !refresh_token) {
-      return { error: 'No tokens received from Google sign-in' };
+      return { error: `No tokens received from ${label} sign-in` };
     }
     return { access_token, refresh_token };
   } catch (err) {
     if (err.message?.includes('canceled')) {
       return { error: 'Sign-in was cancelled' };
     }
-    return { error: err.message ?? 'Google sign-in failed' };
+    return { error: err.message ?? `${label} sign-in failed` };
   }
 }
 

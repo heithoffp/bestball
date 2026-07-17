@@ -1,14 +1,15 @@
 // CaptureGuide — the Draft Assistant's quiet "good to know" guidance (TASK-342,
 // ADR-026). Rendered under the setup rail pre-session and under the
 // LiveSessionPanel in-session. Four tip rows, no cards: fast drafts, the
-// slow-draft username-in-banner tip that anchors your slot and refills your
-// roster (TASK-328, with the drafter-card diagram), where the team lives (the
+// slow-draft username-in-banner tip that anchors your slot, refills your
+// roster, and auto-detects the next draft room (TASK-328, with a real
+// blurred-usernames UD banner screenshot), where the team lives (the
 // mobile assistant is capture-only — it never re-displays the roster in app),
 // and the privacy line. No session or portfolio state; safe pre- and in-session.
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import {
-  Zap, Hourglass, AtSign, ShieldCheck, LayoutGrid,
+  Zap, Hourglass, ShieldCheck, LayoutGrid,
 } from 'lucide-react-native';
 import { colors, spacing, radii } from '../../theme';
 
@@ -27,19 +28,23 @@ function TipRow({ icon, lead, last, extra, children }) {
   );
 }
 
-// Mini drafter-card diagram: your username chip in the room's top banner,
-// with the tap target that anchors your slot (TASK-328).
-function BannerMock() {
+// Real UD draft-room banner (usernames blurred): the accent ring marks the
+// user's own drafter card — the tap that anchors the slot (TASK-328) and
+// hands the new-draft auto-detect its roster panel.
+function BannerShot() {
   return (
-    <View style={styles.bannerMock}>
-      <View style={styles.avatar} />
-      <View style={styles.usernameChip}>
-        <AtSign size={11} color={colors.textInverse} />
-        <Text style={styles.usernameChipTxt}>yourname</Text>
+    <View>
+      <View style={styles.bannerWrap}>
+        <Image
+          source={require('../../../assets/slow-draft-banner.png')}
+          style={styles.bannerImg}
+          resizeMode="cover"
+        />
+        <View style={styles.bannerRing} pointerEvents="none" />
       </View>
-      <View style={{ flex: 1 }} />
-      <View style={styles.tapDot} />
-      <Text style={styles.tapHint}>tap</Text>
+      <Text style={styles.bannerCaption}>
+        Your card shows <Text style={styles.bannerCaptionStrong}>your username</Text> — tap it.
+      </Text>
     </View>
   );
 }
@@ -56,10 +61,11 @@ export default function CaptureGuide() {
       <TipRow
         icon={<Hourglass size={15} color={colors.accent} />}
         lead="Slow drafts."
-        extra={<BannerMock />}
+        extra={<BannerShot />}
       >
-        Coming back to a room hours or days later? Tap your username in the top banner —
-        BBE refills your roster from the board and locks in your slot.
+        Coming back hours later — or jumping into your next draft? Tap your username
+        in the room&apos;s top banner: BBE locks in your slot, refills your roster,
+        and spots a brand-new draft on its own. No need to reset anything in the app.
       </TipRow>
 
       <TipRow icon={<LayoutGrid size={15} color={colors.textSecondary} />} lead="Your team.">
@@ -87,23 +93,21 @@ const styles = StyleSheet.create({
   tipTxt: { fontSize: 12.5, lineHeight: 18, color: colors.textSecondary },
   tipLead: { color: colors.textPrimary, fontWeight: '800' },
 
-  bannerMock: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+  bannerWrap: {
     marginTop: spacing.md,
-    paddingVertical: 8, paddingHorizontal: 10,
     borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderStrong,
+    overflow: 'hidden', position: 'relative',
     backgroundColor: colors.surface2,
   },
-  avatar: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surface3 },
-  usernameChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: colors.accent, borderRadius: radii.sm,
-    paddingHorizontal: 7, paddingVertical: 3,
+  // Real screenshot crop is 1179x327; the ring hugs the user's own card
+  // (the yellow-outlined one, center of the crop).
+  bannerImg: { width: '100%', aspectRatio: 1179 / 327 },
+  bannerRing: {
+    position: 'absolute', left: '38.2%', width: '22%', top: '2%', height: '94%',
+    borderWidth: 2, borderColor: colors.accent, borderRadius: 6,
   },
-  usernameChipTxt: { fontSize: 12, fontWeight: '800', color: colors.textInverse },
-  tapDot: {
-    width: 14, height: 14, borderRadius: 7,
-    borderWidth: 2, borderColor: colors.accent, backgroundColor: 'transparent',
+  bannerCaption: {
+    marginTop: 6, fontSize: 11, lineHeight: 15, color: colors.textMuted,
   },
-  tapHint: { fontSize: 10, fontWeight: '700', color: colors.accent },
+  bannerCaptionStrong: { color: colors.accent, fontWeight: '700' },
 });

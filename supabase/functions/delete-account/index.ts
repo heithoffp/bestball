@@ -46,13 +46,17 @@ Deno.serve(async (req) => {
   }
 
   // Cancel any live Stripe subscriptions before deleting the rows — otherwise
-  // the deleted account keeps billing with no portal access to stop it.
+  // the deleted account keeps billing with no portal access to stop it. Apple
+  // IAP subscriptions (provider='apple', ADR-028) cannot be canceled
+  // server-side — the user must cancel them in iOS Settings — so they are
+  // skipped here and only their local row is removed below.
   if (STRIPE_SECRET_KEY) {
     const { data: subs } = await supabaseAdmin
       .from("subscriptions")
-      .select("stripe_subscription_id, status")
+      .select("stripe_subscription_id, status, provider")
       .eq("user_id", user.id);
     for (const sub of subs ?? []) {
+      if (sub.provider && sub.provider !== "stripe") continue;
       if (!sub.stripe_subscription_id) continue;
       if (!["active", "trialing", "past_due"].includes(sub.status)) continue;
       const response = await fetch(
@@ -76,6 +80,17 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Note whether the account had a live Apple subscription — deleting the row
+  // doesn't stop Apple billing, so the client warns the user to cancel it in
+  // iOS Settings.
+  const { data: appleSubs } = await supabaseAdmin
+    .from("subscriptions")
+    .select("status")
+    .eq("user_id", user.id)
+    .eq("provider", "apple")
+    .in("status", ["active", "trialing", "past_due"]);
+  const hadActiveAppleSub = (appleSubs?.length ?? 0) > 0;
+
   // Delete public schema data before removing the auth user
   await supabaseAdmin.from("subscriptions").delete().eq("user_id", user.id);
   await supabaseAdmin.from("profiles").delete().eq("id", user.id);
@@ -89,7 +104,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ success: true }), {
+  return new Response(JSON.stringify({ success: true, hadActiveAppleSub }), {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });

@@ -1,7 +1,8 @@
 # ADR-027: Sell mobile Pro via external Stripe Checkout link (US storefront), not Apple In-App Purchase
 
 **Date:** 2026-07-16
-**Status:** Accepted
+**Status:** Superseded
+**Superseded By:** ADR-028
 
 ---
 

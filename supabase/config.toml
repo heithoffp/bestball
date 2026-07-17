@@ -28,3 +28,11 @@ verify_jwt = false
 # function header for the full security model).
 [functions.live-activity-relay]
 verify_jwt = false
+
+# apple-notifications (ADR-028 / TASK-344): App Store Server Notifications v2
+# endpoint. Apple's servers POST here and cannot present a Supabase JWT, so the
+# gateway must not gate on one — trust comes from verifying Apple's JWS signature
+# chain inside the function (see _shared/appleJws.ts). sync-apple-purchase keeps
+# the default verify_jwt = true (it is called by the signed-in app).
+[functions.apple-notifications]
+verify_jwt = false

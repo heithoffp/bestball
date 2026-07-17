@@ -52,6 +52,28 @@ export async function signInWithGoogle() {
 }
 
 /**
+ * Signs in with Apple via chrome.identity OAuth flow. Same delegation pattern
+ * as signInWithGoogle — the background worker runs launchWebAuthFlow, then we
+ * set the returned tokens as the Supabase session here.
+ *
+ * @returns {Promise<import('@supabase/supabase-js').Session>}
+ */
+export async function signInWithApple() {
+  if (!supabase) throw new Error('[BBM] Supabase not configured');
+  const result = await new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'APPLE_OAUTH' }, resolve);
+  });
+  if (result.error) throw new Error(result.error);
+
+  const { data, error } = await supabase.auth.setSession({
+    access_token: result.access_token,
+    refresh_token: result.refresh_token,
+  });
+  if (error) throw error;
+  return data.session;
+}
+
+/**
  * Signs out the current user.
  *
  * @returns {Promise<void>}
