@@ -1,15 +1,16 @@
 // Account tab — sign in / sign up (email+password, same Supabase accounts as
-// the website), subscription status with desktop hand-off for billing, roster
-// sync guidance, demo mode, and outbound links.
+// the website), in-app Pro checkout and billing (ADR-027), roster sync
+// guidance, demo mode, account deletion, and outbound links.
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import {
-  CircleUserRound, LogOut, ExternalLink, Puzzle, BookOpen, Sparkles, RefreshCw,
+  CircleUserRound, LogOut, ExternalLink, Puzzle, BookOpen, Sparkles, RefreshCw, Trash2,
 } from 'lucide-react-native';
 import ScreenScaffold, { HelpSection } from '../../src/components/ScreenScaffold';
 import { Card, SectionTitle, Button } from '../../src/components/ui';
+import PlanPicker from '../../src/components/PlanPicker';
 import { colors, spacing, radii, type } from '../../src/theme';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
@@ -19,7 +20,8 @@ import { WEB_APP_URL, INSTALL_URL, BLOG_URL, X_URL } from '../../shared/config';
 const HELP = (
   <>
     <HelpSection heading="One account everywhere">Your BestBallExposures.com account works here — rosters synced by the Chrome extension and saved rankings load automatically.</HelpSection>
-    <HelpSection heading="Desktop steps">Roster sync (Chrome extension), subscription checkout, and rankings CSV upload happen on your computer. Everything else lives in the app.</HelpSection>
+    <HelpSection heading="Subscribe in the app">Upgrade to Pro right here — checkout is handled securely by Stripe, and the same subscription works on the website.</HelpSection>
+    <HelpSection heading="Desktop steps">Roster sync (Chrome extension) and rankings CSV upload happen on your computer. Everything else lives in the app.</HelpSection>
   </>
 );
 
@@ -35,11 +37,11 @@ function Row({ icon: Icon, label, onPress, danger }) {
 
 export default function AccountTab() {
   const {
-    user, authError, clearError, signInWithEmail, signUpWithEmail, resetPassword, signOut,
+    user, authError, clearError, signInWithEmail, signUpWithEmail, resetPassword, signOut, deleteAccount,
   } = useAuth();
   const {
-    tier, isProUser, isBetaActive, betaDaysRemaining, isCompActive, status,
-    openUpgradeOnWeb, openBillingOnWeb,
+    isProUser, isBetaActive, betaDaysRemaining, isCompActive, status,
+    openBillingPortal, checkoutFinalizing,
   } = useSubscription();
   const { rosterData, isUsingDemoData, loadDemoData, exitDemo, reload } = usePortfolio();
 
@@ -48,6 +50,28 @@ export default function AccountTab() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'This permanently deletes your account, synced rosters, and saved rankings, and cancels any active subscription. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            const { error } = await deleteAccount();
+            setDeleting(false);
+            if (error) Alert.alert('Could not delete account', error.message);
+          },
+        },
+      ],
+    );
+  };
 
   const submit = async () => {
     if (!email || !password) return;
@@ -139,9 +163,13 @@ export default function AccountTab() {
             </View>
             <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
               {!isProUser ? (
-                <Button title="Upgrade to Pro (on the website)" onPress={openUpgradeOnWeb} />
+                <Button
+                  title={checkoutFinalizing ? 'Finalizing your subscription…' : 'Upgrade to Pro'}
+                  onPress={() => setPickerOpen(true)}
+                  disabled={checkoutFinalizing}
+                />
               ) : (
-                <Button title="Manage subscription (on the website)" variant="ghost" onPress={openBillingOnWeb} />
+                <Button title="Manage subscription" variant="ghost" onPress={openBillingPortal} />
               )}
             </View>
           </Card>
@@ -196,8 +224,18 @@ export default function AccountTab() {
               <LogOut size={16} color={colors.negative} />
               <Text style={[type.body, { flex: 1, color: colors.negative }]}>Sign out</Text>
             </Pressable>
+            <Pressable
+              style={styles.linkRow}
+              onPress={confirmDeleteAccount}
+              disabled={deleting}
+            >
+              <Trash2 size={16} color={colors.negative} />
+              <Text style={[type.body, { flex: 1, color: colors.negative }]}>
+                {deleting ? 'Deleting account…' : 'Delete account'}
+              </Text>
+            </Pressable>
             <Text style={[type.muted, { marginTop: spacing.sm }]}>
-              Account deletion and email changes are handled on the website under Account Settings.
+              Email changes are handled on the website under Account Settings.
             </Text>
           </Card>
         )}
@@ -206,6 +244,7 @@ export default function AccountTab() {
           Best Ball Exposures · v{version} · iOS
         </Text>
       </ScrollView>
+      <PlanPicker visible={pickerOpen} onClose={() => setPickerOpen(false)} />
     </ScreenScaffold>
   );
 }

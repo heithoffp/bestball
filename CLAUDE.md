@@ -41,7 +41,8 @@ Bundled by **Vite + @crxjs/vite-plugin** into `chrome-extension/dist/` — the d
 **Implemented (iOS-first full app port + EPIC-08 assistant host).** Expo (SDK 57) /
 React Native / expo-router app at the `mobile-app/` root — a native port of every web
 tab (Dashboard, Exposures, Rosters, ADP Tracker, Combos, Rankings, Draft Assistant,
-Arena) with desktop hand-offs for roster sync, checkout, and CSV upload. Built via EAS
+Arena) with in-app Pro checkout via Stripe (external checkout link, ADR-027) and
+desktop hand-offs for roster sync and CSV upload. Built via EAS
 cloud builds from Windows (ADR-022). `mobile-app/shared/utils/` is a port snapshot of
 `best-ball-manager/src/utils/` — **the web files remain the source of truth**; keep them
 in lockstep when the pipeline changes. Bundled CSVs are compacted at build time with

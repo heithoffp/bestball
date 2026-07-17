@@ -72,6 +72,7 @@ const Arena = lazy(() => import('./components/Arena'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const InstallPage = lazy(() => import('./components/InstallPage'));
 const Unsubscribe = lazy(() => import('./components/Unsubscribe'));
+const MobileCheckoutReturn = lazy(() => import('./components/MobileCheckoutReturn'));
 const BlogChrome = lazy(() => import('./components/BlogChrome'));
 const BlogIndex = lazy(() => import('./components/BlogIndex'));
 const BlogPost = lazy(() => import('./components/BlogPost'));
@@ -423,6 +424,17 @@ export default function App() {
   // Load bundled demo data on demand (triggered from landing page "Try Demo")
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadDemoData = useCallback(() => { loadFromAssets({ forceDemo: true }); }, []);
+
+  // Standalone /mobile/checkout-return — public, no auth gate, no tab chrome.
+  // Stripe success/cancel/portal-return target for the iOS app (ADR-027);
+  // deep-links straight back into the app.
+  if (location.pathname === '/mobile/checkout-return') {
+    return (
+      <Suspense fallback={null}>
+        <MobileCheckoutReturn />
+      </Suspense>
+    );
+  }
 
   // Standalone /unsubscribe — public, no auth gate, no tab chrome (email link target)
   if (location.pathname === '/unsubscribe') {

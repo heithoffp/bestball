@@ -24,6 +24,7 @@
 - TASK-338: Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session)
 - TASK-339: Mobile Draft Assistant overhaul: live-session-first UX, retire manual pick entry
 - TASK-342: Mobile Draft Assistant: strip to capture-and-guide only (ADR-026)
+- TASK-343: Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -84,6 +85,7 @@
 | TASK-338 | Live Activity loss detection + auto-restart (recover dead activity mid slow-draft session) | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-338.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-339 | Mobile Draft Assistant overhaul: live-session-first UX, retire manual pick entry | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-339.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-342 | Mobile Draft Assistant: strip to capture-and-guide only (ADR-026) | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-342.md) | No | 2026-07-16 | 2026-07-16 |
+| TASK-343 | Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-343.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |

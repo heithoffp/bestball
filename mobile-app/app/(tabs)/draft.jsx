@@ -20,12 +20,11 @@ const HELP = {
   assistant: (
     <>
       <HelpSection heading="How it works">Enter your Underdog username, start a session, tap record, then just draft in Underdog. BBE reads the draft board on your device and follows along — your picks, the room, and your slot are detected automatically.</HelpSection>
-      <HelpSection heading="Your turn clock">The session bar shows the current pick, round, and how many picks until you're up. Your slot comes from your username's drafter card — nothing to configure.</HelpSection>
-      <HelpSection heading="Player Columns">ADP = consensus draft position. Avg = your historical pick. Path = % of your rosters that started the same way. Corr = co-occurrence with your picks. Global = portfolio-wide ownership %.</HelpSection>
-      <HelpSection heading="Badges">STACK / GAME STACK = pairs with a pick you've made. W15–17 STACK = playoff-week overlap. FALLING = market moving away from your average. BREAKS PLAN = would end your last viable build path.</HelpSection>
-      <HelpSection heading="Strategy Cards">Which RB/QB/TE construction paths remain viable given your picks. A locked badge means only one path is left.</HelpSection>
-      <HelpSection heading="Eliminator Mode">Swaps strategy cards for the bye rainbow — no two players in a position room should share a bye.</HelpSection>
-      <HelpSection heading="Demo">Not in a draft? "Try a demo draft" on the setup screen replays a real room through the full assistant.</HelpSection>
+      <HelpSection heading="Your Lock Screen">While you draft, the Live Activity shows the current pick and round, how many picks until you're up, your roster's position counts, and the top available players — with stack and playoff-week markers plus your portfolio exposure.</HelpSection>
+      <HelpSection heading="Fast drafts">Nothing to manage. Keep the broadcast running and every pick lands within seconds of being made.</HelpSection>
+      <HelpSection heading="Slow drafts">Tap your username in the draft room's top banner whenever you come back — BBE refills your roster from the board and locks in your slot, even days into a draft. Drafting several slow rooms back to back? Use Reset between rooms so each board starts clean.</HelpSection>
+      <HelpSection heading="Where's my team?">On Underdog while the draft runs — the assistant tracks, it doesn't re-display. Once your rosters sync, the Dashboard, Exposures, and Rosters tabs pick them up.</HelpSection>
+      <HelpSection heading="Privacy">Every frame is processed on your device and instantly discarded. Only draft data — picks and your slot — is ever produced; screenshots never leave your phone.</HelpSection>
     </>
   ),
   arena: (

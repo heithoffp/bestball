@@ -6,7 +6,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../../shared/utils/supabaseClient';
 import { clearAllData } from '../../shared/utils/storage';
 import { isAuthorEmail } from '../../shared/utils/authorPreview';
-import { WEB_APP_URL } from '../../shared/config';
+import { WEB_APP_URL, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '../../shared/config';
 
 const AuthContext = createContext(null);
 
@@ -73,10 +73,39 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
   }
 
+  // Permanently delete the account via the delete-account edge function
+  // (App Review 5.1.1(v): deletion must be initiable in-app). The function
+  // cancels any active Stripe subscription before removing data.
+  async function deleteAccount() {
+    if (!supabase) return { error: { message: 'Auth is not available.' } };
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { error: { message: 'Not signed in.' } };
+    try {
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/delete-account`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok || data?.error) {
+        return { error: { message: data?.error || 'Could not delete account.' } };
+      }
+    } catch {
+      return { error: { message: 'Could not delete account. Check your connection.' } };
+    }
+    // The auth user is gone server-side — clear local state only.
+    await clearAllData();
+    await supabase.auth.signOut({ scope: 'local' });
+    return { error: null };
+  }
+
   return (
     <AuthContext.Provider value={{
       user, loading, emailVerified, isAuthor, authError, clearError,
-      signOut, signUpWithEmail, signInWithEmail, resetPassword,
+      signOut, signUpWithEmail, signInWithEmail, resetPassword, deleteAccount,
     }}>
       {children}
     </AuthContext.Provider>

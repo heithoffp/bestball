@@ -15,10 +15,18 @@
       "distribution": "internal",
       "ios": {
         "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID": "price_1TGeWIRyMnsAXUULVi1ORqFa",
+        "EXPO_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID": "price_1TGeWIRyMnsAXUUL8mQtlEps"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID": "price_1TGeWIRyMnsAXUULVi1ORqFa",
+        "EXPO_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID": "price_1TGeWIRyMnsAXUUL8mQtlEps"
+      }
     }
   },
   "submit": {

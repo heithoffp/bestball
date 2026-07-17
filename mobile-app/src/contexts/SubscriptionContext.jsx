@@ -1,14 +1,18 @@
 // SubscriptionContext — mobile port of the web SubscriptionContext.
 // Tier derivation (subscription/beta/comp → guest|free|pro) is identical.
-// Checkout and the billing portal are desktop steps: Apple's IAP rules keep
-// purchases out of the app, so upgrade paths open the website instead
-// (see openUpgradeOnWeb / openBillingOnWeb).
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+// Checkout and the billing portal run in-app (ADR-027): Stripe Checkout opens
+// in an auth browser session via the existing create-checkout-session edge
+// function and returns through the bbexposures:// deep link; the tier flips
+// via the realtime subscriptions channel plus a short finalizing poll.
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../../shared/utils/supabaseClient';
 import { useAuth } from './AuthContext';
 import { trackEvent } from '../../shared/utils/analytics';
-import { WEB_APP_URL } from '../../shared/config';
+import {
+  SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY,
+  CHECKOUT_RETURN_URL, CHECKOUT_DEEP_LINK,
+} from '../../shared/config';
 
 const SubscriptionContext = createContext(null);
 
@@ -17,6 +21,9 @@ export function SubscriptionProvider({ children }) {
   const [subscription, setSubscription] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [checkoutFinalizing, setCheckoutFinalizing] = useState(false);
+  const userIdRef = useRef(null);
+  userIdRef.current = user?.id ?? null;
 
   // Beta access derived state
   const betaExpiresAt = profile?.beta_expires_at ? new Date(profile.beta_expires_at) : null;
@@ -94,15 +101,123 @@ export function SubscriptionProvider({ children }) {
     };
   }, [user]);
 
-  // Desktop hand-offs — subscriptions are managed on the website.
-  const openUpgradeOnWeb = useCallback(async () => {
-    trackEvent('subscription_upgrade_web_handoff');
-    await WebBrowser.openBrowserAsync(`${WEB_APP_URL}?upgrade=1`);
+  // Re-query the subscription + profile rows on demand (after checkout or a
+  // billing-portal round-trip). Returns the fresh subscription row, if any.
+  const refetchSubscription = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId || !supabase) return null;
+    const [subResult, profileResult] = await Promise.all([
+      supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['active', 'trialing', 'past_due'])
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('beta_expires_at, comp_expires_at')
+        .eq('id', userId)
+        .maybeSingle(),
+    ]);
+    if (userIdRef.current !== userId) return null;
+    setSubscription(subResult.error ? null : subResult.data);
+    if (!profileResult.error) setProfile(profileResult.data);
+    return subResult.error ? null : subResult.data;
   }, []);
 
-  const openBillingOnWeb = useCallback(async () => {
-    await WebBrowser.openBrowserAsync(WEB_APP_URL);
-  }, []);
+  // Belt alongside the realtime channel: the stripe-webhook write can lag the
+  // Checkout redirect by a few seconds, so poll briefly after a successful
+  // return instead of leaving the user staring at a Free tier.
+  const finalizeCheckout = useCallback(async () => {
+    setCheckoutFinalizing(true);
+    try {
+      const deadline = Date.now() + 20000;
+      while (Date.now() < deadline) {
+        const sub = await refetchSubscription();
+        if (sub?.status === 'active' || sub?.status === 'trialing') {
+          trackEvent('subscription_checkout_completed');
+          return true;
+        }
+        if (!userIdRef.current) return false;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      return false;
+    } finally {
+      setCheckoutFinalizing(false);
+    }
+  }, [refetchSubscription]);
+
+  // In-app checkout (ADR-027): Stripe Checkout in an auth browser session.
+  // The hosted return page redirects to the bbexposures:// deep link, which
+  // dismisses the sheet. Returns { status } or { error }.
+  const startCheckout = useCallback(async (priceId, { promoCode } = {}) => {
+    if (!supabase || !priceId) return { error: 'Checkout is not available.' };
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { error: 'Sign in to subscribe.' };
+    trackEvent('subscription_checkout_started');
+
+    let data;
+    try {
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          priceId,
+          promoCode: promoCode || undefined,
+          successUrl: `${CHECKOUT_RETURN_URL}?status=success`,
+          cancelUrl: `${CHECKOUT_RETURN_URL}?status=canceled`,
+        }),
+      });
+      data = await response.json();
+    } catch {
+      return { error: 'Could not reach checkout. Check your connection.' };
+    }
+    if (!data?.url) return { error: data?.error || 'Could not start checkout.' };
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, CHECKOUT_DEEP_LINK);
+    const succeeded = result.type === 'success' && result.url?.includes('status=success');
+    if (succeeded) {
+      await finalizeCheckout();
+      return { status: 'success' };
+    }
+    // Covers explicit cancel and a manual sheet dismiss after paying — the
+    // realtime channel still flips the tier in the latter case.
+    return { status: 'canceled' };
+  }, [finalizeCheckout]);
+
+  // Stripe billing portal, scoped to the user's customer via the existing
+  // create-portal-session edge function.
+  const openBillingPortal = useCallback(async () => {
+    if (!supabase) return { error: 'Billing is not available.' };
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { error: 'Sign in to manage billing.' };
+
+    let data;
+    try {
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-portal-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ returnUrl: `${CHECKOUT_RETURN_URL}?status=portal` }),
+      });
+      data = await response.json();
+    } catch {
+      return { error: 'Could not reach billing. Check your connection.' };
+    }
+    if (!data?.url) return { error: data?.error || 'Could not open billing.' };
+
+    await WebBrowser.openAuthSessionAsync(data.url, CHECKOUT_DEEP_LINK);
+    await refetchSubscription();
+    return { status: 'done' };
+  }, [refetchSubscription]);
 
   return (
     <SubscriptionContext.Provider value={{
@@ -117,8 +232,10 @@ export function SubscriptionProvider({ children }) {
       betaExpiresAt,
       isCompActive,
       compExpiresAt,
-      openUpgradeOnWeb,
-      openBillingOnWeb,
+      checkoutFinalizing,
+      startCheckout,
+      openBillingPortal,
+      refetchSubscription,
     }}>
       {children}
     </SubscriptionContext.Provider>
