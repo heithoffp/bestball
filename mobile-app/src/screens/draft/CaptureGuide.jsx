@@ -3,7 +3,7 @@
 // LiveSessionPanel in-session. Four tip rows, no cards: fast drafts, the
 // slow-draft username-in-banner tip that anchors your slot, refills your
 // roster, and auto-detects the next draft room (TASK-328, with a real
-// blurred-usernames UD banner screenshot), where the team lives (the
+// UD room-banner screenshot), where the team lives (the
 // mobile assistant is capture-only — it never re-displays the roster in app),
 // and the privacy line. No session or portfolio state; safe pre- and in-session.
 import React from 'react';
@@ -28,8 +28,9 @@ function TipRow({ icon, lead, last, extra, children }) {
   );
 }
 
-// Real UD draft-room banner (usernames blurred): the accent ring marks the
-// user's own drafter card — the tap that anchors the slot (TASK-328) and
+// Real UD draft-room top banner (header + drafter cards; other drafters'
+// usernames pixelated, the user's own left readable): the accent ring marks
+// the user's own drafter card — the tap that anchors the slot (TASK-328) and
 // hands the new-draft auto-detect its roster panel.
 function BannerShot() {
   return (
@@ -99,11 +100,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden', position: 'relative',
     backgroundColor: colors.surface2,
   },
-  // Real screenshot crop is 1179x327; the ring hugs the user's own card
-  // (the yellow-outlined one, center of the crop).
-  bannerImg: { width: '100%', aspectRatio: 1179 / 327 },
+  // Real screenshot crop is 1179x450 (room header + full drafter-card row);
+  // the ring hugs the user's own card — readable username, center of the crop.
+  bannerImg: { width: '100%', aspectRatio: 1179 / 450 },
   bannerRing: {
-    position: 'absolute', left: '38.2%', width: '22%', top: '2%', height: '94%',
+    position: 'absolute', left: '38.4%', width: '21.6%', top: '32.5%', height: '65.5%',
     borderWidth: 2, borderColor: colors.accent, borderRadius: 6,
   },
   bannerCaption: {

@@ -13,7 +13,12 @@ in third-party dashboards, not in the repo.
    configure its **Return URL** to the Supabase Apple callback
    (`https://cwjorshxkbbxjvhqxdlh.supabase.co/auth/v1/callback`).
 3. Create a **Sign in with Apple key** (.p8) and note the **Key ID** and **Team ID**
-   (`WNGNQ89YJ2`). Supabase uses these to generate the client secret.
+   (`WNGNQ89YJ2`). These are used to generate the **client secret** — an ES256 JWT
+   signed with the .p8 that Apple caps at **6 months validity**. Supabase does not
+   generate or rotate it; generation + rotation is automated by
+   `scripts/rotate-apple-secret.mjs` and the monthly `rotate-apple-secret.yml`
+   workflow (TASK-347) — see the
+   [Apple Secret Rotation Runbook](../Apple_Secret_Rotation_Runbook.md).
 
 ## 2. Google Cloud console (OAuth clients)
 
@@ -29,7 +34,12 @@ in third-party dashboards, not in the repo.
 
 ## 3. Supabase dashboard (Authentication → Providers)
 
-1. **Apple:** enable; add the Services ID, Team ID, Key ID, and the .p8 key contents.
+1. **Apple:** enable; add the Services ID as client ID and a **generated client-secret
+   JWT** (not the raw .p8 — the dashboard stores a pre-generated secret that expires
+   ≤6 months). Generate the initial secret with
+   `node scripts/rotate-apple-secret.mjs --print-secret`, or complete the runbook's
+   one-time setup and dispatch the rotation workflow; thereafter the monthly cron
+   keeps it fresh ([runbook](../Apple_Secret_Rotation_Runbook.md)).
 2. **Google:** enable; add the **web** client ID + secret. Add the **iOS** client ID to
    the provider's *Authorized Client IDs* list so native `signInWithIdToken` tokens are
    accepted.
@@ -59,4 +69,5 @@ in third-party dashboards, not in the repo.
   (guards the known peer-dep autolink launch-crash).
 
 ## Related
-- ADR-029 (decision), TASK-345 (implementation)
+- ADR-029 (decision), TASK-345 (implementation), TASK-347 (client-secret rotation
+  automation — [runbook](../Apple_Secret_Rotation_Runbook.md))

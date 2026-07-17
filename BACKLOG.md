@@ -26,6 +26,7 @@
 - TASK-342: Mobile Draft Assistant: strip to capture-and-guide only (ADR-026)
 - TASK-344: Mobile Pro via Apple In-App Purchase (StoreKit 2) — ADR-028, replaces mobile Stripe checkout
 - TASK-345: Add Google + Apple sign-in (mobile native + Apple on web) per ADR-029
+- TASK-347: Automated Apple Sign-In client-secret rotation pipeline
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -88,6 +89,7 @@
 | TASK-342 | Mobile Draft Assistant: strip to capture-and-guide only (ADR-026) | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-342.md) | No | 2026-07-16 | 2026-07-16 |
 | TASK-344 | Mobile Pro via Apple In-App Purchase (StoreKit 2) — ADR-028, replaces mobile Stripe checkout | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-344.md) | No | 2026-07-17 | 2026-07-17 |
 | TASK-345 | Add Google + Apple sign-in (mobile native + Apple on web) per ADR-029 | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-345.md) | No | 2026-07-17 | 2026-07-17 |
+| TASK-347 | Automated Apple Sign-In client-secret rotation pipeline | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-347.md) | No | 2026-07-17 | 2026-07-17 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
