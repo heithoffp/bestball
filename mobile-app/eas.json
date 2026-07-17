@@ -18,18 +18,14 @@
       },
       "env": {
         "EXPO_PUBLIC_APPLE_PRO_MONTHLY_PRODUCT_ID": "com.bestballexposures.app.pro.monthly",
-        "EXPO_PUBLIC_APPLE_PRO_YEARLY_PRODUCT_ID": "com.bestballexposures.app.pro.yearly",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": ""
+        "EXPO_PUBLIC_APPLE_PRO_YEARLY_PRODUCT_ID": "com.bestballexposures.app.pro.yearly"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_APPLE_PRO_MONTHLY_PRODUCT_ID": "com.bestballexposures.app.pro.monthly",
-        "EXPO_PUBLIC_APPLE_PRO_YEARLY_PRODUCT_ID": "com.bestballexposures.app.pro.yearly",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": ""
+        "EXPO_PUBLIC_APPLE_PRO_YEARLY_PRODUCT_ID": "com.bestballexposures.app.pro.yearly"
       }
     }
   },
