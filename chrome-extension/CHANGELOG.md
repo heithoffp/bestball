@@ -5,6 +5,10 @@ All notable changes to the BBE Chrome extension are documented here. Format foll
 
 
 
+## [1.4.0] - 2026-07-18
+
+- **Sign in with Apple.** The draft overlay login now offers Apple sign-in alongside Google and email, matching the authentication options available on the website. Runs through `chrome.identity` via the same Supabase OAuth path as Google.
+
 ## [1.3.0] - 2026-06-20
 
 - **Draft Boards in the Rosters tab.** View the full draft board for your synced drafts — every roster in the pod, your column highlighted, with per-column stats — right from the Rosters tab. Re-sync from the extension to pull in your draft boards.
