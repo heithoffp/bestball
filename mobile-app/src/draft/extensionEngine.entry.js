@@ -13,19 +13,20 @@
 //   BBEEngine.snapshot()        -> resultJson without ingest-specific fields
 import { buildPool } from './playerMatcher.js';
 import { parseUnderdogScreen } from './underdogParser.js';
+import { parseDraftKingsScreen } from './draftkingsParser.js';
 import { createDraftSession } from './sessionEngine.js';
 
 // Bumped with every engine change: the app JS updates over Metro but this
 // bundle ships inside the native broadcast extension, so a stale EAS build
 // silently runs old parsing. The version rides in every result so the panel
 // can prove which engine is actually running.
-export const ENGINE_VERSION = 'autoreset.1';
+export const ENGINE_VERSION = 'draftkings.1';
 
 // Monotonic build counter (ADR-023). ENGINE_VERSION is a task-string with no
 // ordering, so the App Group hot-load path uses this integer to decide whether
 // the app-written engine is newer than the one baked into the extension
 // bundle. BUMP THIS (by 1) with every engine change, alongside ENGINE_VERSION.
-export const ENGINE_BUILD = 3;
+export const ENGINE_BUILD = 4;
 
 let session = null;
 let config = null;
@@ -140,7 +141,13 @@ globalThis.BBEEngine = {
     try {
       if (!session) return JSON.stringify({ ok: false, error: 'not initialized' });
       const items = JSON.parse(itemsJson);
-      const obs = parseUnderdogScreen(items, { pool, teams: config.teams || 12 });
+      // Platform-selected parser (TASK-350): the session config carries the
+      // draft platform so DK and UD screen grammars stay fully separated.
+      const obs = config.platform === 'draftkings'
+        ? parseDraftKingsScreen(items, {
+          pool, teams: config.teams || 12, username: config.username || null,
+        })
+        : parseUnderdogScreen(items, { pool, teams: config.teams || 12 });
       const summary = session.ingest(obs, Number(nowMs) || Date.now());
       const st = session.getStatus();
       diagLog.push({

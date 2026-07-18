@@ -14,12 +14,15 @@ import AssistantSetup from './draft/AssistantSetup';
 import CaptureGuide from './draft/CaptureGuide';
 
 export default function DraftAssistantView() {
-  const [sessionActive, setSessionActive] = useState(false);
+  const [session, setSession] = useState({ active: false, platform: 'underdog' });
 
-  useEffect(() => subscribeSession(snap => setSessionActive(!!snap?.active)), []);
+  useEffect(() => subscribeSession(snap => setSession({
+    active: !!snap?.active,
+    platform: snap?.platform || 'underdog',
+  })), []);
 
   // No session -> the setup screen owns the tab.
-  if (!sessionActive) {
+  if (!session.active) {
     return <AssistantSetup />;
   }
 
@@ -30,7 +33,7 @@ export default function DraftAssistantView() {
       keyboardShouldPersistTaps="handled"
     >
       <LiveSessionPanel />
-      <CaptureGuide />
+      <CaptureGuide platform={session.platform} />
     </ScrollView>
   );
 }

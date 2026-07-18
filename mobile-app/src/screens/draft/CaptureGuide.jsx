@@ -1,11 +1,12 @@
 // CaptureGuide — the Draft Assistant's quiet "good to know" guidance (TASK-342,
 // ADR-026). Rendered under the setup rail pre-session and under the
 // LiveSessionPanel in-session. Four tip rows, no cards: fast drafts, the
-// slow-draft username-in-banner tip that anchors your slot, refills your
-// roster, and auto-detects the next draft room (TASK-328, with a real
-// UD room-banner screenshot), where the team lives (the
-// mobile assistant is capture-only — it never re-displays the roster in app),
-// and the privacy line. No session or portfolio state; safe pre- and in-session.
+// platform's slow-draft recovery tip (Underdog: tap your username in the room
+// banner, with a real UD room-banner screenshot, TASK-328; DraftKings: glance
+// at the Board tab — every cell carries its exact pick number, TASK-350),
+// where the team lives (the mobile assistant is capture-only — it never
+// re-displays the roster in app), and the privacy line. No session or
+// portfolio state; safe pre- and in-session.
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import {
@@ -50,7 +51,9 @@ function BannerShot() {
   );
 }
 
-export default function CaptureGuide() {
+export default function CaptureGuide({ platform = 'underdog' }) {
+  const dk = platform === 'draftkings';
+  const platformName = dk ? 'DraftKings' : 'Underdog';
   return (
     <View style={styles.wrap}>
       <Text style={styles.eyebrow}>GOOD TO KNOW</Text>
@@ -59,18 +62,26 @@ export default function CaptureGuide() {
         Nothing to manage — keep recording and every pick lands on its own within seconds.
       </TipRow>
 
-      <TipRow
-        icon={<Hourglass size={15} color={colors.accent} />}
-        lead="Slow drafts."
-        extra={<BannerShot />}
-      >
-        Coming back hours later — or jumping into your next draft? Tap your username
-        in the room&apos;s top banner: BBE locks in your slot, refills your roster,
-        and spots a brand-new draft on its own. No need to reset anything in the app.
-      </TipRow>
+      {dk ? (
+        <TipRow icon={<Hourglass size={15} color={colors.accent} />} lead="Slow drafts.">
+          Coming back hours later? Glance at the Board tab: every cell carries its exact
+          pick number, so BBE refills the whole draft — your slot, your roster, everyone
+          else&apos;s picks — in a single look.
+        </TipRow>
+      ) : (
+        <TipRow
+          icon={<Hourglass size={15} color={colors.accent} />}
+          lead="Slow drafts."
+          extra={<BannerShot />}
+        >
+          Coming back hours later — or jumping into your next draft? Tap your username
+          in the room&apos;s top banner: BBE locks in your slot, refills your roster,
+          and spots a brand-new draft on its own. No need to reset anything in the app.
+        </TipRow>
+      )}
 
       <TipRow icon={<LayoutGrid size={15} color={colors.textSecondary} />} lead="Your team.">
-        Lives on Underdog while the draft runs. Once your rosters sync, every BBE tab
+        Lives on {platformName} while the draft runs. Once your rosters sync, every BBE tab
         picks them up.
       </TipRow>
 

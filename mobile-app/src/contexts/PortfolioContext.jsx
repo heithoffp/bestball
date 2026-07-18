@@ -2,9 +2,9 @@
 // Authenticated users load rosters synced by the Chrome extension (Supabase
 // extension_entries); guests can load bundled demo data. Bundled ADP snapshots +
 // projections always load so ADP Tracker / Rankings / Arena work without rosters.
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { processLoadedData } from '../../shared/utils/dataLoader';
-import { syncGetFile } from '../../shared/utils/storage';
+import { syncGetFile, getFile } from '../../shared/utils/storage';
 import { parseCSVText } from '../../shared/utils/csv';
 import { supabase } from '../../shared/utils/supabaseClient';
 import { trackEvent } from '../../shared/utils/analytics';
@@ -46,6 +46,13 @@ export function PortfolioProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  // Latest entries applied to state — kept so deleteRoster and the background
+  // refresh can rewrite the on-device cache without refetching (ADR-030).
+  const entriesRef = useRef(null);
+  // Bumped per loadData call; async continuations from a superseded load
+  // (user switched, reload fired) check it and drop their results.
+  const loadGeneration = useRef(0);
+
   const applyResult = useCallback((result) => {
     setRosterData(result.rosterData);
     setMasterPlayers(result.masterPlayers);
@@ -56,7 +63,23 @@ export function PortfolioProvider({ children }) {
 
   const loadPerPlatformRankings = useCallback(async (userId) => {
     const platforms = ['underdog', 'draftkings'];
-    const rankingsMap = {};
+
+    // Local-first (ADR-030): render whatever copies are already on device,
+    // then refresh from cloud in the background and re-set only on change.
+    const localTexts = {};
+    const localMap = {};
+    for (const p of platforms) {
+      let file = await getFile(`rankings_${p}`);
+      if (!file && p === 'underdog') file = await getFile('rankings');
+      if (file) {
+        localTexts[p] = file.text;
+        localMap[p] = await parseCSVText(file.text);
+      }
+    }
+    if (Object.keys(localMap).length > 0) setRankingsByPlatform(localMap);
+
+    const cloudTexts = {};
+    const cloudMap = {};
     for (const p of platforms) {
       let file = await syncGetFile(`rankings_${p}`, userId);
       // One-time legacy fallback: migrate 'rankings' → rankings_underdog for existing users
@@ -64,13 +87,36 @@ export function PortfolioProvider({ children }) {
         file = await syncGetFile('rankings', userId);
       }
       if (file) {
-        rankingsMap[p] = await parseCSVText(file.text);
+        cloudTexts[p] = file.text;
+        cloudMap[p] = await parseCSVText(file.text);
       }
     }
-    setRankingsByPlatform(rankingsMap);
+    const changed = platforms.some(p => cloudTexts[p] !== localTexts[p]);
+    if (changed || Object.keys(localMap).length === 0) setRankingsByPlatform(cloudMap);
   }, []);
 
-  const loadData = useCallback(async () => {
+  // Process a mapped entries array into app state. Empty portfolios still load
+  // ADP data so Tracker/Rankings/Exposures work; rosterData stays empty so
+  // empty-state CTAs show.
+  const applyEntries = useCallback(async (entries, adpFiles, projectionsRows) => {
+    if (entries.length > 0) {
+      const { convertEntriesToRosterRows } = await import('../../shared/utils/extensionBridge');
+      const rosterRows = convertEntriesToRosterRows(entries);
+      const result = await processLoadedData({ rosterRows, adpFiles, projectionsRows });
+      applyResult(result);
+    } else {
+      const result = await processLoadedData({ adpFiles, projectionsRows });
+      setAdpSnapshots(result.adpSnapshots);
+      setAdpByPlatform(result.adpByPlatform || {});
+      setMasterPlayers(result.masterPlayers);
+      setRosterData([]);
+      setStatus({ type: '', msg: '' });
+    }
+    setIsUsingDemoData(false);
+  }, [applyResult]);
+
+  const loadData = useCallback(async ({ forceFull = false } = {}) => {
+    const gen = ++loadGeneration.current;
     setStatus({ type: 'loading', msg: 'Loading data...' });
     try {
       const adpFiles = loadBundledAdp();
@@ -78,27 +124,38 @@ export function PortfolioProvider({ children }) {
 
       if (user?.id && supabase) {
         // Authenticated: the Chrome extension is the only roster data source.
-        const { readExtensionEntries, convertEntriesToRosterRows } = await import('../../shared/utils/extensionBridge');
-        const entries = await readExtensionEntries(user.id);
-        if (entries.length > 0) {
-          const rosterRows = convertEntriesToRosterRows(entries);
-          const result = await processLoadedData({ rosterRows, adpFiles, projectionsRows });
-          applyResult(result);
-          setIsUsingDemoData(false);
-          trackEvent('extension_sync_loaded', { count: entries.length });
+        const userId = user.id;
+        const entriesCache = await import('../../shared/utils/entriesCache');
+        const cached = forceFull ? null : entriesCache.readEntriesCache(userId);
+
+        if (cached) {
+          // Cache-first render (ADR-030): the portfolio appears at local-CPU
+          // speed; a delta refresh reconciles adds/edits/deletes in background.
+          entriesRef.current = cached.entries;
+          await applyEntries(cached.entries, adpFiles, projectionsRows);
+          trackEvent('entries_cache_hit', { count: cached.entries.length });
+
+          entriesCache.refreshEntries(userId, cached).then(async ({ entries, changed }) => {
+            if (gen !== loadGeneration.current) return; // superseded load
+            if (!changed) return;
+            entriesRef.current = entries;
+            entriesCache.writeEntriesCache(userId, entries);
+            await applyEntries(entries, adpFiles, projectionsRows);
+          }).catch(() => { /* refresh is best-effort; cache already rendered */ });
         } else {
-          // No extension entries yet — ADP data still loads so Tracker/Rankings/
-          // Exposures work; rosterData stays empty so empty-state CTAs show.
-          const result = await processLoadedData({ adpFiles, projectionsRows });
-          setAdpSnapshots(result.adpSnapshots);
-          setAdpByPlatform(result.adpByPlatform || {});
-          setMasterPlayers(result.masterPlayers);
-          setRosterData([]);
-          setIsUsingDemoData(false);
-          setStatus({ type: '', msg: '' });
+          const { readExtensionEntries } = await import('../../shared/utils/extensionBridge');
+          const entries = await readExtensionEntries(userId);
+          if (gen !== loadGeneration.current) return;
+          entriesRef.current = entries;
+          entriesCache.writeEntriesCache(userId, entries);
+          await applyEntries(entries, adpFiles, projectionsRows);
+          if (entries.length > 0) {
+            trackEvent('extension_sync_loaded', { count: entries.length });
+          }
         }
-        await loadPerPlatformRankings(user.id);
-        setStatus({ type: '', msg: '' });
+        // Not awaited: rankings render local-first inside and must not hold
+        // up the portfolio, which is already on screen.
+        loadPerPlatformRankings(userId).catch(() => {});
       } else {
         // Guest: bundled ADP + projections only (public Arena needs them too).
         const result = await processLoadedData({ adpFiles, projectionsRows });
@@ -111,7 +168,7 @@ export function PortfolioProvider({ children }) {
       console.error('Load failed', err);
       setStatus({ type: 'error', msg: String(err) });
     }
-  }, [user?.id, applyResult, loadPerPlatformRankings]);
+  }, [user?.id, applyEntries, loadPerPlatformRankings]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -145,12 +202,22 @@ export function PortfolioProvider({ children }) {
     loadData();
   }, [loadData]);
 
+  // Explicit reload (pull-to-refresh, sync hand-off return) bypasses the
+  // on-device cache and rewrites it from a full fetch.
+  const reload = useCallback(() => loadData({ forceFull: true }), [loadData]);
+
   const deleteRoster = useCallback(async (entryId) => {
     // Only authenticated, non-demo sessions have real rows in extension_entries.
     if (!user?.id || !supabase || isUsingDemoData) return;
     const { deleteExtensionEntry } = await import('../../shared/utils/extensionBridge');
     await deleteExtensionEntry(user.id, entryId);
     setRosterData(prev => prev.filter(r => r.entry_id !== entryId));
+    // Keep the on-device cache in step so a relaunch doesn't resurrect the row.
+    if (entriesRef.current) {
+      entriesRef.current = entriesRef.current.filter(e => e.entryId !== entryId);
+      const { writeEntriesCache } = await import('../../shared/utils/entriesCache');
+      writeEntriesCache(user.id, entriesRef.current);
+    }
     trackEvent('roster_deleted');
   }, [user?.id, isUsingDemoData]);
 
@@ -180,12 +247,12 @@ export function PortfolioProvider({ children }) {
     isUsingDemoData,
     loadDemoData,
     exitDemo,
-    reload: loadData,
+    reload,
     deleteRoster,
     rosterNavContext,
     setRosterNavContext,
   }), [rosterData, masterPlayers, adpSnapshots, adpByPlatform, rankingsByPlatform,
-       weeklyActuals, status, isUsingDemoData, loadDemoData, exitDemo, loadData, deleteRoster,
+       weeklyActuals, status, isUsingDemoData, loadDemoData, exitDemo, reload, deleteRoster,
        rosterNavContext]);
 
   return (

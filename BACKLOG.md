@@ -27,6 +27,10 @@
 - TASK-344: Mobile Pro via Apple In-App Purchase (StoreKit 2) — ADR-028, replaces mobile Stripe checkout
 - TASK-345: Add Google + Apple sign-in (mobile native + Apple on web) per ADR-029
 - TASK-347: Automated Apple Sign-In client-secret rotation pipeline
+- TASK-348: Mobile cache-first launch data with delta sync (ADR-030)
+- TASK-349: Mobile Arena UI parity with web's mobile Arena layout
+- TASK-350: DraftKings live draft capture parity — DK parser, platform-aware engine + onboarding platform selector
+- TASK-351: Mobile Rankings overhaul: drag-and-drop board + true UD-vs-DK Compare (web parity)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -90,6 +94,10 @@
 | TASK-344 | Mobile Pro via Apple In-App Purchase (StoreKit 2) — ADR-028, replaces mobile Stripe checkout | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-344.md) | No | 2026-07-17 | 2026-07-17 |
 | TASK-345 | Add Google + Apple sign-in (mobile native + Apple on web) per ADR-029 | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-345.md) | No | 2026-07-17 | 2026-07-17 |
 | TASK-347 | Automated Apple Sign-In client-secret rotation pipeline | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-347.md) | No | 2026-07-17 | 2026-07-17 |
+| TASK-348 | Mobile cache-first launch data with delta sync (ADR-030) | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-348.md) | No | 2026-07-18 | 2026-07-18 |
+| TASK-349 | Mobile Arena UI parity with web's mobile Arena layout | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-349.md) | No | 2026-07-18 | 2026-07-18 |
+| TASK-350 | DraftKings live draft capture parity — DK parser, platform-aware engine + onboarding platform selector | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-350.md) | No | 2026-07-18 | 2026-07-18 |
+| TASK-351 | Mobile Rankings overhaul: drag-and-drop board + true UD-vs-DK Compare (web parity) | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-351.md) | No | 2026-07-18 | 2026-07-18 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -128,6 +136,8 @@
 | TASK-317 | Boards IO follow-ups: artifact refresh cadence + client cache for user boards | Todo | P3 | - | - | [Plan](docs/plans/TASK-317.md) -- Draft | No | 2026-07-09 | 2026-07-09 |
 | TASK-330 | Record the user's own pick while parked on the Players tab (confirm-card/queue-diff inference) | Todo | P3 | S | Opus | [Plan](docs/plans/TASK-330.md) -- Draft | No | 2026-07-15 | 2026-07-15 |
 | TASK-341 | Fix failing slow-draft replay glance-format checks (target format + exposure cell) | Todo | P3 | S | Sonnet | [Plan](docs/plans/TASK-341.md) -- Draft | No | 2026-07-16 | 2026-07-16 |
+| TASK-352 | DraftKings live capture follow-ups: auto new-draft detection + lobby/pre-draft screen grammar | Todo | P3 | S | Opus | [Plan](docs/plans/TASK-352.md) -- Draft | No | 2026-07-18 | 2026-07-18 |
+| TASK-353 | Mobile Compare: in-view editing + mirror-edit proposals | Todo | P3 | M | Opus | [Plan](docs/plans/TASK-353.md) -- Draft | No | 2026-07-18 | 2026-07-18 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | - | - | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | - | - | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | - | - | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |

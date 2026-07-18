@@ -89,10 +89,27 @@ Desktop-only side-by-side view of Underdog (half-PPR) and DraftKings (full-PPR) 
 ### Off-screen edge markers
 - When one endpoint of a curve falls outside the viewport, an arrow marker is drawn at the canvas edge in the opposite platform's color rather than rendering a partial curve. The active player's marker also shows the player's name and counterpart rank.
 
+## Mobile App (native, `mobile-app/`)
+
+The iOS app ports the tab with touch-adapted behavior (TASK-351):
+
+### Board
+- Real drag-and-drop reordering via `react-native-reorderable-list` (pinned 0.18.1): long-press the grip handle to lift a row, auto-scroll near list edges, haptic feedback on lift. The list is one flat array of players + tier rails + "+ Tier" pills; only player rows are draggable, and after a drop the tier/break state is re-derived from the physical arrangement (`boardItems.js`, node-tested via `scripts/test-rankings-board.mjs`).
+- Tier rails match the web: tap a label to rename inline, ✕ removes a break, "+ Tier" pills insert one. The tier-1 rail renders as the list header and cannot be deleted.
+- Tap a row body → panel with a "move to rank #" input (fast path for long moves) and a tier-break toggle.
+- Drag works in Overall and position views (position drops anchor to the neighbor and reorder the full list); drag pauses while searching.
+- Save writes through the same `rankingsExport.js` pipeline as the web (Supabase storage + `user_rankings`) and pushes the saved rows back into `PortfolioContext` so the ADR-030 background refresh cannot clobber a fresh save.
+
+### Compare (interactive diff — differs from web)
+- Mobile Compare is a **read-only UD-vs-DK diff**, not the web's editable dual-board: synced dual columns (lock toggle), rank-delta Bézier curves in the gutter (`react-native-svg` port of CompareCurves, including off-screen edge markers), per-column Saved / ADP-fallback source pills, position chips, shared search.
+- Movers filter uses stepped chips (All / 5+ / 10+ / 25+ / 50+) instead of the web's slider.
+- Tapping a player highlights them in both columns, draws their curve at full opacity with a ±Δ badge, and auto-scrolls the other column to the counterpart. Reordering happens on the single-platform board.
+
 ## Known Limitations
 - No tier templates (e.g., "copy last year's rankings")
 - Compare mode does not yet persist mirrored edits — applied moves are session-local until the user explicitly saves the affected platform's rankings.
 - Export flow may be incomplete in some edge cases
+- Mobile Compare has no in-view editing or mirror-edit proposals (deferred follow-up to TASK-351)
 
 ## Key Files
 - `src/components/PlayerRankings.jsx` — main component
@@ -100,3 +117,5 @@ Desktop-only side-by-side view of Underdog (half-PPR) and DraftKings (full-PPR) 
 - `src/components/PlayerRankings/CompareCurves.jsx` — SVG curve canvas (gradients, edge markers, tick labels)
 - `src/components/PlayerRankings/buildPlayers.js` — shared `buildPlayersFromSource()` helper
 - `src/utils/rankingsExport.js` — `exportRankingsCSV()`, `getTierLabel()`, `getTierColor()`
+- `mobile-app/src/screens/RankingsView.jsx` — mobile shell (platform + Board/Compare toggle)
+- `mobile-app/src/screens/rankings/` — `BoardView.jsx`, `boardItems.js`, `TierRail.jsx`, `CompareView.jsx`, `CompareCurves.jsx`, `buildPlayers.js`

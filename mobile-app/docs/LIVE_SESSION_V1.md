@@ -50,8 +50,10 @@ continuous FrameSource lands (post-spike), it feeds the identical pipeline.
 Screenshot(s) in Photos
   → screenshotSync.js   expo-media-library sweep (session-scoped, screenshots only)
   → BBEDraftNative.recognizeText(uri)   Vision OCR, on-device, boxes + confidence
-  → underdogParser.js   classify screen (players|board|queue) + extract observations
-  → playerMatcher.js    canonicalName + fuzzy match vs the UD ADP player pool
+  → underdogParser.js / draftkingsParser.js   classify screen
+                        (players|board|queue|roster) + extract observations —
+                        selected by the session's platform (TASK-350)
+  → playerMatcher.js    canonicalName + fuzzy match vs the platform's ADP pool
   → sessionEngine.js    merge into monotonic pick ledger; snake math; derive
                         DraftState {currentPick, currentRound, draftSlot,
                         availablePlayers, myPicks} + glance payload
@@ -333,12 +335,14 @@ the module is absent (`liveActivity.js` no-ops and the panel says so).
 |------|------|
 | `src/draft/snake.js` | pure snake-draft math (overall↔round/slot, my picks) |
 | `src/draft/playerMatcher.js` | pool build + canonical/fuzzy name matching |
-| `src/draft/underdogParser.js` | OCR lines/boxes → screen observations |
+| `src/draft/underdogParser.js` | OCR lines/boxes → screen observations (Underdog grammar) |
+| `src/draft/draftkingsParser.js` | OCR lines/boxes → screen observations (DraftKings grammar: exact "Round X, Pick Y" header, "Last Pick" events, per-slot board columns — TASK-350) |
+| `src/draft/selfOverlay.js` | shared excision of our own expanded Live Activity from captured frames |
 | `src/draft/sessionEngine.js` | ledger + merge + DraftState + glance payload + resume detection (pure) |
 | `src/draft/liveActivity.js` | lazy native wrapper (no-op off device) |
 | `src/draft/sessionController.js` | singleton glue: App Group handoff → extension state absorption on foreground → publish + activity update |
 | `src/screens/LiveSessionPanel.jsx` | in-session status layer: capture chip, record CTA + preflight modal, presence/reset + resume banners, sync log, session tools (TASK-339 — start moved to AssistantSetup) |
-| `src/screens/draft/AssistantSetup.jsx` | the assistant's front door (TASK-339): required username (anchors auto slot detection, remembered between drafts), Start CTA, demo draft; no slot selector |
+| `src/screens/draft/AssistantSetup.jsx` | the assistant's front door (TASK-339): platform choice (Underdog \| DraftKings — selects parser, pool, and rounds, TASK-350), required username (anchors auto slot detection, remembered per platform), Start CTA; no slot selector |
 | `src/screens/draft/CoachMarks.jsx` | one-time three-step overlay introducing the live assistant in place (TASK-339) |
 | `src/screens/draft/useSessionInputs.js` | pool/rankings/exposure/roster-index inputs for `startSession` (extracted from the panel) |
 | `scripts/test-draft-parser.mjs` | Node regression test against the OCR fixture |
@@ -534,8 +538,12 @@ line), and the whole draft replays offline through the identical engine.
   its forward-compatible seam.
 - Remote parse templates in Supabase (ADR-021) — patterns are code constants,
   structured to lift into templates.
-- DraftKings templates; 6-team pods; multi-draft concurrency; Watch Smart Stack.
-- Broadcast-extension orientation handling assumes portrait (UD is
+- ~~DraftKings templates~~ — shipped as `draftkingsParser.js` + the setup
+  platform selector (TASK-350). Still open for DK: auto new-draft detection
+  (DK's roster tab shows no overalls; the Board tab + manual reset cover it)
+  and lobby/pre-draft screens. 6-team pods; multi-draft concurrency; Watch
+  Smart Stack.
+- Broadcast-extension orientation handling assumes portrait (UD and DK are
   portrait-locked; RPVideoSampleOrientationKey is read when present).
 - Governance follow-ups intentionally skipped per the developer's direct
   instruction (no BACKLOG/plan-file/ADR writes this session); reconcile via

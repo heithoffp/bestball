@@ -34,6 +34,10 @@ export const colors = {
   posRB: '#10B981',
   posWR: '#F59E0B',
   posTE: '#3B82F6',
+
+  // Platform identities (mirror web --platform-ud / --platform-dk)
+  platformUd: '#bf44ef',
+  platformDk: '#53d337',
 };
 
 export const posBg = {
@@ -42,6 +46,22 @@ export const posBg = {
   WR: 'rgba(245, 158, 11, 0.15)',
   TE: 'rgba(59, 130, 246, 0.15)',
 };
+
+// Fighter-corner colors for the Arena blind matchup (mirror web Arena.module.css
+// --corner-red / --corner-blue). Purely positional — the server randomizes which
+// team lands in which corner, so they carry no owner signal.
+export const corner = {
+  red: '#ec5a5f',
+  blue: '#4f93f5',
+};
+
+// Append an 8-bit alpha (0..1) to a #rrggbb hex for translucent tints/glows.
+// e.g. withAlpha('#ec5a5f', 0.2) -> '#ec5a5f33'. Non-hex inputs pass through.
+export function withAlpha(hex, alpha) {
+  if (typeof hex !== 'string' || hex[0] !== '#' || hex.length < 7) return hex;
+  const a = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+  return `${hex.slice(0, 7)}${a.toString(16).padStart(2, '0')}`;
+}
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 };
 

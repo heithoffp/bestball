@@ -26,7 +26,16 @@ export const BROADCAST_EXTENSION_ID = 'com.bestballexposures.app.draftbroadcast'
 const SESSION_CONFIG_KEY = 'bbe.sessionConfig';
 const RESULT_KEY = 'bbe.extensionResult';
 const HEARTBEAT_KEY = 'bbe.extensionHeartbeat';
-const USERNAME_KEY = 'bbe.udUsername';
+// Per-platform remembered usernames (TASK-350) — DK and UD accounts differ,
+// so each platform keeps its own. 'bbe.udUsername' predates the split and
+// stays as the Underdog key so existing installs keep their prefill.
+const USERNAME_KEYS = {
+  underdog: 'bbe.udUsername',
+  draftkings: 'bbe.dkUsername',
+};
+// The platform picked at the last session start, prefilling the setup screen.
+const PLATFORM_KEY = 'bbe.draftPlatform';
+const PLATFORM_LABELS = { underdog: 'Underdog', draftkings: 'DraftKings' };
 // TASK-338: single source of truth for the activity's APNs push token. The
 // native pushTokenUpdates observer keeps this current (initial token, iOS
 // rotation, every recovery re-request); FrameProcessor reads it fresh per push
@@ -52,6 +61,7 @@ const state = {
   active: false,
   session: null,
   pool: null,
+  platform: 'underdog',
   teams: 12,
   lastSyncEpoch: 0,
   pushToken: null,
@@ -116,14 +126,22 @@ function publishAll({ freshSync = false } = {}) {
   }
 }
 
-/** The username remembered from the last session (configured or auto-learned). */
-export function getRememberedUsername() {
-  return readSharedValue(USERNAME_KEY);
+/** The username remembered from the last session on `platform` (configured or
+ *  auto-learned). */
+export function getRememberedUsername(platform = 'underdog') {
+  return readSharedValue(USERNAME_KEYS[platform] || USERNAME_KEYS.underdog);
+}
+
+/** The platform picked at the last session start ('underdog' | 'draftkings'). */
+export function getRememberedPlatform() {
+  const p = readSharedValue(PLATFORM_KEY);
+  return p === 'draftkings' ? 'draftkings' : 'underdog';
 }
 
 export function getSnapshot() {
   return {
     active: state.active,
+    platform: state.platform,
     status: state.session ? state.session.getStatus() : null,
     log: state.log,
     pushToken: !!state.pushToken,
@@ -157,11 +175,13 @@ export function subscribeSession(fn) {
  */
 export async function startSession({
   poolRows, rankMap, exposureMap, rosterIndexMap,
-  slot = null, teams = 12, rounds = 18, username = null,
+  slot = null, teams = 12, rounds = 18, username = null, platform = 'underdog',
 }) {
   if (state.active) endSession();
+  const platformLabel = PLATFORM_LABELS[platform] || 'Underdog';
+  const usernameKey = USERNAME_KEYS[platform] || USERNAME_KEYS.underdog;
   if (!poolRows?.length) {
-    state.lastError = 'No Underdog player pool loaded yet';
+    state.lastError = `No ${platformLabel} player pool loaded yet`;
     notify();
     return false;
   }
@@ -169,16 +189,19 @@ export async function startSession({
   // previous draft > auto-learned mid-session (lobby / "Your pick" card).
   // TASK-339: required to start — auto slot detection keys on it, and the setup
   // screen gates Start on it.
-  const knownUsername = username || readSharedValue(USERNAME_KEY) || null;
+  const knownUsername = username || readSharedValue(usernameKey) || null;
   if (!knownUsername) {
-    state.lastError = 'Enter your Underdog username to start';
+    state.lastError = `Enter your ${platformLabel} username to start`;
     notify();
     return false;
   }
   // Remember a configured username immediately (not just when auto-learned)
-  // so the setup screen prefills it next time (TASK-339).
-  if (username) writeSharedValue(USERNAME_KEY, username);
+  // so the setup screen prefills it next time (TASK-339), and the platform
+  // choice so the selector defaults to it (TASK-350).
+  if (username) writeSharedValue(usernameKey, username);
+  writeSharedValue(PLATFORM_KEY, platform);
   state.pool = buildPool(poolRows);
+  state.platform = platform;
   state.teams = teams;
   state.session = createDraftSession({
     pool: state.pool, teams, rounds, slot, username: knownUsername,
@@ -230,6 +253,8 @@ export async function startSession({
     teams,
     rounds,
     slot,
+    // The extension engine selects the platform's parser from this (TASK-350).
+    platform,
     username: knownUsername,
     rankMap: rankMap ? Object.fromEntries(rankMap) : {},
     exposureMap: exposureMap ? Object.fromEntries(exposureMap) : {},
@@ -378,9 +403,10 @@ function absorbExtensionState() {
         pushLog(`Resumed mid-draft — ${s.picksAtStart} picks already on the board`);
       }
       pushLog(`capture · P${s.currentPick}${s.picksUntil != null ? ` · up in ${s.picksUntil}` : ''} · ${s.ledgerSize} picks known`);
-      // Remember the auto-learned username for the next draft.
-      if (s.learnedUsername && s.learnedUsername !== readSharedValue(USERNAME_KEY)) {
-        writeSharedValue(USERNAME_KEY, s.learnedUsername);
+      // Remember the auto-learned username for the next draft (per platform).
+      const usernameKey = USERNAME_KEYS[state.platform] || USERNAME_KEYS.underdog;
+      if (s.learnedUsername && s.learnedUsername !== readSharedValue(usernameKey)) {
+        writeSharedValue(usernameKey, s.learnedUsername);
       }
       notify();
     }
@@ -453,7 +479,8 @@ export function setSessionSlot(slot) {
 export function resetDraftBoard() {
   if (!state.active || !state.startInputs || !state.session) return false;
   const { rankMap, exposureMap, rosterIndexMap, teams, rounds } = state.startInputs;
-  const knownUsername = readSharedValue(USERNAME_KEY) || state.baseConfig?.username || null;
+  const usernameKey = USERNAME_KEYS[state.platform] || USERNAME_KEYS.underdog;
+  const knownUsername = readSharedValue(usernameKey) || state.baseConfig?.username || null;
   state.session = createDraftSession({
     pool: state.pool, teams, rounds, slot: null, username: knownUsername,
     rankMap, exposureMap, rosterIndexMap,

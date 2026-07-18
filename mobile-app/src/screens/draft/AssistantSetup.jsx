@@ -1,24 +1,37 @@
 // AssistantSetup — the Draft Assistant's front door (TASK-339, TASK-342). Owns
 // the tab whenever no live session is active. The setup card IS the
-// instructions: a vertical three-step rail where the controls are the steps —
-// the username field (anchors automatic slot detection, TASK-328), the Start
-// CTA with its warnings, and the record-then-draft hand-off. Markers fill gold
-// as steps complete so the next action is always obvious. Quiet "good to know"
-// guidance (CaptureGuide) below; no duplicate flow diagrams (ADR-026).
+// instructions: a vertical four-step rail where the controls are the steps —
+// the platform choice (Underdog | DraftKings, TASK-350 — it selects the parser,
+// player pool, and rounds), the username field (anchors automatic slot
+// detection, TASK-328), the Start CTA with its warnings, and the
+// record-then-draft hand-off. Markers fill gold as steps complete so the next
+// action is always obvious. Quiet "good to know" guidance (CaptureGuide)
+// below; no duplicate flow diagrams (ADR-026).
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Check, Zap, TriangleAlert } from 'lucide-react-native';
 import { trackEvent } from '../../../shared/utils/analytics';
 import {
-  subscribeSession, startSession, getRememberedUsername,
+  subscribeSession, startSession, getRememberedUsername, getRememberedPlatform,
 } from '../../draft/sessionController';
 import useSessionInputs from './useSessionInputs';
 import CaptureGuide from './CaptureGuide';
 import { colors, spacing, radii } from '../../theme';
 
 const TEAMS = 12;
-const ROUNDS = 18;
 const GOLD = '#E8BF4A';
+
+// Platform-specific session facts: DK Best Ball drafts 20 rounds, UD 18.
+const PLATFORMS = {
+  underdog: {
+    label: 'Underdog', tag: 'iOS · UNDERDOG', rounds: 18,
+    placeholder: 'e.g. DRAFTHAWK99', autoCapitalize: 'characters',
+  },
+  draftkings: {
+    label: 'DraftKings', tag: 'iOS · DRAFTKINGS', rounds: 20,
+    placeholder: 'e.g. DraftHawk99', autoCapitalize: 'none',
+  },
+};
 
 function WarnRow({ color = colors.negative, children }) {
   return (
@@ -50,20 +63,32 @@ function StepRow({ n, done, active, last, title, children }) {
 }
 
 export default function AssistantSetup() {
-  const inputs = useSessionInputs();
+  const [platform, setPlatform] = useState(() => getRememberedPlatform());
+  const inputs = useSessionInputs(platform);
   const [snap, setSnap] = useState(null);
-  const [username, setUsername] = useState(() => getRememberedUsername() || '');
+  const [username, setUsername] = useState(() => getRememberedUsername(getRememberedPlatform()) || '');
 
   React.useEffect(() => subscribeSession(setSnap), []);
   if (!snap) return null;
   const { capabilities, lastError } = snap;
 
+  const plat = PLATFORMS[platform];
   const name = username.trim();
   const canStartLive = !!name && capabilities.nativeModule;
 
+  const handlePlatform = (next) => {
+    if (next === platform) return;
+    setPlatform(next);
+    // The typed name belongs to the previous platform's account — swap to the
+    // new platform's remembered username.
+    setUsername(getRememberedUsername(next) || '');
+  };
+
   const handleStart = () => {
-    trackEvent('draft_session_started');
-    startSession({ ...inputs, slot: null, teams: TEAMS, rounds: ROUNDS, username: name });
+    trackEvent('draft_session_started', { platform });
+    startSession({
+      ...inputs, slot: null, teams: TEAMS, rounds: plat.rounds, username: name, platform,
+    });
   };
 
   return (
@@ -74,7 +99,7 @@ export default function AssistantSetup() {
       <View style={styles.card}>
         <View style={styles.headRow}>
           <Text style={styles.headline}>Draft hands-free</Text>
-          <Text style={styles.platformTag}>iOS · UNDERDOG</Text>
+          <Text style={styles.platformTag}>{plat.tag}</Text>
         </View>
         <Text style={styles.sub}>
           BBE records your screen while you draft and follows every pick — no tapping, no
@@ -82,23 +107,43 @@ export default function AssistantSetup() {
         </Text>
 
         <View style={{ marginTop: spacing.lg }}>
-          <StepRow n={1} done={!!name} active={!name} title="Your Underdog username">
+          <StepRow n={1} done title="Where are you drafting?">
+            <View style={styles.platformRow}>
+              {Object.entries(PLATFORMS).map(([key, p]) => (
+                <Pressable
+                  key={key}
+                  style={[styles.platformBtn, platform === key && styles.platformBtnOn]}
+                  onPress={() => handlePlatform(key)}
+                >
+                  <Text style={[styles.platformTxt, platform === key && styles.platformTxtOn]}>
+                    {p.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.microcopy}>
+              Each platform draws its own draft room — BBE reads {plat.label}&apos;s with
+              logic built just for it.
+            </Text>
+          </StepRow>
+
+          <StepRow n={2} done={!!name} active={!name} title={`Your ${plat.label} username`}>
             <TextInput
               style={styles.usernameInput}
               value={username}
               onChangeText={setUsername}
-              placeholder="e.g. DRAFTHAWK99"
+              placeholder={plat.placeholder}
               placeholderTextColor={colors.textMuted}
-              autoCapitalize="characters"
+              autoCapitalize={plat.autoCapitalize}
               autoCorrect={false}
               returnKeyType="done"
             />
             <Text style={styles.microcopy}>
-              Exactly as it appears in the draft room — it's how BBE finds your picks and slot.
+              Exactly as it appears in the draft room — it&apos;s how BBE finds your picks and slot.
             </Text>
           </StepRow>
 
-          <StepRow n={2} active={!!name} title="Start your session">
+          <StepRow n={3} active={!!name} title="Start your session">
             <Pressable
               style={[styles.startBtn, !canStartLive && { opacity: 0.4 }]}
               onPress={handleStart}
@@ -116,17 +161,17 @@ export default function AssistantSetup() {
             {lastError && <WarnRow>{lastError}</WarnRow>}
           </StepRow>
 
-          <StepRow n={3} last title="Record, then draft">
+          <StepRow n={4} last title="Record, then draft">
             <Text style={styles.stepText}>
-              Tap the red record button on the next screen, then switch to Underdog and draft
-              like you always do. Your turn clock and top targets stay on the Lock Screen the
-              whole way.
+              Tap the red record button on the next screen, then switch to {plat.label} and
+              draft like you always do. Your turn clock and top targets stay on the Lock
+              Screen the whole way.
             </Text>
           </StepRow>
         </View>
       </View>
 
-      <CaptureGuide />
+      <CaptureGuide platform={platform} />
     </ScrollView>
   );
 }
@@ -156,6 +201,17 @@ const styles = StyleSheet.create({
   stepBody: { flex: 1 },
   stepTitle: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, marginBottom: spacing.sm, marginTop: 3 },
   stepText: { fontSize: 12.5, lineHeight: 18, color: colors.textSecondary, marginTop: -2 },
+
+  platformRow: { flexDirection: 'row', gap: spacing.sm },
+  platformBtn: {
+    flex: 1, height: 40, borderRadius: radii.md,
+    borderWidth: 1, borderColor: colors.borderDefault,
+    backgroundColor: colors.surface2 ?? colors.surface1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  platformBtnOn: { borderColor: colors.accent, backgroundColor: colors.accent },
+  platformTxt: { fontSize: 13, fontWeight: '800', color: colors.textSecondary },
+  platformTxtOn: { color: colors.textInverse },
 
   usernameInput: {
     height: 44, borderRadius: radii.md,

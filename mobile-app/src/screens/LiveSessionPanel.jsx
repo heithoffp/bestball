@@ -35,13 +35,13 @@ function WarnRow({ color = colors.negative, children }) {
 // Apple's own "Everything on your screen…" sheet is system UI we can't reword.
 // Everything stated here is what FrameProcessor.swift already enforces:
 // on-device processing, draft-screen-only OCR, derived pick JSON only.
-const PREFLIGHT_POINTS = [
-  'Reads only the Underdog draft board to follow your picks.',
+const preflightPoints = platformName => [
+  `Reads only the ${platformName} draft board to follow your picks.`,
   'Processes each frame on your device, then discards it instantly.',
   'Sends only draft data (picks, your slot) — never screenshots, notifications, or messages.',
 ];
 
-function PreflightExplainer({ visible, onStart, onCancel }) {
+function PreflightExplainer({ visible, onStart, onCancel, platformName = 'Underdog' }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.preflightScrim} onPress={onCancel}>
@@ -55,7 +55,7 @@ function PreflightExplainer({ visible, onStart, onCancel }) {
             covers every app — but here's exactly what BBE does:
           </Text>
           <View style={{ gap: 6, marginTop: 8 }}>
-            {PREFLIGHT_POINTS.map((line) => (
+            {preflightPoints(platformName).map((line) => (
               <View key={line} style={styles.preflightBullet}>
                 <Text style={styles.preflightDot}>•</Text>
                 <Text style={styles.preflightBulletTxt}>{line}</Text>
@@ -94,6 +94,7 @@ export default function LiveSessionPanel() {
     status, log, activityStarted, activityError,
     captureLive, pushToken, extensionEngine,
   } = snap;
+  const platformName = snap.platform === 'draftkings' ? 'DraftKings' : 'Underdog';
   const engineStale = !!extensionEngine && extensionEngine.startsWith('stale');
 
   const phaseColor = status?.picksUntil === 0 ? colors.negative
@@ -144,7 +145,7 @@ export default function LiveSessionPanel() {
             {broadcastPickerLaunchable() || BroadcastPicker ? (
               <>
                 Tap record → <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Start Broadcast</Text> →
-                switch to Underdog. BBE follows the board from there.
+                switch to {platformName}. BBE follows the board from there.
                 On-device only — every frame is read and instantly discarded.
               </>
             ) : (
@@ -177,7 +178,7 @@ export default function LiveSessionPanel() {
         <View style={styles.roomRow}>
           <DoorOpen size={12} color={colors.textMuted} />
           <Text style={[styles.resumeTxt, { color: colors.textSecondary }]}>
-            Waiting to enter a draft room — open your draft in Underdog
+            Waiting to enter a draft room — open your draft in {platformName}
           </Text>
         </View>
       )}
@@ -286,6 +287,7 @@ export default function LiveSessionPanel() {
 
       <PreflightExplainer
         visible={showPreflight}
+        platformName={platformName}
         onCancel={() => setShowPreflight(false)}
         onStart={() => {
           setShowPreflight(false);

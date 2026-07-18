@@ -186,6 +186,25 @@ export function usernameMatches(a, b) {
 }
 
 /**
+ * Truncation-tolerant username equality for anchor evidence (TASK-350).
+ * DraftKings board-column headers truncate with an ellipsis
+ * ("BirdEnthusi..."), which usernameMatches rightly rejects — but a marked
+ * truncation of ≥6 leading characters is safe anchor evidence (a collision
+ * needs another drafter sharing that prefix in the same room).
+ */
+export function anchorUsernameMatches(known, seen) {
+  if (!known || !seen) return false;
+  const truncated = /(\.{2,3}|…)\s*$/.test(String(seen));
+  const bare = String(seen).replace(/(\.{2,3}|…)\s*$/, '').trim();
+  if (usernameMatches(known, bare)) return true;
+  if (!truncated) return false;
+  const norm = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const nk = norm(known);
+  const nb = norm(bare);
+  return nb.length >= 6 && nk.startsWith(nb);
+}
+
+/**
  * Match a carousel pick-confirmation card name ("D. London", "K. Walker III",
  * "J. Smith-Nji…") against the pool. The card renders first-initial + surname,
  * so the general matcher's thresholds don't fit; team is a strong hint here

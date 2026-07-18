@@ -6,9 +6,12 @@
 //
 // Usage (from mobile-app/):
 //   node scripts/replay-frames.mjs <frames.jsonl> --pool <adp.csv>
-//        [--username BIRDENTHUSIAST] [--slot N] [--teams 12] [--rounds 18]
+//        [--platform underdog|draftkings|dk] [--username BIRDENTHUSIAST]
+//        [--slot N] [--teams 12] [--rounds 18]
 //        [--from <epochSec>] [--to <epochSec>] [--dump <frameIndex>] [--quiet]
 //        [--push-sim] [--drop-kind board,players]
+// --platform (TASK-350): parse with the DraftKings screen grammar instead of
+//   Underdog's (also passed through to the extension engine in --push-sim).
 // --drop-kind (TASK-336): parse but do NOT ingest frames of the given kinds —
 //   proves e.g. that a roster glance + players scroll suffices without any
 //   board frame ("no-board mid-draft resume").
@@ -25,6 +28,7 @@
 import { readFileSync } from 'node:fs';
 import { buildPool } from '../src/draft/playerMatcher.js';
 import { parseUnderdogScreen } from '../src/draft/underdogParser.js';
+import { parseDraftKingsScreen } from '../src/draft/draftkingsParser.js';
 import { createDraftSession } from '../src/draft/sessionEngine.js';
 // Side-effect import: defines globalThis.BBEEngine (the extension's JSC entry),
 // used by --push-sim so the simulated push decision runs on the exact engine.
@@ -78,12 +82,19 @@ function poolFromCsv(path) {
 
 const poolPath = arg('pool');
 if (!poolPath) {
-  console.error('--pool <adp.csv> is required (UD ADP snapshot: name,position,team,adp)');
+  console.error('--pool <adp.csv> is required (platform ADP snapshot: name,position,team,adp)');
   process.exit(1);
 }
 const poolRows = poolFromCsv(poolPath);
 const pool = buildPool(poolRows);
 console.log(`pool: ${pool.players.length} players from ${poolPath}`);
+
+// ---- platform (TASK-350) ----
+const platform = /^(dk|draftkings)$/i.test(arg('platform', 'underdog')) ? 'draftkings' : 'underdog';
+const parseScreen = (items, ctx) => (platform === 'draftkings'
+  ? parseDraftKingsScreen(items, ctx)
+  : parseUnderdogScreen(items, ctx));
+console.log(`platform: ${platform}`);
 
 // ---- frames ----
 const frames = readFileSync(framesPath, 'utf8')
@@ -120,6 +131,7 @@ if (has('push-sim')) {
   const initRes = globalThis.BBEEngine.init(JSON.stringify({
     poolRows,
     teams,
+    platform,
     rounds: parseInt(arg('rounds', '18'), 10),
     slot: arg('slot') ? parseInt(arg('slot'), 10) : null,
     username: arg('username') || null,
@@ -201,7 +213,7 @@ const dropKinds = new Set((arg('drop-kind') || '').split(',').map(s => s.trim())
 let prev = { cp: 1, led: 0, gone: 0, presence: 'unseen' };
 frames.forEach((f, i) => {
   if (f.t < from || f.t > to) return;
-  const obs = parseUnderdogScreen(f.items, { pool, teams });
+  const obs = parseScreen(f.items, { pool, teams, username: arg('username') || null });
   if (dropKinds.has(obs.kind)) {
     if (!quiet) console.log(`#${String(i).padStart(4)} t=${f.t} ${String(obs.kind).padEnd(8)} DROPPED (--drop-kind)`);
     return;

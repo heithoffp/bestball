@@ -1,13 +1,14 @@
 // useSessionInputs — builds everything a Live Draft Session needs from the
-// portfolio context: the Underdog player pool for the OCR matcher, the user
+// portfolio context: the platform's player pool for the OCR matcher, the user
 // rankings map, and the exposure / roster-index maps behind the glance columns
 // (TASK-337). Extracted from LiveSessionPanel so the setup screen owns session
-// start (TASK-339) while the panel stays a pure status layer.
+// start (TASK-339) while the panel stays a pure status layer. Platform-aware
+// since TASK-350 (Underdog | DraftKings).
 import { useMemo } from 'react';
 import { canonicalName } from '../../../shared/utils/helpers';
 import { usePortfolio } from '../../contexts/PortfolioContext';
 
-// Underdog ADP CSV rows -> matcher pool rows (same field fallbacks as
+// ADP CSV rows -> matcher pool rows (same field fallbacks as
 // shared/utils/dataLoader rowName/buildLookupsFromRows).
 function poolRowsFromAdpRows(rows) {
   const out = [];
@@ -28,27 +29,27 @@ function poolRowsFromAdpRows(rows) {
   return out;
 }
 
-export default function useSessionInputs() {
+export default function useSessionInputs(platform = 'underdog') {
   const { masterPlayers, adpByPlatform, rankingsByPlatform, rosterData } = usePortfolio();
 
   const poolRows = useMemo(() => {
-    const udRows = poolRowsFromAdpRows(adpByPlatform?.underdog?.latestRows);
-    if (udRows.length >= 100) return udRows;
+    const rows = poolRowsFromAdpRows(adpByPlatform?.[platform]?.latestRows);
+    if (rows.length >= 100) return rows;
     return (masterPlayers || [])
       .filter(p => p?.name)
       .map(p => ({ name: p.name, position: p.position, team: p.team, adp: p.adpPick }));
-  }, [adpByPlatform, masterPlayers]);
+  }, [adpByPlatform, masterPlayers, platform]);
 
   const rankMap = useMemo(() => {
     const map = new Map();
-    (rankingsByPlatform?.underdog || []).forEach((row, i) => {
+    (rankingsByPlatform?.[platform] || []).forEach((row, i) => {
       const name = row.Name || row.name || row.Player || row.player || row['Player Name'] || '';
       if (!name) return;
       const rank = parseInt(row.Rank ?? row.rank ?? '', 10);
       map.set(canonicalName(name), Number.isFinite(rank) ? rank : i + 1);
     });
     return map;
-  }, [rankingsByPlatform]);
+  }, [rankingsByPlatform, platform]);
 
   // One pass over the portfolio yields both glance inputs: exposure % and the
   // per-player roster index the correlation column reads (TASK-337).

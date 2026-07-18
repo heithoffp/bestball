@@ -25,7 +25,9 @@ function shortEntry(id) {
 
 export default function PlayoffStacksView({ rosters, totalRosters, minCount = 1, onNavigateToRosters }) {
   const [lens, setLens] = useState('games');
-  const [rosterSort, setRosterSort] = useState('total');
+  // Selected playoff week (null = all weeks / "Total"). Drives Games filter,
+  // Teams sort, and Rosters sort — the single control for all three lenses.
+  const [selectedWeek, setSelectedWeek] = useState(null);
 
   const agg = useMemo(
     () => aggregatePortfolioPlayoffStacks(rosters, playoffSchedule),
@@ -47,46 +49,64 @@ export default function PlayoffStacksView({ rosters, totalRosters, minCount = 1,
 
   const teamRows = useMemo(() => {
     const byTeam = aggregateByTeam(agg, playoffSchedule);
-    return [...byTeam.values()]
-      .map(t => ({
-        team: t.team,
-        weeks: t.weeks,
-        anyPct: totalRosters > 0 ? (t.anyStackRosters.size / totalRosters) * 100 : 0,
-        anyCount: t.anyStackRosters.size,
-      }))
-      .sort((a, b) => b.anyCount - a.anyCount);
-  }, [agg, totalRosters]);
+    const rows = [...byTeam.values()].map(t => ({
+      team: t.team,
+      weeks: t.weeks,
+      anyPct: totalRosters > 0 ? (t.anyStackRosters.size / totalRosters) * 100 : 0,
+      anyCount: t.anyStackRosters.size,
+    }));
+    if (selectedWeek) {
+      return rows.sort((a, b) => {
+        const av = a.weeks[selectedWeek]?.rosterIds.size || 0;
+        const bv = b.weeks[selectedWeek]?.rosterIds.size || 0;
+        return bv - av || b.anyCount - a.anyCount;
+      });
+    }
+    return rows.sort((a, b) => b.anyCount - a.anyCount);
+  }, [agg, totalRosters, selectedWeek]);
 
   const rosterRows = useMemo(() => {
     const rows = aggregatePerRoster(rosters, playoffSchedule);
-    const key = rosterSort === 'total' ? null : rosterSort;
+    const key = selectedWeek ? String(selectedWeek) : null;
     return [...rows].sort((a, b) => key
       ? b.counts[key] - a.counts[key] || b.counts.total - a.counts.total
       : b.counts.total - a.counts.total);
-  }, [rosters, rosterSort]);
+  }, [rosters, selectedWeek]);
 
   const naked = agg.nakedRosters.size;
 
   return (
     <View style={{ paddingHorizontal: spacing.lg }}>
-      {/* Week KPI row */}
+      {/* Week KPI row — tap a week to filter/sort all three lenses to it */}
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-        {weekCoverage.map(w => (
-          <View key={w.week} style={styles.kpi}>
-            <Text style={styles.kpiLabel}>Week {w.week}</Text>
-            <Text style={styles.kpiValue}>{w.pct.toFixed(0)}%</Text>
-            <Bar pct={w.pct} color={colors.accent} height={5} style={{ marginTop: 4 }} />
-            <Text style={[type.muted, { marginTop: 3 }]}>{w.count} of {totalRosters}</Text>
-          </View>
-        ))}
+        {weekCoverage.map(w => {
+          const active = selectedWeek === w.week;
+          return (
+            <Pressable
+              key={w.week}
+              onPress={() => setSelectedWeek(active ? null : w.week)}
+              style={[styles.kpi, active && styles.kpiActive]}
+            >
+              <Text style={styles.kpiLabel}>Week {w.week}</Text>
+              <Text style={[styles.kpiValue, active && { color: colors.accent }]}>{w.pct.toFixed(0)}%</Text>
+              <Bar pct={w.pct} color={colors.accent} height={5} style={{ marginTop: 4 }} />
+              <Text style={[type.muted, { marginTop: 3 }]}>{w.count} of {totalRosters}</Text>
+            </Pressable>
+          );
+        })}
       </View>
       <Text style={[type.muted, { marginBottom: spacing.md }]}>
+        {selectedWeek
+          ? `Showing Week ${selectedWeek} — tap it again to show all weeks. `
+          : 'Tap a week to filter Games, Teams, and Rosters to it. '}
         {naked} roster{naked === 1 ? '' : 's'} with no W15–17 game stack. Meaningful stacks = cross-team QB/WR/TE pairings (RB and TE↔TE excluded).
       </Text>
 
       <Segmented options={LENSES} value={lens} onChange={setLens} style={{ marginBottom: spacing.md }} />
 
-      {lens === 'games' && gamesByWeek.map(({ week, games }) => (
+      {lens === 'games' && gamesByWeek
+        .filter(({ week }) => !selectedWeek || week === selectedWeek)
+        .map(({ week, games }) => (
         <View key={week} style={{ marginBottom: spacing.md }}>
           <Text style={[type.h3, { color: colors.accent, marginBottom: spacing.sm }]}>Week {week}</Text>
           {games.length === 0 && <Text style={type.muted}>No stacked games this week.</Text>}
@@ -129,8 +149,10 @@ export default function PlayoffStacksView({ rosters, totalRosters, minCount = 1,
         <View>
           <View style={styles.teamHeaderRow}>
             <Text style={[styles.teamCellTeam, type.muted]}>Team</Text>
-            {PLAYOFF_WEEKS.map(w => <Text key={w} style={[styles.teamCell, type.muted]}>W{w}</Text>)}
-            <Text style={[styles.teamCell, type.muted]}>Any</Text>
+            {PLAYOFF_WEEKS.map(w => (
+              <Text key={w} style={[styles.teamCell, type.muted, selectedWeek === w && { color: colors.accent, fontWeight: '800' }]}>W{w}</Text>
+            ))}
+            <Text style={[styles.teamCell, type.muted, !selectedWeek && { color: colors.accent, fontWeight: '800' }]}>Any</Text>
           </View>
           {teamRows.map(t => (
             <View key={t.team} style={styles.teamRow}>
@@ -157,14 +179,9 @@ export default function PlayoffStacksView({ rosters, totalRosters, minCount = 1,
 
       {lens === 'rosters' && (
         <View>
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm }}>
-            {[['total', 'Total'], ['15', 'W15'], ['16', 'W16'], ['17', 'W17']].map(([k, lbl]) => (
-              <Pressable key={k} onPress={() => setRosterSort(k)}
-                style={[styles.chip, rosterSort === k && { borderColor: colors.accent, backgroundColor: colors.accentMuted }]}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: rosterSort === k ? colors.accent : colors.textSecondary }}>{lbl}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <Text style={[type.muted, { marginBottom: spacing.sm }]}>
+            Sorted by {selectedWeek ? `Week ${selectedWeek}` : 'total'} stacks. Dots = W15 · W16 · W17.
+          </Text>
           {rosterRows.map(r => (
             <Pressable
               key={r.entryId}
@@ -179,6 +196,7 @@ export default function PlayoffStacksView({ rosters, totalRosters, minCount = 1,
                   <View key={w} style={[
                     styles.dot,
                     { backgroundColor: r.counts[w] > 0 ? colors.accent : colors.surface3 },
+                    selectedWeek === w && styles.dotActive,
                   ]} />
                 ))}
               </View>
@@ -198,6 +216,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: colors.surface1, borderRadius: radii.md,
     borderWidth: 1, borderColor: colors.borderSubtle, padding: spacing.md,
   },
+  kpiActive: { borderColor: colors.accent, backgroundColor: colors.accentMuted },
   kpiLabel: { fontSize: 10.5, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' },
   kpiValue: { fontSize: 19, fontWeight: '800', color: colors.textPrimary, marginTop: 2, fontVariant: ['tabular-nums'] },
   pieceChip: {
@@ -213,10 +232,6 @@ const styles = StyleSheet.create({
   },
   teamCellTeam: { width: 48, fontSize: 12 },
   teamCell: { flex: 1, alignItems: 'center', textAlign: 'center', fontSize: 11 },
-  chip: {
-    paddingHorizontal: 11, paddingVertical: 6, borderRadius: radii.pill,
-    borderWidth: 1, borderColor: colors.borderDefault, backgroundColor: colors.surface1,
-  },
   rosterRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface1, borderRadius: radii.sm,
@@ -224,4 +239,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: 9, marginBottom: 5,
   },
   dot: { width: 9, height: 9, borderRadius: 5 },
+  dotActive: { borderWidth: 1.5, borderColor: colors.textPrimary },
 });

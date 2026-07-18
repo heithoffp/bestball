@@ -1,0 +1,4 @@
+{
+  "//": "Node ESM marker so scripts/test-rankings-board.mjs can import boardItems.js directly. Metro ignores the type field.",
+  "type": "module"
+}

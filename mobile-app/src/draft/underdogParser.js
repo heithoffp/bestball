@@ -15,6 +15,7 @@ import {
   matchPlayer, matchAbbrevPlayer, fuzzyPosition, looksLikeNameLine,
 } from './playerMatcher.js';
 import { resolveRoundDotPick, slotForOverall } from './snake.js';
+import { exciseSelfOverlay } from './selfOverlay.js';
 
 const PATTERNS = {
   // "UP IN 2 PICKS" header ticker; on-the-clock variants. "YOUR PICK" must
@@ -43,42 +44,8 @@ const PATTERNS = {
   // Expanded player-detail accordion signatures.
   statsHeader: /^(Rushing|Receiving)$/i,
   draftAction: /^Draft$/,
-  // Our own Live Activity, when expanded over the draft room, is captured
-  // like any other screen content (the P·S·C·E table, target rows, the
-  // roster bar). Ingesting it feeds our output back into the parser — target
-  // names read as visible available rows and resurrect drafted players, and
-  // the glance headline reads as the header ticker. The overlay is a
-  // top-anchored card, so these signals bound an excision region (TASK-329)
-  // rather than poisoning the whole frame.
-  // "synced … ago" left the card in TASK-337; kept for replaying frame logs
-  // recorded by older builds.
-  selfSynced: /^synced\b/i,
-  // Legacy long-form flags plus the TASK-336 compact flag glyphs ("SP", "QF")
-  // — pre-TASK-337 replay compatibility. "SF" is excluded — it's a real team
-  // abbreviation, not one of our flags.
-  selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED|(?!SF$)[SPQF]{2,4})$/,
-  // TASK-337 table: the P·S·C·E header strip (one per grid column; OCR may
-  // merge both strips into one line or squeeze the spaces out)...
-  selfTableHeader: /^P\s*S\s*C\s*E(\s+P\s*S\s*C\s*E)?$/,
-  // ...and metric-cell runs: two or more tokens drawn ONLY from the table
-  // vocabulary — playoff weeks ("16", "15+"), check/dash glyphs, percents —
-  // e.g. "16 ✓ 24% 10%", "– – 9% 8%". A lone "15" or "9%" is deliberately
-  // NOT a signal: it could be real screen content and would stretch the
-  // excision region downward over live rows.
-  selfTableCells: /^(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%)(?:\s+(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%))+$/,
-  // Separator garbles observed on device: "·" reads as "•", ".", or "-";
-  // zeros read as the letter "O" and may merge into the label ("QBO - RB O").
-  // A missed roster bar shrinks the excision region and our own target rows
-  // survive as "visible" player rows (frames-1784120786 #1/#5).
-  selfRosterBar: /^QB\s*[0-9O]+\s*[·•.-]\s*RB\s*[0-9O]+\s*[·•.-]\s*WR\s*[0-9O]+\s*[·•.-]\s*TE\s*[0-9O]+$/,
-  // Glance headlines are sentence case; Underdog renders its header ALL-CAPS,
-  // so the case-sensitive match cannot swallow a real "UP IN 4 PICKS".
-  // Observed garbles keep the lowercase body but mangle the leading capital
-  // and truncate ("fou're on the clo....", "fracking • R1 • P1").
-  selfHeadline: /^(Up in \d{1,2} picks?$|[A-Za-z]?ou'?re (on the clo|up next)|Waiting for capture to start$|[A-Za-z]?aiting to enter draft|[A-Za-z]?eft draft room|Draft complete$|Session ended$|[A-Za-z]?racking\s*[·•.]\s*R\d+\s*[·•.]\s*P\d+$)/,
-  selfBrand: /^BB ?EXPOSURES$/i,
-  // Merged-form glance target row: "RB · Jaylen Warren · FALLING".
-  selfTargetRow: /^(QB|RB|WR|TE)\s*[·•.]\s+\S/,
+  // Self-overlay signals (our own expanded Live Activity over the draft room)
+  // live in selfOverlay.js — shared with the DraftKings parser (TASK-350).
   // Drafter card "3.8 | 32" (round.pickInRound | overall); OCR may drop the dot
   // ("310 | 34") or garble the pipe.
   upcomingCard: /(\d[\d.,·]{0,4})\s*[|Il¦]\s*(\d{1,3})\s*$/,
@@ -353,7 +320,9 @@ function findConfirmCard(lines) {
   return null;
 }
 
-function normalizeItems(items) {
+/** Normalize raw OCR items (strings or Vision boxes) into sorted line objects.
+ *  Exported for the DraftKings parser (TASK-350) — one normalization for both. */
+export function normalizeItems(items) {
   const out = [];
   for (const it of items || []) {
     const text = (typeof it === 'string' ? it : it?.text) ?? '';
@@ -403,43 +372,16 @@ export function parseUnderdogScreen(items, ctx) {
     stats: { lines: lines.length, matchedRows: 0, boardMatches: 0, unmatchedNames: [] },
   };
 
-  // ---- Self-overlay excision: our Live Activity expanded over the draft
-  // room. One strong signal ("synced … ago") or two weak kinds (target flag,
-  // roster bar, glance headline, brand, merged target row) marks the overlay.
-  // The expanded panel is a top-anchored card, so everything at or above the
-  // lowest signal is our own output — drop that region and parse what remains
-  // below (the Players rows and the "N picks away" divider stay valid).
-  // Discarding the whole frame froze capture for as long as the panel stayed
-  // expanded (TASK-329); returning 'self' is reserved for frames with nothing
-  // usable left after excision (e.g. the overlay over a blurred background).
+  // ---- Self-overlay excision (shared, selfOverlay.js): our Live Activity
+  // expanded over the draft room. Everything at or above the lowest signal is
+  // our own output — drop that region and parse what remains below (the
+  // Players rows and the "N picks away" divider stay valid, TASK-329).
+  // Returning 'self' is reserved for frames with nothing usable left after
+  // excision (e.g. the overlay over a blurred background).
   {
-    const isSignal = l => PATTERNS.selfSynced.test(l.text)
-      || PATTERNS.selfFlag.test(l.text)
-      || PATTERNS.selfTableHeader.test(l.text)
-      || PATTERNS.selfTableCells.test(l.text)
-      || PATTERNS.selfRosterBar.test(l.text)
-      || PATTERNS.selfHeadline.test(l.text)
-      || PATTERNS.selfBrand.test(l.text)
-      || PATTERNS.selfTargetRow.test(l.text);
-    // Strong = unmistakably ours: the legacy "synced …" line, or the TASK-337
-    // P·S·C·E header strip — nothing on a real Underdog screen renders either.
-    const strong = lines.some(l => PATTERNS.selfSynced.test(l.text)
-      || PATTERNS.selfTableHeader.test(l.text));
-    const weakKinds = [
-      'selfFlag', 'selfTableCells', 'selfRosterBar', 'selfHeadline', 'selfBrand', 'selfTargetRow',
-    ].filter(k => lines.some(l => PATTERNS[k].test(l.text))).length;
-    if (strong || weakKinds >= 2) {
-      const withBoxes = lines.every(l => l.y != null);
-      if (withBoxes) {
-        const overlayBottom = Math.max(
-          ...lines.filter(isSignal).map(l => l.y + (l.h ?? 0)),
-        ) + 0.02;
-        lines = lines.filter(l => l.y >= overlayBottom && !isSignal(l));
-      } else {
-        // Boxless input is roughly top-to-bottom: drop through the last signal.
-        const lastIdx = lines.reduce((acc, l, i) => (isSignal(l) ? i : acc), -1);
-        lines = lines.slice(lastIdx + 1).filter(l => !isSignal(l));
-      }
+    const excision = exciseSelfOverlay(lines);
+    if (excision.excised) {
+      lines = excision.lines;
       if (lines.length < 4) {
         obs.kind = 'self';
         return obs;

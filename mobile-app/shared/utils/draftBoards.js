@@ -9,6 +9,14 @@
 // board affordances.
 
 import { supabase } from './supabaseClient';
+import { cacheGetMany, cachePutMany } from './modelCache';
+
+// Captured boards are immutable once written (upsert is last-writer-wins but
+// a pod never re-drafts), so each board is cached on device permanently and
+// fetched at most once (ADR-030). Bump the version to force a refetch if
+// boards are ever re-scraped with corrected data.
+const BOARD_CACHE_VERSION = 1;
+const boardCacheKey = (draftId) => `board:v${BOARD_CACHE_VERSION}:${draftId}`;
 
 /**
  * Fetch the set of draft ids that have a usable (player-named) board.
@@ -55,7 +63,18 @@ export async function fetchAvailableBoardIds() {
  */
 export async function fetchDraftBoards(draftIds) {
   if (!supabase || !draftIds?.length) return [];
-  const ids = [...new Set(draftIds.map(String))];
+  const allIds = [...new Set(draftIds.map(String))];
+
+  // Device cache first (ADR-030): only ids never seen here hit the network.
+  const cachedBoards = await cacheGetMany(allIds.map(boardCacheKey));
+  const cached = [];
+  const ids = [];
+  allIds.forEach((id, i) => {
+    if (cachedBoards[i]) cached.push(cachedBoards[i]);
+    else ids.push(id);
+  });
+  if (ids.length === 0) return cached;
+
   const CHUNK = 50;
   const chunks = [];
   for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
@@ -81,7 +100,14 @@ export async function fetchDraftBoards(draftIds) {
       });
     }
   }
-  return out;
+  // Persist newly fetched boards. Known-bad boards (pre-fix scraper, null
+  // player names) are NOT cached — if they're re-captured server-side the
+  // fix should reach the device.
+  cachePutMany(
+    out.filter(b => b.picks?.[0]?.name != null)
+       .map(b => [boardCacheKey(b.draftId), b])
+  ).catch(() => { /* fail soft */ });
+  return [...cached, ...out];
 }
 
 // ── User-board fetch, cached per session ─────────────────────────────────────

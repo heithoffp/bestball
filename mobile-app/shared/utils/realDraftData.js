@@ -32,10 +32,18 @@
 
 import { supabase } from './supabaseClient';
 import { canonicalName } from './helpers';
+import { cacheGet, cachePut } from './modelCache';
 
 const BOARDS_BUCKET = 'app-data';
 const BOARDS_OBJECT = 'combo-boards-v1.json';
 const PATH_ROUNDS = 4;
+
+// Device cache for the slim-board artifact (ADR-030). The artifact is
+// rebuilt out-of-band by scripts/build-combo-boards.mjs, so a freshness
+// window (not immutability) governs it: younger than TTL → no network at
+// all; older → refetch, falling back to the stale copy if the fetch fails.
+const ARTIFACT_CACHE_KEY = 'comboBoardsArtifact:v1';
+const ARTIFACT_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** Number of earliest picks that form the Early Combo key. */
 export const COMBO_PICKS = 3;
@@ -72,18 +80,33 @@ export function isExcludedSlate(slateTitle) {
 // Fetch the precomputed slim-board artifact (TASK-315). One small object read
 // from Storage replaces what used to be a full-table download of
 // draft_boards_admin. Returns [{ id, slate, seats: [[first-4 names], ...] }].
+// Cached on device with a freshness window (ADR-030) — see ARTIFACT_TTL_MS.
 async function fetchAllBoards() {
   if (!supabase) return [];
+
+  let stale = null;
+  try {
+    const rec = await cacheGet(ARTIFACT_CACHE_KEY);
+    if (Array.isArray(rec?.boards) && rec.boards.length) {
+      if (Date.now() - (rec.fetchedAt ?? 0) < ARTIFACT_TTL_MS) return rec.boards;
+      stale = rec.boards;
+    }
+  } catch { /* treat as miss */ }
+
   try {
     const { data, error } = await supabase.storage
       .from(BOARDS_BUCKET)
       .download(BOARDS_OBJECT);
-    if (error || !data) return [];
+    if (error || !data) return stale ?? [];
     const artifact = JSON.parse(await data.text());
-    return Array.isArray(artifact?.boards) ? artifact.boards : [];
+    const boards = Array.isArray(artifact?.boards) ? artifact.boards : [];
+    if (boards.length) {
+      cachePut(ARTIFACT_CACHE_KEY, { fetchedAt: Date.now(), boards });
+    }
+    return boards;
   } catch {
-    // fail soft — callers see empty tables
-    return [];
+    // fail soft — stale copy if we have one, else callers see empty tables
+    return stale ?? [];
   }
 }
 

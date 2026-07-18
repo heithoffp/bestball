@@ -14,8 +14,27 @@ function normalizeSlateTitle(slateTitle, tournamentTitle) {
 }
 
 /**
+ * Map a raw extension_entries row to the Entry shape consumers use.
+ * Exported so delta-sync consumers (mobile entriesCache.js, ADR-030) map
+ * rows identically — including the DK slate normalization above.
+ */
+export function mapEntryRow(row) {
+  return {
+    entryId: row.entry_id,
+    tournamentTitle: row.tournament,
+    slateTitle: normalizeSlateTitle(row.slate_title ?? null, row.tournament),
+    draftDate: row.draft_date,
+    players: row.players,
+    syncedAt: row.synced_at,
+  };
+}
+
+/**
  * Reads portfolio entries synced from the Chrome extension for the given user.
  * Returns an array of Entry objects matching the adapter interface shape.
+ *
+ * Paginated: PostgREST caps un-ranged selects at 1000 rows, so a single
+ * select silently truncates portfolios past 1000 entries.
  *
  * @param {string} userId
  * @returns {Promise<Array<{entryId: string, tournamentTitle: string|null, slateTitle: string|null, draftDate: string|null, players: Array, syncedAt: string}>>}
@@ -23,22 +42,21 @@ function normalizeSlateTitle(slateTitle, tournamentTitle) {
 export async function readExtensionEntries(userId) {
   if (!supabase || !userId) return [];
 
-  const { data, error } = await supabase
-    .from('extension_entries')
-    .select('entry_id, tournament, slate_title, draft_date, players, synced_at')
-    .eq('user_id', userId)
-    .order('synced_at', { ascending: false });
+  const PAGE = 1000;
+  const entries = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('extension_entries')
+      .select('entry_id, tournament, slate_title, draft_date, players, synced_at')
+      .eq('user_id', userId)
+      .order('synced_at', { ascending: false })
+      .range(from, from + PAGE - 1);
 
-  if (error) throw error;
-
-  return (data ?? []).map(row => ({
-    entryId: row.entry_id,
-    tournamentTitle: row.tournament,
-    slateTitle: normalizeSlateTitle(row.slate_title ?? null, row.tournament),
-    draftDate: row.draft_date,
-    players: row.players,
-    syncedAt: row.synced_at,
-  }));
+    if (error) throw error;
+    entries.push(...(data ?? []).map(mapEntryRow));
+    if (!data || data.length < PAGE) break;
+  }
+  return entries;
 }
 
 /**

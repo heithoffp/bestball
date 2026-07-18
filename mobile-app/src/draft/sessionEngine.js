@@ -7,7 +7,7 @@
 import {
   roundForOverall, pickInRoundForOverall, slotForOverall, nextOverallForSlot, overallsForSlot,
 } from './snake.js';
-import { usernameMatches, matchAbbrevPlayer } from './playerMatcher.js';
+import { usernameMatches, anchorUsernameMatches, matchAbbrevPlayer } from './playerMatcher.js';
 import { PLAYOFF_SCHEDULE } from './playoffSchedule.js';
 
 // ---- Draft-room presence (TASK-336) ----
@@ -323,6 +323,40 @@ export function createDraftSession(cfg) {
       ratchetCurrentPick(Math.max(...boardOveralls) + 1);
     }
 
+    // DraftKings header (TASK-350): "Round X, Pick Y" is the exact pick on the
+    // clock — the one source that never needs inference. Direct ratchet.
+    if (Number.isFinite(obs.currentOverall)) {
+      ratchetCurrentPick(obs.currentOverall);
+    }
+
+    // DraftKings "Last Pick: T. McLaurin WAS-WR" (TASK-350): event evidence at
+    // an EXACT overall (currentOverall − 1, same frame), unlike the UD confirm
+    // card's inferred placement. Board evidence at the same overall wins later
+    // merges (event entries never ratchet the pick).
+    if (obs.lastPick && Number.isFinite(obs.currentOverall)) {
+      const overall = obs.currentOverall - 1;
+      if (overall >= 1 && !state.ledger.has(overall)) {
+        const match = matchAbbrevPlayer(pool, obs.lastPick.nameRaw, obs.lastPick.team);
+        if (match
+          && (!obs.lastPick.pos || !match.player.position
+            || match.player.position === obs.lastPick.pos || match.player.position === 'N/A')) {
+          const dup = [...state.ledger.values()]
+            .some(e => e.player.canonical === match.player.canonical);
+          if (!dup) {
+            state.ledger.set(overall, {
+              player: match.player,
+              round: roundForOverall(overall, teams),
+              pickInRound: pickInRoundForOverall(overall, teams),
+              score: 0.7,
+              raw: obs.lastPick.raw,
+              src: 'event',
+            });
+            summary.confirmPick = match.player.name;
+          }
+        }
+      }
+    }
+
     // Drafter cards show each opponent's *next* pick -> current <= min visible − 1.
     // Valid ONLY when the on-clock card is visible in the same frame: that
     // proves the carousel is auto-tracking, so the labeled cards are the ones
@@ -365,6 +399,22 @@ export function createDraftSession(cfg) {
         proposeAnchor(cardSlot);
         if (state.anchoredSlot === cardSlot) summary.slotAnchored = cardSlot;
       }
+    }
+
+    // DraftKings board columns (TASK-350): each column IS a slot; the header
+    // username over snake-validated cells anchors it directly. Column headers
+    // truncate ("BirdEnthusi..."), so the match is truncation-tolerant.
+    for (const a of obs.slotAnchors || []) {
+      if (!(a.slot >= 1 && a.slot <= teams) || !a.username) continue;
+      state.usernameSlots.set(a.username.replace(/(\.{2,3}|…)\s*$/, ''), a.slot);
+      if (state.learnedUsername && anchorUsernameMatches(state.learnedUsername, a.username)) {
+        proposeAnchor(a.slot);
+        if (state.anchoredSlot === a.slot) summary.slotAnchored = a.slot;
+      }
+    }
+    // DraftKings Rosters-tab fill tally for the panel owner (display only).
+    if (obs.rosterTally && obs.rosterTally.username) {
+      state.tallies.set(obs.rosterTally.username, obs.rosterTally.tally);
     }
 
     // Header "UP IN N PICKS": with an anchored slot the ticker ratchets the
@@ -503,7 +553,8 @@ export function createDraftSession(cfg) {
     // fully ratcheted for this observation by now (board/upcoming/availability
     // above). A high value means we joined a draft already in progress.
     if (state.observedStartPick == null
-      && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability || picksUntil != null)) {
+      && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability
+        || picksUntil != null || Number.isFinite(obs.currentOverall))) {
       state.observedStartPick = state.currentPick;
     }
 

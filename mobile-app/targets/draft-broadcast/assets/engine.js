@@ -189,6 +189,17 @@
     if (Math.abs(na.length - nb.length) > 1) return false;
     return na.length >= 8 && levenshtein(na, nb, 1) <= 1;
   }
+  function anchorUsernameMatches(known, seen) {
+    if (!known || !seen) return false;
+    const truncated = /(\.{2,3}|…)\s*$/.test(String(seen));
+    const bare = String(seen).replace(/(\.{2,3}|…)\s*$/, "").trim();
+    if (usernameMatches(known, bare)) return true;
+    if (!truncated) return false;
+    const norm = (s) => String(s).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const nk = norm(known);
+    const nb = norm(bare);
+    return nb.length >= 6 && nk.startsWith(nb);
+  }
   function matchAbbrevPlayer(pool2, raw, teamHint) {
     if (!pool2 || !raw) return null;
     const scrubbed = scrubOcr(raw);
@@ -264,6 +275,74 @@
     return null;
   }
 
+  // src/draft/selfOverlay.js
+  var SELF_PATTERNS = {
+    // "synced … ago" left the card in TASK-337; kept for replaying frame logs
+    // recorded by older builds.
+    selfSynced: /^synced\b/i,
+    // Legacy long-form flags plus the TASK-336 compact flag glyphs ("SP", "QF")
+    // — pre-TASK-337 replay compatibility. "SF" is excluded — it's a real team
+    // abbreviation, not one of our flags.
+    selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED|(?!SF$)[SPQF]{2,4})$/,
+    // TASK-337 table: the P·S·C·E header strip (one per grid column; OCR may
+    // merge both strips into one line or squeeze the spaces out)...
+    selfTableHeader: /^P\s*S\s*C\s*E(\s+P\s*S\s*C\s*E)?$/,
+    // ...and metric-cell runs: two or more tokens drawn ONLY from the table
+    // vocabulary — playoff weeks ("16", "15+"), check/dash glyphs, percents —
+    // e.g. "16 ✓ 24% 10%", "– – 9% 8%". A lone "15" or "9%" is deliberately
+    // NOT a signal: it could be real screen content and would stretch the
+    // excision region downward over live rows.
+    selfTableCells: /^(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%)(?:\s+(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%))+$/,
+    // Separator garbles observed on device: "·" reads as "•", ".", or "-";
+    // zeros read as the letter "O" and may merge into the label ("QBO - RB O");
+    // the leading "Q" itself can garble ("2BO - RB O", DK corpus
+    // frames-1784385816 #17). The RB/WR/TE tail is the real signature, so the
+    // leading token only needs to be QB-shaped. A missed roster bar shrinks the
+    // excision region and our own target rows survive as "visible" player rows
+    // (frames-1784120786 #1/#5).
+    selfRosterBar: /^\W{0,2}[A-Z0-9]{1,3}\s*[0-9O]*\s*[·•.-]\s*RB\s*[0-9O]+\s*[·•.-]\s*WR\s*[0-9O]+\s*[·•.-]\s*TE\s*[0-9O]+$/,
+    // Glance headlines are sentence case; Underdog renders its header ALL-CAPS,
+    // so the case-sensitive match cannot swallow a real "UP IN 4 PICKS".
+    // Observed garbles keep the lowercase body but mangle the leading capital
+    // and truncate ("fou're on the clo....", "fracking • R1 • P1").
+    selfHeadline: /^(Up in \d{1,2} picks?$|[A-Za-z]?ou'?re (on the clo|up next)|Waiting for capture to start$|[A-Za-z]?aiting to enter draft|[A-Za-z]?eft draft room|Draft complete$|Session ended$|[A-Za-z]?racking\s*[·•.]\s*R\d+\s*[·•.]\s*P\d+$)/,
+    selfBrand: /^BB ?EXPOSURES$/i,
+    // The card's compact position line ("P1 • R1", "R2 • P14") — observed as
+    // its own OCR line over the DK draft room (frames-1784385816 #8/#17).
+    selfPickLine: /^[PR]\d{1,2}\s*[·•.]\s*[PR]\d{1,2}$/,
+    // Merged-form glance target row: "RB · Jaylen Warren · FALLING".
+    selfTargetRow: /^(QB|RB|WR|TE)\s*[·•.]\s+\S/
+  };
+  var WEAK_KINDS = [
+    "selfFlag",
+    "selfTableCells",
+    "selfRosterBar",
+    "selfHeadline",
+    "selfBrand",
+    "selfPickLine",
+    "selfTargetRow"
+  ];
+  function isSignal(l) {
+    return SELF_PATTERNS.selfSynced.test(l.text) || SELF_PATTERNS.selfFlag.test(l.text) || SELF_PATTERNS.selfTableHeader.test(l.text) || SELF_PATTERNS.selfTableCells.test(l.text) || SELF_PATTERNS.selfRosterBar.test(l.text) || SELF_PATTERNS.selfHeadline.test(l.text) || SELF_PATTERNS.selfBrand.test(l.text) || SELF_PATTERNS.selfPickLine.test(l.text) || SELF_PATTERNS.selfTargetRow.test(l.text);
+  }
+  function exciseSelfOverlay(lines) {
+    const strong = lines.some((l) => SELF_PATTERNS.selfSynced.test(l.text) || SELF_PATTERNS.selfTableHeader.test(l.text));
+    const weakKinds = WEAK_KINDS.filter((k) => lines.some((l) => SELF_PATTERNS[k].test(l.text))).length;
+    if (!strong && weakKinds < 2) return { lines, excised: false };
+    const withBoxes = lines.every((l) => l.y != null);
+    let out;
+    if (withBoxes) {
+      const overlayBottom = Math.max(
+        ...lines.filter(isSignal).map((l) => l.y + (l.h ?? 0))
+      ) + 0.02;
+      out = lines.filter((l) => l.y >= overlayBottom && !isSignal(l));
+    } else {
+      const lastIdx = lines.reduce((acc, l, i) => isSignal(l) ? i : acc, -1);
+      out = lines.slice(lastIdx + 1).filter((l) => !isSignal(l));
+    }
+    return { lines: out, excised: true };
+  }
+
   // src/draft/underdogParser.js
   var PATTERNS = {
     // "UP IN 2 PICKS" header ticker; on-the-clock variants. "YOUR PICK" must
@@ -292,42 +371,8 @@
     // Expanded player-detail accordion signatures.
     statsHeader: /^(Rushing|Receiving)$/i,
     draftAction: /^Draft$/,
-    // Our own Live Activity, when expanded over the draft room, is captured
-    // like any other screen content (the P·S·C·E table, target rows, the
-    // roster bar). Ingesting it feeds our output back into the parser — target
-    // names read as visible available rows and resurrect drafted players, and
-    // the glance headline reads as the header ticker. The overlay is a
-    // top-anchored card, so these signals bound an excision region (TASK-329)
-    // rather than poisoning the whole frame.
-    // "synced … ago" left the card in TASK-337; kept for replaying frame logs
-    // recorded by older builds.
-    selfSynced: /^synced\b/i,
-    // Legacy long-form flags plus the TASK-336 compact flag glyphs ("SP", "QF")
-    // — pre-TASK-337 replay compatibility. "SF" is excluded — it's a real team
-    // abbreviation, not one of our flags.
-    selfFlag: /^(FALLING|STACK|QUEUE RISK|\d+% OWNED|(?!SF$)[SPQF]{2,4})$/,
-    // TASK-337 table: the P·S·C·E header strip (one per grid column; OCR may
-    // merge both strips into one line or squeeze the spaces out)...
-    selfTableHeader: /^P\s*S\s*C\s*E(\s+P\s*S\s*C\s*E)?$/,
-    // ...and metric-cell runs: two or more tokens drawn ONLY from the table
-    // vocabulary — playoff weeks ("16", "15+"), check/dash glyphs, percents —
-    // e.g. "16 ✓ 24% 10%", "– – 9% 8%". A lone "15" or "9%" is deliberately
-    // NOT a signal: it could be real screen content and would stretch the
-    // excision region downward over live rows.
-    selfTableCells: /^(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%)(?:\s+(?:1[567]\+?|[✓√]|[–—-]|\d{1,2}%))+$/,
-    // Separator garbles observed on device: "·" reads as "•", ".", or "-";
-    // zeros read as the letter "O" and may merge into the label ("QBO - RB O").
-    // A missed roster bar shrinks the excision region and our own target rows
-    // survive as "visible" player rows (frames-1784120786 #1/#5).
-    selfRosterBar: /^QB\s*[0-9O]+\s*[·•.-]\s*RB\s*[0-9O]+\s*[·•.-]\s*WR\s*[0-9O]+\s*[·•.-]\s*TE\s*[0-9O]+$/,
-    // Glance headlines are sentence case; Underdog renders its header ALL-CAPS,
-    // so the case-sensitive match cannot swallow a real "UP IN 4 PICKS".
-    // Observed garbles keep the lowercase body but mangle the leading capital
-    // and truncate ("fou're on the clo....", "fracking • R1 • P1").
-    selfHeadline: /^(Up in \d{1,2} picks?$|[A-Za-z]?ou'?re (on the clo|up next)|Waiting for capture to start$|[A-Za-z]?aiting to enter draft|[A-Za-z]?eft draft room|Draft complete$|Session ended$|[A-Za-z]?racking\s*[·•.]\s*R\d+\s*[·•.]\s*P\d+$)/,
-    selfBrand: /^BB ?EXPOSURES$/i,
-    // Merged-form glance target row: "RB · Jaylen Warren · FALLING".
-    selfTargetRow: /^(QB|RB|WR|TE)\s*[·•.]\s+\S/,
+    // Self-overlay signals (our own expanded Live Activity over the draft room)
+    // live in selfOverlay.js — shared with the DraftKings parser (TASK-350).
     // Drafter card "3.8 | 32" (round.pickInRound | overall); OCR may drop the dot
     // ("310 | 34") or garble the pipe.
     upcomingCard: /(\d[\d.,·]{0,4})\s*[|Il¦]\s*(\d{1,3})\s*$/,
@@ -599,27 +644,9 @@
       stats: { lines: lines.length, matchedRows: 0, boardMatches: 0, unmatchedNames: [] }
     };
     {
-      const isSignal = (l) => PATTERNS.selfSynced.test(l.text) || PATTERNS.selfFlag.test(l.text) || PATTERNS.selfTableHeader.test(l.text) || PATTERNS.selfTableCells.test(l.text) || PATTERNS.selfRosterBar.test(l.text) || PATTERNS.selfHeadline.test(l.text) || PATTERNS.selfBrand.test(l.text) || PATTERNS.selfTargetRow.test(l.text);
-      const strong = lines.some((l) => PATTERNS.selfSynced.test(l.text) || PATTERNS.selfTableHeader.test(l.text));
-      const weakKinds = [
-        "selfFlag",
-        "selfTableCells",
-        "selfRosterBar",
-        "selfHeadline",
-        "selfBrand",
-        "selfTargetRow"
-      ].filter((k) => lines.some((l) => PATTERNS[k].test(l.text))).length;
-      if (strong || weakKinds >= 2) {
-        const withBoxes = lines.every((l) => l.y != null);
-        if (withBoxes) {
-          const overlayBottom = Math.max(
-            ...lines.filter(isSignal).map((l) => l.y + (l.h ?? 0))
-          ) + 0.02;
-          lines = lines.filter((l) => l.y >= overlayBottom && !isSignal(l));
-        } else {
-          const lastIdx = lines.reduce((acc, l, i) => isSignal(l) ? i : acc, -1);
-          lines = lines.slice(lastIdx + 1).filter((l) => !isSignal(l));
-        }
+      const excision = exciseSelfOverlay(lines);
+      if (excision.excised) {
+        lines = excision.lines;
         if (lines.length < 4) {
           obs.kind = "self";
           return obs;
@@ -844,6 +871,358 @@
             visibleCanonicals: obs.rows.map((r) => r.player.canonical),
             // Rows whose name OCR'd too garbled to match — a high count means
             // gaps in the window are misreads, not drafted players.
+            unmatchedCount: obs.stats.unmatchedNames.length
+          };
+        }
+      }
+    }
+    return obs;
+  }
+
+  // src/draft/draftkingsParser.js
+  var PATTERNS2 = {
+    // "Round 4, Pick 12" — the pick currently on the clock, on every tab.
+    roundPick: /Round\s*(\d{1,2})\s*[,.]?\s*Pick\s*(\d{1,2})/i,
+    // "You're up in 4 pick(s)" (OCR may garble the apostrophe).
+    upIn: /You.?re\s+up\s+in\s+(\d{1,2})\s+pick/i,
+    // Speculative on-clock header for the user's own turn; the countdown also
+    // derives picksUntil=0 from slot math, so this is belt-and-braces.
+    youreOnClock: /You.?re\s+on\s+the\s+clock/i,
+    // "On The Clock:" label — the username follows on the same line or the next.
+    onClockLabel: /On\s*The\s*Clock\s*:?\s*(.*)$/i,
+    // "Last Pick: T. McLaurin WAS-WR" → event evidence at currentOverall − 1.
+    lastPick: /Last\s*Pick\s*:?\s*(.+?)\s+([A-Z]{2,3})\s*[-–]\s*([A-Za-z]{1,3})\s*$/i,
+    // Slow-draft clock "06:35:49"; fast clock "0:28".
+    clockHMS: /^(\d{1,2}):(\d{2}):(\d{2})$/,
+    clockMS: /^(\d{1,2}):(\d{2})$/,
+    // Board cell label "1.1" / "2.12" (round.pickInRound); overall sits beneath.
+    cellLabel: /^(\d{1,2})[.,·](\d{1,2})$/,
+    overallNum: /^\d{1,3}$/,
+    // Row meta "RB BAL (BYE 13)" (Players/Rosters tabs).
+    posTeamBye: /^([A-Za-z]{1,3})\s+([A-Z]{2,3})\s*\(\s*BYE\s*(\d{1,2})\s*\)/i,
+    // Board cell meta "RB ATL" (position may garble).
+    posTeam: /^([A-Za-z]{1,3})\s+([A-Z]{2,3})$/,
+    // Abbreviated row/cell name: "D. Henry", "T.McLaurin", "K. Walker III".
+    abbrevName: /^([A-Za-z])[.·]\s*([A-Za-z'.\-\s…]{2,})$/,
+    // Players-tab controls.
+    showDrafted: /^SHOW\s+DRAFTED/i,
+    // Rosters-tab fill tally "QB 0/1 RB 1/2" (groups may merge into one line).
+    tallyGroup: /(QB|RB|WR|TE)\s*([0-9O]{1,2})\s*\/\s*[0-9O]{1,2}/gi,
+    // Rosters-tab left rail slots.
+    posRail: /^(QB|RB|WR|TE|FLEX|BN)$/,
+    // Queue empty state.
+    emptyQueue: /No\s+players\s+in\s+Queue/i,
+    // Bottom tab bar — present on every draft-room screen (in-room evidence).
+    tabBar: /^(Players|Queue|Rosters|Board)$/,
+    // DK usernames are mixed-case, single-token ("ski2sun", "BirdEnthusiast");
+    // board column headers truncate with an ellipsis ("BirdEnthusi...").
+    username: /^[A-Za-z][A-Za-z0-9_.\-]{2,24}(\.{2,3}|…)?$/
+  };
+  var NOT_USERNAMES2 = /* @__PURE__ */ new Set([
+    "players",
+    "queue",
+    "rosters",
+    "board",
+    "player",
+    "rank",
+    "adp",
+    "pos",
+    "flex",
+    "bn",
+    "all",
+    "show",
+    "drafted",
+    "round",
+    "pick",
+    "clock",
+    "bye",
+    "autodraft",
+    "auto",
+    "settings",
+    "search",
+    "fantasy",
+    "sports"
+  ]);
+  function isUsernameLine2(t) {
+    if (!PATTERNS2.username.test(t)) return false;
+    const bare = t.replace(/(\.{2,3}|…)$/, "");
+    if (/^(QB|RB|WR|TE|FLEX|BN)\d{0,2}$/i.test(bare)) return false;
+    return !NOT_USERNAMES2.has(bare.toLowerCase());
+  }
+  function bareUsername(t) {
+    return String(t).replace(/(\.{2,3}|…)$/, "").trim();
+  }
+  function centerX2(l) {
+    return (l.x ?? 0) + (Number.isFinite(l.w) ? l.w / 2 : 0);
+  }
+  function cleanRowName(t) {
+    return String(t).replace(/\s+[QWA]$/, "").trim();
+  }
+  function matchDkName(pool2, raw, teamHint, posHint) {
+    const cleaned = cleanRowName(raw);
+    const m = matchAbbrevPlayer(pool2, cleaned, teamHint) || matchPlayer(pool2, cleaned, { team: teamHint, position: posHint });
+    if (!m) return null;
+    if (posHint && m.player.position && m.player.position !== "N/A" && m.player.position !== posHint) return null;
+    return { player: m.player, score: Math.min(m.score, 1) };
+  }
+  function parseDraftKingsScreen(items, ctx) {
+    const { pool: pool2, teams = 12, username = null } = ctx || {};
+    let lines = normalizeItems(items);
+    const obs = {
+      kind: "unknown",
+      picksUntil: null,
+      onClock: false,
+      clockSeconds: null,
+      currentOverall: null,
+      // exact current pick from "Round X, Pick Y"
+      lastPick: null,
+      // { nameRaw, team, pos, raw } at currentOverall − 1
+      slotAnchors: [],
+      // [{ username, slot }] from Board columns
+      rosterTally: null,
+      // { username, tally } from the Rosters-tab header
+      upcomingOveralls: [],
+      picksAwayDivider: null,
+      boardPicks: [],
+      rosterPicks: [],
+      cardPicks: [],
+      rosterOwner: null,
+      rows: [],
+      availability: null,
+      queueNames: [],
+      drafterCards: [],
+      confirmCard: null,
+      lobby: false,
+      filledCount: 0,
+      detailPanel: false,
+      rosterPanel: false,
+      stats: { lines: lines.length, matchedRows: 0, boardMatches: 0, unmatchedNames: [] }
+    };
+    {
+      const excision = exciseSelfOverlay(lines);
+      if (excision.excised) {
+        lines = excision.lines;
+        if (lines.length < 4) {
+          obs.kind = "self";
+          return obs;
+        }
+      }
+    }
+    const texts = lines.map((l) => l.text);
+    const withBoxes = lines.length > 0 && lines.every((l) => l.y != null && l.x != null);
+    for (let i = 0; i < lines.length; i++) {
+      const ln = lines[i];
+      const t = ln.text;
+      const rp = t.match(PATTERNS2.roundPick);
+      if (rp && (ln.y == null || ln.y < 0.3)) {
+        const r = parseInt(rp[1], 10);
+        const p = parseInt(rp[2], 10);
+        if (r >= 1 && r <= 30 && p >= 1 && p <= teams) {
+          obs.currentOverall = (r - 1) * teams + p;
+        }
+      }
+      const up = t.match(PATTERNS2.upIn);
+      if (up) obs.picksUntil = parseInt(up[1], 10);
+      if (PATTERNS2.youreOnClock.test(t)) {
+        obs.onClock = true;
+        obs.picksUntil = 0;
+      }
+      const oc = t.match(PATTERNS2.onClockLabel);
+      if (oc && username && (ln.y == null || ln.y < 0.3)) {
+        let name = oc[1] ? oc[1].trim() : "";
+        if (!name) {
+          const near = withBoxes ? lines.find((l) => l !== ln && l.y > ln.y && l.y - ln.y < 0.05 && Math.abs(l.x - ln.x) < 0.2 && isUsernameLine2(l.text)) : i + 1 < lines.length && isUsernameLine2(lines[i + 1].text) ? lines[i + 1] : null;
+          name = near ? near.text : "";
+        }
+        if (name && anchorUsernameMatches(username, name)) {
+          obs.onClock = true;
+          obs.picksUntil = 0;
+        }
+      }
+      const lp = t.match(PATTERNS2.lastPick);
+      if (lp && (ln.y == null || ln.y < 0.3)) {
+        obs.lastPick = {
+          nameRaw: lp[1].trim(),
+          team: lp[2].toUpperCase(),
+          pos: fuzzyPosition(lp[3]),
+          raw: t
+        };
+      }
+      const hms = t.match(PATTERNS2.clockHMS);
+      if (hms) {
+        obs.clockSeconds = parseInt(hms[1], 10) * 3600 + parseInt(hms[2], 10) * 60 + parseInt(hms[3], 10);
+      } else if (obs.clockSeconds == null && (ln.y == null || ln.y < 0.12)) {
+        const ms = t.match(PATTERNS2.clockMS);
+        if (ms) obs.clockSeconds = parseInt(ms[1], 10) * 60 + parseInt(ms[2], 10);
+      }
+    }
+    const consumedLines = /* @__PURE__ */ new Set();
+    const validatedCells = [];
+    if (withBoxes) {
+      for (const lbl of lines) {
+        const m = lbl.text.match(PATTERNS2.cellLabel);
+        if (!m) continue;
+        const round = parseInt(m[1], 10);
+        const pickInRound = parseInt(m[2], 10);
+        if (!(round >= 1 && round <= 30 && pickInRound >= 1 && pickInRound <= teams)) continue;
+        const expected = (round - 1) * teams + pickInRound;
+        const ov = lines.find((l) => l !== lbl && PATTERNS2.overallNum.test(l.text) && l.y > lbl.y && l.y - lbl.y < 0.04 && Math.abs(l.x - lbl.x) < 0.06 && parseInt(l.text, 10) === expected);
+        if (!ov) continue;
+        validatedCells.push({ labelLine: lbl, overall: expected });
+        const nameLine = lines.filter((l) => l.y > ov.y && l.y - ov.y < 0.045 && Math.abs(l.x - lbl.x) < 0.15 && PATTERNS2.abbrevName.test(cleanRowName(l.text))).sort((a, b) => a.y - b.y)[0];
+        if (!nameLine) continue;
+        const metaLine = lines.find((l) => l.y > nameLine.y && l.y - nameLine.y < 0.035 && Math.abs(l.x - lbl.x) < 0.15 && PATTERNS2.posTeam.test(l.text));
+        const meta = metaLine ? metaLine.text.match(PATTERNS2.posTeam) : null;
+        const posHint = meta ? fuzzyPosition(meta[1]) : null;
+        const teamHint = meta && /^[A-Z]{2,3}$/.test(meta[2]) ? meta[2] : null;
+        const match = matchDkName(pool2, nameLine.text, teamHint, posHint);
+        if (match) {
+          obs.boardPicks.push({
+            overall: expected,
+            round,
+            pickInRound,
+            player: match.player,
+            score: match.score,
+            raw: nameLine.text
+          });
+          obs.stats.boardMatches++;
+          consumedLines.add(nameLine);
+          if (metaLine) consumedLines.add(metaLine);
+        } else {
+          obs.stats.unmatchedNames.push(nameLine.text);
+        }
+      }
+      if (validatedCells.length) {
+        const headerCands = lines.filter((l) => l.y < 0.27 && isUsernameLine2(l.text) && !lines.some((o) => o !== l && PATTERNS2.onClockLabel.test(o.text) && Math.abs(o.y - l.y) < 0.06 && o.x < l.x + 0.05));
+        for (const u of headerCands) {
+          const ucx = centerX2(u);
+          const colCells = validatedCells.filter((c) => c.labelLine.y > u.y && Math.abs(centerX2(c.labelLine) - ucx) < 0.13);
+          if (!colCells.length) continue;
+          const slots = new Set(colCells.map((c) => slotForOverall(c.overall, teams)));
+          if (slots.size !== 1) continue;
+          obs.slotAnchors.push({ username: u.text, slot: [...slots][0] });
+        }
+      }
+    } else {
+      for (let i = 0; i < texts.length - 1; i++) {
+        const m = texts[i].match(PATTERNS2.cellLabel);
+        if (!m) continue;
+        const round = parseInt(m[1], 10);
+        const pickInRound = parseInt(m[2], 10);
+        if (!(round >= 1 && round <= 30 && pickInRound >= 1 && pickInRound <= teams)) continue;
+        const expected = (round - 1) * teams + pickInRound;
+        if (!PATTERNS2.overallNum.test(texts[i + 1]) || parseInt(texts[i + 1], 10) !== expected) continue;
+        validatedCells.push({ labelLine: lines[i], overall: expected });
+        const nameText = i + 2 < texts.length ? cleanRowName(texts[i + 2]) : "";
+        if (!PATTERNS2.abbrevName.test(nameText)) continue;
+        const meta = i + 3 < texts.length ? texts[i + 3].match(PATTERNS2.posTeam) : null;
+        const posHint = meta ? fuzzyPosition(meta[1]) : null;
+        const teamHint = meta && /^[A-Z]{2,3}$/.test(meta[2]) ? meta[2] : null;
+        const match = matchDkName(pool2, nameText, teamHint, posHint);
+        if (match) {
+          obs.boardPicks.push({
+            overall: expected,
+            round,
+            pickInRound,
+            player: match.player,
+            score: match.score,
+            raw: nameText
+          });
+          obs.stats.boardMatches++;
+          consumedLines.add(lines[i + 2]);
+        } else {
+          obs.stats.unmatchedNames.push(nameText);
+        }
+      }
+    }
+    const railCount = withBoxes ? lines.filter((l) => l.x < 0.12 && PATTERNS2.posRail.test(l.text)).length : texts.filter((t) => PATTERNS2.posRail.test(t)).length;
+    const tallyPositions = /* @__PURE__ */ new Map();
+    for (const t of texts) {
+      for (const g of t.matchAll(PATTERNS2.tallyGroup)) {
+        const filled = parseInt(String(g[2]).replace(/O/gi, "0"), 10);
+        if (Number.isFinite(filled)) tallyPositions.set(g[1].toUpperCase(), filled);
+      }
+    }
+    const hasTally = tallyPositions.size >= 2;
+    obs.rosterPanel = railCount >= 4 || hasTally && railCount >= 2;
+    if (obs.rosterPanel || hasTally) {
+      const owner = withBoxes ? lines.filter((l) => l.y > 0.26 && l.y < 0.37 && isUsernameLine2(l.text)).sort((a, b) => a.y - b.y)[0] : lines.find((l) => isUsernameLine2(l.text));
+      if (owner) obs.rosterOwner = bareUsername(owner.text);
+      if (obs.rosterOwner && hasTally) {
+        obs.rosterTally = {
+          username: obs.rosterOwner,
+          tally: {
+            QB: tallyPositions.get("QB") ?? 0,
+            RB: tallyPositions.get("RB") ?? 0,
+            WR: tallyPositions.get("WR") ?? 0,
+            TE: tallyPositions.get("TE") ?? 0
+          }
+        };
+      }
+    }
+    if (obs.boardPicks.length < 2 && validatedCells.length < 2) {
+      for (let i = 0; i < lines.length; i++) {
+        const ln = lines[i];
+        if (consumedLines.has(ln)) continue;
+        const nameText = cleanRowName(ln.text);
+        if (!PATTERNS2.abbrevName.test(nameText)) continue;
+        if (withBoxes && ln.y < 0.3) continue;
+        let meta = null;
+        if (withBoxes) {
+          const metaLine = lines.find((l) => l !== ln && l.y > ln.y && l.y - ln.y < 0.04 && Math.abs(l.x - ln.x) < 0.1 && PATTERNS2.posTeamBye.test(l.text));
+          meta = metaLine ? metaLine.text.match(PATTERNS2.posTeamBye) : null;
+        } else {
+          meta = i + 1 < texts.length ? texts[i + 1].match(PATTERNS2.posTeamBye) : null;
+        }
+        const posHint = meta ? fuzzyPosition(meta[1]) : null;
+        const teamHint = meta && /^[A-Z]{2,3}$/.test(meta[2].toUpperCase()) ? meta[2].toUpperCase() : null;
+        const match = matchDkName(pool2, nameText, teamHint, posHint);
+        if (!match) {
+          obs.stats.unmatchedNames.push(nameText);
+          continue;
+        }
+        obs.rows.push({
+          player: match.player,
+          score: match.score,
+          raw: nameText,
+          pos: posHint,
+          posRank: null,
+          team: teamHint,
+          bye: meta ? parseInt(meta[3], 10) : null
+        });
+        obs.stats.matchedRows++;
+      }
+    }
+    const hasShowDrafted = texts.some((t) => PATTERNS2.showDrafted.test(t));
+    const emptyQueue = texts.some((t) => PATTERNS2.emptyQueue.test(t));
+    const tabBarCount = new Set(
+      lines.filter((l) => PATTERNS2.tabBar.test(l.text) && (l.y == null || l.y > 0.9)).map((l) => l.text)
+    ).size;
+    if (obs.boardPicks.length >= 2 || validatedCells.length >= 4 && obs.slotAnchors.length) {
+      obs.kind = "board";
+    } else if (obs.rosterPanel) {
+      obs.kind = "roster";
+    } else if (emptyQueue) {
+      obs.kind = "queue";
+    } else if (obs.rows.length >= 1) {
+      obs.kind = "players";
+    } else if (obs.currentOverall != null || obs.picksUntil != null || tabBarCount >= 3) {
+      obs.kind = "header";
+    }
+    if (obs.kind === "players" && hasShowDrafted && obs.rows.length >= 6) {
+      const withAdp = obs.rows.filter((r) => Number.isFinite(r.player.adp));
+      if (withAdp.length >= 6) {
+        let inversions = 0;
+        for (let i = 1; i < withAdp.length; i++) {
+          if (withAdp[i].player.adp < withAdp[i - 1].player.adp - 2) inversions++;
+        }
+        if (inversions <= 1) {
+          const positionsSeen = [...new Set(obs.rows.map((r) => r.pos || r.player.position).filter(Boolean))];
+          obs.availability = {
+            topVisibleAdp: withAdp[0].player.adp,
+            bottomVisibleAdp: withAdp[withAdp.length - 1].player.adp,
+            positionsSeen,
+            visibleCanonicals: obs.rows.map((r) => r.player.canonical),
             unmatchedCount: obs.stats.unmatchedNames.length
           };
         }
@@ -1138,6 +1517,29 @@
       if (boardOveralls.length) {
         ratchetCurrentPick(Math.max(...boardOveralls) + 1);
       }
+      if (Number.isFinite(obs.currentOverall)) {
+        ratchetCurrentPick(obs.currentOverall);
+      }
+      if (obs.lastPick && Number.isFinite(obs.currentOverall)) {
+        const overall = obs.currentOverall - 1;
+        if (overall >= 1 && !state.ledger.has(overall)) {
+          const match = matchAbbrevPlayer(pool2, obs.lastPick.nameRaw, obs.lastPick.team);
+          if (match && (!obs.lastPick.pos || !match.player.position || match.player.position === obs.lastPick.pos || match.player.position === "N/A")) {
+            const dup = [...state.ledger.values()].some((e) => e.player.canonical === match.player.canonical);
+            if (!dup) {
+              state.ledger.set(overall, {
+                player: match.player,
+                round: roundForOverall(overall, teams),
+                pickInRound: pickInRoundForOverall(overall, teams),
+                score: 0.7,
+                raw: obs.lastPick.raw,
+                src: "event"
+              });
+              summary.confirmPick = match.player.name;
+            }
+          }
+        }
+      }
       const carouselTracking = (obs.drafterCards || []).some((c) => c.onClock);
       const upcomingFloor = obs.upcomingOveralls.length && carouselTracking && !obs.lobby ? Math.min(...obs.upcomingOveralls) - 1 : 0;
       const headerPicksUntil = obs.picksUntil ?? obs.picksAwayDivider;
@@ -1161,6 +1563,17 @@
           proposeAnchor(cardSlot);
           if (state.anchoredSlot === cardSlot) summary.slotAnchored = cardSlot;
         }
+      }
+      for (const a of obs.slotAnchors || []) {
+        if (!(a.slot >= 1 && a.slot <= teams) || !a.username) continue;
+        state.usernameSlots.set(a.username.replace(/(\.{2,3}|…)\s*$/, ""), a.slot);
+        if (state.learnedUsername && anchorUsernameMatches(state.learnedUsername, a.username)) {
+          proposeAnchor(a.slot);
+          if (state.anchoredSlot === a.slot) summary.slotAnchored = a.slot;
+        }
+      }
+      if (obs.rosterTally && obs.rosterTally.username) {
+        state.tallies.set(obs.rosterTally.username, obs.rosterTally.tally);
       }
       const picksUntil = headerPicksUntil;
       if (picksUntil != null) {
@@ -1246,7 +1659,7 @@
       if (obs.kind !== "roster") {
         for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
       }
-      if (state.observedStartPick == null && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability || picksUntil != null)) {
+      if (state.observedStartPick == null && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability || picksUntil != null || Number.isFinite(obs.currentOverall))) {
         state.observedStartPick = state.currentPick;
       }
       return summary;
@@ -1511,8 +1924,8 @@
   }
 
   // src/draft/extensionEngine.entry.js
-  var ENGINE_VERSION = "autoreset.1";
-  var ENGINE_BUILD = 3;
+  var ENGINE_VERSION = "draftkings.1";
+  var ENGINE_BUILD = 4;
   var session = null;
   var config = null;
   var pool = null;
@@ -1606,7 +2019,11 @@
       try {
         if (!session) return JSON.stringify({ ok: false, error: "not initialized" });
         const items = JSON.parse(itemsJson);
-        const obs = parseUnderdogScreen(items, { pool, teams: config.teams || 12 });
+        const obs = config.platform === "draftkings" ? parseDraftKingsScreen(items, {
+          pool,
+          teams: config.teams || 12,
+          username: config.username || null
+        }) : parseUnderdogScreen(items, { pool, teams: config.teams || 12 });
         const summary = session.ingest(obs, Number(nowMs) || Date.now());
         const st = session.getStatus();
         diagLog.push({

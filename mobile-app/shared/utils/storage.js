@@ -27,6 +27,17 @@ export async function deleteFile(id) {
 export async function clearAllData() {
   const keys = await AsyncStorage.getAllKeys();
   await AsyncStorage.multiRemove(keys.filter(k => k.startsWith(PREFIX)));
+  // Sign-out / account-deletion hygiene (ADR-030): the on-device portfolio
+  // cache and derived-model caches must not survive into another account's
+  // session. Dynamic imports keep this module load-safe in node tests.
+  try {
+    const { clearEntriesCache } = await import('./entriesCache');
+    clearEntriesCache();
+  } catch { /* fail soft */ }
+  try {
+    const { cacheClearAll } = await import('./modelCache');
+    await cacheClearAll();
+  } catch { /* fail soft */ }
 }
 
 export async function hasUserData() {

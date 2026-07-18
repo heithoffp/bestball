@@ -23,6 +23,30 @@ export async function cachePut(key, value) {
   }
 }
 
+/** Batch read: returns values positionally aligned with keys (undefined = miss). */
+export async function cacheGetMany(keys) {
+  if (!keys.length) return [];
+  try {
+    const pairs = await AsyncStorage.multiGet(keys.map(k => PREFIX + k));
+    return pairs.map(([, raw]) => {
+      if (raw == null) return undefined;
+      try { return JSON.parse(raw); } catch { return undefined; }
+    });
+  } catch {
+    return keys.map(() => undefined);
+  }
+}
+
+/** Batch write of [key, value] pairs. */
+export async function cachePutMany(entries) {
+  if (!entries.length) return;
+  try {
+    await AsyncStorage.multiSet(entries.map(([k, v]) => [PREFIX + k, JSON.stringify(v)]));
+  } catch {
+    /* fail soft */
+  }
+}
+
 export async function cacheDelete(key) {
   try {
     await AsyncStorage.removeItem(PREFIX + key);
