@@ -20,13 +20,13 @@ import { createDraftSession } from './sessionEngine.js';
 // bundle ships inside the native broadcast extension, so a stale EAS build
 // silently runs old parsing. The version rides in every result so the panel
 // can prove which engine is actually running.
-export const ENGINE_VERSION = 'draftkings.1';
+export const ENGINE_VERSION = 'draftkings.2';
 
 // Monotonic build counter (ADR-023). ENGINE_VERSION is a task-string with no
 // ordering, so the App Group hot-load path uses this integer to decide whether
 // the app-written engine is newer than the one baked into the extension
 // bundle. BUMP THIS (by 1) with every engine change, alongside ENGINE_VERSION.
-export const ENGINE_BUILD = 4;
+export const ENGINE_BUILD = 5;
 
 let session = null;
 let config = null;

@@ -118,6 +118,36 @@ export function applyFlatReorder(flatItems, from, to, labels = {}) {
 }
 
 /**
+ * Reorder the homogeneous overall board (player-only drag cells).
+ *
+ * from/to index the `players` array directly (the ReorderableList's data is the
+ * player list — tier rails and insert pills are rendered as per-row decorations,
+ * NOT as separate list items, so the drag list stays homogeneous). Tier breaks
+ * are stored as a Set<playerId>, so they travel with their owning player: a break
+ * "above player X" stays above X wherever X lands.
+ *
+ * The one normalization: a break that ends up on the new #1 is meaningless (there
+ * is no tier above the top player), so it dissolves into the tier-1 rail and its
+ * custom label migrates to `__tier1__`. Returns null for a no-op.
+ */
+export function applyPlayerReorder(players, breaks, labels = {}, from, to) {
+  if (from === to) return null;
+  if (from < 0 || from >= players.length) return null;
+  const next = reorderItems(players, from, to);
+  const nextBreaks = new Set(breaks);
+  const nextLabels = { ...labels };
+
+  const first = next[0];
+  if (first && nextBreaks.has(first.id)) {
+    nextBreaks.delete(first.id);
+    if (labels[first.id] !== undefined) nextLabels.__tier1__ = labels[first.id];
+    delete nextLabels[first.id];
+  }
+
+  return { players: next, breaks: nextBreaks, labels: nextLabels };
+}
+
+/**
  * Reorder within a filtered view (position chips). from/to index the filtered
  * player-only array; the move is applied to the full list by anchoring to the
  * moved player's new neighbor inside the filter. Breaks/labels are untouched.

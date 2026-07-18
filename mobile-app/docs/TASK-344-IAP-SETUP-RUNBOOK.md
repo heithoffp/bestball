@@ -41,7 +41,7 @@ App Store Connect → **Business → Agreements, Tax, and Banking**.
   - **Exemptions:** leave **both** exemption boxes **blank** (an ordinary individual/sole proprietor is *not* an exempt payee and *not* FATCA-exempt).
   - Not tax advice — if you've formed an LLC/corp, confirm entity vs. individual with an accountant.
 - [x] **Banking** info added.
-- [ ] Agreement status flips to **Active**. (Until then, product creation + sandbox purchase are blocked; everything else below can proceed.)
+- [x] Agreement status flips to **Active**. (Until then, product creation + sandbox purchase are blocked; everything else below can proceed.)
 - [ ] **DSA / trader status** submitted (may show "in review"; it gates EU distribution + IAP creation later, not agreement signing).
 
 ---
@@ -52,7 +52,7 @@ App Store Connect → **Business → Agreements, Tax, and Banking**.
 - [x] Enroll: Apple Developer → **App Store Small Business Program** (15% commission instead of 30%).
 
 ### 1.2 — International availability (do now, not blocked)
-- [ ] App → **Pricing and Availability** → include **Canada / international** (remove the ADR-027 US-only restriction).
+- [x] App → **Pricing and Availability** → include **Canada / international** (remove the ADR-027 US-only restriction).
 
 ### 1.3 — Sandbox tester (do now, not blocked)
 - [ ] Users and Access → **Sandbox → Testers** → add a tester with an email **not** already tied to an Apple ID. You'll sign into this on the phone during Phase 3.
@@ -62,29 +62,29 @@ App Store Connect → **Business → Agreements, Tax, and Banking**.
 App Store Connect → app → **Monetization → Subscriptions**.
 
 **A. Subscription group**
-- [ ] Create group → Reference Name: `BB Exposures Pro` (internal only)
-- [ ] Add localization (English U.S.) → Subscription Group Display Name: `BB Exposures Pro`
+- [x] Create group → Reference Name: `BB Exposures Pro` (internal only)
+- [x] Add localization (English U.S.) → Subscription Group Display Name: `BB Exposures Pro`
 
 **B. Monthly product**
-- [ ] Create subscription:
+- [x] Create subscription:
   - Reference Name: `Pro Monthly`
   - Product ID: `com.bestballexposures.app.pro.monthly`  ⚠️ **immutable, must be exact**
-- [ ] Duration: `1 Month`
-- [ ] Price: **$20.00** if that point exists, else **$19.99** (see price-mismatch note below)
-- [ ] Localization (English U.S.):
+- [x] Duration: `1 Month`
+- [x] Price: **$20.00** if that point exists, else **$19.99** (see price-mismatch note below)
+- [x] Localization (English U.S.):
   - Display Name (≤30 chars): `BB Exposures Pro (Monthly)`
   - Description (≤45 chars): `All Pro tabs: ADP, Draft Assistant, Rankings`
-- [ ] Review Information:
+- [x] Review Information:
   - Screenshot: paywall (PlanPicker) screenshot — see Phase 3 note
   - Review Notes: `Auto-renewable Pro subscription unlocking ADP Tracker, Draft Assistant, custom Rankings, Combos, and Roster Construction. To test: sign in, open Account, tap Upgrade to Pro, choose Monthly.`
 
 **C. Annual product**
-- [ ] Create subscription:
+- [x] Create subscription:
   - Reference Name: `Pro Annual`
   - Product ID: `com.bestballexposures.app.pro.yearly`  ⚠️ **immutable, must be exact**
-- [ ] Duration: `1 Year`
-- [ ] Price: **$67.00** if available, else **$66.99**
-- [ ] Localization (English U.S.):
+- [x] Duration: `1 Year`
+- [x] Price: **$67.00** if available, else **$69.99**
+- [x] Localization (English U.S.):
   - Display Name (≤30 chars): `BB Exposures Pro (Annual)`
   - Description (≤45 chars): `Save 72% vs monthly. Every Pro feature.`
 - [ ] Review Information:
@@ -105,8 +105,8 @@ App Store Connect → app → **Monetization → Subscriptions**.
 ## Phase 2 — Backend deploy (Windows, not blocked by the agreement)
 
 ### 2.1 — Migration 017
-- [ ] Supabase dashboard → SQL Editor → paste `supabase/migrations/017_add_apple_provider_to_subscriptions.sql` → Run.
-- [ ] Verify:
+- [x] Supabase dashboard → SQL Editor → paste `supabase/migrations/017_add_apple_provider_to_subscriptions.sql` → Run.
+- [x] Verify:
 ```sql
 select column_name from information_schema.columns
 where table_name = 'subscriptions'

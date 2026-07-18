@@ -163,5 +163,65 @@ const MY_PICKS = [
   check('UD parser on a DK frame ledgers nothing', r.status.ledgerSize, 0);
 }
 
+// ---- 5. Rosters-tab roster harvest (TASK-352): a roster glance alone
+// populates the user's picks — no Board visit. Corpus: the 2026-07-18
+// roster-glance session (Rosters + Players tabs only, zero board frames).
+{
+  const glancePath = path.join(root, 'docs/draftkings_debug/frames-1784393824.jsonl');
+  if (!existsSync(glancePath)) {
+    console.error(`frames corpus missing: ${glancePath}`);
+    process.exit(1);
+  }
+  const glanceFrames = readFileSync(glancePath, 'utf8').split(/\r?\n/).filter(Boolean).map(l => JSON.parse(l));
+  const session = createDraftSession({
+    pool, teams: TEAMS, rounds: ROUNDS, username: USERNAME,
+  });
+  let boardFrames = 0;
+  for (const f of glanceFrames) {
+    const obs = parseDraftKingsScreen(f.items, { pool, teams: TEAMS, username: USERNAME });
+    if (obs.kind === 'board') boardFrames++;
+    session.ingest(obs, f.t * 1000);
+  }
+  const st = session.getStatus();
+  console.log('roster-glance resume (no board):');
+  check('corpus really has zero board frames', boardFrames, 0);
+  check('slot resolved to 4', st.slot, 4);
+  check('draft position reached pick 48', st.currentPick, 48);
+  check('roster glance recovered all 4 picks',
+    st.myPicks.map(p => `${p.overall}:${p.name}`), MY_PICKS);
+  check('roster bar filled from the glance',
+    session.getGlance().rosterBar, 'QB 0 · RB 1 · WR 3 · TE 0');
+  check('rostered players are off the available list',
+    session.getDraftState().availablePlayers
+      .every(p => !st.myPicks.some(m => m.canonical === p.canonical)), true);
+
+  // ---- 6. DK auto new-draft detection: a COMPLETE self-owned roster read
+  // missing held picks contradicts the board; two consecutive reads reset.
+  const newDraftRosterFrame = [
+    'On The Clock: ski2sun',
+    'Round 1, Pick 5',
+    'BirdEnthusiast',
+    'QB 1/1 RB 0/2 WR 0/3 TE 0/1',
+    'QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX',
+    'J. Burrow', 'QB CIN (BYE 10)',
+    'Players', 'Queue', 'Rosters', 'Board',
+  ];
+  const t0 = glanceFrames[glanceFrames.length - 1].t + 60;
+  console.log('auto new-draft detection:');
+  const first = session.ingest(
+    parseDraftKingsScreen(newDraftRosterFrame, { pool, teams: TEAMS, username: USERNAME }),
+    t0 * 1000,
+  );
+  check('first contradicting read does NOT reset', first.newDraft, false);
+  check('ledger held through the first read', session.getStatus().ledgerSize >= 5, true);
+  const second = session.ingest(
+    parseDraftKingsScreen(newDraftRosterFrame, { pool, teams: TEAMS, username: USERNAME }),
+    (t0 + 2) * 1000,
+  );
+  check('second consecutive read resets the board', second.newDraft, true);
+  check('old draft ledger cleared', session.getStatus().ledgerSize, 0);
+  check('position restarted from the new header', session.getStatus().currentPick, 5);
+}
+
 console.log(failures === 0 ? '\nDK replay: all checks passed.' : `\nDK replay: ${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);

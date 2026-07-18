@@ -3,7 +3,7 @@
 // Run from mobile-app/:  node scripts/test-rankings-board.mjs
 
 import {
-  buildFlatItems, applyFlatReorder, applyFilteredReorder,
+  buildFlatItems, applyFlatReorder, applyPlayerReorder, applyFilteredReorder,
   computeTierMaps, moveToRank, reorderItems,
 } from '../src/screens/rankings/boardItems.js';
 
@@ -130,6 +130,35 @@ const labels = { __tier1__: 'Elite', c: 'Mid', e: 'Late' };
   const flat = buildFlatItems(players, breaks);
   check('same-index move is null', applyFlatReorder(flat, 0, 0, labels) === null);
   check('dragging a divider is null', applyFlatReorder(flat, 3, 0, labels) === null);
+}
+
+// ── applyPlayerReorder (homogeneous overall board) ───────────────
+// Board: a b | c d | e  (breaks above c and e). from/to index players directly;
+// tier breaks are player-id-anchored and travel with their owning player.
+{
+  // same-tier move: a → after b
+  const res = applyPlayerReorder(players, breaks, labels, 0, 1);
+  check('player reorder order', ids(res.players) === 'b,a,c,d,e', ids(res.players));
+  check('player reorder keeps breaks', [...res.breaks].sort().join(',') === 'c,e');
+  check('player reorder keeps labels', res.labels.c === 'Mid' && res.labels.__tier1__ === 'Elite');
+}
+{
+  // break-owning player c dragged to the end → its break travels WITH c
+  const res = applyPlayerReorder(players, breaks, labels, 2, 4);
+  check('owner-moved order', ids(res.players) === 'a,b,d,e,c', ids(res.players));
+  check('break travels with owner', res.breaks.has('c') && !res.breaks.has('d'));
+  check('other break untouched', res.breaks.has('e') && res.breaks.size === 2);
+}
+{
+  // break-owning player c dragged to #1 → break dissolves into tier-1 rail
+  const res = applyPlayerReorder(players, breaks, labels, 2, 0);
+  check('crowned owner order', ids(res.players) === 'c,a,b,d,e', ids(res.players));
+  check('break on new #1 dissolves', !res.breaks.has('c') && res.breaks.size === 1);
+  check('dissolved label becomes tier-1', res.labels.__tier1__ === 'Mid' && res.labels.c === undefined);
+}
+{
+  check('player reorder same-index is null', applyPlayerReorder(players, breaks, labels, 2, 2) === null);
+  check('player reorder out-of-range is null', applyPlayerReorder(players, breaks, labels, 9, 0) === null);
 }
 
 // ── applyFilteredReorder (position views) ────────────────────────

@@ -260,7 +260,8 @@ export function createDraftSession(cfg) {
       && obs.rosterOwner && usernameMatches(state.learnedUsername, obs.rosterOwner)) {
       const conflicts = obs.rosterPicks.filter((rp) => {
         const e = state.ledger.get(rp.overall);
-        return e && e.src !== 'event' && e.player.canonical !== rp.player.canonical;
+        return e && e.src !== 'event' && e.src !== 'rosterSet'
+          && e.player.canonical !== rp.player.canonical;
       }).length;
       const panelSlot = slotForOverall(obs.rosterPicks[0].overall, teams);
       const slotMoved = state.anchoredSlot != null && panelSlot !== state.anchoredSlot
@@ -275,6 +276,38 @@ export function createDraftSession(cfg) {
           // read confirms — merging now could overwrite the very entry the
           // conflict is measured against.
           deferRosterMerge = true;
+        }
+      } else {
+        state.newDraftStreak = 0;
+      }
+    }
+    // DK Rosters-tab analog (TASK-352): DK renders no overalls on the Rosters
+    // tab, so the contradiction signal is set-level — a COMPLETE self-owned
+    // roster read (rows == fill tally) that is MISSING a held board-grade pick
+    // can only mean a different draft; within one draft a complete self-roster
+    // always contains every real pick. Same two-read streak as the UD path.
+    let deferRosterSetMerge = false;
+    const rosterSetComplete = !!(obs.rosterSet
+      && obs.rosterSet.tallyTotal != null
+      && obs.rosterSet.players.length === obs.rosterSet.tallyTotal);
+    const rosterSetIsMine = !!(obs.rosterSet && state.learnedUsername
+      && anchorUsernameMatches(state.learnedUsername, obs.rosterSet.username));
+    if (rosterSetComplete && rosterSetIsMine && slot()) {
+      const onScreen = new Set(obs.rosterSet.players.map(p => p.player.canonical));
+      // rosterSet-held picks count as contradiction evidence here (unlike the
+      // UD exact-overall check): set membership is pairing-independent, and a
+      // roster-glance-only draft holds nothing else to contradict against.
+      const missing = overallsForSlot(slot(), teams, rounds)
+        .map(o => state.ledger.get(o))
+        .filter(e => e && e.src !== 'event'
+          && !onScreen.has(e.player.canonical)).length;
+      if (missing >= 1) {
+        state.newDraftStreak++;
+        if (state.newDraftStreak >= 2) {
+          resetForNewDraft();
+          summary.newDraft = true;
+        } else {
+          deferRosterSetMerge = true;
         }
       } else {
         state.newDraftStreak = 0;
@@ -447,6 +480,36 @@ export function createDraftSession(cfg) {
       }
     }
     refreshSlotConflict();
+
+    // ---- DK Rosters tab → ledger (TASK-352). A complete self-owned roster
+    // set maps onto the slot's first-K snake overalls — the one DK source
+    // that recovers the user's picks without a Board visit. The SET is exact
+    // (identities feed myPicks, targets, correlation, availability); only the
+    // player↔round pairing is heuristic (ADP order ≈ pick order), written at
+    // a score board cells (1.0) and Last-Pick events (0.7) always override.
+    // Runs after slot inference so the frame that infers the slot also merges.
+    if (rosterSetComplete && rosterSetIsMine && !deferRosterSetMerge && slot()) {
+      const myOveralls = overallsForSlot(slot(), teams, rounds)
+        .slice(0, obs.rosterSet.tallyTotal);
+      const held = new Set([...state.ledger.values()].map(e => e.player.canonical));
+      const openOveralls = myOveralls.filter(o => !state.ledger.has(o));
+      const newcomers = obs.rosterSet.players
+        .filter(p => !held.has(p.player.canonical))
+        .sort((a, b) => (Number.isFinite(a.player.adp) ? a.player.adp : 9999)
+          - (Number.isFinite(b.player.adp) ? b.player.adp : 9999));
+      for (let i = 0; i < newcomers.length && i < openOveralls.length; i++) {
+        const overall = openOveralls[i];
+        state.ledger.set(overall, {
+          player: newcomers[i].player,
+          round: roundForOverall(overall, teams),
+          pickInRound: pickInRoundForOverall(overall, teams),
+          score: Math.min(newcomers[i].score, 0.55),
+          raw: newcomers[i].raw,
+          src: 'rosterSet',
+        });
+        summary.newBoardPicks++;
+      }
+    }
 
     // ---- Pick-confirmation card -> event-ledger append (fast-draft path).
     // Attribution needs a fresh position read in the same frame; the card
@@ -708,6 +771,16 @@ export function createDraftSession(cfg) {
 
     const counts = { QB: 0, RB: 0, WR: 0, TE: 0 };
     for (const p of picks) if (counts[p.position] != null) counts[p.position]++;
+    // Rosters-tab tally fallback (TASK-352): the fill tally can OCR clean
+    // before any roster row matches — show it rather than an all-zero bar.
+    if (!picks.length && state.learnedUsername) {
+      for (const [name, tally] of state.tallies) {
+        if (usernameMatches(state.learnedUsername, name)) {
+          for (const k of Object.keys(counts)) counts[k] = tally[k] ?? 0;
+          break;
+        }
+      }
+    }
 
     // No target grid outside the room — nothing actionable to show there.
     const showTargets = phase === 'tracking' || phase === 'onClock' || phase === 'onDeck';

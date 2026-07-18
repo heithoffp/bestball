@@ -23,7 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   buildRankedPlayers, buildTeamLookup, buildNameToAdpId, buildAdpLookup,
 } from './buildPlayers';
-import { buildFlatItems, applyFlatReorder, applyFilteredReorder, computeTierMaps, moveToRank } from './boardItems';
+import { applyPlayerReorder, applyFilteredReorder, computeTierMaps, moveToRank } from './boardItems';
 import { TierRail, InsertPill } from './TierRail';
 
 const VIEWS = ['overall', 'QB', 'RB', 'WR', 'TE'];
@@ -146,11 +146,6 @@ export default function BoardView({ platform }) {
 
   const isSearching = searchTerm.trim().length > 0;
 
-  const flatItems = useMemo(
-    () => (viewMode === 'overall' && !isSearching ? buildFlatItems(players, breaks) : []),
-    [viewMode, isSearching, players, breaks]
-  );
-
   const posPlayers = useMemo(
     () => (viewMode !== 'overall' && !isSearching
       ? players.filter(p => (p.slotName || '').toUpperCase() === viewMode)
@@ -167,11 +162,13 @@ export default function BoardView({ platform }) {
   }, [isSearching, searchTerm, viewMode, players]);
 
   /* ── reorder handlers ── */
+  // Overall board is a HOMOGENEOUS reorderable list (player rows only — tier rails
+  // and insert pills are per-row decorations, not list items), so from/to index
+  // the players array directly. See boardItems.applyPlayerReorder.
   const handleOverallReorder = useCallback(({ from, to }) => {
     setBoard(prev => {
-      const items = buildFlatItems(prev.players, prev.breaks);
-      const res = applyFlatReorder(items, from, to, prev.labels);
-      return res ? { players: res.players, breaks: res.breaks, labels: res.labels } : prev;
+      const res = applyPlayerReorder(prev.players, prev.breaks, prev.labels, from, to);
+      return res || prev;
     });
     setDirty(true);
   }, []);
@@ -303,35 +300,42 @@ export default function BoardView({ platform }) {
     );
   }, [overallRankById, breaks, rankInput, handleJumpToRank, handleDeleteBreak, handleInsertBreak]);
 
-  const renderFlatItem = useCallback(({ item }) => {
-    if (item.type === 'divider') {
-      return (
-        <TierRail
-          tierColor={getTierColor(item.tierNum)}
-          label={tierLabelFor(item.tierNum)}
-          ownerKey={item.ownerId}
-          editable
-          onLabelChange={handleLabelChange}
-          onDelete={handleDeleteBreak}
-        />
-      );
-    }
-    if (item.type === 'insert') {
-      return <InsertPill ownerId={item.ownerId} onInsert={handleInsertBreak} />;
-    }
-    const expanded = expandedId === item.player.id;
+  // Homogeneous overall list: every cell is a draggable player row. The tier rail
+  // (a break above this player) and the "+ Tier" insert pill (a same-tier gap
+  // below this player) render INSIDE the cell as decorations, keeping the drag
+  // list free of non-draggable items — the mixed-cell layout was crashing the
+  // native reorder path.
+  const renderOverallItem = useCallback(({ item: player, index }) => {
+    const isBreak = index > 0 && breaks.has(player.id);
+    const tierNum = tierByPlayer.get(player.id) || 1;
+    const expanded = expandedId === player.id;
+    const nextPlayer = players[index + 1];
+    // Insert pill sits between two same-tier players (i.e. the next player is not
+    // itself a break owner); its ownerId is the player the break would sit above.
+    const showInsertBelow = nextPlayer && !breaks.has(nextPlayer.id);
     return (
       <View>
+        {isBreak && (
+          <TierRail
+            tierColor={getTierColor(tierNum)}
+            label={tierLabelFor(tierNum)}
+            ownerKey={player.id}
+            editable
+            onLabelChange={handleLabelChange}
+            onDelete={handleDeleteBreak}
+          />
+        )}
         <DraggablePlayerRow
-          player={item.player}
-          rank={item.rank}
+          player={player}
+          rank={index + 1}
           expanded={expanded}
-          onPress={() => handleRowPress(item.player.id)}
+          onPress={() => handleRowPress(player.id)}
         />
-        {expanded && renderExpandedPanel(item.player)}
+        {expanded && renderExpandedPanel(player)}
+        {showInsertBelow && <InsertPill ownerId={nextPlayer.id} onInsert={handleInsertBreak} />}
       </View>
     );
-  }, [tierLabelFor, handleLabelChange, handleDeleteBreak, handleInsertBreak, expandedId, handleRowPress, renderExpandedPanel]);
+  }, [players, breaks, tierByPlayer, tierLabelFor, handleLabelChange, handleDeleteBreak, handleInsertBreak, expandedId, handleRowPress, renderExpandedPanel]);
 
   const renderPosItem = useCallback(({ item, index }) => (
     <DraggablePlayerRow
@@ -399,9 +403,9 @@ export default function BoardView({ platform }) {
         />
       ) : viewMode === 'overall' ? (
         <ReorderableList
-          data={flatItems}
-          keyExtractor={(item) => item.key}
-          renderItem={renderFlatItem}
+          data={players}
+          keyExtractor={(p) => p.id}
+          renderItem={renderOverallItem}
           onReorder={handleOverallReorder}
           contentContainerStyle={listPad}
           keyboardShouldPersistTaps="handled"

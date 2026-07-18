@@ -981,6 +981,8 @@
       // [{ username, slot }] from Board columns
       rosterTally: null,
       // { username, tally } from the Rosters-tab header
+      rosterSet: null,
+      // { username, players, tallyTotal } — Rosters-tab rows
       upcomingOveralls: [],
       picksAwayDivider: null,
       boardPicks: [],
@@ -1192,6 +1194,13 @@
         });
         obs.stats.matchedRows++;
       }
+    }
+    if (obs.rosterPanel && obs.rosterOwner && obs.rows.length) {
+      obs.rosterSet = {
+        username: obs.rosterOwner,
+        players: obs.rows.map(({ player, score, raw }) => ({ player, score, raw })),
+        tallyTotal: hasTally ? [...tallyPositions.values()].reduce((a, b) => a + b, 0) : null
+      };
     }
     const hasShowDrafted = texts.some((t) => PATTERNS2.showDrafted.test(t));
     const emptyQueue = texts.some((t) => PATTERNS2.emptyQueue.test(t));
@@ -1468,7 +1477,7 @@
       if ((obs.rosterPicks || []).length && state.learnedUsername && obs.rosterOwner && usernameMatches(state.learnedUsername, obs.rosterOwner)) {
         const conflicts = obs.rosterPicks.filter((rp) => {
           const e = state.ledger.get(rp.overall);
-          return e && e.src !== "event" && e.player.canonical !== rp.player.canonical;
+          return e && e.src !== "event" && e.src !== "rosterSet" && e.player.canonical !== rp.player.canonical;
         }).length;
         const panelSlot = slotForOverall(obs.rosterPicks[0].overall, teams);
         const slotMoved = state.anchoredSlot != null && panelSlot !== state.anchoredSlot && myPicks().length > 0;
@@ -1479,6 +1488,24 @@
             summary.newDraft = true;
           } else {
             deferRosterMerge = true;
+          }
+        } else {
+          state.newDraftStreak = 0;
+        }
+      }
+      let deferRosterSetMerge = false;
+      const rosterSetComplete = !!(obs.rosterSet && obs.rosterSet.tallyTotal != null && obs.rosterSet.players.length === obs.rosterSet.tallyTotal);
+      const rosterSetIsMine = !!(obs.rosterSet && state.learnedUsername && anchorUsernameMatches(state.learnedUsername, obs.rosterSet.username));
+      if (rosterSetComplete && rosterSetIsMine && slot()) {
+        const onScreen = new Set(obs.rosterSet.players.map((p) => p.player.canonical));
+        const missing = overallsForSlot(slot(), teams, rounds).map((o) => state.ledger.get(o)).filter((e) => e && e.src !== "event" && !onScreen.has(e.player.canonical)).length;
+        if (missing >= 1) {
+          state.newDraftStreak++;
+          if (state.newDraftStreak >= 2) {
+            resetForNewDraft();
+            summary.newDraft = true;
+          } else {
+            deferRosterSetMerge = true;
           }
         } else {
           state.newDraftStreak = 0;
@@ -1596,6 +1623,24 @@
         }
       }
       refreshSlotConflict();
+      if (rosterSetComplete && rosterSetIsMine && !deferRosterSetMerge && slot()) {
+        const myOveralls = overallsForSlot(slot(), teams, rounds).slice(0, obs.rosterSet.tallyTotal);
+        const held = new Set([...state.ledger.values()].map((e) => e.player.canonical));
+        const openOveralls = myOveralls.filter((o) => !state.ledger.has(o));
+        const newcomers = obs.rosterSet.players.filter((p) => !held.has(p.player.canonical)).sort((a, b) => (Number.isFinite(a.player.adp) ? a.player.adp : 9999) - (Number.isFinite(b.player.adp) ? b.player.adp : 9999));
+        for (let i = 0; i < newcomers.length && i < openOveralls.length; i++) {
+          const overall = openOveralls[i];
+          state.ledger.set(overall, {
+            player: newcomers[i].player,
+            round: roundForOverall(overall, teams),
+            pickInRound: pickInRoundForOverall(overall, teams),
+            score: Math.min(newcomers[i].score, 0.55),
+            raw: newcomers[i].raw,
+            src: "rosterSet"
+          });
+          summary.newBoardPicks++;
+        }
+      }
       if (obs.confirmCard && obs.confirmCard.raw !== state.lastConfirmKey) {
         state.lastConfirmKey = obs.confirmCard.raw;
         const overall = state.currentPick - 1;
@@ -1779,6 +1824,14 @@
       else headline = `Tracking \xB7 R${round} \xB7 P${state.currentPick}`;
       const counts = { QB: 0, RB: 0, WR: 0, TE: 0 };
       for (const p of picks) if (counts[p.position] != null) counts[p.position]++;
+      if (!picks.length && state.learnedUsername) {
+        for (const [name, tally] of state.tallies) {
+          if (usernameMatches(state.learnedUsername, name)) {
+            for (const k of Object.keys(counts)) counts[k] = tally[k] ?? 0;
+            break;
+          }
+        }
+      }
       const showTargets = phase === "tracking" || phase === "onClock" || phase === "onDeck";
       const targets = showTargets ? buildTargets(picks) : [];
       return {
@@ -1924,8 +1977,8 @@
   }
 
   // src/draft/extensionEngine.entry.js
-  var ENGINE_VERSION = "draftkings.1";
-  var ENGINE_BUILD = 4;
+  var ENGINE_VERSION = "draftkings.2";
+  var ENGINE_BUILD = 5;
   var session = null;
   var config = null;
   var pool = null;

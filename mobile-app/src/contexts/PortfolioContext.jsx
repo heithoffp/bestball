@@ -126,7 +126,7 @@ export function PortfolioProvider({ children }) {
         // Authenticated: the Chrome extension is the only roster data source.
         const userId = user.id;
         const entriesCache = await import('../../shared/utils/entriesCache');
-        const cached = forceFull ? null : entriesCache.readEntriesCache(userId);
+        const cached = forceFull ? null : await entriesCache.readEntriesCache(userId);
 
         if (cached) {
           // Cache-first render (ADR-030): the portfolio appears at local-CPU

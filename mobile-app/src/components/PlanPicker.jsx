@@ -2,7 +2,7 @@
 // IAP (ADR-028): Subscribe opens the system purchase sheet via purchasePro
 // instead of a Stripe checkout browser session. Promo codes are web-only (Apple
 // Offer Codes are a future path), so there is no promo field here. Plans mirror
-// the web PlanPicker ($20/mo, $67/yr) but are keyed by App Store product ID.
+// the web PlanPicker ($20/mo, $69.99/yr) but are keyed by App Store product ID.
 import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { X, Check } from 'lucide-react-native';
@@ -15,7 +15,7 @@ import { Button } from './ui';
 
 const PLANS = {
   monthly: { price: 20, label: 'Monthly', period: '/mo', productId: APPLE_PRO_MONTHLY_PRODUCT_ID },
-  seasonal: { price: 67, label: 'Annual', period: '/yr', badge: 'Save 72%', productId: APPLE_PRO_YEARLY_PRODUCT_ID },
+  seasonal: { price: 69.99, label: 'Annual', period: '/yr', badge: 'Save 71%', productId: APPLE_PRO_YEARLY_PRODUCT_ID },
 };
 
 export default function PlanPicker({ visible, onClose }) {

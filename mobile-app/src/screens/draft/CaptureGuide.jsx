@@ -1,18 +1,33 @@
 // CaptureGuide — the Draft Assistant's quiet "good to know" guidance (TASK-342,
 // ADR-026). Rendered under the setup rail pre-session and under the
-// LiveSessionPanel in-session. Four tip rows, no cards: fast drafts, the
+// LiveSessionPanel in-session. Five tip rows, no cards: fast drafts, the
 // platform's slow-draft recovery tip (Underdog: tap your username in the room
 // banner, with a real UD room-banner screenshot, TASK-328; DraftKings: glance
 // at the Board tab — every cell carries its exact pick number, TASK-350),
-// where the team lives (the mobile assistant is capture-only — it never
-// re-displays the roster in app), and the privacy line. No session or
+// the Lock Screen Live Activity (real glance screenshot + P·S·C·E column
+// legend), where the team lives (the mobile assistant is capture-only — it
+// never re-displays the roster in app), and the privacy line. No session or
 // portfolio state; safe pre- and in-session.
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import {
-  Zap, Hourglass, ShieldCheck, LayoutGrid,
+  Zap, Hourglass, ShieldCheck, LayoutGrid, Smartphone,
 } from 'lucide-react-native';
 import { colors, spacing, radii } from '../../theme';
+
+// RN's aspectRatio style is unreliable on <Image> here — the image lays out at
+// its intrinsic height and `cover` zooms the crop — so the height is computed
+// explicitly from the measured width instead.
+function ShotImage({ source, aspect }) {
+  const [width, setWidth] = useState(0);
+  return (
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <Image source={source} style={{ width, height: Math.round(width / aspect) }} />
+      )}
+    </View>
+  );
+}
 
 function TipRow({ icon, lead, last, extra, children }) {
   return (
@@ -37,16 +52,50 @@ function BannerShot() {
   return (
     <View>
       <View style={styles.bannerWrap}>
-        <Image
+        <ShotImage
           source={require('../../../assets/slow-draft-banner.png')}
-          style={styles.bannerImg}
-          resizeMode="cover"
+          aspect={1179 / 450}
         />
         <View style={styles.bannerRing} pointerEvents="none" />
       </View>
       <Text style={styles.bannerCaption}>
         Your card shows <Text style={styles.bannerCaptionStrong}>your username</Text> — tap it.
       </Text>
+    </View>
+  );
+}
+
+// Live Activity glance (assets/live-activity-glance.png, 1086x382 crop of a
+// real in-draft Lock Screen pill). The legend decodes the four metric columns
+// exactly as sessionEngine.buildTargets emits them (TASK-337).
+const GLANCE_LEGEND = [
+  ['P', 'Playoff game stack — the week (15–17) their team plays one of your picks. "15+" means multiple weeks.'],
+  ['S', '✓ when they stack with one of your picks (same team, QB involved).'],
+  ['C', 'Correlation — how often they already appear alongside your current picks across your synced rosters.'],
+  ['E', 'Exposure — the share of your synced rosters that hold this player.'],
+];
+
+function GlanceShot() {
+  return (
+    <View>
+      <View style={styles.bannerWrap}>
+        <ShotImage
+          source={require('../../../assets/live-activity-glance.png')}
+          aspect={1086 / 382}
+        />
+      </View>
+      <Text style={styles.bannerCaption}>
+        Top row: picks until you&apos;re up, plus the live pick
+        (<Text style={styles.bannerCaptionStrong}>P117 · R10</Text> = pick 117, round 10).
+        The grid is your six best available players by your rankings; the bottom line
+        counts your roster by position.
+      </Text>
+      {GLANCE_LEGEND.map(([key, txt]) => (
+        <View key={key} style={styles.legendRow}>
+          <Text style={styles.legendKey}>{key}</Text>
+          <Text style={styles.legendTxt}>{txt}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -79,6 +128,15 @@ export default function CaptureGuide({ platform = 'underdog' }) {
           and spots a brand-new draft on its own. No need to reset anything in the app.
         </TipRow>
       )}
+
+      <TipRow
+        icon={<Smartphone size={15} color={colors.accent} />}
+        lead="Your Lock Screen."
+        extra={<GlanceShot />}
+      >
+        While you record, a Live Activity keeps the whole draft on your Lock Screen —
+        no app-switching needed.
+      </TipRow>
 
       <TipRow icon={<LayoutGrid size={15} color={colors.textSecondary} />} lead="Your team.">
         Lives on {platformName} while the draft runs. Once your rosters sync, every BBE tab
@@ -113,7 +171,6 @@ const styles = StyleSheet.create({
   },
   // Real screenshot crop is 1179x450 (room header + full drafter-card row);
   // the ring hugs the user's own card — readable username, center of the crop.
-  bannerImg: { width: '100%', aspectRatio: 1179 / 450 },
   bannerRing: {
     position: 'absolute', left: '38.4%', width: '21.6%', top: '32.5%', height: '65.5%',
     borderWidth: 2, borderColor: colors.accent, borderRadius: 6,
@@ -122,4 +179,11 @@ const styles = StyleSheet.create({
     marginTop: 6, fontSize: 11, lineHeight: 15, color: colors.textMuted,
   },
   bannerCaptionStrong: { color: colors.accent, fontWeight: '700' },
+
+  legendRow: { flexDirection: 'row', gap: spacing.sm, marginTop: 6 },
+  legendKey: {
+    width: 14, fontSize: 11, fontWeight: '800', textAlign: 'center',
+    color: colors.accent,
+  },
+  legendTxt: { flex: 1, fontSize: 11, lineHeight: 15, color: colors.textMuted },
 });

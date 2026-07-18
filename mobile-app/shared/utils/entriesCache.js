@@ -35,14 +35,16 @@ function cursorOf(entries) {
  * (corrupt files are deleted so they can't wedge future launches).
  *
  * @param {string} userId
- * @returns {{ entries: Array, cursor: string|null }|null}
+ * @returns {Promise<{ entries: Array, cursor: string|null }|null>}
  */
-export function readEntriesCache(userId) {
+export async function readEntriesCache(userId) {
   if (!userId) return null;
   const file = cacheFile();
   try {
     if (!file.exists) return null;
-    const payload = JSON.parse(file.text());
+    // file.text() is async in expo-file-system 57 (textSync is the sync
+    // variant) — awaiting keeps the multi-MB read off the JS thread.
+    const payload = JSON.parse(await file.text());
     if (payload?.version !== CACHE_VERSION || payload?.userId !== userId
         || !Array.isArray(payload.entries)) {
       return null;

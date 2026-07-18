@@ -114,6 +114,7 @@ export function parseDraftKingsScreen(items, ctx) {
     lastPick: null,         // { nameRaw, team, pos, raw } at currentOverall − 1
     slotAnchors: [],        // [{ username, slot }] from Board columns
     rosterTally: null,      // { username, tally } from the Rosters-tab header
+    rosterSet: null,        // { username, players, tallyTotal } — Rosters-tab rows
     upcomingOveralls: [],
     picksAwayDivider: null,
     boardPicks: [],
@@ -367,6 +368,20 @@ export function parseDraftKingsScreen(items, ctx) {
       });
       obs.stats.matchedRows++;
     }
+  }
+
+  // ---- Rosters tab: matched rows + fill tally → roster-set observation ----
+  // DK's Rosters tab renders no pick numbers (RANK/ADP right rail only), so
+  // the set carries player identities, not overalls; the engine maps a
+  // complete self-owned set onto the slot's snake overalls (TASK-352).
+  if (obs.rosterPanel && obs.rosterOwner && obs.rows.length) {
+    obs.rosterSet = {
+      username: obs.rosterOwner,
+      players: obs.rows.map(({ player, score, raw }) => ({ player, score, raw })),
+      tallyTotal: hasTally
+        ? [...tallyPositions.values()].reduce((a, b) => a + b, 0)
+        : null,
+    };
   }
 
   // ---- Classification ----
