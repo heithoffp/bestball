@@ -1,13 +1,13 @@
 // CaptureGuide — the Draft Assistant's quiet "good to know" guidance (TASK-342,
 // ADR-026). Rendered under the setup rail pre-session and under the
-// LiveSessionPanel in-session. Five tip rows, no cards: fast drafts, the
-// platform's slow-draft recovery tip (Underdog: tap your username in the room
-// banner, with a real UD room-banner screenshot, TASK-328; DraftKings: glance
-// at the Board tab — every cell carries its exact pick number, TASK-350),
-// the Lock Screen Live Activity (real glance screenshot + P·S·C·E column
-// legend), where the team lives (the mobile assistant is capture-only — it
-// never re-displays the roster in app), and the privacy line. No session or
-// portfolio state; safe pre- and in-session.
+// LiveSessionPanel in-session. Five tip rows, no cards: the Lock Screen /
+// Dynamic Island Live Activity first (real glance screenshot + P·S·C·E column
+// legend), fast drafts, the platform's slow-draft recovery tip (Underdog: tap
+// your username in the room banner, with a real UD room-banner screenshot,
+// TASK-328; DraftKings: glance at the Board tab — every cell carries its exact
+// pick number, TASK-350), where the team lives (the mobile assistant is
+// capture-only — it never re-displays the roster in app), and the privacy
+// line. No session or portfolio state; safe pre- and in-session.
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import {
@@ -45,9 +45,10 @@ function TipRow({ icon, lead, last, extra, children }) {
 }
 
 // Real UD draft-room top banner (header + drafter cards; other drafters'
-// usernames pixelated, the user's own left readable): the accent ring marks
-// the user's own drafter card — the tap that anchors the slot (TASK-328) and
-// hands the new-draft auto-detect its roster panel.
+// usernames pixelated): the accent ring marks the user's own drafter card —
+// the tap that anchors the slot (TASK-328) and hands the new-draft auto-detect
+// its roster panel. The screenshot's real username is masked at render time by
+// a generic placeholder overlay so no personal account name ships in the UI.
 function BannerShot() {
   return (
     <View>
@@ -56,6 +57,16 @@ function BannerShot() {
           source={require('../../../assets/slow-draft-banner.png')}
           aspect={1179 / 450}
         />
+        <View style={styles.bannerNameMask} pointerEvents="none">
+          <Text
+            style={styles.bannerNameMaskTxt}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.4}
+          >
+            YOURUSERNAME
+          </Text>
+        </View>
         <View style={styles.bannerRing} pointerEvents="none" />
       </View>
       <Text style={styles.bannerCaption}>
@@ -107,6 +118,15 @@ export default function CaptureGuide({ platform = 'underdog' }) {
     <View style={styles.wrap}>
       <Text style={styles.eyebrow}>GOOD TO KNOW</Text>
 
+      <TipRow
+        icon={<Smartphone size={15} color={colors.accent} />}
+        lead="Your Lock Screen & Dynamic Island."
+        extra={<GlanceShot />}
+      >
+        While you record, a Live Activity keeps the whole draft on your Lock Screen
+        and in the Dynamic Island at the top of your screen. No app-switching needed.
+      </TipRow>
+
       <TipRow icon={<Zap size={15} color={colors.accent} />} lead="Fast drafts.">
         Nothing to manage. Keep recording and every pick lands on its own within seconds.
       </TipRow>
@@ -128,15 +148,6 @@ export default function CaptureGuide({ platform = 'underdog' }) {
           and spots a brand-new draft on its own. No need to reset anything in the app.
         </TipRow>
       )}
-
-      <TipRow
-        icon={<Smartphone size={15} color={colors.accent} />}
-        lead="Your Lock Screen."
-        extra={<GlanceShot />}
-      >
-        While you record, a Live Activity keeps the whole draft on your Lock Screen.
-        No app-switching needed.
-      </TipRow>
 
       <TipRow icon={<LayoutGrid size={15} color={colors.textSecondary} />} lead="Your team.">
         Lives on {platformName} while the draft runs. Once your rosters sync, every BBE tab
@@ -174,6 +185,16 @@ const styles = StyleSheet.create({
   bannerRing: {
     position: 'absolute', left: '38.4%', width: '21.6%', top: '32.5%', height: '65.5%',
     borderWidth: 2, borderColor: colors.accent, borderRadius: 6,
+  },
+  // Covers the real account name baked into the screenshot (x≈470–692,
+  // y≈254–282 of the 1179x450 crop) with a generic placeholder.
+  bannerNameMask: {
+    position: 'absolute', left: '39.2%', width: '20%', top: '55.3%', height: '8.2%',
+    backgroundColor: '#0b0b0b', alignItems: 'center', justifyContent: 'center',
+  },
+  bannerNameMaskTxt: {
+    color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.3,
+    textAlign: 'center',
   },
   bannerCaption: {
     marginTop: 6, fontSize: 11, lineHeight: 15, color: colors.textMuted,
