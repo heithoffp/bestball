@@ -22,16 +22,16 @@ const HELP = {
       <HelpSection heading="Chart Controls">Scope the page: platform (Both overlays Underdog solid vs DraftKings dashed) and the time window that clips the chart and drives Trend calculations.</HelpSection>
       <HelpSection heading="Watchlist">The players on the chart, each with current ADP and trend. Tap × to remove, or Top 5 to grab the top of the table. Up to 10 at once.</HelpSection>
       <HelpSection heading="My Pick Ranges">Overlays a quartile band on the chart showing where you actually picked each player.</HelpSection>
-      <HelpSection heading="Player Table">Tap a row to add or remove that player from the chart. Trend = ADP movement over the selected window — rising means going earlier in drafts. Value = your average pick minus current ADP.</HelpSection>
+      <HelpSection heading="Player Table">Tap a row to add or remove that player from the chart. Trend = ADP movement over the selected window. Rising means going earlier in drafts. Value = your average pick minus current ADP.</HelpSection>
     </>
   ),
   rankings: (
     <>
       <HelpSection heading="Your Board">Each platform keeps its own saved order. The board seeds from current ADP until you save your own.</HelpSection>
-      <HelpSection heading="Reordering">Tap a player to open move controls — single/±5 steps or type an exact rank.</HelpSection>
+      <HelpSection heading="Reordering">Tap a player to open move controls: single/±5 steps or type an exact rank.</HelpSection>
       <HelpSection heading="Tier Breaks">Colored rails split the board into tiers. Add a break above any player from its move panel; tap × on a rail to remove it.</HelpSection>
       <HelpSection heading="Save & Export">Save persists to your account (the Chrome extension reads the same rankings). Export shares the CSV. CSV upload lives on the website.</HelpSection>
-      <HelpSection heading="Compare">Your rank vs live ADP — biggest disagreements first. Positive Δ = the market drafts them later than you rank them.</HelpSection>
+      <HelpSection heading="Compare">Your rank vs live ADP, biggest disagreements first. Positive Δ = the market drafts them later than you rank them.</HelpSection>
     </>
   ),
 };

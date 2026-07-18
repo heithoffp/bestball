@@ -26,9 +26,9 @@
 <body>
   <div class="container">
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: July 2, 2026</p>
+    <p class="updated">Last updated: July 18, 2026</p>
 
-    <p>Best Ball Exposures ("we", "our", "us") operates the Best Ball Exposures web application at <a href="https://bestballexposures.com">bestballexposures.com</a>, the Best Ball Exposures Chrome extension, and the Best Ball Arena. This policy explains what data we access, store, and publish, and the choices you have.</p>
+    <p>Best Ball Exposures ("we", "our", "us") operates the Best Ball Exposures web application at <a href="https://bestballexposures.com">bestballexposures.com</a>, the Best Ball Exposures iOS mobile app, the Best Ball Exposures Chrome extension, and the Best Ball Arena. This policy explains what data we access, store, and publish, and the choices you have.</p>
 
     <h2>What the Chrome Extension Does</h2>
     <p>The Best Ball Exposures Chrome extension enhances your drafting experience on supported platforms (Underdog Fantasy, DraftKings) by displaying your portfolio exposure data alongside the draft board. It reads draft-room information visible to you on these sites — including the rosters in your draft pods — and, when you are signed in, syncs that roster data to your account so the web app and the Arena can use it.</p>
@@ -54,6 +54,28 @@
       <li><strong>Subscription and payment status</strong> — managed through Stripe. We do not store your full card details; Stripe processes payments and returns only subscription status to us.</li>
     </ul>
     <p>This data is stored securely in Supabase and is used to provide the service. Without an account, all data remains local to your browser via IndexedDB.</p>
+
+    <h3>iOS Mobile App</h3>
+    <p>The Best Ball Exposures iOS app provides the same portfolio views, rankings, Arena, and a live-draft companion. When you use the app we may collect:</p>
+    <ul>
+      <li><strong>Account information</strong> — you can sign in with email and password, <strong>Sign in with Apple</strong>, or <strong>Google Sign-In</strong>. Depending on the method you choose, we receive your email address and, where you permit it, your name. These are used solely to create and authenticate your account.</li>
+      <li><strong>Portfolio and rankings data</strong> — your synced rosters and custom rankings, stored in Supabase and tied to your account so they are available across the service.</li>
+      <li><strong>Purchase history</strong> — subscriptions purchased in the app are processed by Apple through the App Store (see "Payments"). We store your subscription status linked to your account; we never receive or store your card details.</li>
+      <li><strong>No advertising identifiers</strong> — the app does not collect the IDFA or any advertising identifier, and includes no third-party analytics, advertising, or tracking SDKs.</li>
+    </ul>
+
+    <h4 style="color:#C8D0DC;font-size:0.95rem;margin-top:0.75rem;margin-bottom:0.3rem;">Live-Draft Capture (On Device)</h4>
+    <p>The app's live-draft companion reads the draft board on your screen while you draft on a supported platform, using on-device text recognition to identify picks. This screen content is processed <strong>entirely on your device</strong> to power the companion and is <strong>not transmitted to our servers or any third party</strong>. You start and stop this capture yourself.</p>
+
+    <h4 style="color:#C8D0DC;font-size:0.95rem;margin-top:0.75rem;margin-bottom:0.3rem;">Notifications &amp; Live Activities</h4>
+    <p>With your permission, the app uses push notifications and iOS Live Activities to show live-draft status. The associated device push token is used only to deliver these updates and is not used for advertising or tracking.</p>
+
+    <h2>Payments</h2>
+    <p>Subscriptions are billed through the platform you purchase on:</p>
+    <ul>
+      <li><strong>Web</strong> — payments are processed by <strong>Stripe</strong>. We do not store your full card details; Stripe processes payments and returns only subscription status to us.</li>
+      <li><strong>iOS app</strong> — purchases are processed by <strong>Apple</strong> through the App Store using in-app purchase. Apple handles the transaction; we never see your payment details and receive only your resulting subscription status.</li>
+    </ul>
 
     <h2>Rosters From Your Drafts</h2>
     <p>Best-ball drafts are pods of multiple entrants. When you sync a draft, the draft data visible to you includes every roster in that pod — yours and your opponents'. We store these opponent rosters ("board teams") to power opponent context in your portfolio views and to populate the Best Ball Arena.</p>
@@ -83,16 +105,18 @@
 
     <h2>Third-Party Services</h2>
     <ul>
-      <li><strong>Supabase</strong> — authentication and cloud storage for roster and Arena data</li>
-      <li><strong>Stripe</strong> — subscription billing and payment processing</li>
-      <li><strong>Vercel Analytics</strong> — anonymous, cookie-free page-view metrics (no personal data)</li>
+      <li><strong>Supabase</strong> — authentication and cloud storage for roster and Arena data (web and app)</li>
+      <li><strong>Stripe</strong> — subscription billing and payment processing (web)</li>
+      <li><strong>Apple</strong> — Sign in with Apple and in-app purchase processing (iOS app)</li>
+      <li><strong>Google</strong> — Google Sign-In authentication (iOS app)</li>
+      <li><strong>Vercel Analytics</strong> — anonymous, cookie-free page-view metrics on the website only, with no personal data. The iOS app includes no analytics or tracking services.</li>
     </ul>
 
     <h2>Your Choices &amp; Data Removal</h2>
     <ul>
       <li><strong>Arena enrollment</strong> — remove your own teams from the Arena at any time via the enrollment switch in the app.</li>
       <li><strong>Takedown requests</strong> — request removal of any roster from the Arena by emailing us.</li>
-      <li><strong>Account deletion</strong> — request deletion of your account and synced data by emailing us.</li>
+      <li><strong>Account deletion</strong> — delete your account and synced data directly in the iOS app, or request deletion by emailing us.</li>
     </ul>
 
     <h2>Changes to This Policy</h2>

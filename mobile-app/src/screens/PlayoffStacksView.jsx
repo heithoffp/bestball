@@ -97,7 +97,7 @@ export default function PlayoffStacksView({ rosters, totalRosters, minCount = 1,
       </View>
       <Text style={[type.muted, { marginBottom: spacing.md }]}>
         {selectedWeek
-          ? `Showing Week ${selectedWeek} — tap it again to show all weeks. `
+          ? `Showing Week ${selectedWeek}. Tap it again to show all weeks. `
           : 'Tap a week to filter Games, Teams, and Rosters to it. '}
         {naked} roster{naked === 1 ? '' : 's'} with no W15–17 game stack. Meaningful stacks = cross-team QB/WR/TE pairings (RB and TE↔TE excluded).
       </Text>

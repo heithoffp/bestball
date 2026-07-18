@@ -41,7 +41,7 @@ const HELP = {
     <>
       <HelpSection heading="Stacks">Every QB you drafted and the same-team pass-catchers paired with them. Each colored segment is a unique stack combo.</HelpSection>
       <HelpSection heading="QB Pairs">Every QB pairing rostered together, ranked by frequency.</HelpSection>
-      <HelpSection heading="Similarity">Most overlapping roster pairs — high overlap means concentrated risk.</HelpSection>
+      <HelpSection heading="Similarity">Most overlapping roster pairs. High overlap means concentrated risk.</HelpSection>
       <HelpSection heading="Playoffs">Which W15–17 matchups you're leveraged on, every team's playoff schedule with your stack rate, and per-roster coverage.</HelpSection>
       <HelpSection heading="Explorer">Players arranged by ADP. Shading shows how often each player was drafted next across real tracked drafts. Pick 4 to see how common your opening is.</HelpSection>
     </>

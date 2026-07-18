@@ -1,11 +1,10 @@
 // ui.jsx — shared UI primitives for all screens (mobile analogues of the web
 // app's cards / pills / filter chips / stat tiles).
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, Image, StyleSheet, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, ScrollView } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { colors, spacing, radii, type, posBg } from '../theme';
 import { posColor } from '../../shared/utils/positionColors';
-import { headshotUrl, teamLogoUrl } from '../../shared/utils/headshots';
 
 export function Card({ children, style, onPress }) {
   const body = (
@@ -119,11 +118,8 @@ export function StatTile({ label, value, sub, accent, style }) {
   );
 }
 
-/** Player headshot with position-colored monogram fallback. */
-export function PlayerAvatar({ name, position, team, size = 34 }) {
-  const [failed, setFailed] = useState(false);
-  const isDef = /^(DEF|DST)$/i.test(String(position || ''));
-  const url = isDef ? teamLogoUrl(team) : headshotUrl(name, position);
+/** Player avatar: position-colored monogram (initials on a position-tinted disc). */
+export function PlayerAvatar({ name, position, size = 34 }) {
   const initials = String(name || '?').split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   const c = posColor(String(position || '').toUpperCase());
   return (
@@ -132,14 +128,7 @@ export function PlayerAvatar({ name, position, team, size = 34 }) {
       backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center',
       borderWidth: 1.5, borderColor: c,
     }}>
-      <Text style={{ color: c, fontWeight: '700', fontSize: size * 0.36, position: 'absolute' }}>{initials}</Text>
-      {url && !failed && (
-        <Image
-          source={{ uri: url }}
-          style={{ width: size, height: size }}
-          onError={() => setFailed(true)}
-        />
-      )}
+      <Text style={{ color: c, fontWeight: '700', fontSize: size * 0.36 }}>{initials}</Text>
     </View>
   );
 }

@@ -59,7 +59,7 @@ function BannerShot() {
         <View style={styles.bannerRing} pointerEvents="none" />
       </View>
       <Text style={styles.bannerCaption}>
-        Your card shows <Text style={styles.bannerCaptionStrong}>your username</Text> — tap it.
+        Your card shows <Text style={styles.bannerCaptionStrong}>your username</Text>. Tap it.
       </Text>
     </View>
   );
@@ -69,10 +69,10 @@ function BannerShot() {
 // real in-draft Lock Screen pill). The legend decodes the four metric columns
 // exactly as sessionEngine.buildTargets emits them (TASK-337).
 const GLANCE_LEGEND = [
-  ['P', 'Playoff game stack — the week (15–17) their team plays one of your picks. "15+" means multiple weeks.'],
+  ['P', 'Playoff game stack: the week (15–17) their team plays one of your picks. "15+" means multiple weeks.'],
   ['S', '✓ when they stack with one of your picks (same team, QB involved).'],
-  ['C', 'Correlation — how often they already appear alongside your current picks across your synced rosters.'],
-  ['E', 'Exposure — the share of your synced rosters that hold this player.'],
+  ['C', 'Correlation: how often they already appear alongside your current picks across your synced rosters.'],
+  ['E', 'Exposure: the share of your synced rosters that hold this player.'],
 ];
 
 function GlanceShot() {
@@ -108,14 +108,14 @@ export default function CaptureGuide({ platform = 'underdog' }) {
       <Text style={styles.eyebrow}>GOOD TO KNOW</Text>
 
       <TipRow icon={<Zap size={15} color={colors.accent} />} lead="Fast drafts.">
-        Nothing to manage — keep recording and every pick lands on its own within seconds.
+        Nothing to manage. Keep recording and every pick lands on its own within seconds.
       </TipRow>
 
       {dk ? (
         <TipRow icon={<Hourglass size={15} color={colors.accent} />} lead="Slow drafts.">
           Coming back hours later? Glance at the Board tab: every cell carries its exact
-          pick number, so BBE refills the whole draft — your slot, your roster, everyone
-          else&apos;s picks — in a single look.
+          pick number, so BBE refills the whole draft (your slot, your roster, everyone
+          else&apos;s picks) in a single look.
         </TipRow>
       ) : (
         <TipRow
@@ -123,7 +123,7 @@ export default function CaptureGuide({ platform = 'underdog' }) {
           lead="Slow drafts."
           extra={<BannerShot />}
         >
-          Coming back hours later — or jumping into your next draft? Tap your username
+          Coming back hours later, or jumping into your next draft? Tap your username
           in the room&apos;s top banner: BBE locks in your slot, refills your roster,
           and spots a brand-new draft on its own. No need to reset anything in the app.
         </TipRow>
@@ -134,8 +134,8 @@ export default function CaptureGuide({ platform = 'underdog' }) {
         lead="Your Lock Screen."
         extra={<GlanceShot />}
       >
-        While you record, a Live Activity keeps the whole draft on your Lock Screen —
-        no app-switching needed.
+        While you record, a Live Activity keeps the whole draft on your Lock Screen.
+        No app-switching needed.
       </TipRow>
 
       <TipRow icon={<LayoutGrid size={15} color={colors.textSecondary} />} lead="Your team.">
@@ -144,7 +144,7 @@ export default function CaptureGuide({ platform = 'underdog' }) {
       </TipRow>
 
       <TipRow icon={<ShieldCheck size={15} color={colors.positive} />} lead="Private by design." last>
-        Every frame is read on your device and instantly discarded — screenshots never
+        Every frame is read on your device and instantly discarded. Screenshots never
         leave your phone.
       </TipRow>
     </View>

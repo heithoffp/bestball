@@ -53,7 +53,7 @@ export default function ScreenScaffold({ title, help, children, right, waitForDa
         <View style={styles.helpBackdrop}>
           <View style={styles.helpSheet}>
             <View style={styles.helpHeader}>
-              <Text style={type.h2}>{title} — Help</Text>
+              <Text style={type.h2}>{title} · Help</Text>
               <Pressable onPress={() => setHelpOpen(false)} hitSlop={10}>
                 <X size={20} color={colors.textSecondary} />
               </Pressable>

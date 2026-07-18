@@ -554,7 +554,7 @@ export default function AdpTrackerView() {
               />
               <Text style={type.muted}>{sortConfig.direction === 'asc' ? '▲' : '▼'}</Text>
             </View>
-            {atCap && <Text style={[type.muted, { marginBottom: 4 }]}>Chart full — remove a player to add another.</Text>}
+            {atCap && <Text style={[type.muted, { marginBottom: 4 }]}>Chart full. Remove a player to add another.</Text>}
           </View>
         }
         ListEmptyComponent={<Text style={[type.secondary, { textAlign: 'center', padding: spacing.xl }]}>No players match.</Text>}

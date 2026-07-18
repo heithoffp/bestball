@@ -211,7 +211,7 @@ export default function CompareView() {
     return (
       <View style={{ padding: spacing.xl }}>
         <Text style={type.secondary}>
-          No rankings or ADP loaded for either platform — sync data or save a board first.
+          No rankings or ADP loaded for either platform. Sync data or save a board first.
         </Text>
       </View>
     );
@@ -282,7 +282,7 @@ export default function CompareView() {
           </Pressable>
         </View>
         <Text style={[type.muted, { marginBottom: spacing.sm }]}>
-          Your rank on each platform — tap a player to trace them across boards.
+          Your rank on each platform. Tap a player to trace them across boards.
           {selectedDelta != null ? `  Δ ${selectedDelta > 0 ? '+' : ''}${selectedDelta} (UD → DK)` : ''}
           {' '}Edit order on the board view.
         </Text>

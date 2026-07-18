@@ -231,7 +231,7 @@ export async function startSession({
       // hasn't landed; harmless duplication otherwise (TASK-338).
       writeSharedValue(PUSH_TOKEN_KEY, state.pushToken);
     } else {
-      pushLog('No push token — glance updates only while BBE is open');
+      pushLog('No push token. Glance updates only while BBE is open');
     }
   }
   // Hand the current parse engine to the broadcast extension (ADR-023) BEFORE
@@ -285,7 +285,7 @@ export async function startSession({
     pollExtension();
   });
 
-  pushLog('Session armed — tap record, confirm Start Broadcast, then draft');
+  pushLog('Session armed. Tap record, confirm Start Broadcast, then draft');
   notify();
   return true;
 }
@@ -351,7 +351,7 @@ async function ensureActivityAlive() {
     }));
   }
   state.activityError = null;
-  pushLog('Live Activity restarted — it was ended by iOS or dismissed');
+  pushLog('Live Activity restarted. It was ended by iOS or dismissed');
   notify();
 }
 
@@ -381,7 +381,7 @@ function absorbExtensionState() {
       // reseeded the app-side session — just tell the user.
       if (s.draftGen !== state.lastDraftGen) {
         state.lastDraftGen = s.draftGen;
-        pushLog('New draft detected — board reset automatically');
+        pushLog('New draft detected. Board reset automatically');
         haptic('success');
       }
       // Persist the merged state back so a broadcast RESTART resumes warm —
@@ -400,7 +400,7 @@ function absorbExtensionState() {
       // One-time note when we've joined a draft already underway.
       if (s.isResume && !state.resumeLogged) {
         state.resumeLogged = true;
-        pushLog(`Resumed mid-draft — ${s.picksAtStart} picks already on the board`);
+        pushLog(`Resumed mid-draft: ${s.picksAtStart} picks already on the board`);
       }
       pushLog(`capture · P${s.currentPick}${s.picksUntil != null ? ` · up in ${s.picksUntil}` : ''} · ${s.ledgerSize} picks known`);
       // Remember the auto-learned username for the next draft (per platform).
@@ -508,7 +508,7 @@ export function resetDraftBoard() {
     const res = updateActivity(stampedGlance('waiting'));
     if (!res.ok) state.activityError = res.error;
   }
-  pushLog('Board reset — ready for the next draft room');
+  pushLog('Board reset. Ready for the next draft room');
   haptic('success');
   notify();
   return true;

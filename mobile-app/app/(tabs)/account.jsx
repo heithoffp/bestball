@@ -20,8 +20,8 @@ import { WEB_APP_URL, INSTALL_URL, BLOG_URL, X_URL } from '../../shared/config';
 
 const HELP = (
   <>
-    <HelpSection heading="One account everywhere">Your BestBallExposures.com account works here — rosters synced by the Chrome extension and saved rankings load automatically.</HelpSection>
-    <HelpSection heading="Subscribe in the app">Upgrade to Pro right here — billed through your Apple ID, and the same subscription unlocks the website too. Manage or cancel anytime in iOS Settings.</HelpSection>
+    <HelpSection heading="One account everywhere">Your BestBallExposures.com account works here. Rosters synced by the Chrome extension and saved rankings load automatically.</HelpSection>
+    <HelpSection heading="Subscribe in the app">Upgrade to Pro right here, billed through your Apple ID, and the same subscription unlocks the website too. Manage or cancel anytime in iOS Settings.</HelpSection>
     <HelpSection heading="Desktop steps">Roster sync (Chrome extension) and rankings CSV upload happen on your computer. Everything else lives in the app.</HelpSection>
   </>
 );
@@ -113,7 +113,7 @@ export default function AccountTab() {
     if (!email) { setNotice('Enter your email first.'); return; }
     setBusy(true);
     const { error } = await resetPassword(email.trim());
-    setNotice(error ? null : 'Password reset email sent — the link opens the website.');
+    setNotice(error ? null : 'Password reset email sent. The link opens the website.');
     setBusy(false);
   };
 
@@ -248,7 +248,7 @@ export default function AccountTab() {
               ? isUsingDemoData
                 ? 'Viewing bundled demo data.'
                 : `${new Set(rosterData.map(r => r.entry_id)).size} rosters synced from the Chrome extension.`
-              : 'No rosters yet — sync happens on your desktop with the Chrome extension.'}
+              : 'No rosters yet. Sync happens on your desktop with the Chrome extension.'}
           </Text>
           <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
             <Row icon={Puzzle} label="Extension install guide (desktop)" onPress={() => WebBrowser.openBrowserAsync(INSTALL_URL)} />

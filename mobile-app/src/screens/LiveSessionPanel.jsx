@@ -38,7 +38,7 @@ function WarnRow({ color = colors.negative, children }) {
 const preflightPoints = platformName => [
   `Reads only the ${platformName} draft board to follow your picks.`,
   'Processes each frame on your device, then discards it instantly.',
-  'Sends only draft data (picks, your slot) — never screenshots, notifications, or messages.',
+  'Sends only draft data (picks, your slot), never screenshots, notifications, or messages.',
 ];
 
 function PreflightExplainer({ visible, onStart, onCancel, platformName = 'Underdog' }) {
@@ -52,7 +52,7 @@ function PreflightExplainer({ visible, onStart, onCancel, platformName = 'Underd
           </View>
           <Text style={styles.preflightBody}>
             iOS will ask to record your screen next. That prompt is Apple's standard wording and it
-            covers every app — but here's exactly what BBE does:
+            covers every app, but here's exactly what BBE does:
           </Text>
           <View style={{ gap: 6, marginTop: 8 }}>
             {preflightPoints(platformName).map((line) => (
@@ -146,7 +146,7 @@ export default function LiveSessionPanel() {
               <>
                 Tap record → <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Start Broadcast</Text> →
                 switch to {platformName}. BBE follows the board from there.
-                On-device only — every frame is read and instantly discarded.
+                On-device only. Every frame is read and instantly discarded.
               </>
             ) : (
               <>
@@ -154,7 +154,7 @@ export default function LiveSessionPanel() {
                 <Text style={{ color: colors.textPrimary, fontWeight: '700' }}> Screen Recording</Text>, choose
                 <Text style={{ color: colors.textPrimary, fontWeight: '700' }}> BBE Draft Capture</Text>, then Start Broadcast.
                 If it isn't listed, install the latest EAS build.
-                On-device only — every frame is read and instantly discarded.
+                On-device only. Every frame is read and instantly discarded.
               </>
             )}
           </Text>
@@ -178,7 +178,7 @@ export default function LiveSessionPanel() {
         <View style={styles.roomRow}>
           <DoorOpen size={12} color={colors.textMuted} />
           <Text style={[styles.resumeTxt, { color: colors.textSecondary }]}>
-            Waiting to enter a draft room — open your draft in {platformName}
+            Waiting to enter a draft room. Open your draft in {platformName}
           </Text>
         </View>
       )}
@@ -187,14 +187,14 @@ export default function LiveSessionPanel() {
           <DoorOpen size={12} color={GOLD} />
           <Text style={[styles.resumeTxt, { color: GOLD }]}>
             Left the draft room
-            {(status.ledgerSize > 0 || status.inferredGone > 0) ? ' — board state held' : ''}
+            {(status.ledgerSize > 0 || status.inferredGone > 0) ? '. Board state held' : ''}
           </Text>
           {(status.ledgerSize > 0 || status.inferredGone > 0) && (
             <Pressable
               style={styles.resetBtn}
               onPress={() => Alert.alert(
                 'Reset for next draft?',
-                'Usually not needed — opening your next draft and tapping your username card resets the board automatically. This clears it manually: picks and availability drop; your username, rankings, and exposures are kept.',
+                'Usually not needed. Opening your next draft and tapping your username card resets the board automatically. This clears it manually: picks and availability drop; your username, rankings, and exposures are kept.',
                 [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Reset board', style: 'destructive', onPress: () => resetDraftBoard() },
@@ -228,7 +228,7 @@ export default function LiveSessionPanel() {
                 try {
                   const path = getFrameLogPath();
                   if (!path) {
-                    setDebugText('No frame recording found — the extension writes it during a live broadcast (needs the task329.3+ build).');
+                    setDebugText('No frame recording found. The extension writes it during a live broadcast (needs the task329.3+ build).');
                     return;
                   }
                   // eslint-disable-next-line global-require
@@ -260,19 +260,19 @@ export default function LiveSessionPanel() {
           )}
           {engineStale && (
             <WarnRow>
-              The broadcast extension is running an OLD engine build — parsing fixes are not live.
+              The broadcast extension is running an OLD engine build. Parsing fixes are not live.
               Install the latest EAS build to update it (Metro reload is not enough).
             </WarnRow>
           )}
           {!activityStarted && <WarnRow>Live Activity failed: {activityError || 'unknown'}</WarnRow>}
           {activityStarted && activityError && (
             <WarnRow color={GOLD}>
-              Live Activity issue: {activityError} — trying to restore it automatically.
+              Live Activity issue: {activityError}. Trying to restore it automatically.
             </WarnRow>
           )}
           {activityStarted && !pushToken && (
             <WarnRow color={GOLD}>
-              No push token — the Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).
+              No push token. The Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).
             </WarnRow>
           )}
           <View style={{ marginTop: 6, gap: 2 }}>

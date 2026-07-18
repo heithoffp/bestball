@@ -83,7 +83,7 @@ export default function ArenaMyTeams({ rosterData, masterPlayers }) {
         <Text style={[type.secondary, { lineHeight: 19, flex: 1 }]}>
           {enrolled
             ? `Your ${FEATURED_TOURNAMENT.label} teams are in the Arena: they appear (anonymously) in the blind vote pool and on the leaderboard. Owners are never shown while voting.`
-            : 'Your teams are out of the Arena — none of them appear in the vote pool or on the leaderboard. Their ratings are kept for if you return.'}
+            : 'Your teams are out of the Arena. None of them appear in the vote pool or on the leaderboard. Their ratings are kept for if you return.'}
         </Text>
         <Pressable onPress={toggle} disabled={busy} style={[styles.enrollBtn, enrolled ? styles.leaveBtn : styles.rejoinBtn]}>
           <Text style={[styles.enrollBtnText, enrolled ? { color: colors.textSecondary } : { color: colors.textInverse }]}>

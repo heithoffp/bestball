@@ -250,7 +250,7 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, projTo
     return <StateBox icon={<Swords size={30} color={colors.accent} />} title="The Arena is warming up" body="Head-to-head voting isn't available here yet. Check back once the Arena is live." />;
   }
   if (status === 'empty') {
-    return <StateBox icon={<Trophy size={30} color={colors.accent} />} title="No matchups yet" body="Not enough Best Ball Mania VII teams are in the Arena yet. Be among the first — sync your teams and start the competition." cta={onGoToMyTeams ? 'Enter your teams' : null} onCta={onGoToMyTeams} />;
+    return <StateBox icon={<Trophy size={30} color={colors.accent} />} title="No matchups yet" body="Not enough Best Ball Mania VII teams are in the Arena yet. Be among the first: sync your teams and start the competition." cta={onGoToMyTeams ? 'Enter your teams' : null} onCta={onGoToMyTeams} />;
   }
   if (status === 'rate_limited') {
     return <StateBox icon={<RefreshCw size={30} color={colors.accent} />} title="Slow down a sec" body="You're voting quickly. Take a breath, then grab the next matchup." cta="Next matchup" onCta={fetchNext} />;
@@ -368,10 +368,10 @@ export default function ArenaVote({ onGoToMyTeams, adpLookup, projLookup, projTo
           <View>
             <Text style={styles.revealNote}>
               {guestCapped
-                ? 'Guest voting limit reached — keep playing, but picks no longer move the ratings.'
+                ? 'Guest voting limit reached. Keep playing, but picks no longer move the ratings.'
                 : result
-                  ? (result.upset ? 'Upset pick — the ratings had it the other way.' : 'Vote counted — next up.')
-                  : 'Pick locked in — next up.'}
+                  ? (result.upset ? 'Upset pick. The ratings had it the other way.' : 'Vote counted. Next up.')
+                  : 'Pick locked in. Next up.'}
             </Text>
             <View style={styles.dockRow}>
               {guestCapped && onGoToMyTeams ? (

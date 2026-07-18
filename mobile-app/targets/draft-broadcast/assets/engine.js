@@ -1817,7 +1817,7 @@
       else if (phase === "done") headline = "Draft complete";
       else if (phase === "waiting") headline = "Waiting to enter draft";
       else if (phase === "away") {
-        headline = state.ledger.size || state.inferredGone.size ? `Left draft room \u2014 R${round} \xB7 P${state.currentPick} held` : "Left draft room";
+        headline = state.ledger.size || state.inferredGone.size ? `Left draft room \xB7 R${round} \xB7 P${state.currentPick} held` : "Left draft room";
       } else if (phase === "onClock") headline = "You're on the clock!";
       else if (phase === "onDeck") headline = "You're up next";
       else if (picksUntil > 0) headline = `Up in ${picksUntil} picks`;

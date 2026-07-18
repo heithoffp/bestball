@@ -22,7 +22,7 @@ export default function LockedFeature({ featureName }) {
       <Text style={[type.h2, { marginTop: spacing.lg }]}>{featureName} is a Pro feature</Text>
       <Text style={[type.secondary, { textAlign: 'center', marginTop: spacing.sm, lineHeight: 20, maxWidth: 300 }]}>
         {user
-          ? 'Upgrade to Pro to unlock this tab — the same subscription works on BestBallExposures.com.'
+          ? 'Upgrade to Pro to unlock this tab. The same subscription works on BestBallExposures.com.'
           : 'Sign in to your Best Ball Exposures account, or create one, to get started.'}
       </Text>
       <View style={{ marginTop: spacing.xl, gap: spacing.sm, alignSelf: 'stretch', paddingHorizontal: spacing.xl }}>

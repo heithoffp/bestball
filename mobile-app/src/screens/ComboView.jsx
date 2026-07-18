@@ -586,7 +586,7 @@ export default function ComboView() {
             </View>
           )}
           <Text style={[type.muted, { marginBottom: spacing.sm }]}>
-            Most overlapping roster pairs — high overlap = concentrated risk.
+            Most overlapping roster pairs. High overlap = concentrated risk.
           </Text>
         </View>
         <FlatList

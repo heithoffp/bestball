@@ -19,17 +19,17 @@ import { spacing } from '../../src/theme';
 const HELP = {
   assistant: (
     <>
-      <HelpSection heading="How it works">Enter your Underdog username, start a session, tap record, then just draft in Underdog. BBE reads the draft board on your device and follows along — your picks, the room, and your slot are detected automatically.</HelpSection>
-      <HelpSection heading="Your Lock Screen">While you draft, the Live Activity shows the current pick and round, how many picks until you're up, your roster's position counts, and the top available players — with stack and playoff-week markers plus your portfolio exposure.</HelpSection>
+      <HelpSection heading="How it works">Enter your Underdog username, start a session, tap record, then just draft in Underdog. BBE reads the draft board on your device and follows along. Your picks, the room, and your slot are detected automatically.</HelpSection>
+      <HelpSection heading="Your Lock Screen">While you draft, the Live Activity shows the current pick and round, how many picks until you're up, your roster's position counts, and the top available players, with stack and playoff-week markers plus your portfolio exposure.</HelpSection>
       <HelpSection heading="Fast drafts">Nothing to manage. Keep the broadcast running and every pick lands within seconds of being made.</HelpSection>
-      <HelpSection heading="Slow drafts">Tap your username in the draft room's top banner whenever you come back — BBE refills your roster from the board and locks in your slot, even days into a draft. Drafting several slow rooms back to back? Use Reset between rooms so each board starts clean.</HelpSection>
-      <HelpSection heading="Where's my team?">On Underdog while the draft runs — the assistant tracks, it doesn't re-display. Once your rosters sync, the Dashboard, Exposures, and Rosters tabs pick them up.</HelpSection>
-      <HelpSection heading="Privacy">Every frame is processed on your device and instantly discarded. Only draft data — picks and your slot — is ever produced; screenshots never leave your phone.</HelpSection>
+      <HelpSection heading="Slow drafts">Tap your username in the draft room's top banner whenever you come back. BBE refills your roster from the board and locks in your slot, even days into a draft. Drafting several slow rooms back to back? Use Reset between rooms so each board starts clean.</HelpSection>
+      <HelpSection heading="Where's my team?">On Underdog while the draft runs. The assistant tracks, it doesn't re-display. Once your rosters sync, the Dashboard, Exposures, and Rosters tabs pick them up.</HelpSection>
+      <HelpSection heading="Privacy">Every frame is processed on your device and instantly discarded. Only draft data (picks and your slot) is ever produced; screenshots never leave your phone.</HelpSection>
     </>
   ),
   arena: (
     <>
-      <HelpSection heading="Vote">Two real Best Ball Mania VII teams, shown blind (no owners). Pick the one you'd rather have — your vote nudges each team's hidden Elo rating.</HelpSection>
+      <HelpSection heading="Vote">Two real Best Ball Mania VII teams, shown blind (no owners). Pick the one you'd rather have. Your vote nudges each team's hidden Elo rating.</HelpSection>
       <HelpSection heading="Blind & fair">Owner identity is never shown while voting, and you'll never be shown your own teams.</HelpSection>
       <HelpSection heading="Free to play">Anyone can vote. Your synced teams enter the Arena automatically; you can leave (and rejoin) any time from My Teams.</HelpSection>
     </>

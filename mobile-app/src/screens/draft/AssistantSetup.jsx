@@ -102,7 +102,7 @@ export default function AssistantSetup() {
           <Text style={styles.platformTag}>{plat.tag}</Text>
         </View>
         <Text style={styles.sub}>
-          BBE records your screen while you draft and follows every pick — no tapping, no
+          BBE records your screen while you draft and follows every pick. No tapping, no
           manual entry.
         </Text>
 
@@ -122,7 +122,7 @@ export default function AssistantSetup() {
               ))}
             </View>
             <Text style={styles.microcopy}>
-              Each platform draws its own draft room — BBE reads {plat.label}&apos;s with
+              Each platform draws its own draft room. BBE reads {plat.label}&apos;s with
               logic built just for it.
             </Text>
           </StepRow>
@@ -139,7 +139,7 @@ export default function AssistantSetup() {
               returnKeyType="done"
             />
             <Text style={styles.microcopy}>
-              Exactly as it appears in the draft room — it&apos;s how BBE finds your picks and slot.
+              Exactly as it appears in the draft room. It&apos;s how BBE finds your picks and slot.
             </Text>
           </StepRow>
 
@@ -153,10 +153,10 @@ export default function AssistantSetup() {
               <Text style={styles.startTxt}>Start live session</Text>
             </Pressable>
             {!capabilities.nativeModule && (
-              <WarnRow>Live capture needs the EAS dev/preview build — install the latest build to record.</WarnRow>
+              <WarnRow>Live capture needs the EAS dev/preview build. Install the latest build to record.</WarnRow>
             )}
             {capabilities.nativeModule && !capabilities.activitiesEnabled && (
-              <WarnRow color={GOLD}>Live Activities look disabled — check Settings → Best Ball Exposures.</WarnRow>
+              <WarnRow color={GOLD}>Live Activities look disabled. Check Settings → Best Ball Exposures.</WarnRow>
             )}
             {lastError && <WarnRow>{lastError}</WarnRow>}
           </StepRow>

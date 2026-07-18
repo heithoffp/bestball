@@ -115,8 +115,8 @@ where table_name = 'subscriptions'
 Expect **two** rows.
 
 ### 2.2 — Apple Root CA - G3 secret
-- [ ] Download "Apple Root CA - G3 Root" from https://www.apple.com/certificateauthority/
-- [ ] Convert + set the secret:
+- [x] Download "Apple Root CA - G3 Root" from https://www.apple.com/certificateauthority/
+- [x] Convert + set the secret:
 ```bash
 openssl x509 -inform der -in AppleRootCA-G3.cer -out AppleRootCA-G3.pem
 supabase secrets set APPLE_ROOT_CA_G3="$(cat AppleRootCA-G3.pem)"
@@ -129,17 +129,17 @@ supabase functions deploy apple-notifications --no-verify-jwt
 supabase functions deploy sync-apple-purchase
 supabase functions deploy delete-account
 ```
-- [ ] `apple-notifications` deployed. `verify_jwt = false` is now pinned in `supabase/config.toml`, so the deploy sets it durably; the `--no-verify-jwt` flag is redundant belt-and-suspenders (Apple can't send a Supabase JWT — the function verifies Apple's JWS signature itself).
-- [ ] `sync-apple-purchase` deployed (keeps JWT auth).
-- [ ] `delete-account` re-deployed (Apple-awareness).
+- [x] `apple-notifications` deployed. `verify_jwt = false` is now pinned in `supabase/config.toml`, so the deploy sets it durably; the `--no-verify-jwt` flag is redundant belt-and-suspenders (Apple can't send a Supabase JWT — the function verifies Apple's JWS signature itself).
+- [x] `sync-apple-purchase` deployed (keeps JWT auth).
+- [x] `delete-account` re-deployed (Apple-awareness).
 
 ### 2.4 — Wire the notification URL
-- [ ] App Store Connect → App → **App Information → App Store Server Notifications** → set **both** Production and Sandbox **Version 2** URLs to:
+- [x] App Store Connect → App → **App Information → App Store Server Notifications** → set **both** Production and Sandbox **Version 2** URLs to:
   `https://cwjorshxkbbxjvhqxdlh.supabase.co/functions/v1/apple-notifications`
 
 ### 2.5 — Smoke-test the webhook
-- [ ] Click **Request a Test Notification** in that screen.
-- [ ] Check logs: `supabase functions logs apple-notifications` → expect **200**.
+- [x] Click **Request a Test Notification** in that screen.
+- [x] Check logs: `supabase functions logs apple-notifications` → expect **200**.
   (A test notification has no `appAccountToken`, so "skip — no user" + 200 is the **correct** result, not a failure.)
 
 ---
@@ -152,18 +152,18 @@ cd mobile-app
 npm install
 npm run lint
 ```
-- [ ] `react-native-iap` installed, lint clean.
+- [x] `react-native-iap` installed, lint clean.
 
 ### 3.2 — EAS dev build (not blocked)
 ```bash
 npm run eas:dev
 ```
-- [ ] Build completes.
-- [ ] Confirm StoreKit is linked: download the `.ipa`, unzip, check `react-native-iap` / nitro modules appear under `Payload/*.app/Frameworks/` (avoids the dyld launch crash — see `project_mobile_peer_dep_autolink`).
+- [x] Build completes.
+- [x] Confirm StoreKit is linked: download the `.ipa`, unzip, check `react-native-iap` / nitro modules appear under `Payload/*.app/Frameworks/` (avoids the dyld launch crash — see `project_mobile_peer_dep_autolink`).
 
 ### 3.3 — Install on device
-- [ ] Install the dev build.
-- [ ] Sign into the app with a real Supabase account.
+- [x] Install the dev build.
+- [x] Sign into the app with a real Supabase account.
 - [ ] Sign into the **sandbox tester** Apple ID (Settings → Developer → Sandbox Apple Account, or when the purchase sheet prompts).
 - [ ] Capture the **paywall screenshot** here and upload it to both products in step 1.4.
 

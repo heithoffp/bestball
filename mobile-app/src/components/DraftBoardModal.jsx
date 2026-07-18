@@ -95,7 +95,7 @@ export default function DraftBoardModal({ roster, adpByPlatform, onClose, actual
         {!loading && !derived && (
           <View style={styles.stateMsg}>
             <Text style={[type.secondary, { textAlign: 'center' }]}>
-              This board isn't available yet. Boards are added as drafts are captured — check back soon.
+              This board isn't available yet. Boards are added as drafts are captured. Check back soon.
             </Text>
           </View>
         )}

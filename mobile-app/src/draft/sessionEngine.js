@@ -762,7 +762,7 @@ export function createDraftSession(cfg) {
     else if (phase === 'waiting') headline = 'Waiting to enter draft';
     else if (phase === 'away') {
       headline = state.ledger.size || state.inferredGone.size
-        ? `Left draft room — R${round} · P${state.currentPick} held`
+        ? `Left draft room · R${round} · P${state.currentPick} held`
         : 'Left draft room';
     } else if (phase === 'onClock') headline = "You're on the clock!";
     else if (phase === 'onDeck') headline = "You're up next";
