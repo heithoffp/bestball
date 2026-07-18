@@ -178,23 +178,29 @@ async function build(masterPlayers, rosterRows) {
     }
   }
 
-  // The user's own rosters for drafts without a captured board.
-  const byEntry = new Map();
-  for (const row of rosterRows) {
-    const id = row?.entry_id != null ? String(row.entry_id) : '';
-    if (!id || boardIds.has(id)) continue;
-    if (isExcludedSlate(row.slateTitle)) continue;
-    if (!byEntry.has(id)) byEntry.set(id, []);
-    byEntry.get(id).push(row);
-  }
-  for (const players of byEntry.values()) {
-    const tables = isPreDraftSlate(players[0]?.slateTitle, players[0]?.tournamentTitle)
-      ? data.pre
-      : data.post;
-    const sorted = players
-      .filter(p => Number(p.pick) > 0)
-      .sort((a, b) => Number(a.pick) - Number(b.pick));
-    addSeat(tables, sorted.slice(0, PATH_ROUNDS).map(p => resolvePid(p.name, nameToPid)));
+  // The user's own rosters for drafts without a captured board — but only when
+  // the boards artifact actually loaded. Without boards (guest/demo, or a
+  // failed fetch) the user's rosters would be the ENTIRE pool: every roster
+  // finds only itself, self-exclusion subtracts it, and Early Combo % renders
+  // a misleading flat 0% instead of the documented no-data em-dash.
+  if (boards.length > 0) {
+    const byEntry = new Map();
+    for (const row of rosterRows) {
+      const id = row?.entry_id != null ? String(row.entry_id) : '';
+      if (!id || boardIds.has(id)) continue;
+      if (isExcludedSlate(row.slateTitle)) continue;
+      if (!byEntry.has(id)) byEntry.set(id, []);
+      byEntry.get(id).push(row);
+    }
+    for (const players of byEntry.values()) {
+      const tables = isPreDraftSlate(players[0]?.slateTitle, players[0]?.tournamentTitle)
+        ? data.pre
+        : data.post;
+      const sorted = players
+        .filter(p => Number(p.pick) > 0)
+        .sort((a, b) => Number(a.pick) - Number(b.pick));
+      addSeat(tables, sorted.slice(0, PATH_ROUNDS).map(p => resolvePid(p.name, nameToPid)));
+    }
   }
 
   // Carried on the result so snapshot consumers (Arena) can resolve names and

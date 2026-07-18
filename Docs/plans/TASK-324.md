@@ -33,3 +33,22 @@ None
 ### Guided first submission with Manually release selected
 - **Added:** 2026-07-15
 - **Verification:** developer creates ASC app record, submits production build, and confirms it reaches 'Pending Developer Release' (approved, held for manual launch)
+
+### App Store screenshots: capture 6-frame sequence + Fable-composed marketing frames
+- **Added:** 2026-07-18
+- **Verification:** 6 finished App Store frames at iPhone 6.9 in dimensions (Dashboard, Exposures, Draft Assistant, ADP Tracker, Combos, Arena/Rankings), each with a one-line caption; produced by developer raw-capture then Fable composition; optional App Preview video noted as follow-on
+
+**Approved 6-frame sequence** (first 3 carry the weight — they surface in search results / above the fold). Captions describe portfolio *state/capability* per the mirror-not-advisor principle; never prescribe.
+
+| # | Screen to capture | Headline caption | Rationale |
+|---|-------------------|------------------|-----------|
+| 1 | Dashboard (populated portfolio overview) | "Your entire best-ball portfolio, at a glance" | Hero frame — communicates the one-stop shop. Must show a full, healthy dashboard, not an empty state. |
+| 2 | Exposures table (sorted, % bars visible) | "Know your real exposure to every player" | Core differentiator + namesake; the "aha." |
+| 3 | Draft Assistant (live draft view mid-draft) | "A live draft companion that keeps up with you" | Flagship interactive feature; signals it works during drafts. |
+| 4 | ADP Tracker (a player's ADP timeline chart) | "Watch ADP move, on Underdog and DraftKings" | Depth + plants the multi-platform flag. |
+| 5 | Combos (QB stack / dual-QB pair view) | "See every stack and correlation you're building" | Portfolio-level sophistication. |
+| 6 | Arena (or Rankings drag board if Arena thin on mobile) | "Compare your builds in Best Ball Arena" | Community hook + aspirational close. |
+
+**Capture notes:** portrait, full screen, clean status bar (full battery, no notification clutter); use populated/realistic demo data (esp. frame 1); same device size for all 6; scroll to the most information-dense state of each screen; shoot 2-3 candidates per tab for framing options. On-device iOS screenshots are fine — no Mac needed.
+
+**Workflow:** developer captures raw screenshots -> hands to Fable for composition (background, optional device mockup, consistent caption typography, brand colors). Optional follow-on: a 15-30s App Preview video (real-device screen recording, `.mov`/`.mp4`, matching device dimensions).

@@ -84,7 +84,7 @@
 | TASK-331 | Live-capture session frame recorder: full OCR frame log + export + local replay harness | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-331.md) | No | 2026-07-15 | 2026-07-15 |
 | TASK-332 | Roster-panel roster intake: harvest drafter roster views as a first-class pick-ledger source | Todo | P2 | S | Opus | [Plan](docs/plans/TASK-332.md) -- Draft | No | 2026-07-15 | 2026-07-15 |
 | TASK-333 | Broadcast extension hot-loads engine.js from the App Group (decouple parser fixes from EAS builds) | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-333.md) | No | 2026-07-15 | 2026-07-15 |
-| TASK-324 | App Store readiness: review notes, privacy disclosures, distribution strategy | Todo | P2 | M | Opus | [Plan](docs/plans/TASK-324.md) -- Draft | No | 2026-07-11 | 2026-07-15 |
+| TASK-324 | App Store readiness: review notes, privacy disclosures, distribution strategy | Todo | P2 | M | Opus | [Plan](docs/plans/TASK-324.md) -- Draft | No | 2026-07-11 | 2026-07-18 |
 | TASK-209 | Rename Docs/ -> docs/ in git (case normalization) | Todo | P2 | - | - | [Plan](docs/plans/TASK-209.md) -- Draft | No | 2026-05-07 | 2026-07-15 |
 | TASK-335 | Event-driven Live Activity push policy: unfreeze the card far from the pick | In Progress | P2 | S | Opus | [Plan](docs/plans/TASK-335.md) | No | 2026-07-15 | 2026-07-15 |
 | TASK-336 | Live draft: no-board mid-draft resume, room presence + reset flow, 6-target Live Activity | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-336.md) | No | 2026-07-16 | 2026-07-16 |
