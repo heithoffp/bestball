@@ -4,7 +4,7 @@ import { detectBrowser } from '../utils/browserDetect';
 import BrandLogo from './BrandLogo';
 import styles from './InstallPage.module.css';
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const ZIP_HREF = `/extension/bestballexposures-extension-${VERSION}.zip`;
 const XPI_HREF = `/extension/bestballexposures-extension-${VERSION}.xpi`;
 
@@ -61,6 +61,10 @@ function WhatsNew() {
         <span>New in v{VERSION}</span>
       </div>
       <ul className={styles.whatsNewList}>
+        <li>
+          <strong>Sign in with Apple</strong> — the draft overlay now supports Apple sign-in
+          alongside Google and email, matching the login options on the website.
+        </li>
         <li>
           <strong>Draft Boards in the Rosters tab</strong> — view the full draft board for your
           synced drafts: every roster in the pod, your column highlighted, with per-column stats.
