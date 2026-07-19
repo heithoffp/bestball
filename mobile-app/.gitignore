@@ -17,6 +17,12 @@ web-build/
 *.key
 *.mobileprovision
 
+# Build outputs (produced by `eas build --local`; the canonical copies live in
+# GitHub Actions artifacts / App Store Connect, never in git — public repo).
+*.ipa
+*.app
+*.dSYM.zip
+
 # Metro
 .metro-health-check*
 

@@ -2,10 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- Hand-authored to override @bacons/apple-targets' generated plist, which
-       puts RPBroadcastProcessMode directly under NSExtension. iOS only
-       registers the broadcast extension when the mode is declared inside
-       NSExtensionAttributes — misplaced, the record button no-ops silently. -->
+  <!-- Hand-authored to override @bacons/apple-targets' generated plist.
+       RPBroadcastProcessMode is declared in BOTH locations ON PURPOSE — do not
+       "de-dupe" it or App Store submission / device capture will break:
+         1. Inside NSExtensionAttributes — iOS runtime only registers the
+            broadcast extension (record button works) when the mode is here;
+            misplaced, the record button no-ops silently.
+         2. Directly under NSExtension — Apple's altool App Store validator
+            looks for the key HERE. Absent, submission fails validation with
+            "the key was not specified" (RPBroadcastProcessMode / 409). -->
   <key>NSExtension</key>
   <dict>
     <key>NSExtensionAttributes</key>
@@ -17,6 +22,8 @@
     <string>com.apple.broadcast-services-upload</string>
     <key>NSExtensionPrincipalClass</key>
     <string>$(PRODUCT_MODULE_NAME).SampleHandler</string>
+    <key>RPBroadcastProcessMode</key>
+    <string>RPBroadcastProcessModeSampleBuffer</string>
   </dict>
 </dict>
 </plist>
