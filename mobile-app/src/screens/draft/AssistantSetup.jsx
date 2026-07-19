@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Check, Zap, TriangleAlert } from 'lucide-react-native';
 import { trackEvent } from '../../../shared/utils/analytics';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   subscribeSession, startSession, getRememberedUsername, getRememberedPlatform,
 } from '../../draft/sessionController';
@@ -63,6 +64,9 @@ function StepRow({ n, done, active, last, title, children }) {
 }
 
 export default function AssistantSetup() {
+  // isAuthor (shared/utils/authorPreview allowlist, +tag-normalized) gates the
+  // session debug tooling: only the developer's accounts get it.
+  const { isAuthor } = useAuth();
   const [platform, setPlatform] = useState(() => getRememberedPlatform());
   const inputs = useSessionInputs(platform);
   const [snap, setSnap] = useState(null);
@@ -88,6 +92,8 @@ export default function AssistantSetup() {
     trackEvent('draft_session_started', { platform });
     startSession({
       ...inputs, slot: null, teams: TEAMS, rounds: plat.rounds, username: name, platform,
+      // Developer accounts get the debug tools + OCR frame recording.
+      debug: isAuthor,
     });
   };
 

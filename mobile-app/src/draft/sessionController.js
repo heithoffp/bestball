@@ -82,6 +82,7 @@ const state = {
   configEpoch: 0,          // bumped per session start and per board reset
   lastPersistedKey: '',
   lastDiag: null,          // extension's recent-ingest ring buffer (debugging)
+  debug: false,            // internal-tester session: frame recording + debug UI
   extensionEngine: null,   // version reported by the extension's engine bundle
   lastDraftGen: 0,         // engine draft generation (auto new-draft reset)
 };
@@ -151,6 +152,7 @@ export function getSnapshot() {
     activityError: state.activityError,
     lastError: state.lastError,
     extensionEngine: state.extensionEngine,
+    debug: state.debug,
     capabilities: {
       nativeModule: nativeModuleAvailable(),
       liveActivity: liveActivitySupported(),
@@ -176,6 +178,7 @@ export function subscribeSession(fn) {
 export async function startSession({
   poolRows, rankMap, exposureMap, rosterIndexMap,
   slot = null, teams = 12, rounds = 18, username = null, platform = 'underdog',
+  debug = false,
 }) {
   if (state.active) endSession();
   const platformLabel = PLATFORM_LABELS[platform] || 'Underdog';
@@ -200,6 +203,7 @@ export async function startSession({
   // choice so the selector defaults to it (TASK-350).
   if (username) writeSharedValue(usernameKey, username);
   writeSharedValue(PLATFORM_KEY, platform);
+  state.debug = !!debug;
   state.pool = buildPool(poolRows);
   state.platform = platform;
   state.teams = teams;
@@ -267,8 +271,8 @@ export async function startSession({
     configEpoch: state.configEpoch,
     // TASK-331: the extension records every OCR frame (JSONL in the App
     // Group) so whole drafts replay offline via scripts/replay-frames.mjs.
-    // Developer-build default; revisit before public TestFlight.
-    recordFrames: true,
+    // Author-account sessions only (authorPreview allowlist) — off for users.
+    recordFrames: state.debug,
   };
   state.lastPersistedKey = '';
   writeSharedValue(SESSION_CONFIG_KEY, JSON.stringify({

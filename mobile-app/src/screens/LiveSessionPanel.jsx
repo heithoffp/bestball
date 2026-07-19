@@ -92,7 +92,7 @@ export default function LiveSessionPanel() {
   if (!snap?.active) return null;
   const {
     status, log, activityStarted, activityError,
-    captureLive, pushToken, extensionEngine,
+    captureLive, pushToken, extensionEngine, debug,
   } = snap;
   const platformName = snap.platform === 'draftkings' ? 'DraftKings' : 'Underdog';
   const engineStale = !!extensionEngine && extensionEngine.startsWith('stale');
@@ -209,7 +209,9 @@ export default function LiveSessionPanel() {
       )}
 
       <View style={styles.btnRow}>
-        {expanded && (
+        {/* Debug bundle + OCR frame export: developer accounts only (session
+            started with debug — see AssistantSetup / authorPreview). */}
+        {expanded && debug && (
           <>
             <Pressable
               style={styles.actionBtn}
@@ -258,7 +260,7 @@ export default function LiveSessionPanel() {
               {status.slotSource === 'anchored' ? ` · slot ${status.slot} pinned from your card` : ''}
             </Text>
           )}
-          {engineStale && (
+          {debug && engineStale && (
             <WarnRow>
               The broadcast extension is running an OLD engine build. Parsing fixes are not live.
               Install the latest EAS build to update it (Metro reload is not enough).
@@ -272,7 +274,9 @@ export default function LiveSessionPanel() {
           )}
           {activityStarted && !pushToken && (
             <WarnRow color={GOLD}>
-              No push token. The Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).
+              {debug
+                ? 'No push token. The Live Activity refreshes only when you reopen BBE. Check the relay setup (docs/LIVE_SESSION_V1.md).'
+                : 'Lock Screen updates refresh only while BBE is open.'}
             </WarnRow>
           )}
           <View style={{ marginTop: 6, gap: 2 }}>
