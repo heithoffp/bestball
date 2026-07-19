@@ -21,6 +21,9 @@ export function buildPlayersFromSource(source, projMap = {}, isAdpFallback = fal
       lastName = parts.slice(1).join(' ') || '';
     }
     const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
+    // DK ADP exports mark undrafted players with a literal 0 — treat any
+    // non-positive ADP as missing so those rows don't sort ahead of pick 1.
+    const hasAdp = !isNaN(adpVal) && adpVal > 0;
     const nameKey = canonicalName(name);
     const projRaw = row.projectedPoints || row.projected_points || '';
     const proj = projRaw || (projMap[nameKey] != null ? String(projMap[nameKey]) : '');
@@ -29,9 +32,9 @@ export function buildPlayersFromSource(source, projMap = {}, isAdpFallback = fal
       name,
       firstName,
       lastName,
-      adp: isNaN(adpVal) ? 9999 : adpVal,
+      adp: hasAdp ? adpVal : 9999,
       // Display-only: round to one decimal so ADP-fallback floats don't overflow the column
-      adpStr: isNaN(adpVal) ? '-' : String(Math.round(adpVal * 10) / 10),
+      adpStr: hasAdp ? String(Math.round(adpVal * 10) / 10) : '-',
       projectedPoints: proj,
       slotName: row.slotName || row.position || row.Position || row.pos || 'N/A',
       teamName: expandTeam(row.teamName || row.team || row.Team || ''),

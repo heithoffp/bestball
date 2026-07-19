@@ -29,6 +29,9 @@ export function buildPlayersFromSource(source, projMap = {}, isAdpFallback = fal
       lastName = parts.slice(1).join(' ') || '';
     }
     const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
+    // DK ADP exports mark undrafted players with a literal 0 — treat any
+    // non-positive ADP as missing so those rows don't sort ahead of pick 1.
+    const hasAdp = !isNaN(adpVal) && adpVal > 0;
     const nameKey = canonicalName(name);
     const projRaw = row.projectedPoints || row.projected_points || '';
     const proj = projRaw || (projMap[nameKey] != null ? String(projMap[nameKey]) : '');
@@ -37,8 +40,8 @@ export function buildPlayersFromSource(source, projMap = {}, isAdpFallback = fal
       name,
       firstName,
       lastName,
-      adp: isNaN(adpVal) ? 9999 : adpVal,
-      adpStr: isNaN(adpVal) ? '-' : String(Math.round(adpVal * 10) / 10),
+      adp: hasAdp ? adpVal : 9999,
+      adpStr: hasAdp ? String(Math.round(adpVal * 10) / 10) : '-',
       projectedPoints: proj,
       slotName: row.slotName || row.position || row.Position || row.pos || 'N/A',
       teamName: expandTeam(row.teamName || row.team || row.Team || ''),
@@ -62,6 +65,9 @@ export function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map
     const lastName = row.lastName || row.last_name || row['Last Name'] || '';
     const name = `${firstName} ${lastName}`.trim() || row['Player Name'] || row.player_name || row.Name || row.name || 'Unknown';
     const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
+    // DK ADP exports mark undrafted players with a literal 0 — treat any
+    // non-positive ADP as missing so those rows don't sort ahead of pick 1.
+    const hasAdp = !isNaN(adpVal) && adpVal > 0;
     const nameKey = canonicalName(name);
     const projFromMap = projMap[nameKey] != null ? String(projMap[nameKey]) : '';
     const projRaw = row.projectedPoints || row.projected_points || '';
@@ -76,8 +82,8 @@ export function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map
       firstName,
       lastName,
       name,
-      adp: isNaN(adpVal) ? 9999 : adpVal,
-      originalAdp: isNaN(adpVal) ? '-' : String(adpVal),
+      adp: hasAdp ? adpVal : 9999,
+      originalAdp: hasAdp ? String(adpVal) : '-',
       latestAdp: adpLookup.get(nameKey) || null,
       projectedPoints: proj,
       positionRank: row.positionRank || '',
@@ -90,7 +96,17 @@ export function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map
     };
   });
   players.sort((a, b) => a.adp - b.adp);
-  return players.filter(p => p.adp !== 9999);
+  const kept = players.filter(p => p.adp !== 9999);
+  // Ids double as list keys (the drag board's ReorderableList remounts cells by
+  // key) — duplicate source rows (same player twice in a DK ADP export) must
+  // not produce duplicate ids.
+  const seen = new Map();
+  for (const p of kept) {
+    const n = (seen.get(p.id) || 0) + 1;
+    seen.set(p.id, n);
+    if (n > 1) p.id = `${p.id}__${n}`;
+  }
+  return kept;
 }
 
 export function buildTeamLookup(adpRows) {
@@ -127,7 +143,7 @@ export function buildAdpLookup(adpRows) {
       || r.Name || r.name || ''
     );
     const adp = parseFloat(r.adp ?? r.ADP ?? '');
-    if (n && !isNaN(adp)) map.set(n, adp);
+    if (n && !isNaN(adp) && adp > 0) map.set(n, adp);
   });
   return map;
 }

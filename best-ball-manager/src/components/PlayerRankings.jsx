@@ -115,6 +115,9 @@ function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adp
     const lastName = row.lastName || row.last_name || row['Last Name'] || '';
     const name = `${firstName} ${lastName}`.trim() || row['Player Name'] || row.player_name || row.Name || row.name || 'Unknown';
     const adpVal = parseFloat(row.adp ?? row.ADP ?? '');
+    // DK ADP exports mark undrafted players with a literal 0 — treat any
+    // non-positive ADP as missing so those rows don't sort ahead of pick 1.
+    const hasAdp = !isNaN(adpVal) && adpVal > 0;
     const nameKey = canonicalName(name);
     const projFromMap = projMap[nameKey] != null ? String(projMap[nameKey]) : '';
     const projRaw = row.projectedPoints || row.projected_points || '';
@@ -129,8 +132,8 @@ function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adp
       firstName,
       lastName,
       name,
-      adp: isNaN(adpVal) ? 9999 : adpVal,
-      originalAdp: isNaN(adpVal) ? '-' : String(adpVal),
+      adp: hasAdp ? adpVal : 9999,
+      originalAdp: hasAdp ? String(adpVal) : '-',
       latestAdp: adpLookup.get(nameKey) || null,
       projectedPoints: proj,
       positionRank: row.positionRank || '',
@@ -143,7 +146,16 @@ function buildRankedPlayers(source, { projMap = {}, nameToAdpId = new Map(), adp
     };
   });
   players.sort((a, b) => a.adp - b.adp);
-  return players.filter(p => p.adp !== 9999);
+  const kept = players.filter(p => p.adp !== 9999);
+  // Ids double as React list keys — duplicate source rows (same player twice
+  // in a DK ADP export) must not produce duplicate ids.
+  const seen = new Map();
+  for (const p of kept) {
+    const n = (seen.get(p.id) || 0) + 1;
+    seen.set(p.id, n);
+    if (n > 1) p.id = `${p.id}__${n}`;
+  }
+  return kept;
 }
 
 function buildTeamLookup(adpRows) {

@@ -84,11 +84,13 @@ for (const fileName of readdirSync(adpDir).filter(f => f.endsWith('.csv')).sort(
   const isSuperflex = /^superflex_adp/.test(fileName);
   const isEliminator = /^eliminator_adp/.test(fileName);
   const dateStr = dateMatch ? dateMatch[1] : ((isSuperflex || isEliminator) ? '1900-01-01' : fileName);
-  const platformMatch = fileName.match(/^(underdog|draftking)_adp_/);
+  // Accept both the canonical "draftking_" prefix and the stray "draftkings_"
+  // variant so a misnamed export doesn't land in an orphan "unknown" platform.
+  const platformMatch = fileName.match(/^(underdog|draftkings?)_adp_/);
   let platform = 'unknown';
   if (isSuperflex) platform = 'superflex';
   else if (isEliminator) platform = 'eliminator';
-  else if (platformMatch) platform = platformMatch[1] === 'draftking' ? 'draftkings' : platformMatch[1];
+  else if (platformMatch) platform = platformMatch[1].startsWith('draftking') ? 'draftkings' : platformMatch[1];
   parsed.push({ date: dateStr, filename: fileName, platform, rows: parseCSV(text) });
 }
 

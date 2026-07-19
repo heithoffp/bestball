@@ -81,6 +81,13 @@ export function isExcludedSlate(slateTitle) {
 // from Storage replaces what used to be a full-table download of
 // draft_boards_admin. Returns [{ id, slate, seats: [[first-4 names], ...] }].
 // Cached on device with a freshness window (ADR-030) — see ARTIFACT_TTL_MS.
+//
+// Read path diverges from the web here by necessity: the web calls
+// supabase.storage.download() and reads the returned Blob with Blob.text(),
+// but React Native's Blob implements neither .text() nor .arrayBuffer(), so
+// that call throws and every board silently drops — collapsing the uniqueness
+// pool to the user's own rosters. Instead we sign a short-lived URL and read it
+// with fetch(), whose Response.json() IS implemented on RN.
 async function fetchAllBoards() {
   if (!supabase) return [];
 
@@ -94,11 +101,13 @@ async function fetchAllBoards() {
   } catch { /* treat as miss */ }
 
   try {
-    const { data, error } = await supabase.storage
+    const { data: signed, error } = await supabase.storage
       .from(BOARDS_BUCKET)
-      .download(BOARDS_OBJECT);
-    if (error || !data) return stale ?? [];
-    const artifact = JSON.parse(await data.text());
+      .createSignedUrl(BOARDS_OBJECT, 60);
+    if (error || !signed?.signedUrl) return stale ?? [];
+    const res = await fetch(signed.signedUrl);
+    if (!res.ok) return stale ?? [];
+    const artifact = await res.json();
     const boards = Array.isArray(artifact?.boards) ? artifact.boards : [];
     if (boards.length) {
       cachePut(ARTIFACT_CACHE_KEY, { fetchedAt: Date.now(), boards });
@@ -201,23 +210,29 @@ async function build(masterPlayers, rosterRows) {
     }
   }
 
-  // The user's own rosters for drafts without a captured board.
-  const byEntry = new Map();
-  for (const row of rosterRows) {
-    const id = row?.entry_id != null ? String(row.entry_id) : '';
-    if (!id || boardIds.has(id)) continue;
-    if (isExcludedSlate(row.slateTitle)) continue;
-    if (!byEntry.has(id)) byEntry.set(id, []);
-    byEntry.get(id).push(row);
-  }
-  for (const players of byEntry.values()) {
-    const tables = isPreDraftSlate(players[0]?.slateTitle, players[0]?.tournamentTitle)
-      ? data.pre
-      : data.post;
-    const sorted = players
-      .filter(p => Number(p.pick) > 0)
-      .sort((a, b) => Number(a.pick) - Number(b.pick));
-    addSeat(tables, sorted.slice(0, PATH_ROUNDS).map(p => resolvePid(p.name, nameToPid)));
+  // The user's own rosters for drafts without a captured board — but only when
+  // the boards artifact actually loaded. Without boards (guest/demo, or a
+  // failed fetch) the user's rosters would be the ENTIRE pool: every roster
+  // finds only itself, self-exclusion subtracts it, and Early Combo % renders
+  // a misleading flat 0% instead of the documented no-data em-dash.
+  if (boards.length > 0) {
+    const byEntry = new Map();
+    for (const row of rosterRows) {
+      const id = row?.entry_id != null ? String(row.entry_id) : '';
+      if (!id || boardIds.has(id)) continue;
+      if (isExcludedSlate(row.slateTitle)) continue;
+      if (!byEntry.has(id)) byEntry.set(id, []);
+      byEntry.get(id).push(row);
+    }
+    for (const players of byEntry.values()) {
+      const tables = isPreDraftSlate(players[0]?.slateTitle, players[0]?.tournamentTitle)
+        ? data.pre
+        : data.post;
+      const sorted = players
+        .filter(p => Number(p.pick) > 0)
+        .sort((a, b) => Number(a.pick) - Number(b.pick));
+      addSeat(tables, sorted.slice(0, PATH_ROUNDS).map(p => resolvePid(p.name, nameToPid)));
+    }
   }
 
   // Carried on the result so snapshot consumers (Arena) can resolve names and

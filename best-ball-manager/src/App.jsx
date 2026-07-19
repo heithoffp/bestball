@@ -106,11 +106,13 @@ async function loadBundledAdp() {
     // Superflex and Eliminator have different scoring / player pools; never let them win
     // the global "latest" fallback used for slates that don't resolve to a specific platform.
     const dateStr = dateMatch ? dateMatch[1] : ((isSuperflex || isEliminator) ? '1900-01-01' : fileName);
-    const platformMatch = fileName.match(/^(underdog|draftking)_adp_/);
+    // Accept both the canonical "draftking_" prefix and the stray "draftkings_"
+    // variant so a misnamed export doesn't land in an orphan "unknown" platform.
+    const platformMatch = fileName.match(/^(underdog|draftkings?)_adp_/);
     let platform = 'unknown';
     if (isSuperflex) platform = 'superflex';
     else if (isEliminator) platform = 'eliminator';
-    else if (platformMatch) platform = platformMatch[1] === 'draftking' ? 'draftkings' : platformMatch[1];
+    else if (platformMatch) platform = platformMatch[1].startsWith('draftking') ? 'draftkings' : platformMatch[1];
     return { text: String(text), date: dateStr, filename: fileName, platform };
   }));
   return files;
