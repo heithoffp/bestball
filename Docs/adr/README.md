@@ -32,3 +32,4 @@
 | [ADR-028](adr-028-sell-mobile-pro-via-apple-in-app-purchase-storekit.md) | Sell mobile Pro via Apple In-App Purchase (StoreKit 2), enabling international distribution | Accepted | 2026-07-17 |
 | [ADR-029](adr-029-add-native-google-and-apple-sign-in-on-mobile-and.md) | Add native Google and Apple sign-in on mobile, and Apple sign-in on web | Accepted | 2026-07-17 |
 | [ADR-030](adr-030-mobile-launch-data-on-device-cache-first-rendering.md) | Mobile launch data: on-device cache-first rendering with delta sync | Accepted | 2026-07-18 |
+| [ADR-031](adr-031-publish-mobile-adp-snapshots-as-a-remote-storage-a.md) | Publish mobile ADP snapshots as a remote Storage artifact with bundled fallback | Accepted | 2026-07-19 |

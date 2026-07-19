@@ -9,7 +9,7 @@ import { parseCSVText } from '../../shared/utils/csv';
 import { supabase } from '../../shared/utils/supabaseClient';
 import { trackEvent } from '../../shared/utils/analytics';
 import {
-  loadBundledAdp, getProjectionsRows, getRankingsRows, getDemoRosterRows, getActualsFiles,
+  loadAdp, refreshAdpFiles, getProjectionsRows, getRankingsRows, getDemoRosterRows, getActualsFiles,
 } from '../../shared/bundledData';
 import { useAuth } from './AuthContext';
 
@@ -119,7 +119,7 @@ export function PortfolioProvider({ children }) {
     const gen = ++loadGeneration.current;
     setStatus({ type: 'loading', msg: 'Loading data...' });
     try {
-      const adpFiles = loadBundledAdp();
+      const adpFiles = await loadAdp();
       const projectionsRows = getProjectionsRows();
 
       if (user?.id && supabase) {
@@ -140,7 +140,10 @@ export function PortfolioProvider({ children }) {
             if (!changed) return;
             entriesRef.current = entries;
             entriesCache.writeEntriesCache(userId, entries);
-            await applyEntries(entries, adpFiles, projectionsRows);
+            // Re-read ADP from the memo (loadAdp) rather than the load-start
+            // closure: the background ADP refresh (ADR-031) may have landed
+            // meanwhile, and applying old ADP here would overwrite it.
+            await applyEntries(entries, await loadAdp(), projectionsRows);
           }).catch(() => { /* refresh is best-effort; cache already rendered */ });
         } else {
           const { readExtensionEntries } = await import('../../shared/utils/extensionBridge');
@@ -164,6 +167,22 @@ export function PortfolioProvider({ children }) {
         setMasterPlayers(result.masterPlayers);
         setStatus({ type: '', msg: '' });
       }
+
+      // Background ADP refresh (ADR-031, stale-while-revalidate): pull a newer
+      // remote artifact and re-apply it without blocking the already-rendered
+      // screen. Fail-soft — the bundled/cached ADP already rendered above.
+      refreshAdpFiles().then(async (freshAdpFiles) => {
+        if (!freshAdpFiles || gen !== loadGeneration.current) return;
+        if (user?.id && supabase) {
+          await applyEntries(entriesRef.current ?? [], freshAdpFiles, projectionsRows);
+        } else {
+          const result = await processLoadedData({ adpFiles: freshAdpFiles, projectionsRows });
+          if (gen !== loadGeneration.current) return;
+          setAdpSnapshots(result.adpSnapshots);
+          setAdpByPlatform(result.adpByPlatform || {});
+          setMasterPlayers(result.masterPlayers);
+        }
+      }).catch(() => { /* best-effort; bundled/cached ADP already rendered */ });
     } catch (err) {
       console.error('Load failed', err);
       setStatus({ type: 'error', msg: String(err) });
@@ -181,7 +200,7 @@ export function PortfolioProvider({ children }) {
     try {
       const result = await processLoadedData({
         rosterCsvRows: getDemoRosterRows(),
-        adpFiles: loadBundledAdp(),
+        adpFiles: await loadAdp(),
         rankingsRows: getRankingsRows(),
         projectionsRows: getProjectionsRows(),
       });

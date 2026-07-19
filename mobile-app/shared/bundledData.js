@@ -11,14 +11,18 @@ import projectionsRows from './data/projections.json';
 import rankingsRows from './data/rankings.json';
 import demoRosterRows from './data/demoRosters.json';
 import actualsBundle from './data/actuals.json';
+import { readAdpCache, refreshAdp } from './adpArtifact';
 
 let _adpFiles = null;
 
-/** Decode bundled ADP snapshots → [{date, filename, platform, rows}] (cached). */
-export function loadBundledAdp() {
-  if (_adpFiles) return _adpFiles;
-  const { names, snapshots } = adpBundle;
-  _adpFiles = snapshots.map(snap => ({
+/**
+ * Decode a compacted ADP payload ({ names, snapshots }) into the pipeline's
+ * [{date, filename, platform, rows}] shape. Pure — used for both the bundled
+ * copy and a fetched remote artifact (they share the byte-identical shape).
+ */
+export function decodeAdp(bundle) {
+  const { names, snapshots } = bundle;
+  return snapshots.map(snap => ({
     date: snap.date,
     filename: snap.filename,
     platform: snap.platform,
@@ -40,6 +44,30 @@ export function loadBundledAdp() {
       };
     }),
   }));
+}
+
+/**
+ * Decode ADP snapshots for the pipeline, cache-first (ADR-031). Returns the
+ * cached remote copy when present, else the bundled copy shipped in the binary.
+ * Memoized; refreshAdpFiles() updates the memo when a newer remote arrives.
+ */
+export async function loadAdp() {
+  if (_adpFiles) return _adpFiles;
+  const cached = await readAdpCache();
+  _adpFiles = decodeAdp(cached || adpBundle);
+  return _adpFiles;
+}
+
+/**
+ * Background refresh (stale-while-revalidate). Fetches the remote artifact; on a
+ * newer, valid payload it updates the memo and returns the freshly decoded files
+ * so the caller can re-process. Returns null when unchanged or the fetch failed
+ * — nothing already on screen is disturbed.
+ */
+export async function refreshAdpFiles() {
+  const payload = await refreshAdp();
+  if (!payload) return null;
+  _adpFiles = decodeAdp(payload);
   return _adpFiles;
 }
 

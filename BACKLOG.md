@@ -31,6 +31,7 @@
 - TASK-349: Mobile Arena UI parity with web's mobile Arena layout
 - TASK-350: DraftKings live draft capture parity — DK parser, platform-aware engine + onboarding platform selector
 - TASK-351: Mobile Rankings overhaul: drag-and-drop board + true UD-vs-DK Compare (web parity)
+- TASK-355: Implement ADR-031: remote ADP artifact with bundled fallback (mobile)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -98,6 +99,7 @@
 | TASK-349 | Mobile Arena UI parity with web's mobile Arena layout | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-349.md) | No | 2026-07-18 | 2026-07-18 |
 | TASK-350 | DraftKings live draft capture parity — DK parser, platform-aware engine + onboarding platform selector | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-350.md) | No | 2026-07-18 | 2026-07-18 |
 | TASK-351 | Mobile Rankings overhaul: drag-and-drop board + true UD-vs-DK Compare (web parity) | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-351.md) | No | 2026-07-18 | 2026-07-18 |
+| TASK-355 | Implement ADR-031: remote ADP artifact with bundled fallback (mobile) | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-355.md) | No | 2026-07-19 | 2026-07-19 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |

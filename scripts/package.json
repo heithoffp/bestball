@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "description": "Admin/operator scripts for Best Ball Exposures. Not part of the app bundle.",
+  "scripts": {
+    "publish:adp": "node publish-adp.mjs"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "dotenv": "^16.4.5",

@@ -20,10 +20,15 @@ on:
         options:
           - development
           - preview
+          - production
       publish_release:
-        description: "Publish .ipa + itms-services manifest to a GitHub Release for OTA install"
+        description: "Publish .ipa + itms-services manifest to a GitHub Release for OTA install (dev/preview only — ignored for production)"
         type: boolean
         default: true
+      submit_to_app_store:
+        description: "Submit the build to App Store Connect (production profile only)"
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-build
@@ -84,12 +89,30 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      # --- App Store submission (TASK-334): upload the production .ipa to App
+      # Store Connect via `eas submit`. This does NOT consume EAS build credits —
+      # it only uploads an already-built binary through Apple's Transporter API.
+      # Requires an App Store Connect API key registered with EAS (submit.production
+      # is `{}`, so EAS resolves the key server-side via EXPO_TOKEN). Gated to the
+      # production profile so a dev/preview .ipa is never pushed to the store. ---
+      - name: Submit to App Store Connect
+        if: ${{ inputs.profile == 'production' && inputs.submit_to_app_store }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_NO_VCS: "1"
+        run: |
+          npx eas-cli@latest submit \
+            --platform ios \
+            --profile production \
+            --path "${{ github.workspace }}/build.ipa" \
+            --non-interactive
+
       # --- OTA install path (TASK-334): host .ipa + itms-services manifest on a
       # GitHub Release so the developer can install from Windows by opening a
       # link in Safari on the iPhone. Requires the device UDID to be in the
       # provisioning profile (already registered for the current device). ---
       - name: Publish OTA Release (.ipa + manifest.plist)
-        if: ${{ inputs.publish_release }}
+        if: ${{ inputs.publish_release && inputs.profile != 'production' }}
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: ${{ github.workspace }}
