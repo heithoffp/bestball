@@ -8,6 +8,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
 import {
   CircleUserRound, LogOut, ExternalLink, Puzzle, BookOpen, Sparkles, RefreshCw, Trash2, RotateCcw,
+  ShieldCheck, FileText,
 } from 'lucide-react-native';
 import ScreenScaffold, { HelpSection } from '../../src/components/ScreenScaffold';
 import { Card, SectionTitle, Button } from '../../src/components/ui';
@@ -16,7 +17,7 @@ import { colors, spacing, radii, type } from '../../src/theme';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import { usePortfolio } from '../../src/contexts/PortfolioContext';
-import { WEB_APP_URL, INSTALL_URL, BLOG_URL, X_URL } from '../../shared/config';
+import { WEB_APP_URL, INSTALL_URL, BLOG_URL, X_URL, PRIVACY_URL, TERMS_URL } from '../../shared/config';
 
 const HELP = (
   <>
@@ -277,6 +278,8 @@ export default function AccountTab() {
             <Row icon={ExternalLink} label="BestBallExposures.com" onPress={() => WebBrowser.openBrowserAsync(WEB_APP_URL)} />
             <Row icon={BookOpen} label="Blog" onPress={() => WebBrowser.openBrowserAsync(BLOG_URL)} />
             <Row icon={ExternalLink} label="@BBExposures on X" onPress={() => WebBrowser.openBrowserAsync(X_URL)} />
+            <Row icon={ShieldCheck} label="Privacy Policy" onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} />
+            <Row icon={FileText} label="Terms of Use" onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} />
           </View>
         </Card>
 

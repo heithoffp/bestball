@@ -17,6 +17,12 @@ export const INSTALL_URL = `${WEB_APP_URL}/install`;
 export const BLOG_URL = `${WEB_APP_URL}/blog`;
 export const X_URL = 'https://x.com/BBExposures';
 
+// Legal pages (static HTML in best-ball-manager/public/). Apple requires
+// functional Privacy Policy + Terms of Use links on the subscription paywall
+// (Guideline 3.1.2) and an easily-accessible privacy policy in-app (5.1.1).
+export const PRIVACY_URL = `${WEB_APP_URL}/privacy.html`;
+export const TERMS_URL = `${WEB_APP_URL}/terms.html`;
+
 // Apple StoreKit 2 product IDs for the auto-renewable Pro subscription (ADR-028).
 // These must exactly match the product IDs created in the App Store Connect
 // subscription group. Injected at EAS build time via EXPO_PUBLIC_* env; the empty

@@ -5,11 +5,13 @@
 // the web PlanPicker ($19.99/mo, $69.99/yr) but are keyed by App Store product ID.
 import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { X, Check } from 'lucide-react-native';
 import { colors, spacing, radii, type } from '../theme';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import {
   APPLE_PRO_MONTHLY_PRODUCT_ID, APPLE_PRO_YEARLY_PRODUCT_ID,
+  PRIVACY_URL, TERMS_URL,
 } from '../../shared/config';
 import { Button } from './ui';
 
@@ -79,8 +81,19 @@ export default function PlanPicker({ visible, onClose }) {
             />
           </View>
           <Text style={[type.muted, { textAlign: 'center', marginTop: spacing.md }]}>
-            Billed through your Apple ID. Manage or cancel anytime in Settings.
+            Billed through your Apple ID. Auto-renews until canceled — manage or cancel anytime in Settings.
           </Text>
+          {/* Apple Guideline 3.1.2: auto-renewable subscription paywalls must
+              link to the Terms of Use (EULA) and Privacy Policy in the binary. */}
+          <View style={styles.legalRow}>
+            <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}>
+              Terms of Use
+            </Text>
+            <Text style={[type.muted, { fontSize: 11 }]}>·</Text>
+            <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
+          </View>
         </View>
       </View>
     </Modal>
@@ -147,6 +160,18 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   badgeText: { color: colors.textInverse, fontSize: 9, fontWeight: '700', textTransform: 'uppercase' },
+  legalRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  legalLink: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    textDecorationLine: 'underline',
+  },
   radio: {
     width: 16,
     height: 16,
