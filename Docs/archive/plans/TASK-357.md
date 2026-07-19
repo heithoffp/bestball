@@ -1,3 +1,4 @@
+<!-- Completed: 2026-07-19 | Commit: f5b73f5 -->
 # TASK-357: Fix DraftBroadcast Info.plist RPBroadcastProcessMode placement blocking App Store validation
 
 **Status:** Draft
