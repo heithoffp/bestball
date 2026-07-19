@@ -14,6 +14,7 @@ import {
 } from '../src/draft/playerMatcher.js';
 import { parseUnderdogScreen, textToItems } from '../src/draft/underdogParser.js';
 import { createDraftSession } from '../src/draft/sessionEngine.js';
+import { teamAbbrev } from '../src/draft/nflTeams.js';
 import { ENGINE_VERSION } from '../src/draft/extensionEngine.entry.js';
 import {
   PLAYERS_TAB, BOARD_TAB_1, BOARD_TAB_2, QUEUE_TAB,
@@ -217,6 +218,100 @@ const flowersLine = playoffSession.getGlance().targets.find(t => t.includes('Flo
 check('multi-week playoff field joined with "/" (BAL: W15 PIT + W17 CIN)',
   flowersLine?.split('·')[2], '15/17');
 check('stack check rides the S field (BAL QB rostered)', flowersLine?.split('·')[3], 'S');
+
+// ---- TASK-330: team-abbreviation normalization (Underdog full names) ----
+// The Underdog ADP snapshot stores full team names; a naive slice(0,3) mangled
+// multi-word teams (NYJ/NYG/NO/NE -> "NEW", GB -> "GRE", JAX -> "JAC", ...),
+// silently blanking playoff/stack badges and breaking the confirm-card team
+// tie-break. buildPool now normalizes via teamAbbrev; teamAbbrev is a no-op on
+// already-abbreviated (DraftKings) or unknown values.
+console.log('TASK-330 team normalization:');
+check('teamAbbrev New York Jets', teamAbbrev('New York Jets'), 'NYJ');
+check('teamAbbrev New York Giants', teamAbbrev('New York Giants'), 'NYG');
+check('teamAbbrev Green Bay', teamAbbrev('Green Bay Packers'), 'GB');
+check('teamAbbrev Jacksonville', teamAbbrev('Jacksonville Jaguars'), 'JAX');
+check('teamAbbrev San Francisco', teamAbbrev('San Francisco 49ers'), 'SF');
+check('teamAbbrev passthrough abbrev (DK)', teamAbbrev('MIN'), 'MIN');
+check('teamAbbrev passthrough N/A', teamAbbrev('N/A'), 'N/A');
+
+const fullNamePool = buildPool([
+  { name: 'Jonathan Taylor', position: 'RB', team: 'Indianapolis Colts', adp: 7.8 },
+  { name: 'J.J. Taylor', position: 'RB', team: '', adp: null },
+  { name: 'Zay Flowers', position: 'WR', team: 'Baltimore Ravens', adp: 27.1 },
+  { name: 'George Pickens', position: 'WR', team: 'Pittsburgh Steelers', adp: 26.0 },
+  { name: "Ja'Marr Chase", position: 'WR', team: 'Cincinnati Bengals', adp: 4.0 },
+  { name: 'Lamar Jackson', position: 'QB', team: 'Baltimore Ravens', adp: 40 },
+]);
+check('buildPool normalizes full name to abbreviation', fullNamePool.byCanonical.get('jonathan taylor')?.team, 'IND');
+// The J.J. Taylor bug: an abbreviated card name + abbrev team hint must prefer
+// the real IND player over the no-team obscure one.
+check('abbrev card "J. Taylor"/IND prefers Jonathan Taylor over J.J. Taylor',
+  matchAbbrevPlayer(fullNamePool, 'J. Taylor', 'IND')?.player.name, 'Jonathan Taylor');
+
+// P/S badges must populate from a FULL-NAME pool (previously blanked because the
+// schedule/stack lookup got "BALTIMORE RAVENS"). BAL plays PIT (W15) + CIN (W17).
+const fnCanon = n => fullNamePool.players.find(p => p.name === n).canonical;
+const fullNameSession = createDraftSession({
+  pool: fullNamePool, teams: 12, rounds: 18, slot: 9,
+  rankMap: new Map([['zay flowers', 1]]),
+});
+fullNameSession.ingest({
+  kind: 'board',
+  boardPicks: [
+    { overall: 9, player: fullNamePool.byCanonical.get(fnCanon('George Pickens')), round: 1, pickInRound: 9, score: 1, raw: 'a' },
+    { overall: 16, player: fullNamePool.byCanonical.get(fnCanon("Ja'Marr Chase")), round: 2, pickInRound: 4, score: 1, raw: 'b' },
+    { overall: 33, player: fullNamePool.byCanonical.get(fnCanon('Lamar Jackson')), round: 3, pickInRound: 9, score: 1, raw: 'c' },
+  ],
+  rows: [], upcomingOveralls: [], availability: null, queueNames: [],
+  picksUntil: null, picksAwayDivider: null, clockSeconds: null,
+});
+const fnFlowers = fullNameSession.getGlance().targets.find(t => t.includes('Flowers'));
+check('full-name pool: playoff P field resolves (BAL W15 PIT + W17 CIN)', fnFlowers?.split('·')[2], '15/17');
+check('full-name pool: stack S resolves (BAL QB rostered)', fnFlowers?.split('·')[3], 'S');
+
+// ---- TASK-330: own-pick inference on the your-pick transition ----
+// Underdog scrolls the carousel past the user's own slot the instant they draft,
+// so their self-pick is never OCR'd — it only lands on a later Board/Roster
+// visit. When the confirm card / carousel never names it, infer from the
+// on-clock candidates once availability confirms the drafted player disappeared.
+console.log('TASK-330 own-pick inference:');
+const ownPool = buildPool([
+  { name: 'Alpha One', position: 'RB', team: 'DAL', adp: 1 },
+  { name: 'Bravo Two', position: 'WR', team: 'BUF', adp: 2 },
+  { name: 'Charlie Three', position: 'TE', team: 'CAR', adp: 3 },
+  { name: 'Delta Four', position: 'QB', team: 'DEN', adp: 4 },
+]);
+const oc = n => ownPool.players.find(p => p.name === n).canonical;
+const ownBase = (over) => ({
+  kind: 'players', boardPicks: [], rows: [], upcomingOveralls: [], availability: null,
+  queueNames: [], picksUntil: null, picksAwayDivider: null, clockSeconds: null,
+  onClock: false, drafterCards: [], confirmCard: null, lobby: false, filledCount: 0,
+  detailPanel: false, ...over,
+});
+const ownSession = createDraftSession({ pool: ownPool, teams: 12, rounds: 18, slot: 1 });
+// (1) User on the clock at R1 (overall 1) — snapshot the ranked candidates.
+ownSession.ingest(ownBase({ kind: 'header', onClock: true }));
+// (2) Off-clock: the pick landed (arms the snapshot for deferred attribution).
+ownSession.ingest(ownBase({ kind: 'header', onClock: false }));
+// (3-5) Players scrolls; availability marks the drafted Alpha gone. Attribution
+// waits a few syncs so the confirm card / carousel would win if it ever came.
+const goneAvail = {
+  topVisibleAdp: 2, bottomVisibleAdp: 4, positionsSeen: ['RB', 'WR', 'TE'],
+  visibleCanonicals: [oc('Bravo Two'), oc('Charlie Three')], unmatchedCount: 0,
+};
+check('own-pick not attributed before the sync delay elapses',
+  (ownSession.ingest(ownBase({ availability: goneAvail })), ownSession.getStatus().myPicks.length), 0);
+ownSession.ingest(ownBase({ availability: goneAvail }));
+ownSession.ingest(ownBase({ availability: goneAvail }));
+check('own-pick inferred into myPicks before any Board frame',
+  ownSession.getStatus().myPicks.map(p => `${p.round}:${p.name}`), ['1:Alpha One']);
+// (6) A later Board read of the same overall must override the inference.
+ownSession.ingest(ownBase({
+  kind: 'board',
+  boardPicks: [{ overall: 1, player: ownPool.byCanonical.get(oc('Bravo Two')), round: 1, pickInRound: 1, score: 1, raw: 'z' }],
+}));
+check('higher-fidelity Board read overrides the inferred own-pick',
+  ownSession.getStatus().myPicks.map(p => p.name), ['Bravo Two']);
 
 // Fresh draft: a round-1 board must NOT be flagged as a resume.
 const freshSession = createDraftSession({ pool, teams: 12, rounds: 18 });

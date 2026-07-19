@@ -6,6 +6,7 @@
 // since TASK-350 (Underdog | DraftKings).
 import { useMemo } from 'react';
 import { canonicalName } from '../../../shared/utils/helpers';
+import { teamAbbrev } from '../../../shared/utils/nflTeams';
 import { usePortfolio } from '../../contexts/PortfolioContext';
 
 // ADP CSV rows -> matcher pool rows (same field fallbacks as
@@ -22,7 +23,11 @@ function poolRowsFromAdpRows(rows) {
     out.push({
       name,
       position: row.position || row.Position || row.pos || 'N/A',
-      team: (row.teamName || row.team || row.Team || 'N/A').toString().toUpperCase().slice(0, 3),
+      // Underdog ADP stores full team names ("New York Jets"); collapse to the
+      // abbreviation the playoff/stack/correlation logic keys on. A naive
+      // slice(0,3) mangled multi-word teams (NYJ/NYG/NO/NE all -> "NEW",
+      // GB -> "GRE", JAX -> "JAC", ...), silently blanking playoff/stack badges.
+      team: teamAbbrev(row.teamName || row.team || row.Team || 'N/A'),
       adp: Number.isFinite(adp) ? adp : null,
     });
   }
@@ -37,7 +42,7 @@ export default function useSessionInputs(platform = 'underdog') {
     if (rows.length >= 100) return rows;
     return (masterPlayers || [])
       .filter(p => p?.name)
-      .map(p => ({ name: p.name, position: p.position, team: p.team, adp: p.adpPick }));
+      .map(p => ({ name: p.name, position: p.position, team: teamAbbrev(p.team), adp: p.adpPick }));
   }, [adpByPlatform, masterPlayers, platform]);
 
   const rankMap = useMemo(() => {

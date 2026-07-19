@@ -115,6 +115,14 @@ export default function BoardView({ platform }) {
   useEffect(() => {
     if (!activeSource || activeSource.length === 0) return;
     if (seededRef.current === activeSource) return;
+    // Never clobber the board the user is actively editing. A background refresh
+    // (ADR-030 / TASK-348) hands PortfolioContext a new array identity even when
+    // the content is unchanged, which re-fires this effect; reseeding over an
+    // unsaved manual order both wipes the user's work and — if it lands during a
+    // drag — desyncs the reorderable list's indices. Skip the reseed while dirty.
+    // handleSave pre-sets seededRef to the just-saved rows, so a clean board
+    // still adopts legitimately new data on the next identity change.
+    if (dirty) return;
     seededRef.current = activeSource;
     const projMap = adpByPlatform?.[platform]?.projPointsMap ?? {};
     const nameToAdpId = buildNameToAdpId(adpRows);
@@ -124,7 +132,7 @@ export default function BoardView({ platform }) {
     setDirty(false);
     setExpandedId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSource, platform]);
+  }, [activeSource, platform, dirty]);
 
   /* ── derived ── */
   const { players, breaks, labels } = board;
@@ -161,12 +169,22 @@ export default function BoardView({ platform }) {
     return list.filter(p => (`${p.name} ${p.teamName} ${p.slotName}`).toLowerCase().includes(q));
   }, [isSearching, searchTerm, viewMode, players]);
 
+  // Total key function — a keyExtractor must never throw. The library can read a
+  // transient out-of-range index during a reorder (e.g. mid-refresh), which would
+  // otherwise hand us `undefined` and crash the release bundle. Fall back to the
+  // row index for any missing/id-less row instead of dereferencing it.
+  const keyOf = useCallback((p, i) => (p && p.id != null ? String(p.id) : `__row_${i}`), []);
+
   /* ── reorder handlers ── */
   // Overall board is a HOMOGENEOUS reorderable list (player rows only — tier rails
   // and insert pills are per-row decorations, not list items), so from/to index
   // the players array directly. See boardItems.applyPlayerReorder.
   const handleOverallReorder = useCallback(({ from, to }) => {
     setBoard(prev => {
+      // Guard stale indices: a refresh that arrived mid-drag can leave from/to
+      // pointing past the current array. Out-of-range → treat as a no-op.
+      const len = prev.players.length;
+      if (from < 0 || from >= len || to < 0 || to >= len) return prev;
       const res = applyPlayerReorder(prev.players, prev.breaks, prev.labels, from, to);
       return res || prev;
     });
@@ -176,6 +194,7 @@ export default function BoardView({ platform }) {
   const handleFilteredReorder = useCallback(({ from, to }) => {
     setBoard(prev => {
       const filtered = prev.players.filter(p => (p.slotName || '').toUpperCase() === viewMode);
+      if (from < 0 || from >= filtered.length || to < 0 || to >= filtered.length) return prev;
       const next = applyFilteredReorder(prev.players, filtered, from, to);
       return next ? { ...prev, players: next } : prev;
     });
@@ -395,7 +414,7 @@ export default function BoardView({ platform }) {
       {isSearching ? (
         <FlatList
           data={searchResults}
-          keyExtractor={(p) => p.id}
+          keyExtractor={keyOf}
           renderItem={renderSearchItem}
           contentContainerStyle={listPad}
           keyboardShouldPersistTaps="handled"
@@ -404,7 +423,7 @@ export default function BoardView({ platform }) {
       ) : viewMode === 'overall' ? (
         <ReorderableList
           data={players}
-          keyExtractor={(p) => p.id}
+          keyExtractor={keyOf}
           renderItem={renderOverallItem}
           onReorder={handleOverallReorder}
           contentContainerStyle={listPad}
@@ -425,7 +444,7 @@ export default function BoardView({ platform }) {
       ) : (
         <ReorderableList
           data={posPlayers}
-          keyExtractor={(p) => p.id}
+          keyExtractor={keyOf}
           renderItem={renderPosItem}
           onReorder={handleFilteredReorder}
           contentContainerStyle={listPad}

@@ -74,5 +74,12 @@ Manual (requires the developer, on-device via dev client):
 - Blocker: manual on-device verification (4 numbered steps in Verification Approach) requires the developer's dev client. The Phase-1 on-device drag smoke test is folded into manual step 1.
 - Next step: developer runs the manual checklist; if drag fails on-device, fall back to react-native-sortables per plan.
 
+### On-device crash fix — 2026-07-19
+- **Symptom:** dragging any player in the Rankings board hard-crashed the release/preview build (SIGABRT). The `.ips` carried no JS message; a dev-client run surfaced the real error: `TypeError: Cannot read property 'id' of undefined` in `BoardView.jsx` `keyExtractor={(p) => p.id}`.
+- **Root cause:** the seeding effect re-seeds `board.players` whenever `activeSource` changes *identity*. A background data refresh (ADR-030 / TASK-348 cache-first + refresh — churning hard because mobile cloud sync is failing, see TASK-356) hands PortfolioContext a new array with the same content but a new identity, re-firing the effect and swapping `board.players` out from under `react-native-reorderable-list` mid-drag. The library then read a now-out-of-range index and called `keyExtractor(undefined)` → uncaught throw → hard crash in a bundle with no dev red box.
+- **Fix (BoardView.jsx, single-file):** (1) total keyExtractor `keyOf(p, i)` that never dereferences `undefined` (falls back to `__row_${i}`), applied to both boards + the search list; (2) stale-index guards in `handleOverallReorder`/`handleFilteredReorder` — out-of-range `from`/`to` → no-op; (3) the seeding effect now skips the reseed while the board is `dirty` (unsaved manual order), so a refresh can neither desync the list nor silently wipe user edits.
+- **Rejected approach (Reanimated-4 gotcha):** gating on the library's `onDragStart`/`onDragEnd` props. The library calls those bare inside worklets, and worklets 0.10 / Reanimated 4 *throws* on a non-worklet call from the UI thread ("Tried to synchronously call a non-worklet function") — passing plain JS callbacks there would have introduced a new crash. The keyExtractor + index-guard + dirty-guard combination makes a mid-drag reseed non-fatal without needing a drag signal.
+- **Verified:** babel transform clean, `scripts/test-rankings-board.mjs` passes (36 tests). **Manual on-device re-verification of the drag still pending.**
+
 ---
 *Approved by: developer (AskUserQuestion), 2026-07-18*

@@ -32,6 +32,8 @@
 - TASK-350: DraftKings live draft capture parity — DK parser, platform-aware engine + onboarding platform selector
 - TASK-351: Mobile Rankings overhaul: drag-and-drop board + true UD-vs-DK Compare (web parity)
 - TASK-355: Implement ADR-031: remote ADP artifact with bundled fallback (mobile)
+- TASK-356: Mobile cloud storage Blob incompatibility — sync always falls back to local
+- TASK-330: Record the user's own pick while parked on the Players tab (confirm-card/queue-diff inference)
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -100,6 +102,8 @@
 | TASK-350 | DraftKings live draft capture parity — DK parser, platform-aware engine + onboarding platform selector | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-350.md) | No | 2026-07-18 | 2026-07-18 |
 | TASK-351 | Mobile Rankings overhaul: drag-and-drop board + true UD-vs-DK Compare (web parity) | In Progress | P2 | L | Fable | [Plan](docs/plans/TASK-351.md) | No | 2026-07-18 | 2026-07-18 |
 | TASK-355 | Implement ADR-031: remote ADP artifact with bundled fallback (mobile) | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-355.md) | No | 2026-07-19 | 2026-07-19 |
+| TASK-356 | Mobile cloud storage Blob incompatibility — sync always falls back to local | In Progress | P2 | S | Sonnet | [Plan](docs/plans/TASK-356.md) | No | 2026-07-19 | 2026-07-19 |
+| TASK-330 | Mobile UD live-capture correctness: own-pick inference on the your-pick transition + team-abbreviation fix for playoff/stack badges | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-330.md) | No | 2026-07-15 | 2026-07-19 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -136,7 +140,6 @@
 | TASK-307 | Arena pairing sample mix after full-DB backfill | Todo | P3 | - | - | [Plan](docs/plans/TASK-307.md) -- Draft | No | 2026-07-01 | 2026-07-01 |
 | TASK-313 | Arena leaderboard pagination | In Progress | P3 | - | - | [Plan](docs/plans/TASK-313.md) | No | 2026-07-02 | 2026-07-02 |
 | TASK-317 | Boards IO follow-ups: artifact refresh cadence + client cache for user boards | Todo | P3 | - | - | [Plan](docs/plans/TASK-317.md) -- Draft | No | 2026-07-09 | 2026-07-09 |
-| TASK-330 | Record the user's own pick while parked on the Players tab (confirm-card/queue-diff inference) | Todo | P3 | S | Opus | [Plan](docs/plans/TASK-330.md) -- Draft | No | 2026-07-15 | 2026-07-15 |
 | TASK-341 | Fix failing slow-draft replay glance-format checks (target format + exposure cell) | Todo | P3 | S | Sonnet | [Plan](docs/plans/TASK-341.md) -- Draft | No | 2026-07-16 | 2026-07-16 |
 | TASK-353 | Mobile Compare: in-view editing + mirror-edit proposals | Todo | P3 | M | Opus | [Plan](docs/plans/TASK-353.md) -- Draft | No | 2026-07-18 | 2026-07-18 |
 | TASK-354 | DK lobby/pre-draft screen grammar for live capture | Todo | P3 | S | Opus | [Plan](docs/plans/TASK-354.md) -- Draft | No | 2026-07-18 | 2026-07-18 |

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BBE App Store Marketing Panels</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; }
+
+  .panel {
+    position: relative;
+    width: 1284px;
+    height: 2778px;
+    overflow: hidden;
+    background:
+      radial-gradient(1400px 900px at 20% -5%, #12203a 0%, rgba(18,32,58,0) 60%),
+      linear-gradient(180deg, #0b1425 0%, #070d19 55%, #05090f 100%);
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  /* faint field hairlines */
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(148, 170, 205, 0.055) 0px,
+      rgba(148, 170, 205, 0.055) 2px,
+      transparent 2px,
+      transparent 233px
+    );
+    z-index: 0;
+  }
+
+  .glow {
+    position: absolute;
+    left: 50%;
+    top: 1180px;
+    width: 1750px;
+    height: 1750px;
+    transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgba(var(--ac), 0.24), transparent 72%);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .ghost {
+    position: absolute;
+    left: 50%;
+    top: -212px;
+    transform: translateX(-50%);
+    font-family: 'Bahnschrift', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-stretch: 75%;
+    font-size: 268px;
+    letter-spacing: 16px;
+    white-space: nowrap;
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(var(--ac), 0.20);
+    z-index: 0;
+  }
+
+  .copy {
+    position: relative;
+    z-index: 2;
+    padding: 150px 105px 0 105px;
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+  }
+  .wordmark {
+    font-family: 'Bahnschrift', 'Segoe UI', sans-serif;
+    font-weight: 600;
+    font-stretch: 87%;
+    font-size: 40px;
+    letter-spacing: 15px;
+    color: #F5C24B;
+  }
+  .eyebrow .rule {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(245,194,75,0.55), rgba(245,194,75,0));
+  }
+
+  h1 {
+    margin-top: 74px;
+    font-family: 'Bahnschrift', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-stretch: 78%;
+    font-size: 158px;
+    line-height: 1.02;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #F2F6FD;
+  }
+  h1 .ac { font-style: normal; color: rgb(var(--ac)); }
+
+  .sub {
+    margin-top: 52px;
+    max-width: 1010px;
+    font-size: 47px;
+    line-height: 1.42;
+    font-weight: 400;
+    color: #A9B8CE;
+  }
+
+  .chips {
+    display: flex;
+    gap: 22px;
+    margin-top: 54px;
+  }
+  .chip {
+    font-family: 'Bahnschrift', 'Segoe UI', sans-serif;
+    font-weight: 600;
+    font-stretch: 87%;
+    font-size: 31px;
+    letter-spacing: 7px;
+    color: #C9D5E6;
+    border: 2px solid rgba(201, 213, 230, 0.28);
+    border-radius: 999px;
+    padding: 16px 34px 14px 34px;
+  }
+
+  .device-wrap {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    margin-top: 84px;
+  }
+  .device {
+    position: relative;
+    z-index: 1;
+  }
+  .device {
+    border-radius: 98px;
+    padding: 17px;
+    background: linear-gradient(180deg, #172134 0%, #0e1524 100%);
+    box-shadow:
+      0 0 0 2px rgba(var(--ac), 0.38),
+      0 0 130px rgba(var(--ac), 0.22),
+      0 70px 170px rgba(0, 0, 0, 0.72);
+  }
+  .screen {
+    width: 930px;
+    border-radius: 82px;
+    overflow: hidden;
+    background: #000;
+  }
+  .screen img { display: block; width: 100%; }
+</style>
+</head>
+<body>
+
+<!-- 01 · Draft Day (IMG_2815) -->
+<section class="panel" style="--ac: 245,194,75;">
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="eyebrow"><span class="wordmark">BB EXPOSURES</span><span class="rule"></span></div>
+    <h1>Draft day,<br><em class="ac">handled.</em></h1>
+    <p class="sub">Live exposure and projections on every pick while you're on the clock.</p>
+    <div class="chips"><span class="chip">UNDERDOG</span><span class="chip">DRAFTKINGS</span></div>
+  </div>
+  <div class="device-wrap">
+    <div class="ghost">DRAFT</div>
+    <div class="device"><div class="screen">
+      <img src="file:///C:/Software/Personal/BestBall/mobile-app/docs/promotional_screenshots/IMG_2815.PNG" alt="">
+    </div></div>
+  </div>
+</section>
+
+<!-- 02 · Dashboard (IMG_2820) -->
+<section class="panel" style="--ac: 111,168,255;">
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="eyebrow"><span class="wordmark">BB EXPOSURES</span><span class="rule"></span></div>
+    <h1>Your whole portfolio,<br><em class="ac">one screen.</em></h1>
+    <p class="sub">Rosters, stacks, and closing line value across every tournament, all in one glance.</p>
+  </div>
+  <div class="device-wrap">
+    <div class="ghost">PORTFOLIO</div>
+    <div class="device"><div class="screen">
+      <img src="file:///C:/Software/Personal/BestBall/mobile-app/docs/promotional_screenshots/IMG_2820.PNG" alt="">
+    </div></div>
+  </div>
+</section>
+
+<!-- 03 · Exposures (IMG_2821) -->
+<section class="panel" style="--ac: 55,201,140;">
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="eyebrow"><span class="wordmark">BB EXPOSURES</span><span class="rule"></span></div>
+    <h1>Know every<br><em class="ac">exposure.</em></h1>
+    <p class="sub">Exposure, count, ADP, and CLV for every player you hold. Sort, search, and filter by build.</p>
+  </div>
+  <div class="device-wrap">
+    <div class="ghost">EXPOSURE</div>
+    <div class="device"><div class="screen">
+      <img src="file:///C:/Software/Personal/BestBall/mobile-app/docs/promotional_screenshots/IMG_2821.PNG" alt="">
+    </div></div>
+  </div>
+</section>
+
+<!-- 04 · ADP Tracker (IMG_2822) -->
+<section class="panel" style="--ac: 192,132,252;">
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="eyebrow"><span class="wordmark">BB EXPOSURES</span><span class="rule"></span></div>
+    <h1>Watch the<br><em class="ac">market move.</em></h1>
+    <p class="sub">Season-long ADP trends across Underdog and DraftKings, up to ten players on one chart.</p>
+    <div class="chips"><span class="chip">UNDERDOG</span><span class="chip">DRAFTKINGS</span></div>
+  </div>
+  <div class="device-wrap">
+    <div class="ghost">MARKET</div>
+    <div class="device"><div class="screen">
+      <img src="file:///C:/Software/Personal/BestBall/mobile-app/docs/promotional_screenshots/IMG_2822.PNG" alt="">
+    </div></div>
+  </div>
+</section>
+
+<!-- 05 · Combos (IMG_2823) -->
+<section class="panel" style="--ac: 255,122,69;">
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="eyebrow"><span class="wordmark">BB EXPOSURES</span><span class="rule"></span></div>
+    <h1>See your stacks<br><em class="ac">stack up.</em></h1>
+    <p class="sub">Tap any QB to expand every combo you drafted around them, across all your tournaments.</p>
+  </div>
+  <div class="device-wrap">
+    <div class="ghost">STACKS</div>
+    <div class="device"><div class="screen">
+      <img src="file:///C:/Software/Personal/BestBall/mobile-app/docs/promotional_screenshots/IMG_2823.PNG" alt="">
+    </div></div>
+  </div>
+</section>
+
+<!-- 06 · Arena (IMG_2824) -->
+<section class="panel" style="--ac: 255,107,107;">
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="eyebrow"><span class="wordmark">BB EXPOSURES</span><span class="rule"></span></div>
+    <h1>Settle it<br>in the <em class="ac">Arena.</em></h1>
+    <p class="sub">Blind roster matchups judged by the community. Pick a corner.</p>
+  </div>
+  <div class="device-wrap">
+    <div class="ghost">ARENA</div>
+    <div class="device"><div class="screen">
+      <img src="file:///C:/Software/Personal/BestBall/mobile-app/docs/promotional_screenshots/IMG_2824.PNG" alt="">
+    </div></div>
+  </div>
+</section>
+
+</body>
+</html>

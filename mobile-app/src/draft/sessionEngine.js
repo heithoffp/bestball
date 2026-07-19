@@ -9,6 +9,7 @@ import {
 } from './snake.js';
 import { usernameMatches, anchorUsernameMatches, matchAbbrevPlayer } from './playerMatcher.js';
 import { PLAYOFF_SCHEDULE } from './playoffSchedule.js';
+import { teamAbbrev } from './nflTeams.js';
 
 // ---- Draft-room presence (TASK-336) ----
 // Screen kinds that prove the capture is looking at the Underdog draft room.
@@ -37,7 +38,10 @@ const PLAYOFF_PAIRS_W17 = {
 };
 
 function candidatePlayoffWeeks(p, picks) {
-  const team = (p.team || '').toUpperCase();
+  // Normalize to schedule-key abbreviations: pool/pick teams may arrive as
+  // Underdog full names ("New York Jets") — teamAbbrev is a no-op on values
+  // that are already abbreviated (DraftKings) or unknown ("N/A").
+  const team = teamAbbrev(p.team);
   if (!team || team === 'N/A') return [];
   const weeks = [];
   for (const week of PLAYOFF_WEEKS) {
@@ -46,7 +50,7 @@ function candidatePlayoffWeeks(p, picks) {
     const opp = PLAYOFF_SCHEDULE[team]?.[week];
     if (!opp) continue;
     for (const mine of picks) {
-      if ((mine.team || '').toUpperCase() !== opp) continue; // same-team = S flag
+      if (teamAbbrev(mine.team) !== opp) continue; // same-team = S flag
       if (allowed.includes(mine.position)) { weeks.push(week); break; }
     }
   }
@@ -102,6 +106,7 @@ export function createDraftSession(cfg) {
     queue: new Set(),         // canonicals seen on the Queue tab
     wasOnClock: false,        // previous ingest's header said "Your pick"
     lastConfirmKey: null,     // dedupes the lingering pick-confirmation card
+    onClockSnapshot: null,    // {overall, candidates[]} captured while on the clock (TASK-330)
     syncCount: 0,
     lastObs: null,
     inRoom: null,             // null = no room seen yet; true/false after evidence
@@ -189,6 +194,7 @@ export function createDraftSession(cfg) {
     state.queue = new Set();
     state.wasOnClock = false;
     state.lastConfirmKey = null;
+    state.onClockSnapshot = null;
     state.newDraftStreak = 0;
     state.draftGen += 1;
   }
@@ -350,7 +356,7 @@ export function createDraftSession(cfg) {
     // cards) are placed AT currentPick−1, so feeding them back would turn any
     // over-ratchet into a self-reinforcing climb.
     const boardOveralls = [...state.ledger.entries()]
-      .filter(([, e]) => e.src !== 'event')
+      .filter(([, e]) => e.src !== 'event' && e.src !== 'selfInfer')
       .map(([o]) => o);
     if (boardOveralls.length) {
       ratchetCurrentPick(Math.max(...boardOveralls) + 1);
@@ -518,7 +524,11 @@ export function createDraftSession(cfg) {
       state.lastConfirmKey = obs.confirmCard.raw;
       const overall = state.currentPick - 1;
       const freshPosition = picksUntil != null || obs.upcomingOveralls.length > 0;
-      if (freshPosition && overall >= 1 && !state.ledger.has(overall)) {
+      // Fill an empty slot, or overwrite a lower-fidelity own-pick inference
+      // (TASK-330): the confirm card names the actual pick, so it must be able
+      // to correct a mis-inferred selfInfer entry at the same overall.
+      const atOverall = state.ledger.get(overall);
+      if (freshPosition && overall >= 1 && (!atOverall || atOverall.src === 'selfInfer')) {
         const match = matchAbbrevPlayer(pool, obs.confirmCard.nameRaw, obs.confirmCard.team);
         // Sanity: a player "falling" 30+ picks past ADP is far more likely a
         // misattributed overall than a real fall — leave it to board evidence.
@@ -544,8 +554,33 @@ export function createDraftSession(cfg) {
 
     // ---- "Your pick" -> any other in-draft header = our pick just landed.
     if (obs.kind !== 'unknown') {
-      if (state.wasOnClock && !obs.onClock) summary.myPickEvent = true;
+      if (state.wasOnClock && !obs.onClock) {
+        summary.myPickEvent = true;
+        // Arm the own-pick snapshot for deferred attribution (TASK-330): the
+        // confirm card / carousel usually names the pick within a frame or two,
+        // and must win the race — only if it never arrives does inference fill
+        // the slot. Record when the pick landed so we can wait a few syncs.
+        if (state.onClockSnapshot && state.onClockSnapshot.armedSync == null) {
+          state.onClockSnapshot.armedSync = state.syncCount;
+        }
+      }
       state.wasOnClock = !!obs.onClock;
+    }
+
+    // ---- Own-pick snapshot (TASK-330). Underdog auto-advances the carousel
+    // past the user's own slot the instant they draft, so their completed
+    // self-pick card is never OCR'd (no self-confirm banner either) — the pick
+    // only lands on a later Board/Roster visit. While the user is on the clock,
+    // remember the overall they're filling and the ranked available candidates;
+    // the pick is attributed once availability confirms one of them disappeared
+    // (below). Guard: the on-clock overall must map to the user's own slot.
+    if (obs.onClock && slot() && slotForOverall(state.currentPick, teams) === slot()
+      && !state.ledger.has(state.currentPick)) {
+      state.onClockSnapshot = {
+        overall: state.currentPick,
+        candidates: availablePlayers(15).map(p => p.canonical),
+        armedSync: null,
+      };
     }
 
     // Players-tab availability, two inference passes over the visible window.
@@ -609,6 +644,50 @@ export function createDraftSession(cfg) {
     // (an opponent's roster view would resurrect their picks, TASK-329).
     if (obs.kind !== 'roster') {
       for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+    }
+
+    // ---- Own-pick attribution (TASK-330). Fill the user's own overall the
+    // moment availability confirms the drafted player disappeared — the only
+    // passive signal, since the carousel never shows the user's completed
+    // self-pick. Runs after availability/inferred-gone settle for this frame.
+    // The user is on the clock when they pick, so between their pick and the
+    // next Players read exactly ONE snapshot candidate goes missing (theirs);
+    // take the highest-ranked such candidate. Scored below every other source
+    // (0.5 < confirm-card 0.6 < board/roster) so any later Board/Roster/confirm
+    // read of the same overall overrides it.
+    if (state.onClockSnapshot) {
+      const { overall, armedSync } = state.onClockSnapshot;
+      // Wait until the pick has landed (armed) and a couple of syncs have passed
+      // so the confirm card / carousel gets first claim on the slot.
+      const ripe = armedSync != null && state.syncCount - armedSync >= 3;
+      if (state.ledger.has(overall)) {
+        state.onClockSnapshot = null; // filled by higher-fidelity evidence
+      } else if (ripe && slot() && slotForOverall(overall, teams) === slot()) {
+        const goneCanon = state.onClockSnapshot.candidates
+          .find(c => state.inferredGone.has(c));
+        if (goneCanon) {
+          const player = pool.byCanonical.get(goneCanon);
+          const dup = [...state.ledger.values()]
+            .some(e => e.player.canonical === goneCanon);
+          // Sanity: a player "falling" 30+ past ADP into this slot is a likelier
+          // misattribution than a real fall — mirrors the confirm-card guard.
+          const bigFall = player && Number.isFinite(player.adp)
+            && overall - player.adp > 30;
+          if (player && !dup && !bigFall) {
+            state.ledger.set(overall, {
+              player,
+              round: roundForOverall(overall, teams),
+              pickInRound: pickInRoundForOverall(overall, teams),
+              score: 0.5,
+              raw: `selfInfer:${goneCanon}`,
+              src: 'selfInfer',
+            });
+            summary.confirmPick = player.name;
+            summary.newBoardPicks++;
+          }
+          state.onClockSnapshot = null;
+        }
+      }
     }
 
     // Resume detection: the first time a screen gives us a real read on draft
@@ -721,8 +800,9 @@ export function createDraftSession(cfg) {
         short = `${p.name.trim()[0]}.${short}`;
       }
       let stack = '';
+      const candTeam = teamAbbrev(p.team);
       for (const mine of picks) {
-        if (mine.team === p.team && mine.team !== 'N/A' && (p.position === 'QB' || mine.position === 'QB')) {
+        if (teamAbbrev(mine.team) === candTeam && candTeam !== 'N/A' && (p.position === 'QB' || mine.position === 'QB')) {
           stack = 'S';
           break;
         }

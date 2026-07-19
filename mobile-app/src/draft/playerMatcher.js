@@ -5,6 +5,7 @@
 // Pure JS — no React Native imports (Node fixture tests run this directly).
 
 import { canonicalName } from '../../shared/utils/helpers.js';
+import { teamAbbrev } from './nflTeams.js';
 
 /** Levenshtein distance with early-exit cap. */
 function levenshtein(a, b, cap = Infinity) {
@@ -83,7 +84,13 @@ export function buildPool(entries) {
     const player = {
       name: e.name,
       position: fuzzyPosition(e.position) || e.position || 'N/A',
-      team: (e.team || 'N/A').toUpperCase(),
+      // Normalize to an abbreviation so every downstream team comparison keys on
+      // the same form (playoff schedule, stack, and the confirm-card team
+      // tie-break). Underdog ADP stores full names ("Indianapolis Colts"); left
+      // un-normalized, "J. Taylor"/IND matched J.J. Taylor over Jonathan Taylor,
+      // and playoff/stack badges silently blanked. teamAbbrev is a no-op on
+      // already-abbreviated (DraftKings) or unknown ("N/A") values.
+      team: teamAbbrev((e.team || 'N/A')).toUpperCase(),
       adp,
       canonical,
       tokens: canonical.split(' '),
@@ -116,7 +123,7 @@ export function matchPlayer(pool, raw, hints = {}) {
   if (exact) return { player: exact, score: 1, method: 'exact' };
 
   const hintPos = hints.position ? fuzzyPosition(hints.position) : null;
-  const hintTeam = hints.team ? String(hints.team).toUpperCase() : null;
+  const hintTeam = hints.team ? teamAbbrev(String(hints.team)).toUpperCase() : null;
   const corroborate = (p, base) => {
     let s = base;
     if (hintPos && p.position === hintPos) s += 0.06;
@@ -218,7 +225,7 @@ export function matchAbbrevPlayer(pool, raw, teamHint) {
   const initial = m[1].toLowerCase();
   const rest = canonicalName(m[2]);
   if (!rest || rest.length < 3) return null;
-  const team = teamHint ? String(teamHint).toUpperCase() : null;
+  const team = teamHint ? teamAbbrev(String(teamHint)).toUpperCase() : null;
   let best = null;
   for (const p of pool.players) {
     if (p.tokens.length < 2) continue;

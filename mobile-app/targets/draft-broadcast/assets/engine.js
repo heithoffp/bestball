@@ -57,6 +57,50 @@
     return applyAlias(canonical);
   }
 
+  // src/draft/nflTeams.js
+  var NFL_TEAMS2 = {
+    ARI: "Arizona Cardinals",
+    ATL: "Atlanta Falcons",
+    BAL: "Baltimore Ravens",
+    BUF: "Buffalo Bills",
+    CAR: "Carolina Panthers",
+    CHI: "Chicago Bears",
+    CIN: "Cincinnati Bengals",
+    CLE: "Cleveland Browns",
+    DAL: "Dallas Cowboys",
+    DEN: "Denver Broncos",
+    DET: "Detroit Lions",
+    GB: "Green Bay Packers",
+    HOU: "Houston Texans",
+    IND: "Indianapolis Colts",
+    JAC: "Jacksonville Jaguars",
+    JAX: "Jacksonville Jaguars",
+    KC: "Kansas City Chiefs",
+    LAC: "Los Angeles Chargers",
+    LAR: "Los Angeles Rams",
+    LV: "Las Vegas Raiders",
+    MIA: "Miami Dolphins",
+    MIN: "Minnesota Vikings",
+    NE: "New England Patriots",
+    NO: "New Orleans Saints",
+    NYG: "New York Giants",
+    NYJ: "New York Jets",
+    PHI: "Philadelphia Eagles",
+    PIT: "Pittsburgh Steelers",
+    SEA: "Seattle Seahawks",
+    SF: "San Francisco 49ers",
+    TB: "Tampa Bay Buccaneers",
+    TEN: "Tennessee Titans",
+    WAS: "Washington Commanders"
+  };
+  var NFL_TEAMS_ABBREV2 = Object.fromEntries(
+    Object.entries(NFL_TEAMS2).map(([abbr, full]) => [full.toUpperCase(), abbr])
+  );
+  function teamAbbrev(team) {
+    if (!team) return team;
+    return NFL_TEAMS_ABBREV2[String(team).toUpperCase()] || team;
+  }
+
   // src/draft/playerMatcher.js
   function levenshtein(a, b, cap = Infinity) {
     if (a === b) return 0;
@@ -112,7 +156,13 @@
       const player = {
         name: e.name,
         position: fuzzyPosition(e.position) || e.position || "N/A",
-        team: (e.team || "N/A").toUpperCase(),
+        // Normalize to an abbreviation so every downstream team comparison keys on
+        // the same form (playoff schedule, stack, and the confirm-card team
+        // tie-break). Underdog ADP stores full names ("Indianapolis Colts"); left
+        // un-normalized, "J. Taylor"/IND matched J.J. Taylor over Jonathan Taylor,
+        // and playoff/stack badges silently blanked. teamAbbrev is a no-op on
+        // already-abbreviated (DraftKings) or unknown ("N/A") values.
+        team: teamAbbrev(e.team || "N/A").toUpperCase(),
         adp,
         canonical,
         tokens: canonical.split(" ")
@@ -136,7 +186,7 @@
     const exact = pool2.byCanonical.get(canonical);
     if (exact) return { player: exact, score: 1, method: "exact" };
     const hintPos = hints.position ? fuzzyPosition(hints.position) : null;
-    const hintTeam = hints.team ? String(hints.team).toUpperCase() : null;
+    const hintTeam = hints.team ? teamAbbrev(String(hints.team)).toUpperCase() : null;
     const corroborate = (p, base) => {
       let s = base;
       if (hintPos && p.position === hintPos) s += 0.06;
@@ -208,7 +258,7 @@
     const initial = m[1].toLowerCase();
     const rest = canonicalName(m[2]);
     if (!rest || rest.length < 3) return null;
-    const team = teamHint ? String(teamHint).toUpperCase() : null;
+    const team = teamHint ? teamAbbrev(String(teamHint)).toUpperCase() : null;
     let best = null;
     for (const p of pool2.players) {
       if (p.tokens.length < 2) continue;
@@ -1292,7 +1342,7 @@
     RB: ["QB", "WR", "TE", "RB"]
   };
   function candidatePlayoffWeeks(p, picks) {
-    const team = (p.team || "").toUpperCase();
+    const team = teamAbbrev(p.team);
     if (!team || team === "N/A") return [];
     const weeks = [];
     for (const week of PLAYOFF_WEEKS) {
@@ -1301,7 +1351,7 @@
       const opp = PLAYOFF_SCHEDULE[team]?.[week];
       if (!opp) continue;
       for (const mine of picks) {
-        if ((mine.team || "").toUpperCase() !== opp) continue;
+        if (teamAbbrev(mine.team) !== opp) continue;
         if (allowed.includes(mine.position)) {
           weeks.push(week);
           break;
@@ -1353,6 +1403,8 @@
       // previous ingest's header said "Your pick"
       lastConfirmKey: null,
       // dedupes the lingering pick-confirmation card
+      onClockSnapshot: null,
+      // {overall, candidates[]} captured while on the clock (TASK-330)
       syncCount: 0,
       lastObs: null,
       inRoom: null,
@@ -1425,6 +1477,7 @@
       state.queue = /* @__PURE__ */ new Set();
       state.wasOnClock = false;
       state.lastConfirmKey = null;
+      state.onClockSnapshot = null;
       state.newDraftStreak = 0;
       state.draftGen += 1;
     }
@@ -1540,7 +1593,7 @@
           });
         }
       }
-      const boardOveralls = [...state.ledger.entries()].filter(([, e]) => e.src !== "event").map(([o]) => o);
+      const boardOveralls = [...state.ledger.entries()].filter(([, e]) => e.src !== "event" && e.src !== "selfInfer").map(([o]) => o);
       if (boardOveralls.length) {
         ratchetCurrentPick(Math.max(...boardOveralls) + 1);
       }
@@ -1645,7 +1698,8 @@
         state.lastConfirmKey = obs.confirmCard.raw;
         const overall = state.currentPick - 1;
         const freshPosition = picksUntil != null || obs.upcomingOveralls.length > 0;
-        if (freshPosition && overall >= 1 && !state.ledger.has(overall)) {
+        const atOverall = state.ledger.get(overall);
+        if (freshPosition && overall >= 1 && (!atOverall || atOverall.src === "selfInfer")) {
           const match = matchAbbrevPlayer(pool2, obs.confirmCard.nameRaw, obs.confirmCard.team);
           if (match && Number.isFinite(match.player.adp) && overall - match.player.adp > 30) {
             summary.confirmPick = null;
@@ -1666,8 +1720,20 @@
         }
       }
       if (obs.kind !== "unknown") {
-        if (state.wasOnClock && !obs.onClock) summary.myPickEvent = true;
+        if (state.wasOnClock && !obs.onClock) {
+          summary.myPickEvent = true;
+          if (state.onClockSnapshot && state.onClockSnapshot.armedSync == null) {
+            state.onClockSnapshot.armedSync = state.syncCount;
+          }
+        }
         state.wasOnClock = !!obs.onClock;
+      }
+      if (obs.onClock && slot() && slotForOverall(state.currentPick, teams) === slot() && !state.ledger.has(state.currentPick)) {
+        state.onClockSnapshot = {
+          overall: state.currentPick,
+          candidates: availablePlayers(15).map((p) => p.canonical),
+          armedSync: null
+        };
       }
       if (obs.availability) {
         const {
@@ -1703,6 +1769,33 @@
       }
       if (obs.kind !== "roster") {
         for (const r of obs.rows) state.inferredGone.delete(r.player.canonical);
+      }
+      if (state.onClockSnapshot) {
+        const { overall, armedSync } = state.onClockSnapshot;
+        const ripe = armedSync != null && state.syncCount - armedSync >= 3;
+        if (state.ledger.has(overall)) {
+          state.onClockSnapshot = null;
+        } else if (ripe && slot() && slotForOverall(overall, teams) === slot()) {
+          const goneCanon = state.onClockSnapshot.candidates.find((c) => state.inferredGone.has(c));
+          if (goneCanon) {
+            const player = pool2.byCanonical.get(goneCanon);
+            const dup = [...state.ledger.values()].some((e) => e.player.canonical === goneCanon);
+            const bigFall = player && Number.isFinite(player.adp) && overall - player.adp > 30;
+            if (player && !dup && !bigFall) {
+              state.ledger.set(overall, {
+                player,
+                round: roundForOverall(overall, teams),
+                pickInRound: pickInRoundForOverall(overall, teams),
+                score: 0.5,
+                raw: `selfInfer:${goneCanon}`,
+                src: "selfInfer"
+              });
+              summary.confirmPick = player.name;
+              summary.newBoardPicks++;
+            }
+            state.onClockSnapshot = null;
+          }
+        }
       }
       if (state.observedStartPick == null && (obs.boardPicks.length || obs.upcomingOveralls.length || obs.availability || picksUntil != null || Number.isFinite(obs.currentOverall))) {
         state.observedStartPick = state.currentPick;
@@ -1785,8 +1878,9 @@
           short = `${p.name.trim()[0]}.${short}`;
         }
         let stack = "";
+        const candTeam = teamAbbrev(p.team);
         for (const mine of picks) {
-          if (mine.team === p.team && mine.team !== "N/A" && (p.position === "QB" || mine.position === "QB")) {
+          if (teamAbbrev(mine.team) === candTeam && candTeam !== "N/A" && (p.position === "QB" || mine.position === "QB")) {
             stack = "S";
             break;
           }
