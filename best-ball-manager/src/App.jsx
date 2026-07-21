@@ -600,7 +600,7 @@ export default function App() {
         <div className="app-content">
           <Suspense fallback={<div style={{ padding: '2.5rem', textAlign: 'center' }}>Loading tab...</div>}>
             {activeTab === 'dashboard' && <Dashboard rosterData={rosterData} masterPlayers={masterPlayers} adpSnapshots={adpSnapshots} onNavigate={(key) => navigate(TAB_PATHS[key])} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
-            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
+            {activeTab === 'exposures' && <ExposureTable masterPlayers={masterPlayers} rosterData={rosterData} adpByPlatform={adpByPlatform} actuals={weeklyActuals} demoMode={isUsingDemoData} onNavigateToRosters={navigateToRosters} helpOpen={helpOpen} onHelpToggle={toggleHelp} />}
             {activeTab === 'draftflow' && (
               canAccessFeature(tier, 'draftflow') || subLoading
                 ? <DraftFlowAnalysis rosterData={rosterData} masterPlayers={masterPlayers} helpOpen={helpOpen} onHelpToggle={toggleHelp} />

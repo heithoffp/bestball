@@ -8,6 +8,8 @@ import { SearchInput } from './filters';
 import { NFL_TEAMS } from '../utils/nflTeams';
 import { canonicalName } from '../utils/helpers';
 import { calcCLV, clvLabel } from '../utils/clvHelpers';
+import { advanceLabel } from '../utils/advanceModel';
+import { podAdvVersionKey, getMemoPodAdv, hydratePodAdv, subscribePodAdv } from '../utils/podAdvanceStore';
 import TournamentMultiSelect from './TournamentMultiSelect';
 import styles from './ExposureTable.module.css';
 import { FolderSync } from 'lucide-react';
@@ -74,6 +76,7 @@ const SORT_OPTIONS = [
   { value: 'exposure', label: 'Exposure %' },
   { value: 'adp', label: 'ADP' },
   { value: 'clv', label: 'Avg CLV' },
+  { value: 'advance', label: 'Avg Adv %' },
   { value: 'name', label: 'Name' },
   { value: 'count', label: 'Count' },
   { value: 'adpTrend', label: 'Trend' },
@@ -87,8 +90,34 @@ const HELP_ANNOTATIONS = [
   { id: 'adp-trend', label: 'ADP Trend', anchor: 'left', description: 'Sparkline showing 2-week ADP movement. Rising ADP = falling draft cost.' },
 ];
 
-export default function ExposureTable({ masterPlayers = [], rosterData = [], onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
+export default function ExposureTable({ masterPlayers = [], rosterData = [], adpByPlatform = {}, actuals = null, demoMode = false, onNavigateToRosters = null, helpOpen = false, onHelpToggle }) {
   const { isMobile } = useMediaQuery();
+
+  // Pod-exact advance odds per roster, read from the shared podAdvanceStore cache
+  // (keyed by entry_id). The App-level prewarm (rosterPrewarm.js) fetches boards
+  // and computes/persists these; this tab is a pure consumer — it subscribes and
+  // averages, never computes. Values stream in and fill progressively.
+  const podAdvVersion = useMemo(
+    () => podAdvVersionKey(adpByPlatform, actuals, demoMode ? 'demo' : 'real'),
+    [adpByPlatform, actuals, demoMode]
+  );
+  const [advByEntry, setAdvByEntry] = useState(() => ({ ...(getMemoPodAdv(podAdvVersion) ?? {}) }));
+  useEffect(() => {
+    setAdvByEntry({ ...(getMemoPodAdv(podAdvVersion) ?? {}) });
+    let cancelled = false;
+    // Reload case: nothing in memory yet → pull the persisted results once.
+    if (!getMemoPodAdv(podAdvVersion) && !demoMode) {
+      hydratePodAdv(podAdvVersion).then(known => {
+        if (!cancelled && known && Object.keys(known).length) {
+          setAdvByEntry(prev => ({ ...known, ...prev }));
+        }
+      });
+    }
+    const unsub = subscribePodAdv(podAdvVersion, results => {
+      setAdvByEntry(prev => ({ ...prev, ...results }));
+    });
+    return () => { cancelled = true; unsub(); };
+  }, [podAdvVersion, demoMode]);
 
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState(rosterData.length === 0 ? 'adp' : 'exposure');
@@ -146,11 +175,15 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
     });
 
     const playerCounts = {};
-    filtered.forEach(({ roster }) => {
+    filtered.forEach(({ id, roster }) => {
+      // Pod-exact advance rate for this roster (entry_id), if modeled. Object keys
+      // stringify, so match the store's draftId keys via String().
+      const adv = advByEntry[String(id)];
+      const hasAdv = typeof adv === 'number' && Number.isFinite(adv);
       roster.forEach(player => {
         const key = canonicalName(player.name || '');
         if (!key) return;
-        if (!playerCounts[key]) playerCounts[key] = { count: 0, clvSum: 0, clvCount: 0 };
+        if (!playerCounts[key]) playerCounts[key] = { count: 0, clvSum: 0, clvCount: 0, advSum: 0, advCount: 0 };
         playerCounts[key].count++;
         // Average CLV uses the same power-law curve as the Rosters tab (alpha = 0.5).
         const clv = calcCLV(player.pick, player.latestADP, 0.5);
@@ -158,16 +191,22 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
           playerCounts[key].clvSum += clv;
           playerCounts[key].clvCount++;
         }
+        // Average advance rate over rosters that have a modeled Adv %.
+        if (hasAdv) {
+          playerCounts[key].advSum += adv;
+          playerCounts[key].advCount++;
+        }
       });
     });
 
     const exposures = {};
     const rosterCount = filtered.length;
-    Object.entries(playerCounts).forEach(([nameKey, { count, clvSum, clvCount }]) => {
+    Object.entries(playerCounts).forEach(([nameKey, { count, clvSum, clvCount, advSum, advCount }]) => {
       exposures[nameKey] = {
         count,
         exposure: rosterCount > 0 ? (count / rosterCount) * 100 : 0,
         avgCLV: clvCount > 0 ? clvSum / clvCount : null,
+        avgAdvance: advCount > 0 ? advSum / advCount : null,
       };
     });
 
@@ -175,7 +214,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
       totalFilteredEntries: filtered.length,
       playerExposures: exposures
     };
-  }, [rosterData, rbFilter, qbFilter, teFilter, selectedTournaments]);
+  }, [rosterData, rbFilter, qbFilter, teFilter, selectedTournaments, advByEntry]);
 
   const slateGroups = useMemo(() => {
     const map = new Map();
@@ -226,7 +265,8 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
         trendValue,
         filteredExposure: filtered ? filtered.exposure : 0,
         filteredCount: filtered ? filtered.count : 0,
-        avgCLV: filtered ? filtered.avgCLV : null
+        avgCLV: filtered ? filtered.avgCLV : null,
+        avgAdvance: filtered ? filtered.avgAdvance : null
       };
     });
   }, [masterPlayers, playerExposures]);
@@ -278,6 +318,12 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
         const aClv = (a.avgCLV ?? Number.NEGATIVE_INFINITY);
         const bClv = (b.avgCLV ?? Number.NEGATIVE_INFINITY);
         return aClv - bClv;
+      }
+      if (sortField === 'advance') {
+        // Null Adv % (no modeled board) sorts to the bottom of the default (desc) view.
+        const aAdv = (a.avgAdvance ?? Number.NEGATIVE_INFINITY);
+        const bAdv = (b.avgAdvance ?? Number.NEGATIVE_INFINITY);
+        return aAdv - bAdv;
       }
       return (parseFloat(aVal) || 0) - (parseFloat(bVal) || 0);
     };
@@ -419,6 +465,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
     const displayExp = hasActiveFilter ? (p.filteredExposure || 0) : (p.exposure || 0);
     const displayCount = hasActiveFilter ? (p.filteredCount || 0) : (p.count || 0);
     const clv = clvLabel(p.avgCLV ?? null);
+    const adv = advanceLabel(p.avgAdvance ?? null);
     const isExpanded = expandedId === (p.stableId || p.name);
 
     return (
@@ -464,6 +511,10 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
           <div className={styles.cardStat}>
             <span className={styles.cardStatLabel}>CLV</span>
             <span className={styles.cardStatValue} style={{ color: displayCount > 0 ? clv.color : undefined }}>{displayCount > 0 ? clv.text : '—'}</span>
+          </div>
+          <div className={styles.cardStat}>
+            <span className={styles.cardStatLabel}>Adv</span>
+            <span className={styles.cardStatValue} style={{ color: adv.color }}>{adv.text}</span>
           </div>
         </div>
         {isExpanded && (
@@ -533,6 +584,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
             <col className={styles.colCount} />
             <col className={styles.colAdp} />
             <col className={styles.colClv} />
+            <col className={styles.colAdvance} />
             <col className={`${styles.colTrend} ${styles.trendCol}`} />
             {onNavigateToRosters && <col className={styles.colNav} />}
           </colgroup>
@@ -546,6 +598,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
               <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('count')}>Count {sortArrow('count')}</th>
               <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('adp')}>ADP {sortArrow('adp')}</th>
               <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('clv')}>Avg CLV {sortArrow('clv')}</th>
+              <th className={styles.headerCell} style={{ textAlign: 'right' }} onClick={() => onSort('advance')}>Avg Adv % {sortArrow('advance')}</th>
               <th className={`${styles.headerCell} ${styles.trendCol}`} onClick={() => onSort('adpTrend')} data-help-id="adp-trend">ADP Trend {sortArrow('adpTrend')}</th>
               {onNavigateToRosters && <th className={styles.headerCell} />}
             </tr>
@@ -555,21 +608,21 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
             {filteredAndSorted.length === 0 ? (
               masterPlayers.length === 0
                 ? <tr>
-                    <td colSpan={onNavigateToRosters ? 9 : 8} style={{ padding: 0, border: 'none' }}>
+                    <td colSpan={onNavigateToRosters ? 10 : 9} style={{ padding: 0, border: 'none' }}>
                       <EmptyState icon={FolderSync} title="No exposure data">
                         Sync your rosters from the <a href="/install" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>browser extension</a> to see exposure data.
                       </EmptyState>
                     </td>
                   </tr>
                 : <tr>
-                    <td colSpan={onNavigateToRosters ? 9 : 8} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    <td colSpan={onNavigateToRosters ? 10 : 9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                       No players match.
                     </td>
                   </tr>
             ) : (
               <>
                 {virtualizer.getVirtualItems().length > 0 && (
-                  <tr><td colSpan={onNavigateToRosters ? 9 : 8} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
+                  <tr><td colSpan={onNavigateToRosters ? 10 : 9} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
                 )}
                 {virtualizer.getVirtualItems().map(virtualRow => {
                   const p = filteredAndSorted[virtualRow.index];
@@ -577,6 +630,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
                   const displayExp = hasActiveFilter ? (p.filteredExposure || 0) : (p.exposure || 0);
                   const displayCount = hasActiveFilter ? (p.filteredCount || 0) : (p.count || 0);
                   const clv = clvLabel(p.avgCLV ?? null);
+                  const adv = advanceLabel(p.avgAdvance ?? null);
 
                   return (
                     <tr
@@ -592,6 +646,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
                       <td className={styles.cell} style={{ textAlign: 'right' }}>{displayCount}</td>
                       <td className={styles.cell} style={{ textAlign: 'right' }}>{p.adpDisplay}</td>
                       <td className={styles.cell} style={{ textAlign: 'right', color: clv.color, fontFamily: "'JetBrains Mono', monospace" }}>{displayCount > 0 ? clv.text : '—'}</td>
+                      <td className={styles.cell} style={{ textAlign: 'right', color: adv.color, fontFamily: "'JetBrains Mono', monospace" }}>{adv.text}</td>
                       <td className={`${styles.cell} ${styles.trendCol}`} style={{ padding: '8px 10px' }}>
                         <div className={styles.sparklineWrap}>
                           <AdpSparkline history={p.history} />
@@ -613,7 +668,7 @@ export default function ExposureTable({ masterPlayers = [], rosterData = [], onN
                   );
                 })}
                 {virtualizer.getVirtualItems().length > 0 && (
-                  <tr><td colSpan={onNavigateToRosters ? 9 : 8} style={{
+                  <tr><td colSpan={onNavigateToRosters ? 10 : 9} style={{
                     height: virtualizer.getTotalSize() - (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
                     padding: 0, border: 'none'
                   }} /></tr>

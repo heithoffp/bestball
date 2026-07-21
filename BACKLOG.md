@@ -162,6 +162,7 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-358 | Add Avg Adv % column to Exposures tab | Done | P3 | [Plan](docs/archive/plans/TASK-358.md) | Yes | 2026-07-21 |
 | TASK-357 | Fix DraftBroadcast Info.plist RPBroadcastProcessMode placement blocking App Store validation | Done | P1 | [Plan](docs/archive/plans/TASK-357.md) | Yes | 2026-07-19 |
 | TASK-352 | DraftKings live capture follow-ups: auto new-draft detection + lobby/pre-draft screen grammar | Done | P2 | [Plan](docs/archive/plans/TASK-352.md) | No | 2026-07-18 |
 | TASK-343 | Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish (Won't Do: Superseded by TASK-344 — ADR-028 reverses ADR-027 (mobile Stripe external checkout) to Apple StoreKit 2 IAP) | Won't Do | P2 | [Plan](docs/archive/plans/TASK-343.md) | No | 2026-07-17 |

@@ -43,8 +43,18 @@ export function derivePodModel(board, {
   adpByPlatform = null,
   actuals = null,
 } = {}) {
-  const udAdpMap = adpByPlatform?.underdog?.latestAdpMap ?? {};
-  const projMap = adpByPlatform?.underdog?.projPointsMap ?? {};
+  // CLV/ADP must read the board's own platform slate — a DK board scored
+  // against the Underdog ADP map produced a Board CLV that disagreed with the
+  // roster CLV (which already reads the per-platform map, dataLoader.js).
+  // projPointsMap is shared across platforms, so it resolves the same either way.
+  const slateTitle = board.slateTitle || '';
+  const platform = slateTitle.startsWith('DK') ? 'draftkings' : 'underdog';
+  const adpMap = adpByPlatform?.[platform]?.latestAdpMap ?? {};
+  // projPointsMap is shared across platforms; fall back to underdog so the
+  // Adv% worker path (which supplies only { underdog }) still resolves for DK boards.
+  const projMap = adpByPlatform?.[platform]?.projPointsMap
+    ?? adpByPlatform?.underdog?.projPointsMap
+    ?? {};
   const entryCount = board.entryCount || 12;
   const rounds = board.rounds || Math.ceil(board.picks.length / entryCount);
 
@@ -54,7 +64,7 @@ export function derivePodModel(board, {
     const round = p.round ?? (p.pick ? Math.ceil(p.pick / entryCount) : null);
     if (round == null || p.slot == null) continue;
     const key = p.name ? canonicalName(p.name) : null;
-    const latestADP = key && udAdpMap[key] ? udAdpMap[key].pick : null;
+    const latestADP = key && adpMap[key] ? adpMap[key].pick : null;
     const enriched = {
       ...p,
       round,
@@ -69,9 +79,7 @@ export function derivePodModel(board, {
 
   // Season outlook per seat: lineup-aware projection plus banked actuals.
   // Seats where under half the picks resolved a projection stay unmodeled
-  // rather than scoring a fake low.
-  const slateTitle = board.slateTitle || '';
-  const platform = slateTitle.startsWith('DK') ? 'draftkings' : 'underdog';
+  // rather than scoring a fake low. (slateTitle/platform resolved above.)
   const superflex = slateTitle.toLowerCase().includes('superflex');
   // Board slate_title carries the platform's tournament name ("The Big
   // Board"); the roster's tournamentTitle is checked too for boards whose
