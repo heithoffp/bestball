@@ -65,8 +65,8 @@ export function SubscriptionProvider({ children }) {
 
     let cancelled = false;
 
-    async function fetchUserData() {
-      setLoading(true);
+    async function fetchUserData({ initial = false } = {}) {
+      if (initial) setLoading(true);
 
       const [subResult, profileResult] = await Promise.all([
         supabase
@@ -98,34 +98,46 @@ export function SubscriptionProvider({ children }) {
           setProfile(profileResult.data);
         }
 
-        setLoading(false);
+        if (initial) setLoading(false);
       }
+
+      return subResult.error ? null : subResult.data;
     }
 
-    fetchUserData();
+    fetchUserData({ initial: true });
 
-    // Subscribe to realtime changes for instant updates after checkout
-    const channel = supabase
-      .channel('subscription-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'subscriptions',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          if (payload.new) {
-            setSubscription(payload.new);
-          }
+    // Targeted refetches instead of a realtime channel (TASK-361): the
+    // postgres_changes subscription kept Realtime's WAL pollers running for
+    // every signed-in session, and checkout completion is the only event it
+    // ever delivered.
+    //
+    // 1. Checkout return: the Stripe webhook can land seconds after the
+    //    redirect, so poll briefly until the subscription row shows up.
+    // 2. Tab refocus: catches portal-driven changes (cancel / resubscribe)
+    //    made in another tab without requiring a reload.
+    let pollTimer = null;
+    if (new URLSearchParams(window.location.search).get('checkout') === 'success') {
+      let attempts = 0;
+      pollTimer = setInterval(async () => {
+        attempts += 1;
+        const sub = await fetchUserData();
+        const isActive = sub?.status === 'active' || sub?.status === 'trialing';
+        if ((isActive || attempts >= 20 || cancelled) && pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
         }
-      )
-      .subscribe();
+      }, 3000);
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchUserData();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       cancelled = true;
-      channel.unsubscribe();
+      if (pollTimer) clearInterval(pollTimer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [user]);
 

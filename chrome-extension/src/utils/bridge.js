@@ -153,7 +153,7 @@ export async function readEntryIds() {
  * row in draft_boards_admin (TASK-260). Used by the post-sync board backfill to
  * skip drafts whose board is already complete, so repeated syncs converge.
  *
- * "Usable" mirrors the web read path (draftBoards.js fetchAvailableBoardIds):
+ * "Usable" mirrors the web read path (draftBoards.js fetchUserBoardsOnce filter):
  * a row only counts if its first pick has a player name. This is critical —
  * the legacy admin scraper (TASK-241) wrote rows with null player names, and
  * those must NOT be treated as existing or the backfill would skip them
@@ -170,9 +170,12 @@ export async function readBoardIds(draftIds) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return new Set();
 
+  // first_pick_name is a STORED generated column (migration 020 / TASK-361):
+  // selecting it reads a plain text column instead of detoasting the full
+  // picks JSONB (~15 KB/row) just to check the first pick's name.
   const { data, error } = await supabase
     .from('draft_boards_admin')
-    .select('draft_id, first_pick_name:picks->0->>name')
+    .select('draft_id, first_pick_name')
     .in('draft_id', draftIds.map(String));
 
   if (error) return new Set();

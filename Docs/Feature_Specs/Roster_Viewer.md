@@ -60,10 +60,12 @@ in the `draft_boards_admin` Supabase table — no disabled buttons for rosters w
   Superflex boards simulate the extra QB slot.
   Weekly actuals (when loaded) flow in via the `actuals` prop, so pod odds shift with
   banked points in-season.
-- **Board availability is paginated** (2026-07-06): `fetchAvailableBoardIds` pages
-  through `draft_boards_admin` in 1000-row ranges. PostgREST caps un-ranged selects at
-  1000 rows, and once the table grew past that, newer boards silently lost their Board
-  buttons.
+- **Board availability** (2026-07-22, TASK-361): the Roster Viewer asks for the user's
+  boards directly (`fetchUserBoardsOnce`, chunked `IN` queries) and filters out boards
+  whose first pick has no player name. The old full-table `fetchAvailableBoardIds`
+  pager was removed; usability checks elsewhere (extension backfill) read the
+  `first_pick_name` STORED generated column (migration 020) instead of detoasting
+  the `picks` JSONB.
 - **Data source (interim):** developer-scraped boards in `draft_boards_admin`
   (admin-extension, TASK-241), read via `utils/draftBoards.js` with an authenticated-only
   RLS policy (migration 009). Reads fail soft — guests see no board affordances. Boards

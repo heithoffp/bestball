@@ -19,40 +19,6 @@ const BOARD_CACHE_VERSION = 1;
 const boardCacheKey = (draftId) => `board:v${BOARD_CACHE_VERSION}:${draftId}`;
 
 /**
- * Fetch the set of draft ids that have a usable (player-named) board.
- * Boards from the pre-fix scraper hold null player names and are excluded —
- * they render as an empty grid and should not surface a button.
- *
- * Paginated: PostgREST caps un-ranged selects at 1000 rows, and the boards
- * table grew past that — a single select silently dropped newer boards and
- * their Board buttons vanished. Mirrors fetchAllBoards in realDraftData.js.
- *
- * @returns {Promise<Set<string>>}
- */
-export async function fetchAvailableBoardIds() {
-  if (!supabase) return new Set();
-  const PAGE = 1000;
-  const ids = new Set();
-  try {
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
-        .from('draft_boards_admin')
-        .select('draft_id, first_pick_name:picks->0->>name')
-        .order('draft_id')
-        .range(from, from + PAGE - 1);
-      if (error || !data) break;
-      for (const r of data) {
-        if (r.first_pick_name != null) ids.add(String(r.draft_id));
-      }
-      if (data.length < PAGE) break;
-    }
-  } catch {
-    // fail soft — no board affordances
-  }
-  return ids;
-}
-
-/**
  * Fetch many stored boards at once for Arena auto-registration (ADR-014 /
  * TASK-288). Under ADR-016 every draft_boards_admin source is Arena-eligible
  * (admin-scraped included — ADR-014's guardrail #3 is retired), so there is no

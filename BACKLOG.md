@@ -35,6 +35,7 @@
 - TASK-356: Mobile cloud storage Blob incompatibility — sync always falls back to local
 - TASK-330: Record the user's own pick while parked on the Players tab (confirm-card/queue-diff inference)
 - TASK-359: Narrow Arena pool to owned BBM7 teams (execute ADR-032)
+- TASK-361: Supabase Disk IO reduction, round 2
 
 | TASK-170 | Reddit launch posts — r/bestball and r/fantasyfootball announcements | In Progress | P1 |
 | TASK-171 | Creator and streamer outreach — target list and pitch templates | In Progress | P1 |
@@ -57,6 +58,7 @@
 | TASK-238 | L5 config-update loop design (gated on TASK-234) | Todo | P1 | - | - | [Plan](docs/plans/TASK-238.md) -- Draft | No | 2026-05-14 | 2026-05-14 |
 | TASK-188 | Weekly portfolio digest email — retention loop | In Progress | P1 | - | - | [Plan](docs/plans/TASK-188.md) | No | 2026-06-03 | 2026-06-03 |
 | TASK-318 | Spike: iOS draft-capture feasibility (capture visibility, OCR accuracy, toolchain) | In Progress | P1 | - | - | [Plan](docs/plans/TASK-318.md) | No | 2026-07-11 | 2026-07-11 |
+| TASK-361 | Supabase Disk IO reduction, round 2 | In Progress | P1 | M | Opus | [Plan](docs/plans/TASK-361.md) | No | 2026-07-22 | 2026-07-22 |
 | TASK-148 | Overlay — consume platform-specific saved rankings for tier breaks | Todo | P2 | - | - | [Plan](docs/plans/TASK-148.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-172 | Feature gating review — evaluate guest "taste" experience for conversion | Todo | P2 | - | - | [Plan](docs/plans/TASK-172.md) — Draft | No | 2026-04-06 | 2026-04-06 |
 | TASK-184 | Draft Capital by Round — round filter buttons | In Progress | P2 | - | - | [Plan](docs/plans/TASK-184.md) | No | 2026-04-08 | 2026-04-08 |
@@ -146,6 +148,7 @@
 | TASK-353 | Mobile Compare: in-view editing + mirror-edit proposals | Todo | P3 | M | Opus | [Plan](docs/plans/TASK-353.md) -- Draft | No | 2026-07-18 | 2026-07-18 |
 | TASK-354 | DK lobby/pre-draft screen grammar for live capture | Todo | P3 | S | Opus | [Plan](docs/plans/TASK-354.md) -- Draft | No | 2026-07-18 | 2026-07-18 |
 | TASK-360 | Mirror ADR-032 Arena scoping into mobile shared client | Todo | P3 | S | Sonnet | [Plan](docs/plans/TASK-360.md) -- Draft | No | 2026-07-22 | 2026-07-22 |
+| TASK-362 | Web app automated test suite missing (CLAUDE.md claims Playwright) | Todo | P3 | S | Sonnet | [Plan](docs/plans/TASK-362.md) -- Draft | No | 2026-07-22 | 2026-07-22 |
 | TASK-079 | Ensure color independence for trend indicators | Todo | P4 | - | - | [Plan](docs/plans/TASK-079.md) — Draft | No | 2026-04-02 | 2026-04-02 |
 | TASK-205 | Combos: render toolbar when tournament filter empties roster set | Todo | P4 | - | - | [Plan](docs/plans/TASK-205.md) -- Draft | No | 2026-05-06 | 2026-05-06 |
 | TASK-211 | DraftExplorer.jsx — clear pre-existing lint debt | Todo | P4 | - | - | [Plan](docs/plans/TASK-211.md) -- Draft | No | 2026-05-07 | 2026-05-07 |
