@@ -209,18 +209,19 @@ export async function getArenaRank({ elo, platform = 'all', tournament = 'featur
 }
 
 /**
- * Auto-register the user's own + participant-captured board teams into the opt-out
- * pool (ADR-014 / TASK-288). Goes through the arena-register Edge Function because
- * board rows are service-role-only. Beta-gated server-side (403 if not allowlisted).
- * @param {{ownedTeams: Array, boardTeams: Array}} payload
- * @returns {Promise<{ownedWritten, boardWritten, boardRejected}>}
+ * Auto-register the user's own featured (BBM7) teams into the opt-out pool
+ * (ADR-014 / TASK-288, scoped by ADR-032). Goes through the arena-register Edge
+ * Function, which enforces the featured-only write gate. Beta-gated server-side
+ * (403 if not allowlisted).
+ * @param {{ownedTeams: Array}} payload
+ * @returns {Promise<{ownedWritten, ownedRejected}>}
  */
-export async function registerArenaTeams({ ownedTeams = [], boardTeams = [] }) {
-  if (!ARENA_AVAILABLE) return { ownedWritten: 0, boardWritten: 0, boardRejected: 0 };
+export async function registerArenaTeams({ ownedTeams = [] }) {
+  if (!ARENA_AVAILABLE) return { ownedWritten: 0, ownedRejected: 0 };
   const res = await fetch(`${FUNCTIONS_URL}/arena-register`, {
     method: 'POST',
     headers: await functionHeaders(),
-    body: JSON.stringify({ ownedTeams, boardTeams }),
+    body: JSON.stringify({ ownedTeams }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -232,29 +233,26 @@ export async function registerArenaTeams({ ownedTeams = [], boardTeams = [] }) {
 
 /**
  * Register a full portfolio in bounded batches. A heavy account produces thousands
- * of owned + board teams; a single request would blow the function's per-request cap
- * and the Edge Function body limit, so we split into sequential batches and sum the
- * results. Owned and board teams are batched separately for simplicity.
- * @param {{ownedTeams: Array, boardTeams: Array}} payload
+ * of owned teams; a single request would blow the function's per-request cap and the
+ * Edge Function body limit, so we split into sequential batches and sum the results.
+ * ADR-032: the pool is owned-BBM7 only — board teams are no longer ingested, so this
+ * registers owned teams exclusively.
+ * @param {{ownedTeams: Array}} payload
  * @param {number} batchSize teams per request
  */
-export async function registerAllArenaTeams({ ownedTeams = [], boardTeams = [] }, batchSize = 300) {
-  const totals = { ownedWritten: 0, boardWritten: 0, boardRejected: 0, batches: 0 };
+export async function registerAllArenaTeams({ ownedTeams = [] }, batchSize = 300) {
+  const totals = { ownedWritten: 0, ownedRejected: 0, batches: 0 };
   if (!ARENA_AVAILABLE) return totals;
 
   const batches = [];
   for (let i = 0; i < ownedTeams.length; i += batchSize) {
-    batches.push({ ownedTeams: ownedTeams.slice(i, i + batchSize), boardTeams: [] });
-  }
-  for (let i = 0; i < boardTeams.length; i += batchSize) {
-    batches.push({ ownedTeams: [], boardTeams: boardTeams.slice(i, i + batchSize) });
+    batches.push({ ownedTeams: ownedTeams.slice(i, i + batchSize) });
   }
 
   for (const b of batches) {
     const r = await registerArenaTeams(b); // sequential — keeps each request small
     totals.ownedWritten += r.ownedWritten ?? 0;
-    totals.boardWritten += r.boardWritten ?? 0;
-    totals.boardRejected += r.boardRejected ?? 0;
+    totals.ownedRejected += r.ownedRejected ?? 0;
     totals.batches += 1;
   }
   return totals;

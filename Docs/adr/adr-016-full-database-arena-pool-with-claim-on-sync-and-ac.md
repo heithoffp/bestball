@@ -1,7 +1,8 @@
 # ADR-016: Full-database Arena pool with claim-on-sync and account-level enrollment
 
 **Date:** 2026-07-01
-**Status:** Accepted
+**Status:** Superseded
+**Superseded By:** ADR-032
 
 ---
 

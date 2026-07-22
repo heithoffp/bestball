@@ -17,7 +17,7 @@
 | [ADR-013](adr-013-introduce-best-ball-arena-a-server-backed-competit.md) | Introduce Best Ball Arena — a server-backed competitive social layer | Accepted | 2026-06-26 |
 | [ADR-014](adr-014-best-ball-arena-opt-out-enrollment-with-participan.md) | Best Ball Arena opt-out enrollment with participant-captured board teams | Accepted | 2026-06-26 |
 | [ADR-015](adr-015-launch-best-ball-arena-as-a-private-beta-behind-a.md) | Launch Best Ball Arena as a private beta behind a server-enforced email-allowlist gate | Accepted | 2026-06-27 |
-| [ADR-016](adr-016-full-database-arena-pool-with-claim-on-sync-and-ac.md) | Full-database Arena pool with claim-on-sync and account-level enrollment | Accepted | 2026-07-01 |
+| [ADR-016](adr-016-full-database-arena-pool-with-claim-on-sync-and-ac.md) | Full-database Arena pool with claim-on-sync and account-level enrollment | Superseded | 2026-07-01 |
 | [ADR-017](adr-017-arena-public-launch-vote-integrity-and-data-harden.md) | Arena public-launch vote-integrity and data hardening (ADR-013 amendment) | Accepted | 2026-07-02 |
 | [ADR-018](adr-018-serve-heavy-client-aggregations-from-precomputed-s.md) | Serve heavy client aggregations from precomputed Storage artifacts | Accepted | 2026-07-09 |
 | [ADR-019](adr-019-mobile-draft-capture-via-on-device-screen-reading.md) | Mobile draft capture via on-device screen reading | Accepted | 2026-07-11 |
@@ -33,3 +33,4 @@
 | [ADR-029](adr-029-add-native-google-and-apple-sign-in-on-mobile-and.md) | Add native Google and Apple sign-in on mobile, and Apple sign-in on web | Accepted | 2026-07-17 |
 | [ADR-030](adr-030-mobile-launch-data-on-device-cache-first-rendering.md) | Mobile launch data: on-device cache-first rendering with delta sync | Accepted | 2026-07-18 |
 | [ADR-031](adr-031-publish-mobile-adp-snapshots-as-a-remote-storage-a.md) | Publish mobile ADP snapshots as a remote Storage artifact with bundled fallback | Accepted | 2026-07-19 |
+| [ADR-032](adr-032-narrow-the-arena-pool-to-a-single-featured-tournam.md) | Narrow the Arena pool to a single featured tournament (BBM7) | Accepted | 2026-07-22 |

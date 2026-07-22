@@ -46,8 +46,28 @@ export const MAX_OWNED_TEAMS_PER_USER = 6000;
 // Keep in sync with the browser-side constant in
 // best-ball-manager/src/utils/arenaFeatured.js AND the generated-column
 // expression in migration 016.
+//
+// ADR-032 (TASK-359): the pool is now scoped to the featured tournament at the
+// WRITE path too — arena-register and the backfill script reject non-featured
+// teams so arena_teams only ever holds owned BBM7 rows. isFeaturedSnapshot below
+// is the write-side gate; it MUST match the migration-016 generated-column
+// expression and arenaFeatured.js's regex ("best ball mania", case-insensitive,
+// over tournamentTitle OR slateTitle).
 // ---------------------------------------------------------------------------
 export const FEATURED_TOURNAMENT_LABEL = "Best Ball Mania VII";
+
+const FEATURED_MATCH = /best ball mania/i;
+
+// True when a frozen display snapshot belongs to the featured tournament. Mirrors
+// isFeaturedSnapshot in best-ball-manager/src/utils/arenaFeatured.js and the
+// arena_teams.featured generated column (migration 016) — keep all three aligned.
+export function isFeaturedSnapshot(snapshot: unknown): boolean {
+  const s = (snapshot ?? {}) as { tournamentTitle?: unknown; slateTitle?: unknown };
+  return (
+    FEATURED_MATCH.test(String(s.tournamentTitle ?? "")) ||
+    FEATURED_MATCH.test(String(s.slateTitle ?? ""))
+  );
+}
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

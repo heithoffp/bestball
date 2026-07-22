@@ -19,9 +19,9 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import { canonicalName } from '../utils/helpers';
 import { computeRosterOutlook } from '../utils/advanceModel';
 import { BYE_WEEKS_2026 } from '../data/byeWeeks';
-import { buildEnrollableTeams, buildBoardTeams, buildAdpLookup, playerNameKey } from '../utils/arenaSnapshot';
+import { buildEnrollableTeams, buildAdpLookup } from '../utils/arenaSnapshot';
+import { isFeaturedSnapshot } from '../utils/arenaFeatured';
 import { loadRealDraftData, comboRateForSnapshot } from '../utils/realDraftData';
-import { fetchDraftBoards } from '../utils/draftBoards';
 import { registerAllArenaTeams, ARENA_AVAILABLE } from '../utils/arenaClient';
 import css from './Arena.module.css';
 
@@ -70,45 +70,19 @@ function useAutoRegister(user, rosterData, masterPlayers) {
 
     (async () => {
       try {
-        const adpLookup = buildAdpLookup(masterPlayers);
-        const ownedTeams = buildEnrollableTeams(rosterData, masterPlayers).map((t) => ({
-          entryId: t.entryId, platform: t.platform, draftId: t.entryId, snapshot: t.snapshot,
-        }));
-
-        // Board teams: fetch each synced pod's stored board (any source — ADR-016),
-        // excluding the user's own seat (matched by player-name fingerprint). The
-        // pod's tournament is known from the user's own entry in the same draft and
-        // is stamped onto each board snapshot — board picks carry no tournament of
-        // their own, and the BBM7 featured scoping matches on it.
-        const draftIds = [...new Set(rosterData.map((r) => r.entry_id).filter(Boolean))];
-        const ownKeyByDraft = {};
-        const titleByDraft = {};
-        const draftedAtByDraft = {};
-        draftIds.forEach((id) => {
-          const rows = rosterData.filter((r) => r.entry_id === id);
-          ownKeyByDraft[id] = playerNameKey(rows);
-          titleByDraft[id] = rows.find((r) => r.tournamentTitle)?.tournamentTitle || null;
-          // Every seat in this draft was drafted simultaneously, so the user's own
-          // pick timestamps (board picks carry none) give the whole pod its date.
-          const times = rows
-            .map((r) => (r.pickedAt ? new Date(r.pickedAt).getTime() : NaN))
-            .filter((t) => Number.isFinite(t));
-          draftedAtByDraft[id] = times.length
-            ? new Date(Math.min(...times)).toISOString().slice(0, 10)
-            : null;
-        });
-        const boards = await fetchDraftBoards(draftIds);
-        const boardTeams = [];
-        boards.forEach((board) => {
-          boardTeams.push(...buildBoardTeams(
-            board, ownKeyByDraft[board.draftId], adpLookup, titleByDraft[board.draftId],
-            draftedAtByDraft[board.draftId],
-          ));
-        });
+        // Featured-only pool (ADR-032): the Arena holds owned BBM7 teams only, so we
+        // register just the user's own featured teams. Board teams are no longer
+        // ingested (the server discards them), and non-featured teams are filtered
+        // out here so we don't ship payloads the server will reject.
+        const ownedTeams = buildEnrollableTeams(rosterData, masterPlayers)
+          .filter((t) => isFeaturedSnapshot(t.snapshot))
+          .map((t) => ({
+            entryId: t.entryId, platform: t.platform, draftId: t.entryId, snapshot: t.snapshot,
+          }));
 
         if (cancelled) return;
-        if (ownedTeams.length || boardTeams.length) {
-          await registerAllArenaTeams({ ownedTeams, boardTeams });
+        if (ownedTeams.length) {
+          await registerAllArenaTeams({ ownedTeams });
         }
         try { sessionStorage.setItem(sessionKey, '1'); } catch { /* ignore */ }
       } catch {
