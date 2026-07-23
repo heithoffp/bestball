@@ -12,6 +12,7 @@ Best Ball Exposures is a browser-based application at https://bestballexposures.
 - **Platforms supported:** Underdog Fantasy, DraftKings (NFL best-ball)
 - **Pricing:** Free tier available; Pro tier is $20/month ($15 with a creator promo code)
 - **Browser extension:** https://bestballexposures.com/install (self-hosted; supports Chrome, Edge, Brave, and Firefox)
+- **iPhone app:** https://apps.apple.com/app/best-ball-exposures/id6791977736 (free download; full portfolio on iOS, plus a Pro live draft overlay — the only mobile draft overlay in best ball)
 
 ## Documentation
 
@@ -26,6 +27,7 @@ Best Ball Exposures is a browser-based application at https://bestballexposures.
 - Exposure Analysis
 - Roster Viewer with Archetypes
 - Multi-platform support (Underdog + DraftKings)
+- iPhone app with the full portfolio
 - Zero configuration — upload and go
 
 ## Pro tier features
@@ -36,4 +38,4 @@ Best Ball Exposures is a browser-based application at https://bestballexposures.
 - ADP Tracker
 - Player Rankings
 - Roster Construction
-- Live draft overlay (via Chrome extension)
+- Live draft overlay (via Chrome extension, and on iPhone in the iOS app)

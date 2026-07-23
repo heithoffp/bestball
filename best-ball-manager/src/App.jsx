@@ -21,6 +21,8 @@ import useMediaQuery from './hooks/useMediaQuery';
 import { trackEvent } from './utils/analytics';
 import FeedbackButton from './components/FeedbackButton';
 import InstallExtensionButton from './components/InstallExtensionButton';
+import AppStoreBanner from './components/AppStoreBanner';
+import { IosAppButton } from './components/AppStoreBadge';
 import { SideNav, MobileNav } from './components/AppNav';
 import { LayoutDashboard, BarChart3, Users, TrendingUp, ListOrdered, Crosshair, Info, Settings, Network, Swords } from 'lucide-react';
 
@@ -535,6 +537,7 @@ export default function App() {
   const accountCluster = (
     <div className="side-account">
       <InstallExtensionButton showButton={!!(user && supabase)} />
+      <IosAppButton show={!!(user && supabase)} placement="side_rail" />
       <div className="side-account-row">
         {xLink}
         <FeedbackButton />
@@ -548,6 +551,7 @@ export default function App() {
   const sheetAccountCluster = (
     <div className="sheet-account">
       <InstallExtensionButton showButton={!!(user && supabase)} />
+      <IosAppButton show={!!(user && supabase)} placement="mobile_sheet" />
       <div className="side-account-row">
         {xLink}
         <FeedbackButton />
@@ -589,6 +593,8 @@ export default function App() {
         )}
 
         <BetaBanner />
+
+        <AppStoreBanner />
 
         {isUsingDemoData && rosterData.length > 0 && (
           <div className="demo-banner">

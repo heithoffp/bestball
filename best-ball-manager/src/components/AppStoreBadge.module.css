@@ -1,0 +1,101 @@
+/* AppStoreBadge.module.css — App Store badge + compact rail button.
+   The badge is deliberately Apple-black in both themes so it reads as the
+   store artifact users already recognize, not another gold BBE button. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #000;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 9px;
+  padding: 0.5rem 1.05rem 0.55rem 0.9rem;
+  text-decoration: none;
+  line-height: 1;
+  transition: transform var(--duration-fast) var(--ease-default),
+              border-color var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+}
+
+.badge:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.9);
+}
+
+.badgeLogo {
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.badgeText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.14rem;
+  text-align: left;
+}
+
+.badgeSmall {
+  font-family: var(--font-body);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.badgeLarge {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+}
+
+/* ── Compact rail/sheet button (signed-in account cluster) ── */
+.railButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  padding: 0.45rem 0.9rem;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: border-color var(--duration-fast) var(--ease-default),
+              background var(--duration-fast) var(--ease-default);
+}
+
+.railButton:hover {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.railLogo {
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.newBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #e6492d;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}

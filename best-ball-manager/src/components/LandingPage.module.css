@@ -205,6 +205,17 @@
   margin-right: 0.5rem;
 }
 
+.navDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+  margin-left: 2px;
+  vertical-align: middle;
+}
+
 /* ══════════════════════════════════════
    Hero
    ══════════════════════════════════════ */
@@ -218,6 +229,66 @@
 
 .heroCopy {
   min-width: 0;
+}
+
+/* ── Launch announcement pill ── */
+.launchPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(232, 191, 74, 0.07);
+  border: 1px solid rgba(232, 191, 74, 0.35);
+  border-radius: 999px;
+  padding: 0.32rem 0.75rem 0.32rem 0.35rem;
+  margin-bottom: 1.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.launchPill:hover {
+  border-color: rgba(232, 191, 74, 0.65);
+  color: var(--text-primary);
+}
+
+.launchPill svg {
+  color: var(--accent);
+}
+
+.launchPillTag {
+  background: var(--gradient-accent);
+  color: var(--text-inverse);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.heroDemoLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: -0.5rem 0 1.5rem;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.heroDemoLink:hover {
+  color: var(--accent);
 }
 
 .heroHeadline {
@@ -275,9 +346,11 @@
   flex-shrink: 0;
 }
 
-/* Hero screenshot */
+/* Hero screenshot — desktop dashboard with the iPhone overlapping front-right */
 .heroShot {
   min-width: 0;
+  position: relative;
+  padding-bottom: 2rem;
 }
 
 .shotFrame {
@@ -285,9 +358,311 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--surface-1);
+  margin-right: 9%;
   box-shadow:
     0 24px 64px -24px rgba(0, 0, 0, 0.65),
     0 0 0 1px rgba(232, 191, 74, 0.06);
+}
+
+.heroPhone {
+  position: absolute;
+  right: -0.25rem;
+  bottom: -0.75rem;
+  width: 31%;
+  z-index: 2;
+}
+
+/* ══════════════════════════════════════
+   iPhone device mock
+   ══════════════════════════════════════ */
+.phone {
+  position: relative;
+  margin: 0;
+  background: #0a0f1c;
+  border: 1px solid #2a3f63;
+  border-radius: 2.1rem;
+  padding: 7px;
+  box-shadow:
+    0 30px 70px -28px rgba(0, 0, 0, 0.9),
+    0 18px 60px -18px rgba(232, 191, 74, 0.14);
+}
+
+.phoneScreen {
+  border-radius: 1.65rem;
+  overflow: hidden;
+  background: #05070d;
+}
+
+.phoneScreen img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.phoneIsland {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 27%;
+  height: clamp(7px, 2%, 12px);
+  border-radius: 999px;
+  background: #000;
+}
+
+/* ══════════════════════════════════════
+   Pick-ticker HUD (animated overlay replica)
+   ══════════════════════════════════════ */
+.hud {
+  position: absolute;
+  top: -0.75rem;
+  right: 80%;
+  width: 14.5rem;
+  z-index: 3;
+  background: #0b0d13;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  padding: 0.8rem 0.95rem 0.7rem;
+  box-shadow: 0 22px 55px -18px rgba(0, 0, 0, 0.95);
+  animation: hudFloat 6s var(--ease-default) infinite;
+}
+
+@keyframes hudFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.hudHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.hudPicks {
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  animation: hudTick 0.35s var(--ease-default);
+}
+
+.hudPicksHot {
+  color: var(--accent);
+}
+
+@keyframes hudTick {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hudSlot {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.hudRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.22rem 0;
+}
+
+.hudPos {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  width: 1.4rem;
+  flex-shrink: 0;
+}
+
+.hudPosQB { color: var(--pos-qb); }
+.hudPosRB { color: var(--pos-rb); }
+.hudPosWR { color: var(--pos-wr); }
+.hudPosTE { color: var(--pos-te); }
+
+.hudName {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e4e6ea;
+}
+
+.hudExp {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.hudFooter {
+  margin-top: 0.45rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════
+   iPhone app section
+   ══════════════════════════════════════ */
+.appPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 3.5rem;
+  align-items: center;
+  background: var(--surface-1);
+  border: 1px solid rgba(232, 191, 74, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 3.25rem 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.appPanel::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: -12%;
+  width: 55%;
+  height: 140%;
+  background: radial-gradient(closest-side, rgba(232, 191, 74, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.appCopy {
+  min-width: 0;
+  position: relative;
+}
+
+.appTitle {
+  font-family: var(--font-mono);
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.18;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.appDesc {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 1.5rem;
+  max-width: 520px;
+}
+
+.appPoints {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.appPoints li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.appPoints li > svg {
+  color: var(--positive);
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.appPoints strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.appPoints .uniqueBadge {
+  margin-left: 0.5rem;
+  vertical-align: 1px;
+}
+
+.appCtas {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.appQr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.appQr img {
+  display: block;
+  width: 82px;
+  height: 82px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 5px;
+}
+
+.appQr span {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.appFootnote {
+  margin-top: 1.1rem;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.appShots {
+  position: relative;
+  min-width: 0;
+  max-width: 400px;
+  justify-self: center;
+  width: 100%;
+}
+
+.phoneFront {
+  position: relative;
+  width: 60%;
+  margin-left: auto;
+  z-index: 2;
+}
+
+.phoneBack {
+  position: absolute;
+  left: 0;
+  top: 7%;
+  width: 54%;
+  transform: rotate(-5deg);
+  z-index: 1;
+}
+
+.finalStore {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.4rem;
 }
 
 .shotBar {
@@ -1296,6 +1671,16 @@
     gap: 2.25rem;
     padding: 2.25rem;
   }
+
+  .appPanel {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding: 2.25rem;
+  }
+
+  .appShots {
+    max-width: 360px;
+  }
 }
 
 @media (max-width: 899px) {
@@ -1311,6 +1696,11 @@
   .finalCta { padding-bottom: 4.5rem; }
 }
 
+/* QR is a desktop→phone handoff; on small screens the badge itself is the path */
+@media (max-width: 899px) {
+  .appQr { display: none; }
+}
+
 @media (max-width: 599px) {
   .nav { padding: 0.6rem 1rem; }
   .navBrandName { display: none; }
@@ -1320,6 +1710,26 @@
   .heroCtas { flex-direction: column; align-items: stretch; }
   .heroCtas > * { width: 100%; justify-content: center; }
   .heroChecklist { flex-direction: column; gap: 0.5rem; }
+
+  .launchPill { font-size: 0.62rem; }
+  .heroShot { padding-bottom: 1.25rem; }
+  .heroPhone { width: 38%; bottom: -0.5rem; }
+  .hud {
+    width: 11.5rem;
+    right: 72%;
+    padding: 0.65rem 0.75rem 0.55rem;
+  }
+  .hudPicks { font-size: 0.74rem; }
+  .hudName { font-size: 0.68rem; }
+  .hudFooter { font-size: 0.52rem; letter-spacing: 0.05em; }
+  .phone { border-radius: 1.5rem; padding: 5px; }
+  .phoneScreen { border-radius: 1.2rem; }
+  .phoneIsland { top: 10px; }
+
+  .appPanel { padding: 1.5rem 1.1rem; }
+  .appCtas { justify-content: center; }
+  .appCtas > a { width: 100%; justify-content: center; }
+  .appShots { max-width: 300px; }
 
   .arenaPanel { padding: 1.5rem 1.1rem; }
 
@@ -1345,5 +1755,10 @@
   .btnPrimary,
   .btnSecondary {
     transition: none;
+  }
+
+  .hud,
+  .hudPicks {
+    animation: none;
   }
 }

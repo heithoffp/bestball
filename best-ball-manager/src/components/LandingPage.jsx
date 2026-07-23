@@ -5,12 +5,72 @@ import {
   Lock, TrendingUp, Network, ListOrdered, BarChart3, Swords,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import AppStoreBadge, { AppleLogo } from './AppStoreBadge';
 import { getPublishedPosts, formatPostDate } from '../utils/blog';
 import { addToBrowserLabel, browserDisplayName, detectBrowser } from '../utils/browserDetect';
 import { trackEvent } from '../utils/analytics';
 import styles from './LandingPage.module.css';
 
 const EXTENSION_URL = '/install';
+
+/* ── iPhone device mock ── */
+function PhoneFrame({ src, alt, className = '', loading = 'lazy', onZoom }) {
+  return (
+    <figure className={`${styles.phone} ${className}`}>
+      <div className={styles.phoneScreen}>
+        <img
+          src={src}
+          alt={alt}
+          width={750}
+          height={1626}
+          loading={loading}
+          onClick={onZoom ? () => onZoom(src) : undefined}
+          style={onZoom ? { cursor: 'zoom-in' } : undefined}
+        />
+      </div>
+      <span className={styles.phoneIsland} aria-hidden="true" />
+    </figure>
+  );
+}
+
+/* ── Live pick-ticker HUD ──
+   A working replica of the overlay's "Up in N picks" pill — the thing the
+   iPhone app floats over a live draft. The countdown ticks so the hero shows
+   the feature doing its job, not a static badge. */
+const HUD_QUEUE = [
+  { pos: 'TE', name: 'Kelce', exp: '10%' },
+  { pos: 'RB', name: 'Croskey', exp: '11%' },
+  { pos: 'WR', name: 'Higgins', exp: '10%' },
+];
+
+function PickTickerHud() {
+  const [picks, setPicks] = useState(12);
+
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const t = setInterval(() => setPicks(p => (p <= 1 ? 12 : p - 1)), 2400);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className={styles.hud} aria-hidden="true">
+      <div className={styles.hudHeader}>
+        <span key={picks} className={`${styles.hudPicks} ${picks === 1 ? styles.hudPicksHot : ''}`}>
+          {picks === 1 ? "You're on the clock" : `Up in ${picks} picks`}
+        </span>
+        <span className={styles.hudSlot}>P117 &middot; R10</span>
+      </div>
+      {HUD_QUEUE.map((p) => (
+        <div key={p.name} className={styles.hudRow}>
+          <span className={`${styles.hudPos} ${styles[`hudPos${p.pos}`]}`}>{p.pos}</span>
+          <span className={styles.hudName}>{p.name}</span>
+          <span className={styles.hudExp}>{p.exp}</span>
+        </div>
+      ))}
+      <div className={styles.hudFooter}>QB 2 &middot; RB 3 &middot; WR 5 &middot; TE 0</div>
+    </div>
+  );
+}
 
 /* Pick a glyph that matches the user's browser. Chrome has a Lucide brand
    icon; Edge/Firefox/etc. fall back to the generic Puzzle (extension) icon. */
@@ -52,7 +112,7 @@ const STEPS = [
   },
   {
     title: 'Read your portfolio',
-    desc: 'Open BBE and everything is already computed: exposure, stacks, archetypes, ADP movement. Nothing to configure, ever.',
+    desc: 'Open BBE on the web or in the iPhone app — everything is already computed: exposure, stacks, archetypes, ADP movement. Nothing to configure, ever.',
   },
 ];
 
@@ -93,11 +153,12 @@ const SHOWCASE = [
   {
     kicker: 'Draft day',
     title: 'Draft with the overlay on',
-    desc: 'The live overlay brings your exposure and stack context into the draft room itself. No second monitor, no alt-tabbing, no spreadsheet on the side. Eliminator and superflex slates included.',
+    unique: true,
+    desc: 'The live overlay brings your exposure and stack context into the draft room itself — in your desktop browser, and now on your iPhone. No second monitor, no alt-tabbing, no spreadsheet on the side. Eliminator and superflex slates included.',
     points: [
       'Live exposure while you\'re on the clock',
       'Stack and combo context for every pick',
-      'Feels native to Underdog and DraftKings',
+      'On desktop and iPhone — the only mobile draft overlay in best ball',
     ],
     screenshot: '/screenshots/draft-overlay.png',
     alt: 'Live draft overlay showing exposure and stack context inside the draft room',
@@ -137,13 +198,14 @@ const FREE_FEATURES = [
   'Portfolio Dashboard',
   'Exposure analysis across both platforms',
   'Roster Viewer with archetypes & advance rates',
+  'iPhone app with your full portfolio',
   'Best Ball Arena',
   'Underdog + DraftKings auto-sync',
 ];
 
 const PRO_FEATURES = [
   'Everything in Free, plus:',
-  'Draft Assistant with live overlay',
+  'Draft Assistant with live overlay — web + iPhone',
   'Combo analysis & Playoff Stacks',
   'ADP Tracker timelines',
   'Player Rankings with compare mode',
@@ -159,7 +221,8 @@ const COMP_ROWS = [
   { feature: 'Roster archetypes', free: false, usFree: true, usPro: true },
   { feature: 'Advance-rate estimates', free: false, usFree: true, usPro: true },
   { feature: 'Blind matchup Arena', free: false, usFree: true, usPro: true },
-  { feature: 'Live draft overlay', free: false, usFree: false, usPro: true },
+  { feature: 'iPhone app', free: false, usFree: true, usPro: true },
+  { feature: 'Live draft overlay (desktop + iPhone)', free: false, usFree: false, usPro: true },
   { feature: 'Combo & playoff stack analysis', free: false, usFree: false, usPro: true },
   { feature: 'ADP timelines', free: 'Basic', usFree: false, usPro: true },
   { feature: 'Custom rankings board', free: false, usFree: false, usPro: true },
@@ -182,6 +245,10 @@ const FAQS = [
   {
     q: 'Does it help during a live draft?',
     a: 'Yes. Pro includes the Draft Assistant and a live overlay that shows your exposure and stack context inside the draft room while you pick, on both platforms.',
+  },
+  {
+    q: 'Is there a mobile app?',
+    a: 'Yes — BBE for iPhone is on the App Store. The app is free to download and carries your whole portfolio: Dashboard, Exposures, Rosters, ADP, Combos, Rankings, and the Arena. Pro members also get the live draft overlay on their phone, which no other best-ball tool offers. Android isn\'t available yet.',
   },
   {
     q: 'What happens once the season starts?',
@@ -249,6 +316,9 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
           <span className={styles.navBrandName}>Best Ball Exposures</span>
         </div>
         <div className={styles.navActions}>
+          <button className={styles.navLink} onClick={() => scrollTo('mobile-app')}>
+            iPhone app <span className={styles.navDot} aria-hidden="true" />
+          </button>
           <button className={styles.navLink} onClick={() => scrollTo('features')}>Features</button>
           <button className={styles.navLink} onClick={() => scrollTo('arena')}>Arena</button>
           <button className={styles.navLink} onClick={() => scrollTo('pricing')}>Pricing</button>
@@ -265,31 +335,36 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
       {/* ── Hero ── */}
       <header className={`${styles.section} ${styles.hero}`}>
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>Best-ball portfolio analytics</p>
+          <button className={styles.launchPill} onClick={() => scrollTo('mobile-app')}>
+            <span className={styles.launchPillTag}>New</span>
+            BBE for iPhone is on the App Store
+            <ChevronRight size={13} />
+          </button>
           <h1 className={styles.heroHeadline}>
             Every draft.<br />
             Every exposure.<br />
-            <span className={styles.heroAccent}>One dashboard.</span>
+            <span className={styles.heroAccent}>Now in your pocket.</span>
           </h1>
           <p className={styles.heroSub}>
             BBE syncs your Underdog and DraftKings entries automatically, then shows
-            exposure, stacks, archetypes, and advance odds across your whole portfolio.
-            No spreadsheets. No manual entry.
+            exposure, stacks, archetypes, and advance odds across your whole portfolio —
+            on the web and in the new iPhone app. No spreadsheets. No manual entry.
           </p>
           <div className={styles.heroCtas}>
             <button className={`${styles.btnPrimary} ${styles.btnLarge}`} onClick={() => handleSignUp('hero_signup')}>
               Get started free <ChevronRight size={16} />
             </button>
-            {onTryDemo && (
-              <button className={`${styles.btnSecondary} ${styles.btnLarge}`} onClick={() => handleDemo('hero_demo')}>
-                Explore the live demo
-              </button>
-            )}
+            <AppStoreBadge placement="landing_hero" />
           </div>
+          {onTryDemo && (
+            <button className={styles.heroDemoLink} onClick={() => handleDemo('hero_demo')}>
+              Not ready? Explore the live demo <ArrowUpRight size={14} />
+            </button>
+          )}
           <ul className={styles.heroChecklist}>
             <li><Check size={14} /> Free plan, no credit card</li>
             <li><Check size={14} /> Underdog + DraftKings in one place</li>
-            <li><Check size={14} /> Set up in about a minute</li>
+            <li><Check size={14} /> Web + iPhone, one account</li>
           </ul>
         </div>
         <div className={styles.heroShot}>
@@ -306,8 +381,77 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
               onClick={() => setLightboxSrc('/screenshots/dashboard-hero.png')}
             />
           </div>
+          <div className={styles.heroPhone}>
+            <PickTickerHud />
+            <PhoneFrame
+              src="/screenshots/ios-draft-overlay.png"
+              alt="BBE iPhone app during a live draft — the overlay shows exposure and projections on every pick"
+              className={styles.phoneHero}
+              loading="eager"
+            />
+          </div>
         </div>
       </header>
+
+      {/* ── iPhone app ── */}
+      <FadeSection id="mobile-app" className={`${styles.section} ${styles.appSection}`}>
+        <div className={styles.appPanel}>
+          <div className={styles.appCopy}>
+            <p className={styles.rowKicker}>
+              <AppleLogo size={13} /> New &middot; On the App Store
+            </p>
+            <h2 className={styles.appTitle}>
+              The only live draft overlay on your phone
+            </h2>
+            <p className={styles.appDesc}>
+              Phone drafts were always a blind spot: you picked from the couch while your
+              exposure sat at your desk. The BBE iPhone app closes it — live exposure,
+              projections, and pick context floating over every draft, plus your whole
+              portfolio in your pocket.
+            </p>
+            <ul className={styles.appPoints}>
+              <li>
+                <Check size={14} />
+                <span>
+                  <strong>Live draft overlay (Pro)</strong> — your exposure, queue, and
+                  projections on every pick, right over the draft board.
+                  <span className={styles.uniqueBadge}>Only here</span>
+                </span>
+              </li>
+              <li>
+                <Check size={14} />
+                <span><strong>Every tab, rebuilt for iPhone</strong> — Dashboard, Exposures, Rosters, ADP, Combos, Rankings, and the Arena.</span>
+              </li>
+              <li>
+                <Check size={14} />
+                <span><strong>One account</strong> — sign in and everything you&apos;ve synced is already there.</span>
+              </li>
+            </ul>
+            <div className={styles.appCtas}>
+              <AppStoreBadge placement="landing_app_section" />
+              <div className={styles.appQr}>
+                <img src="/appstore-qr.svg" alt="QR code linking to Best Ball Exposures on the App Store" width={82} height={82} loading="lazy" />
+                <span>Scan to install</span>
+              </div>
+            </div>
+            <p className={styles.appFootnote}>Free to download &middot; Pro unlocks the overlay &middot; iPhone only for now</p>
+          </div>
+          <div className={styles.appShots}>
+            <PhoneFrame
+              src="/screenshots/ios-dashboard.png"
+              alt="BBE iPhone app dashboard with portfolio stats and top exposures"
+              className={styles.phoneBack}
+              onZoom={setLightboxSrc}
+            />
+            <PhoneFrame
+              src="/screenshots/ios-draft-overlay.png"
+              alt="BBE iPhone app live draft overlay showing pick countdown, exposure, and player queue"
+              className={styles.phoneFront}
+              onZoom={setLightboxSrc}
+            />
+          </div>
+        </div>
+      </FadeSection>
 
       {/* ── How it works ── */}
       <FadeSection className={`${styles.section} ${styles.how}`}>
@@ -612,6 +756,9 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
             </button>
           )}
         </div>
+        <div className={styles.finalStore}>
+          <AppStoreBadge placement="landing_final" />
+        </div>
         <a
           href={EXTENSION_URL}
           target="_blank"
@@ -629,6 +776,7 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
           <span>Best Ball Exposures</span>
         </div>
         <nav className={styles.footerNav} aria-label="Footer">
+          <button onClick={() => scrollTo('mobile-app')}>iPhone app</button>
           <button onClick={() => scrollTo('features')}>Features</button>
           <button onClick={() => scrollTo('arena')}>Arena</button>
           <button onClick={() => scrollTo('pricing')}>Pricing</button>
