@@ -22,8 +22,17 @@ export function expandTeam(raw = '') {
  */
 const SUFFIX_RE = /\s+(jr\.?|sr\.?|ii|iii|iv|v)\s*$/i;
 
+// Memoized: player names repeat across every ADP snapshot (~200k calls per
+// data load) and the regex pipeline below is hot enough to dominate load time
+// without it (TASK-365). Pure input→output, so the cache is safe; it is
+// bounded by the number of unique name strings seen (a few thousand).
+const canonicalCache = new Map();
+
 export function canonicalName(name = '') {
-  const canonical = String(name)
+  const raw = String(name);
+  const cached = canonicalCache.get(raw);
+  if (cached !== undefined) return cached;
+  const canonical = raw
     .trim()
     .replace(/^"|"$/g, '')
     .replace(SUFFIX_RE, '')
@@ -31,7 +40,9 @@ export function canonicalName(name = '') {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
-  return applyAlias(canonical);
+  const result = applyAlias(canonical);
+  canonicalCache.set(raw, result);
+  return result;
 }
 
 /**
@@ -102,6 +113,14 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
   // normalize names for matching — uses canonicalName for cross-platform consistency
   const normalize = (s = '') => canonicalName(s);
 
+  // Per-invocation caches for the snapshot loop below: raw name strings and
+  // raw ADP values repeat across every snapshot (~134 per load), so cleaning /
+  // parsing each distinct value once instead of ~200k times is a large win
+  // (TASK-365). The shared parsedAdp objects never escape this function —
+  // consumers copy out primitives — so reuse across lookup entries is safe.
+  const nameCandidateCache = new Map();
+  const parsedAdpCache = new Map();
+
   // Build snapshot lookups (sorted by date ascending)
   const snapshotLookups = (Array.isArray(adpSnapshots) && adpSnapshots.length > 0)
     ? adpSnapshots
@@ -111,15 +130,28 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
         .map(snap => {
           const lookup = new Map();
           (snap.rows || []).forEach(row => {
-            const nameCandidate = (
-              (`${row.firstName || row.first_name || row['First Name'] || ''} ${row.lastName || row.last_name || row['Last Name'] || ''}`).trim()
-              || row.Name || row['Player Name'] || row.player_name || row.Player || ''
-            ).trim().replace(/\s+/g, ' ');
+            // Same precedence as the original template-string extraction:
+            // first/last name fields (either alone suffices) win over Name.
+            const fl = row.firstName || row.first_name || row['First Name'] || '';
+            const ll = row.lastName || row.last_name || row['Last Name'] || '';
+            const rawName = (fl || ll)
+              ? `${fl} ${ll}`.trim()
+              : (row.Name || row['Player Name'] || row.player_name || row.Player || '');
+
+            let nameCandidate = nameCandidateCache.get(rawName);
+            if (nameCandidate === undefined) {
+              nameCandidate = String(rawName).trim().replace(/\s+/g, ' ');
+              nameCandidateCache.set(rawName, nameCandidate);
+            }
 
             if (!nameCandidate) return;
             const key = normalize(nameCandidate);
             const rawAdp = row.adp ?? row.ADP ?? row['ADP'] ?? row['Round.Pick'] ?? row['Adp'] ?? '';
-            const parsedAdp = parseAdpString(rawAdp);
+            let parsedAdp = parsedAdpCache.get(rawAdp);
+            if (parsedAdp === undefined) {
+              parsedAdp = parseAdpString(rawAdp);
+              parsedAdpCache.set(rawAdp, parsedAdp);
+            }
             lookup.set(key, { row, parsedAdp, displayName: nameCandidate });
           });
           return { date: snap.date, platform: snap.platform || 'unknown', lookup };
@@ -130,16 +162,28 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
   const latestSnapObj = snapshotLookups.length > 0 ? snapshotLookups[snapshotLookups.length - 1] : null;
   const latestLookup = latestSnapObj ? latestSnapObj.lookup : new Map();
 
-  // Count exposures from rosters
+  // Count exposures from rosters. The same pass indexes the first roster row
+  // per normalized name, replacing a per-universe-player rosters.find() scan
+  // that made this function quadratic on large portfolios (TASK-365).
   const totalEntries = new Set(rosters.map(r => r.entry_id)).size || 1;
   const draftCounts = {};
+  const rosterByName = new Map();
   rosters.forEach(r => {
     const nm = normalize(r.name);
     draftCounts[nm] = (draftCounts[nm] || 0) + 1;
+    if (!rosterByName.has(nm)) rosterByName.set(nm, r);
+  });
+
+  // Normalized adpMap index — first key wins per normalized name, matching the
+  // order-sensitive Object.keys(adpMap).find(...) scans this replaces (TASK-365).
+  const adpByNorm = new Map();
+  Object.keys(adpMap || {}).forEach(k => {
+    const n = normalize(k);
+    if (!adpByNorm.has(n)) adpByNorm.set(n, adpMap[k]);
   });
 
   // BUILD THE UNIVERSE: unique normalized names from adpMap keys, rosters, and latest snapshot
-  const adpMapKeys = Object.keys(adpMap || {}).map(k => normalize(k));
+  const adpMapKeys = Array.from(adpByNorm.keys());
   const rosterNamesNorm = rosters.map(r => normalize(r.name));
   const latestSnapNames = latestLookup ? Array.from(latestLookup.keys()) : [];
 
@@ -162,8 +206,9 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
   const final = Array.from(allNormalizedNamesSet).map(normName => {
     const displayName = displayNameFor[normName] || normName;
 
-    // roster instance (if exists)
-    const rosterInstance = rosters.find(r => normalize(r.name) === normName);
+    // roster instance (if exists) — first roster row for this name, as
+    // rosters.find() returned before the Map index (TASK-365)
+    const rosterInstance = rosterByName.get(normName);
 
     // Determine position/team preference:
     // 1) latest ADP snapshot row (slotName/teamName or pos/team fields)
@@ -179,7 +224,7 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
       team = expandTeam(row.teamName || row.team || row.Team || row.NFL_Team || row['NFL Team'] || row['TeamName'] || '');
     } else {
       // check adpMap (some consumers populate slotName/teamName there)
-      const adpObj = adpMap && (adpMap[displayName] || adpMap[normName] || adpMap[Object.keys(adpMap).find(k => normalize(k) === normName)]);
+      const adpObj = adpMap && (adpMap[displayName] || adpMap[normName] || adpByNorm.get(normName));
       if (adpObj) {
         pos = adpObj.slotName || adpObj.position || adpObj.pos || pos;
         team = expandTeam(adpObj.teamName || adpObj.team || adpObj.Team || '');
@@ -193,7 +238,7 @@ export function processMasterList(rosters = [], adpMap = {}, _teams = 12, adpSna
     let adpPick = null;
     let adpDisplay = '-';
     // try adpMap first (often contains parsed fields)
-    const adpObj = adpMap && (adpMap[displayName] || adpMap[normName] || adpMap[Object.keys(adpMap).find(k => normalize(k) === normName)]);
+    const adpObj = adpMap && (adpMap[displayName] || adpMap[normName] || adpByNorm.get(normName));
     if (adpObj) {
       adpPick = adpObj.pick ?? (Number.isFinite(Number(adpObj)) ? Number(adpObj) : null);
       adpDisplay = adpObj.display ?? (adpPick !== null ? String(adpPick) : adpDisplay);

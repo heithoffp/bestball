@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "sync-blog": "node scripts/sync-blog.mjs",
-    "predev": "node scripts/sync-blog.mjs",
+    "build:data": "node scripts/build-data.mjs",
+    "predev": "node scripts/sync-blog.mjs && node scripts/build-data.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/sync-blog.mjs",
+    "prebuild": "node scripts/sync-blog.mjs && node scripts/build-data.mjs",
     "build": "vite build",
     "postbuild": "node scripts/prerender-blog.mjs && node scripts/prerender-arena.mjs",
     "generate-og-card": "node scripts/generate-og-card.mjs",

@@ -59,7 +59,7 @@ function detectPlatformFromSlate(slateTitle) {
  *
  * @param {string} [rosterText] - Raw CSV text for rosters
  * @param {Array} [rosterRows] - Pre-mapped roster rows from convertEntriesToRosterRows()
- * @param {Array<{text: string, date: string, filename: string}>} adpFiles - ADP snapshot files
+ * @param {Array<{rows?: Array, text?: string, date: string, filename: string, platform?: string}>} adpFiles - ADP snapshot files (pre-parsed rows or raw CSV text)
  * @param {string} [rankingsText] - Raw CSV text for rankings
  * @param {string} [projectionsText] - Raw CSV text for projections
  * @returns {{ rosterData, masterPlayers, adpSnapshots, rankingsSource, adpByPlatform }}
@@ -94,10 +94,10 @@ export async function processLoadedData({ rosterText, rosterRows: prebuiltRows, 
     }).filter(p => p.name !== 'Unknown');
   }
 
-  // 2) Parse ADP snapshots
-  const snapshots = await Promise.all(adpFiles.map(async ({ text, date, filename, platform }) => {
-    const rows = await parseCSVText(String(text));
-    return { date, fileName: filename, rows, rawText: text, platform: platform || 'unknown' };
+  // 2) ADP snapshots — pre-parsed rows (compact artifact, TASK-365) pass
+  // through; raw text falls back to CSV parsing.
+  const snapshots = await Promise.all(adpFiles.map(async ({ text, rows, date, filename, platform }) => {
+    return { date, fileName: filename, rows: rows ?? await parseCSVText(String(text)), platform: platform || 'unknown' };
   }));
   snapshots.sort((a, b) => a.date.localeCompare(b.date));
 

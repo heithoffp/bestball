@@ -1,9 +1,10 @@
 // src/App.jsx
-import React, { useEffect, useState, Suspense, lazy, useCallback } from 'react';
+import React, { useEffect, useState, Suspense, lazy, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { processLoadedData } from './utils/dataLoader';
+import { loadBundledAdp } from './utils/bundledAdp';
 import { syncSaveFile, syncGetFile } from './utils/storage';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './utils/supabaseClient';
@@ -79,10 +80,11 @@ const BlogChrome = lazy(() => import('./components/BlogChrome'));
 const BlogIndex = lazy(() => import('./components/BlogIndex'));
 const BlogPost = lazy(() => import('./components/BlogPost'));
 
-// Bundled assets (developer-controlled) — all use glob so missing files don't break the build
+// Bundled assets (developer-controlled) — all use glob so missing files don't break the build.
+// ADP snapshots are the exception: they ship as a build-time compacted artifact
+// (scripts/build-data.mjs → src/data/adpSnapshots.json) decoded by bundledAdp.js (TASK-365).
 const rosterModules = import.meta.glob('./assets/rosters.csv', { as: 'raw', eager: true });
 const demoRosterModules = import.meta.glob('./assets/demo-rosters.csv', { as: 'raw', eager: true });
-const adpModules = import.meta.glob('./assets/adp/*.csv', { as: 'raw' });
 const projectionsModules = import.meta.glob('./assets/projections.csv', { as: 'raw', eager: true });
 const rankingsModules = import.meta.glob('./assets/rankings.csv', { as: 'raw', eager: true });
 // Weekly actual fantasy points, dropped in as the season progresses (same
@@ -91,34 +93,6 @@ const rankingsModules = import.meta.glob('./assets/rankings.csv', { as: 'raw', e
 // pure-projection mode until the first week's results land.
 const actualsModules = import.meta.glob('./assets/actuals/*.csv', { as: 'raw', eager: true });
 
-async function loadBundledAdp() {
-  const adpEntries = Object.entries(adpModules);
-  if (adpEntries.length === 0) return [];
-  const files = await Promise.all(adpEntries.map(async ([filePath, resolver]) => {
-    const text = await resolver();
-    const parts = filePath.split('/');
-    const fileName = parts[parts.length - 1];
-    // Normalize underscore date separators (e.g. 2026_06_25) to dashes before
-    // matching, so a malformed filename never falls back to the raw string and
-    // corrupts snapshot date sorting / timeline alignment (TASK-278).
-    const normalized = fileName.replace(/(\d{4})_(\d{2})_(\d{2})/, '$1-$2-$3');
-    const dateMatch = normalized.match(/(\d{4}-\d{2}-\d{2})/);
-    const isSuperflex = /^superflex_adp/.test(fileName);
-    const isEliminator = /^eliminator_adp/.test(fileName);
-    // Superflex and Eliminator have different scoring / player pools; never let them win
-    // the global "latest" fallback used for slates that don't resolve to a specific platform.
-    const dateStr = dateMatch ? dateMatch[1] : ((isSuperflex || isEliminator) ? '1900-01-01' : fileName);
-    // Accept both the canonical "draftking_" prefix and the stray "draftkings_"
-    // variant so a misnamed export doesn't land in an orphan "unknown" platform.
-    const platformMatch = fileName.match(/^(underdog|draftkings?)_adp_/);
-    let platform = 'unknown';
-    if (isSuperflex) platform = 'superflex';
-    else if (isEliminator) platform = 'eliminator';
-    else if (platformMatch) platform = platformMatch[1].startsWith('draftking') ? 'draftkings' : platformMatch[1];
-    return { text: String(text), date: dateStr, filename: fileName, platform };
-  }));
-  return files;
-}
 
 export default function App() {
   const [rosterData, setRosterData] = useState([]);
@@ -272,10 +246,15 @@ export default function App() {
   }, [pendingUpgrade, user, subLoading, openPlanPicker]);
 
 
-  async function loadFromExtension() {
-    const { readExtensionEntries, convertEntriesToRosterRows } = await import('./utils/extensionBridge');
-    const entries = await readExtensionEntries(user.id);
-    if (entries.length === 0) return false;
+  // Latest entries applied to state — kept so handleDeleteRoster and the
+  // background refresh can rewrite the local cache without refetching (ADR-030).
+  const entriesRef = useRef(null);
+  // Bumped per loadData call; async continuations from a superseded load
+  // (user switched, reload fired) check it and drop their results.
+  const loadGeneration = useRef(0);
+
+  async function processEntries(entries) {
+    const { convertEntriesToRosterRows } = await import('./utils/extensionBridge');
     const rosterRows = convertEntriesToRosterRows(entries);
     const adpFiles = await loadBundledAdp();
     const projectionsRaw = Object.values(projectionsModules)[0];
@@ -286,6 +265,36 @@ export default function App() {
     });
     applyResult(result);
     setIsUsingDemoData(false);
+  }
+
+  async function loadFromExtension(gen) {
+    const entriesCache = await import('./utils/entriesCache');
+    const cached = await entriesCache.readEntriesCache(user.id);
+
+    if (cached && cached.entries.length > 0) {
+      // Cache-first render (ADR-030 / TASK-365): the portfolio paints at
+      // local speed; a delta refresh reconciles adds/edits/deletes in the
+      // background and re-applies only on change.
+      entriesRef.current = cached.entries;
+      await processEntries(cached.entries);
+      trackEvent('entries_cache_hit', { count: cached.entries.length });
+
+      entriesCache.refreshEntries(user.id, cached).then(async ({ entries, changed }) => {
+        if (gen !== loadGeneration.current || !changed) return;
+        entriesRef.current = entries;
+        entriesCache.writeEntriesCache(user.id, entries);
+        await processEntries(entries);
+      }).catch(() => { /* refresh is best-effort; cache already rendered */ });
+      return true;
+    }
+
+    const { readExtensionEntries } = await import('./utils/extensionBridge');
+    const entries = await readExtensionEntries(user.id);
+    if (gen !== loadGeneration.current) return true; // superseded — newer load owns the UI
+    entriesCache.writeEntriesCache(user.id, entries);
+    if (entries.length === 0) return false;
+    entriesRef.current = entries;
+    await processEntries(entries);
     trackEvent('extension_sync_loaded', { count: entries.length });
     return true;
   }
@@ -297,6 +306,12 @@ export default function App() {
     await deleteExtensionEntry(user.id, entryId);
     // Optimistically drop every row for this entry from the in-memory portfolio.
     setRosterData(prev => prev.filter(r => r.entry_id !== entryId));
+    // Keep the local cache in step so a reload doesn't resurrect the row.
+    if (entriesRef.current) {
+      entriesRef.current = entriesRef.current.filter(e => e.entryId !== entryId);
+      const { writeEntriesCache } = await import('./utils/entriesCache');
+      writeEntriesCache(user.id, entriesRef.current);
+    }
     trackEvent('roster_deleted');
   }
 
@@ -318,11 +333,12 @@ export default function App() {
   }
 
   async function loadData() {
+    const gen = ++loadGeneration.current;
     setStatus({ type: 'loading', msg: 'Loading data...' });
     try {
       if (user?.id && supabase) {
         // Authenticated: extension is the only roster data source
-        const loaded = await loadFromExtension();
+        const loaded = await loadFromExtension(gen);
         if (!loaded) {
           // No extension entries yet — load ADP data so Tracker/Rankings/Exposures still work,
           // but keep rosterData empty so the empty-state CTA shows on Dashboard/Rosters.

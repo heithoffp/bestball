@@ -1,33 +1,35 @@
-// build-data.mjs — precompute bundled data for the mobile app.
+// build-data.mjs — precompute the compacted ADP artifact for the web app
+// (TASK-365; same compaction as mobile-app/scripts/build-data.mjs, ADR-031).
 //
-// The web app bundles ~120 raw ADP snapshot CSVs (~12 MB) via Vite import.meta.glob
-// and parses them with PapaParse at startup. On mobile that work happens at build
-// time, with two size reductions that don't change pipeline behavior:
+// The app previously bundled ~134 raw ADP snapshot CSVs (~13 MB) via Vite
+// import.meta.glob and parsed them with PapaParse on every page load (~1.7s).
+// This script does that work at build time, with two size reductions that
+// don't change pipeline behavior:
 //   1. Player names are dictionary-encoded (they repeat across every snapshot).
-//   2. Historical snapshots keep only [nameIdx, adp] — the pipeline reads position/
-//      team/projections/positionRank/byeWeek exclusively from each platform's LATEST
-//      snapshot (see processMasterList / buildLookupsFromRows / PlayerRankings), so
-//      only those keep full rows. projections.csv remains the authoritative
-//      projection source and is bundled in full.
+//   2. Historical snapshots keep only [nameIdx, adp] — the pipeline reads
+//      position/team/projections/positionRank/byeWeek exclusively from each
+//      platform's LATEST snapshot, so only those keep full rows.
 //
-// Run before every EAS build (or whenever new ADP snapshots land):
-//   npm run build:data
+// Runs automatically via the predev / prebuild npm hooks, so the artifact can
+// never go stale relative to src/assets/adp/*.csv — the "drop a CSV, deploy"
+// workflow is unchanged. The output is also committed for repo parity with
+// mobile-app/shared/data/adpSnapshots.json.
 //
-// Reads (read-only) from best-ball-manager/src/assets/, writes shared/data/*.json.
+// Reads (read-only) from src/assets/adp/, writes src/data/adpSnapshots.json.
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ASSETS = resolve(__dirname, '../../best-ball-manager/src/assets');
-const OUT = resolve(__dirname, '../shared/data');
+const ADP_DIR = resolve(__dirname, '../src/assets/adp');
+const OUT_DIR = resolve(__dirname, '../src/data');
 
-if (!existsSync(ASSETS)) {
-  console.error(`Assets directory not found: ${ASSETS}`);
+if (!existsSync(ADP_DIR)) {
+  console.error(`ADP directory not found: ${ADP_DIR}`);
   process.exit(1);
 }
-mkdirSync(OUT, { recursive: true });
+mkdirSync(OUT_DIR, { recursive: true });
 
 /** Minimal RFC-4180-ish CSV parser (quoted fields, embedded commas/newlines). */
 function parseCSV(text) {
@@ -75,12 +77,10 @@ const roundAdp = (raw) => {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
 };
 
-// ---- ADP snapshots ------------------------------------------------------------------
-// Date/platform parsing mirrors loadBundledAdp() in best-ball-manager/src/App.jsx.
-const adpDir = join(ASSETS, 'adp');
+// Date/platform parsing mirrors the retired loadBundledAdp() in src/App.jsx.
 const parsed = [];
-for (const fileName of readdirSync(adpDir).filter(f => f.endsWith('.csv')).sort()) {
-  const text = readFileSync(join(adpDir, fileName), 'utf8');
+for (const fileName of readdirSync(ADP_DIR).filter(f => f.endsWith('.csv')).sort()) {
+  const text = readFileSync(join(ADP_DIR, fileName), 'utf8');
   const normalized = fileName.replace(/(\d{4})_(\d{2})_(\d{2})/, '$1-$2-$3');
   const dateMatch = normalized.match(/(\d{4}-\d{2}-\d{2})/);
   const isSuperflex = /^superflex_adp/.test(fileName);
@@ -133,30 +133,5 @@ const snapshots = parsed.map(snap => {
   return { date: snap.date, filename: snap.filename, platform: snap.platform, full, rows };
 });
 
-writeFileSync(join(OUT, 'adpSnapshots.json'), JSON.stringify({ names, snapshots }));
+writeFileSync(join(OUT_DIR, 'adpSnapshots.json'), JSON.stringify({ names, snapshots }));
 console.log(`adpSnapshots.json: ${snapshots.length} snapshots (${fullSet.size} full), ${names.length} unique names, ${snapshots.reduce((n, s) => n + s.rows.length, 0)} rows`);
-
-// ---- Small assets: keep full parsed rows so behavior matches the web exactly --------
-for (const [src, out] of [
-  ['projections.csv', 'projections.json'],
-  ['rankings.csv', 'rankings.json'],
-  ['demo-rosters.csv', 'demoRosters.json'],
-]) {
-  const p = join(ASSETS, src);
-  const rows = existsSync(p) ? parseCSV(readFileSync(p, 'utf8')) : [];
-  writeFileSync(join(OUT, out), JSON.stringify(rows));
-  console.log(`${out}: ${rows.length} rows`);
-}
-
-// ---- Weekly actuals (present only once the season starts) ---------------------------
-const actualsDir = join(ASSETS, 'actuals');
-const actuals = [];
-if (existsSync(actualsDir)) {
-  for (const fileName of readdirSync(actualsDir).filter(f => f.endsWith('.csv')).sort()) {
-    actuals.push({ filename: fileName, rows: parseCSV(readFileSync(join(actualsDir, fileName), 'utf8')) });
-  }
-}
-writeFileSync(join(OUT, 'actuals.json'), JSON.stringify(actuals));
-console.log(`actuals.json: ${actuals.length} files`);
-
-console.log('Done.');
