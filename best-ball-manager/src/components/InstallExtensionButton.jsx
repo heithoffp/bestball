@@ -11,10 +11,9 @@ export default function InstallExtensionButton({ showButton = true }) {
     <a
       href="/install"
       className={styles.headerButton}
-      aria-label="Install the Best Ball Exposures extension — new features available"
+      aria-label="Install the Best Ball Exposures extension"
     >
       Install Extension
-      <span className={styles.newBadge} aria-hidden="true">New</span>
     </a>
   );
 }

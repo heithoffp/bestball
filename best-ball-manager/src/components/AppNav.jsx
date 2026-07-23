@@ -86,7 +86,6 @@ export function SideNav({ groups, activeTab, onSelect, helpOpen, onToggleHelp, o
         >
           <BookOpen className={styles.navIcon} size={17} aria-hidden="true" />
           <span className={styles.navLabel}>Blog</span>
-          <span className={styles.pill} aria-label="New feature">New</span>
         </button>
         <button
           className={`${styles.navItem}${helpOpen ? ` ${styles.navItemHelp}` : ''}`}
@@ -213,7 +212,6 @@ export function MobileNav({ groups, activeTab, onSelect, helpOpen, onToggleHelp,
               >
                 <BookOpen size={20} aria-hidden="true" />
                 <span>Blog</span>
-                <span className={`${styles.pill} ${styles.tilePill}`}>New</span>
               </button>
               <button
                 className={`${styles.sheetTile}${helpOpen ? ` ${styles.sheetTileActive}` : ''}`}

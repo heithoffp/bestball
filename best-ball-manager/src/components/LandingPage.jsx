@@ -35,22 +35,30 @@ function PhoneFrame({ src, alt, className = '', loading = 'lazy', onZoom }) {
 
 /* ── Live pick-ticker HUD ──
    A working replica of the overlay's "Up in N picks" pill — the thing the
-   iPhone app floats over a live draft. The countdown ticks so the hero shows
-   the feature doing its job, not a static badge. */
-const HUD_QUEUE = [
+   iPhone app floats over a live draft. The countdown ticks and the queue
+   advances with it (the board eats a player, the next one slides up), so the
+   hero shows the feature doing its job, not a static badge. */
+const HUD_POOL = [
   { pos: 'TE', name: 'Kelce', exp: '10%' },
   { pos: 'RB', name: 'Croskey', exp: '11%' },
   { pos: 'WR', name: 'Higgins', exp: '10%' },
+  { pos: 'QB', name: 'Shough', exp: '5%' },
+  { pos: 'TE', name: 'Andrews', exp: '9%' },
+  { pos: 'WR', name: 'Shakir', exp: '10%' },
+  { pos: 'RB', name: 'Jones', exp: '12%' },
 ];
 
 function PickTickerHud() {
-  const [picks, setPicks] = useState(12);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
-    const t = setInterval(() => setPicks(p => (p <= 1 ? 12 : p - 1)), 2400);
+    const t = setInterval(() => setTick(n => n + 1), 2400);
     return () => clearInterval(t);
   }, []);
+
+  const picks = 12 - (tick % 12); // 12 → 1, then a fresh draft
+  const queue = Array.from({ length: 3 }, (_, i) => HUD_POOL[(tick + i) % HUD_POOL.length]);
 
   return (
     <div className={styles.hud} aria-hidden="true">
@@ -60,8 +68,12 @@ function PickTickerHud() {
         </span>
         <span className={styles.hudSlot}>P117 &middot; R10</span>
       </div>
-      {HUD_QUEUE.map((p) => (
-        <div key={p.name} className={styles.hudRow}>
+      {queue.map((p, i) => (
+        <div
+          key={`${tick}-${p.name}`}
+          className={styles.hudRow}
+          style={{ animationDelay: `${i * 70}ms` }}
+        >
           <span className={`${styles.hudPos} ${styles[`hudPos${p.pos}`]}`}>{p.pos}</span>
           <span className={styles.hudName}>{p.name}</span>
           <span className={styles.hudExp}>{p.exp}</span>
@@ -430,7 +442,7 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
             <div className={styles.appCtas}>
               <AppStoreBadge placement="landing_app_section" />
               <div className={styles.appQr}>
-                <img src="/appstore-qr.svg" alt="QR code linking to Best Ball Exposures on the App Store" width={82} height={82} loading="lazy" />
+                <img src="/appstore-qr.svg" alt="QR code linking to Best Ball Exposures on the App Store" width={132} height={132} loading="lazy" />
                 <span>Scan to install</span>
               </div>
             </div>
@@ -555,7 +567,7 @@ export default function LandingPage({ onSignUp, onTryDemo }) {
         <div className={styles.arenaPanel}>
           <div className={styles.arenaCopy}>
             <p className={styles.rowKicker}>
-              <Swords size={14} /> New &middot; Free to play
+              <Swords size={14} /> Free to play
             </p>
             <h2 className={styles.arenaTitle}>The Arena is open</h2>
             <p className={styles.arenaDesc}>

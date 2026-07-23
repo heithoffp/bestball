@@ -124,7 +124,7 @@ const VIEW_TABS = [
   { key: 'stacks', label: 'Stacks' },
   { key: 'qbpairs', label: 'QB Pairs' },
   { key: 'similarity', label: 'Similarity' },
-  { key: 'playoffs', label: 'Playoffs', isNew: true },
+  { key: 'playoffs', label: 'Playoffs' },
   { key: 'explorer', label: 'Explorer' },
 ];
 

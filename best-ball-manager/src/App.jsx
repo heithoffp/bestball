@@ -47,7 +47,7 @@ const tabs = [
   { key: 'combo', label: 'Combos', icon: Network },
   { key: 'rankings', label: 'Rankings', icon: ListOrdered },
   { key: 'draftflow', label: 'Draft Assistant', icon: Crosshair },
-  { key: 'arena', label: 'Arena', icon: Swords, isNew: true },
+  { key: 'arena', label: 'Arena', icon: Swords },
 ];
 
 // Navigation grouping — encodes the product's real structure: the portfolio

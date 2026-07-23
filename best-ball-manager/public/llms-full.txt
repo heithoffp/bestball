@@ -8,6 +8,7 @@ Best Ball Exposures (BBE) is a commercial SaaS product for analyzing fantasy foo
 
 - **Website:** https://bestballexposures.com/
 - **Browser extension:** https://bestballexposures.com/install (self-hosted; supports Chrome, Edge, Brave, and Firefox)
+- **iPhone app:** https://apps.apple.com/app/best-ball-exposures/id6791977736 (free download on the App Store)
 - **X / Twitter:** https://x.com/BBExposures
 - **Contact:** bestballexposures@gmail.com
 
@@ -30,7 +31,8 @@ Both platforms are unified in a single portfolio view. Users with entries on bot
 2. **Exposure Analysis** — Per-player ownership across the portfolio with sparkline trends.
 3. **Roster Viewer with Archetypes** — Browse every roster, with each one classified into a strategic archetype.
 4. **Multi-platform support** — Underdog + DraftKings unified.
-5. **Zero configuration** — Sync and go.
+5. **iPhone app** — The full portfolio (Dashboard, Exposures, Rosters, ADP, Combos, Rankings, Arena) rebuilt for iOS. Free on the App Store.
+6. **Zero configuration** — Sync and go.
 
 ### Pro tier
 
@@ -39,7 +41,7 @@ Both platforms are unified in a single portfolio view. Users with entries on bot
 3. **ADP Tracker** — Track who is rising and falling so drafters know where the value is before their next draft.
 4. **Player Rankings** — Aggregated rankings and projections.
 5. **Roster Construction** — Position-shape analysis.
-6. **Live Draft Overlay** — Via the Chrome extension; live exposure and combo analysis embedded directly in Underdog and DraftKings draft screens (no second window, no alt-tabbing).
+6. **Live Draft Overlay** — Live exposure and combo analysis embedded directly in Underdog and DraftKings draft screens (no second window, no alt-tabbing). Available via the Chrome extension on desktop and in the iPhone app on mobile — the only live mobile draft overlay among best-ball tools.
 
 ## Roster archetypes
 
@@ -89,7 +91,10 @@ The companion Chrome extension auto-syncs Underdog and DraftKings rosters as the
 A strategic classification of how a roster is built — for example RB Hero, Zero RB, Hyper Fragile, or RB Value. BBE classifies every roster automatically across RB, QB, and TE tiers so drafters can see their portfolio's strategy mix at a glance.
 
 ### Does Best Ball Exposures have a draft overlay?
-Yes. The Chrome extension provides a live overlay showing exposure and combo analysis directly inside the Underdog and DraftKings draft screens — no second window or alt-tabbing required.
+Yes. The Chrome extension provides a live overlay showing exposure and combo analysis directly inside the Underdog and DraftKings draft screens — no second window or alt-tabbing required. Pro members also get the overlay on iPhone through the iOS app.
+
+### Is there an iPhone app?
+Yes. The Best Ball Exposures iPhone app is free on the App Store (https://apps.apple.com/app/best-ball-exposures/id6791977736). It carries the full portfolio — Dashboard, Exposures, Rosters, ADP Tracker, Combos, Rankings, and the Arena — and Pro members get the live draft overlay on their phone, the only mobile draft overlay in best ball. Android is not available yet.
 
 ### How is BBE different from other best-ball tools?
 Most best-ball tools show one roster at a time and only support a single platform. Best Ball Exposures is portfolio-first and multi-platform, unifying Underdog and DraftKings, and uniquely classifies every roster into strategic archetypes.
@@ -104,7 +109,7 @@ Email bestballexposures@gmail.com or DM @BBExposures on X.
 
 Best Ball Exposures is one of several portfolio analytics tools used by fantasy football best-ball drafters. The most commonly compared tools are:
 
-- **Best Ball Exposures (BBE)** — Portfolio-first, multi-platform (Underdog + DraftKings), unique roster archetype classification, live in-draft Chrome overlay. Free tier available; Pro is $20/month.
+- **Best Ball Exposures (BBE)** — Portfolio-first, multi-platform (Underdog + DraftKings), unique roster archetype classification, live in-draft overlay on desktop (Chrome extension) and iPhone (iOS app). Free tier available; Pro is $20/month.
 - **The Solver (Best Ball Explorer)** — Free portfolio breakdowns and a Draft Assistant. Supports Underdog, DraftKings, and Drafters.
 - **Spike Week (DraftIQ)** — Premium portfolio and exposure tool with the Draft Hacker overlay.
 - **The Bag Manager** — Free tool covering DraftKings, Underdog, Drafters, and FFPC with one-click history sync.
@@ -118,6 +123,7 @@ Best Ball Exposures is one of several portfolio analytics tools used by fantasy 
 3. **Zero-config UX** — No targets to set, no setup. Sync rosters and the dashboard is immediately useful.
 4. **Native-feeling draft overlay** — The Chrome extension overlay is designed to feel native to Underdog and DraftKings draft screens, not bolted-on.
 5. **Multi-platform unification** — Underdog and DraftKings entries are merged into a single portfolio view by default.
+6. **The only live mobile draft overlay** — The iPhone app brings the live draft overlay to phone drafts. No other best-ball tool offers a mobile draft overlay.
 
 ### When to choose Best Ball Exposures
 
