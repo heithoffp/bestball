@@ -218,4 +218,4 @@
 ### FEAT-032: Android Overlay Assistant (future phase)
 **Status:** Not Started
 **Description:** The Android half of the dream, deferred until iOS proves the product: MediaProjection capture + ML Kit OCR + floating overlay bubble, reusing the RN shell, shared analytics package, and remote parse templates. Blocked on a FLAG_SECURE go/no-go test of the Android UD/DK apps (research 2026-07: MediaProjection consent is per-session; AccessibilityService is a high-policy-risk fallback only; Google Play's gambling "companion functionality" clause is the primary distribution risk).
-**Tasks:** TASK-325
+**Tasks:** TASK-325, TASK-364

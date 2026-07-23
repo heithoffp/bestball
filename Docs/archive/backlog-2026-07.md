@@ -1,6 +1,6 @@
 # Backlog Archive -- July 2026
 
-Archived from `BACKLOG.md`. Last updated 2026-07-09. Contains completed tasks through TASK-311.
+Archived from `BACKLOG.md`. Last updated 2026-07-23. Contains completed tasks through TASK-325.
 
 ## Completed Tasks
 
@@ -39,3 +39,14 @@ Archived from `BACKLOG.md`. Last updated 2026-07-09. Contains completed tasks th
 | TASK-297 | Arena 'Tale of the Tape' redesign + CLV + perf | Done | P2 | [Plan](../plans/TASK-297.md) | Yes | 2026-07-02 |
 | TASK-286 | Arena: Vision_and_Scope + Feature Spec update for new pillar | Done | P2 | [Plan](../plans/TASK-286.md) | Yes | 2026-07-02 |
 | TASK-284 | Arena: enrollment toggle + paid-tier gating | Done | P2 | [Plan](../plans/TASK-284.md) | Yes | 2026-07-02 |
+| TASK-283 | Arena: leaderboard view | Done | P2 | [Plan](../plans/TASK-283.md) | Yes | 2026-07-02 |
+| TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | Done | P1 | [Plan](../plans/TASK-282.md) | Yes | 2026-07-02 |
+| TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | Done | P1 | [Plan](../plans/TASK-281.md) | Yes | 2026-07-02 |
+| TASK-280 | Arena: data model & Supabase migrations | Done | P1 | [Plan](../plans/TASK-280.md) | Yes | 2026-07-02 |
+| TASK-259 | Privacy policy: note participant-captured third-party roster storage | Done | P3 | [Plan](../plans/TASK-259.md) | Yes | 2026-07-02 |
+| TASK-291 | Arena privacy policy + ToS update for public ranking | Done | P2 | [Plan](../plans/TASK-291.md) | Yes | 2026-07-02 |
+| TASK-308 | Arena mobile matchup comparison UX — swipeable contender deck with quick-toggle and sticky pick bar | Done | P2 | [Plan](../plans/TASK-308.md) | Yes | 2026-07-02 |
+| TASK-316 | Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard | Done | P1 | [Plan](../plans/TASK-316.md) | Yes | 2026-07-09 |
+| TASK-315 | Precompute combo-board aggregate: stop full-table draft_boards_admin downloads | Done | P1 | [Plan](../plans/TASK-315.md) | Yes | 2026-07-09 |
+| TASK-314 | Rosters page — per-roster Delete button (remove entry from extension_entries) | Done | P2 | [Plan](../plans/TASK-314.md) | Yes | 2026-07-09 |
+| TASK-325 | Android FLAG_SECURE go/no-go: UD app capture visibility on Pixel 3 | Done | P3 | [Plan](../plans/TASK-325.md) | Yes | 2026-07-12 |

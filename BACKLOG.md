@@ -108,6 +108,8 @@
 | TASK-356 | Mobile cloud storage Blob incompatibility — sync always falls back to local | In Progress | P2 | S | Sonnet | [Plan](docs/plans/TASK-356.md) | No | 2026-07-19 | 2026-07-19 |
 | TASK-330 | Mobile UD live-capture correctness: own-pick inference on the your-pick transition + team-abbreviation fix for playoff/stack badges | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-330.md) | No | 2026-07-15 | 2026-07-19 |
 | TASK-359 | Narrow Arena pool to owned BBM7 teams (execute ADR-032) | In Progress | P2 | M | Opus | [Plan](docs/plans/TASK-359.md) | No | 2026-07-22 | 2026-07-22 |
+| TASK-363 | Android port: full app on Google Play + Google Play Billing (excludes live overlay) | Todo | P2 | L | Fable | [Plan](docs/plans/TASK-363.md) -- Draft | No | 2026-07-23 | 2026-07-23 |
+| TASK-364 | Android live-draft overlay: full capture to OCR to guide differentiator | Todo | P2 | L | Fable | [Plan](docs/plans/TASK-364.md) -- Draft | No | 2026-07-23 | 2026-07-23 |
 | TASK-176 | DraftKings draft group to slate name mapping | Todo | P3 | - | - | [Plan](docs/plans/TASK-176.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-177 | Sync and store entry fee per DraftKings roster | Todo | P3 | - | - | [Plan](docs/plans/TASK-177.md) — Draft | No | 2026-04-07 | 2026-04-07 |
 | TASK-048 | Update chrome-extension-data-flow.d2 to show Supabase bridge write path | Todo | P3 | - | - | [Plan](docs/plans/TASK-048.md) — Draft | No | 2026-04-01 | 2026-04-01 |
@@ -168,23 +170,13 @@ _Last 5 — full history in [docs/archive/BACKLOG_COMPLETED.md](docs/archive/BAC
 
 | ID | Title | Completed |
 |----|-------|-----------|
-| TASK-358 | Add Avg Adv % column to Exposures tab | Done | P3 | [Plan](docs/archive/plans/TASK-358.md) | Yes | 2026-07-21 |
-| TASK-357 | Fix DraftBroadcast Info.plist RPBroadcastProcessMode placement blocking App Store validation | Done | P1 | [Plan](docs/archive/plans/TASK-357.md) | Yes | 2026-07-19 |
-| TASK-352 | DraftKings live capture follow-ups: auto new-draft detection + lobby/pre-draft screen grammar | Done | P2 | [Plan](docs/archive/plans/TASK-352.md) | No | 2026-07-18 |
-| TASK-343 | Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish (Won't Do: Superseded by TASK-344 — ADR-028 reverses ADR-027 (mobile Stripe external checkout) to Apple StoreKit 2 IAP) | Won't Do | P2 | [Plan](docs/archive/plans/TASK-343.md) | No | 2026-07-17 |
-| TASK-337 | Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup | Done | P2 | [Plan](docs/archive/plans/TASK-337.md) | Yes | 2026-07-16 |
-| TASK-334 | Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows | Done | P2 | [Plan](docs/archive/plans/TASK-334.md) | Yes | 2026-07-15 |
 | TASK-328 | Draft parser: pin slot from the user's username on the board; harden screen classification + picks-until countdown | Done | P2 | [Plan](docs/archive/plans/TASK-328.md) | Yes | 2026-07-14 |
 | TASK-327 | Live Draft Session: remove screenshot capture mode, make live capture the sole path, add mid-draft resume detection | Done | P2 | [Plan](docs/archive/plans/TASK-327.md) | Yes | 2026-07-14 |
 | TASK-326 | Mobile live capture: pre-flight privacy explainer + inline helper copy for broadcast picker | Done | P3 | [Plan](docs/archive/plans/TASK-326.md) | Yes | 2026-07-14 |
-| TASK-325 | Android FLAG_SECURE go/no-go: UD app capture visibility on Pixel 3 | Done | P3 | [Plan](docs/archive/plans/TASK-325.md) | Yes | 2026-07-12 |
-| TASK-283 | Arena: leaderboard view | Done | P2 | [Plan](docs/archive/plans/TASK-283.md) | Yes | 2026-07-02 |
-| TASK-282 | Arena: voting UI (Arena.jsx + route/tab + arenaClient) | Done | P1 | [Plan](docs/archive/plans/TASK-282.md) | Yes | 2026-07-02 |
-| TASK-281 | Arena: Edge Functions (pairing + vote/Elo ingestion) | Done | P1 | [Plan](docs/archive/plans/TASK-281.md) | Yes | 2026-07-02 |
-| TASK-280 | Arena: data model & Supabase migrations | Done | P1 | [Plan](docs/archive/plans/TASK-280.md) | Yes | 2026-07-02 |
-| TASK-259 | Privacy policy: note participant-captured third-party roster storage | Done | P3 | [Plan](docs/archive/plans/TASK-259.md) | Yes | 2026-07-02 |
-| TASK-291 | Arena privacy policy + ToS update for public ranking | Done | P2 | [Plan](docs/archive/plans/TASK-291.md) | Yes | 2026-07-02 |
-| TASK-308 | Arena mobile matchup comparison UX — swipeable contender deck with quick-toggle and sticky pick bar | Done | P2 | [Plan](docs/archive/plans/TASK-308.md) | Yes | 2026-07-02 |
-| TASK-316 | Arena featured flag + partial indexes: stop JSONB ilike scans in pair/leaderboard | Done | P1 | [Plan](docs/archive/plans/TASK-316.md) | Yes | 2026-07-09 |
-| TASK-315 | Precompute combo-board aggregate: stop full-table draft_boards_admin downloads | Done | P1 | [Plan](docs/archive/plans/TASK-315.md) | Yes | 2026-07-09 |
-| TASK-314 | Rosters page — per-roster Delete button (remove entry from extension_entries) | Done | P2 | [Plan](docs/archive/plans/TASK-314.md) | Yes | 2026-07-09 |
+| TASK-334 | Free iOS build pipeline: GitHub Actions macOS runner (eas build --local) + install-to-iPhone path from Windows | Done | P2 | [Plan](docs/archive/plans/TASK-334.md) | Yes | 2026-07-15 |
+| TASK-337 | Live Activity target table redesign: fixed P/S/C/E columns, drop Q/F flags, header cleanup | Done | P2 | [Plan](docs/archive/plans/TASK-337.md) | Yes | 2026-07-16 |
+| TASK-343 | Mobile in-app Pro checkout: Stripe external checkout link with deep-link return + account polish (Won't Do: Superseded by TASK-344 — ADR-028 reverses ADR-027 (mobile Stripe external checkout) to Apple StoreKit 2 IAP) | Won't Do | P2 | [Plan](docs/archive/plans/TASK-343.md) | No | 2026-07-17 |
+| TASK-352 | DraftKings live capture follow-ups: auto new-draft detection + lobby/pre-draft screen grammar | Done | P2 | [Plan](docs/archive/plans/TASK-352.md) | No | 2026-07-18 |
+| TASK-357 | Fix DraftBroadcast Info.plist RPBroadcastProcessMode placement blocking App Store validation | Done | P1 | [Plan](docs/archive/plans/TASK-357.md) | Yes | 2026-07-19 |
+| TASK-358 | Add Avg Adv % column to Exposures tab | Done | P3 | [Plan](docs/archive/plans/TASK-358.md) | Yes | 2026-07-21 |
+| TASK-365 | Data-load performance overhaul: pipeline optimization + web compact ADP artifact + web entries cache | Done | P2 | [Plan](docs/archive/plans/TASK-365.md) | Yes | 2026-07-23 |
